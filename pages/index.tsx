@@ -1,28 +1,17 @@
 import type { NextPage } from 'next';
 import Head from 'next/head';
-import Image from 'next/image';
-import * as React from 'react';
 
 import Home from '../components/Home';
-import styles from '../styles/Home.module.css';
 
-const HomePage: NextPage = (): React.ReactElement => {
+const HomePage: NextPage = () => {
   return (
-    <div className={styles.container}>
+    <>
       <Head>
-        <title>KaraoQ</title>
-        <meta name="description" content="Karaoke Youtube" />
+        <title>KaraoQ — YouTube Karaoke with Friends</title>
+        <meta name="description" content="Host a karaoke session and let your friends queue up songs from YouTube" />
       </Head>
-
       <Home />
-
-      <footer className={styles.footer}>
-        Powered by Brew House, La Puente
-        <span className={styles.logo}>
-          <Image src="/vercel.svg" alt="Vercel Logo" width={72} height={16} />
-        </span>
-      </footer>
-    </div>
+    </>
   );
 };
 
