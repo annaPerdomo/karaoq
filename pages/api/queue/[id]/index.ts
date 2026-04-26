@@ -15,23 +15,21 @@ export default async function handler(
   }
 
   try {
+    await client.connect();
     const db = client.db(process.env.MONGODB_DB);
     const collection = db.collection<Room>("rooms");
 
-    await client.connect();
-
-    if (req.method == "POST") {
-      await collection.insertOne({
-        id: roomId,
-        queue: [],
-        activeVideoIndex: 0,
-      });
-      res
-        .status(203)
-        .json({ code: 203, message: "Data inserted successfully." });
-    } else if (req.method == "GET") {
+    if (req.method === "POST") {
+      const existing = await collection.findOne({ id: roomId });
+      if (existing) {
+        res.status(200).json(existing);
+      } else {
+        const room: Room = { id: roomId, queue: [], activeVideoIndex: 0 };
+        await collection.insertOne(room);
+        res.status(201).json(room);
+      }
+    } else if (req.method === "GET") {
       const room = await collection.findOne({ id: roomId });
-      console.log(room);
       if (room) {
         res.status(200).json(room);
       } else {
@@ -41,9 +39,9 @@ export default async function handler(
       res.status(400).json({ code: 400, message: "Invalid request." });
     }
   } catch (e) {
-    console.log(e);
+    console.error(e);
     res.status(500).json({ code: 500, message: "Internal server error." });
   } finally {
-    client.close();
+    await client.close();
   }
 }
