@@ -1,36 +1,138 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# karaoq
 
-## Getting Started
+Browser-based karaoke queue manager powered by YouTube. A host creates a room, shares a 5-character code, and singers search for songs, join the queue, and perform — all from their phones. No downloads, no DJ software, no hardware. Just a screen and a join code.
 
-First, run the development server:
+## Features
 
-```bash
-npm run dev
-# or
-yarn dev
+- **Host a room** — generate a room code, display the current song and queue on a TV or laptop
+- **Join from any device** — enter the code on your phone to search and queue songs
+- **YouTube search** — find any song on YouTube with embeddable video playback
+- **Live queue** — singers see the current song, upcoming queue, and their position in real time (3s polling)
+- **Next song control** — host advances through the queue at their own pace
+- **Persistent singer names** — usernames saved to localStorage across sessions
+- **Confirmation modal** — review your song choice before adding to the queue
+- **Toast notifications** — visual feedback when a song is added
+
+## Architecture
+
+```
+pages/
+  index.tsx                 Home — create or join a room
+  host/[joinCode]/          Host view — video player + queue sidebar
+  sing/[joinCode]/          Singer view — search, queue, now playing
+  api/queue/[id]/
+    index.ts                GET room / POST create room
+    videos.ts               POST add song to queue
+    position.ts             POST advance active song index
+
+components/
+  Home.tsx                  Room creation and join logic
+  Host.tsx                  Host UI — YouTube embed, queue, controls
+  Sing.tsx                  Singer UI — search, add, queue display
+
+app/queue/
+  createRoom.ts             Client-side API wrapper — create room
+  getRoom.ts                Client-side API wrapper — fetch room
+  postEntryToQueue.ts       Client-side API wrapper — add song
+  updatePosition.ts         Client-side API wrapper — advance queue
+
+styles/                     CSS Modules (dark theme)
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+**Data flow:** Components call client wrappers (`app/queue/`) which hit Next.js API routes (`pages/api/`). API routes connect directly to MongoDB. Both host and singer views poll the room endpoint every 3 seconds for updates.
 
-You can start editing the page by modifying `pages/index.tsx`. The page auto-updates as you edit the file.
+**Data model:**
 
-[API routes](https://nextjs.org/docs/api-routes/introduction) can be accessed on [http://localhost:3000/api/hello](http://localhost:3000/api/hello). This endpoint can be edited in `pages/api/hello.ts`.
+```
+Room {
+  id: string                 // 5-char alphanumeric code (e.g. "K4MNP")
+  queue: QueueEntry[]        // ordered list of songs
+  activeVideoIndex: number   // index of the currently playing song
+}
 
-The `pages/api` directory is mapped to `/api/*`. Files in this directory are treated as [API routes](https://nextjs.org/docs/api-routes/introduction) instead of React pages.
+QueueEntry {
+  id: string                 // UUID v4
+  userName: string           // singer's display name
+  songTitle: string          // YouTube video title
+  videoId: string            // YouTube video ID
+}
+```
 
-## Learn More
+## Tech Stack
 
-To learn more about Next.js, take a look at the following resources:
+| Layer | Choice | Rationale |
+|-------|--------|-----------|
+| Framework | Next.js 14 (Pages Router) | SSR landing page, API routes colocated with frontend, Vercel-native deployment |
+| Database | MongoDB Atlas (free tier) | Document model fits room/queue data naturally; 512MB free tier is generous for this use case |
+| Video | YouTube Data API v3 | Unlimited song catalog, embeddable player, free quota (10k units/day) |
+| Styling | CSS Modules | Component-scoped styles, zero runtime cost, no build config needed |
+| Sync | Polling (3s) | Serverless-friendly, no WebSocket infrastructure. 3s latency is imperceptible during karaoke |
+| IDs | uuid v4 | Collision-resistant queue entry IDs without a database sequence |
+| Language | TypeScript (strict) | Type safety across API boundaries, client wrappers, and components |
+| Deploy | Vercel | Zero-config Next.js hosting, serverless API routes, automatic preview deploys |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Local Development
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
+**Prerequisites:** Node.js 18+, pnpm, a MongoDB Atlas cluster, a YouTube Data API key
 
-## Deploy on Vercel
+```bash
+git clone https://github.com/annaPerdomo/karaoq.git
+cd karaoq
+pnpm install
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Copy `.env.example` to `.env.local` and fill in your credentials:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+```
+MONGODB_URI=mongodb+srv://...
+MONGODB_DB=karaoq
+NEXT_PUBLIC_YOUTUBE_API_KEY=AIza...
+```
 
-Thanks for checking us out!
+```bash
+pnpm dev          # http://localhost:3000
+pnpm build        # production build
+pnpm lint         # ESLint
+```
+
+## How It Works
+
+1. **Host** visits the home page and clicks CREATE — a 5-character room code is generated (ambiguous characters like `0/O`, `1/I/L` are excluded)
+2. Room is created in MongoDB via `POST /api/queue/{code}`
+3. Host screen shows a YouTube embed for the current song, a "Now Playing" banner, and an "Up Next" sidebar
+4. **Singers** visit the home page and enter the room code — they're routed to `/sing/{code}`
+5. Singers enter their name (persisted to localStorage), search YouTube, and tap a result to open the add-song modal
+6. Confirmed songs are appended to the room's queue via `POST /api/queue/{code}/videos`
+7. Both views poll `GET /api/queue/{code}` every 3 seconds to stay in sync
+8. Host clicks "Next Song" to advance `activeVideoIndex` via `POST /api/queue/{code}/position`
+
+## Trade-offs
+
+- **Polling over WebSockets** — The original implementation used Pusher for real-time updates. Replaced with 3-second polling to eliminate external service dependencies and stay compatible with serverless deployment. Karaoke has natural pauses between songs, so 0-3s latency isn't noticeable. Upgrade path to SSE exists if needed.
+- **New MongoDB connection per request** — Acceptable for current scale (single-digit concurrent users). Would add connection pooling via a cached client singleton before scaling further.
+- **YouTube API key on the client** — `NEXT_PUBLIC_` prefix exposes the key in the browser bundle. Acceptable because YouTube API keys are domain-restricted and read-only. Could move search server-side for tighter control.
+- **No auth** — Currently stateless by design. Singers are identified by a self-reported name in localStorage. Works for trusted groups (friends at a party). Auth is the next planned addition.
+- **CSS Modules over a component library** — Keeps the bundle small and avoids framework lock-in. Will migrate to a design system (MUI or similar) when theming and venue branding features require it.
+
+## What I'd Do Differently
+
+- **App Router from day one** — Pages Router works but App Router is the future of Next.js and offers better layouts, loading states, and server components.
+- **Connection pooling** — Should have cached the MongoDB client across requests from the start instead of connect/close per request.
+- **API route middleware** — Rate limiting and input validation should have been set up before any feature work, not after.
+- **E2E tests from the first feature** — The happy path (create room → join → search → queue → play → next) is a natural Playwright test. Should have existed before the first PR.
+- **Design tokens** — Should have established spacing, color, and typography tokens before writing any CSS. Would make future theming much cleaner.
+
+## Roadmap
+
+See [PROPOSAL.md](./PROPOSAL.md) for the full product evolution plan — from personal POC to a platform bars can use. Key phases:
+
+1. Optional auth (NextAuth.js + Google)
+2. Song history and favorites for authenticated singers
+3. Queue fairness (round-robin rotation, wait time estimates)
+4. Organizer dashboard (event history, analytics, QR codes)
+5. Social features (crowd reactions, duets, encore votes)
+6. Venue tier (branding, recurring events, tip jar, TV display mode)
+
+## License
+
+Private
