@@ -272,7 +272,7 @@
 .nowSong {
   font-size: 0.8rem;
   color: var(--text-primary);
-  white-space: nowrap;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -513,4 +513,76 @@
   color: var(--text-muted);
   font-size: 0.9rem;
   margin-bottom: 1.5rem;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .body {
+    padding: 0.75rem 0.75rem 1.5rem;
+  }
+
+  .nameSection {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.4rem;
+  }
+
+  .searchInput {
+    font-size: 1rem;
+    padding: 0.75rem 0.75rem;
+    min-width: 0;
+  }
+
+  .searchBtn {
+    padding: 0.75rem 1rem;
+  }
+
+  .resultCard {
+    gap: 0.6rem;
+    padding: 0.5rem;
+  }
+
+  .resultThumb {
+    width: 64px;
+    height: 48px;
+    border-radius: 6px;
+  }
+
+  .resultTitle {
+    font-size: 0.8rem;
+    -webkit-line-clamp: 2;
+  }
+
+  .addBtn {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    font-size: 1.2rem;
+  }
+
+  .nowPlaying {
+    gap: 0.4rem;
+  }
+
+  .nowSong {
+    white-space: normal;
+    font-size: 0.78rem;
+  }
+
+  .nowSinger {
+    font-size: 0.75rem;
+  }
+
+  .modal {
+    margin: 0 0.5rem;
+    padding: 1.25rem;
+  }
+
+  .modalThumb {
+    max-width: 100%;
+  }
+
+  .queueItem {
+    padding: 0.5rem 0.6rem;
+  }
 }

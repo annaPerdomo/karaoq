@@ -123,9 +123,7 @@ pnpm lint         # ESLint
 - **Design tokens** — Should have established spacing, color, and typography tokens before writing any CSS. Would make future theming much cleaner.
 
 ## Roadmap
-
-See [PROPOSAL.md](./PROPOSAL.md) for the full product evolution plan — from personal POC to a platform bars can use. Key phases:
-
+ Key phases:
 1. Optional auth (NextAuth.js + Google)
 2. Song history and favorites for authenticated singers
 3. Queue fairness (round-robin rotation, wait time estimates)

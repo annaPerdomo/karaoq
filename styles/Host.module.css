@@ -313,35 +313,73 @@
 
 /* Responsive */
 @media (max-width: 768px) {
-  .content {
-    flex-direction: column;
-  }
-
-  .sidebar {
-    width: 100%;
-    border-left: none;
-    border-top: 1px solid rgba(255, 255, 255, 0.06);
-    max-height: 30vh;
-  }
-
-  .video {
-    min-height: 40vh;
-  }
-
   .header {
-    justify-content: center;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.6rem 1rem;
+    align-items: stretch;
+  }
+
+  .brand {
     text-align: center;
+  }
+
+  .joinInfo {
+    justify-content: center;
   }
 
   .joinCode {
     font-size: 1.1rem;
   }
 
+  .nextBtn {
+    width: 100%;
+    padding: 0.75rem;
+    font-size: 1rem;
+  }
+
+  .content {
+    flex-direction: column;
+  }
+
+  .playerArea {
+    min-height: 0;
+  }
+
+  .video {
+    min-height: 35vh;
+    aspect-ratio: 16 / 9;
+  }
+
+  .sidebar {
+    width: 100%;
+    border-left: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    max-height: 35vh;
+  }
+
   .nowPlaying {
     flex-wrap: wrap;
+    gap: 0.4rem;
+    padding: 0.5rem 0.8rem;
   }
 
   .nowPlayingSinger {
     margin-left: 0;
+    width: 100%;
+    font-size: 0.75rem;
+  }
+
+  .nowPlayingSong {
+    white-space: normal;
+    font-size: 0.8rem;
+  }
+
+  .emptyIcon {
+    font-size: 3rem;
+  }
+
+  .emptyState h2 {
+    font-size: 1.2rem;
   }
 }
