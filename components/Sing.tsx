@@ -65,11 +65,14 @@ const Sing = (): React.ReactElement => {
   const [error, setError] = React.useState<string | null>(null);
   const [searching, setSearching] = React.useState(false);
   const [justAdded, setJustAdded] = React.useState<string | null>(null);
+  const [karaokeMode, setKaraokeMode] = React.useState(true);
 
-  // Load saved username
+  // Load saved username and karaoke mode preference
   React.useEffect(() => {
     const saved = localStorage.getItem('karaoq_username');
     if (saved) setUsername(saved);
+    const savedMode = localStorage.getItem('karaoq_karaoke_mode');
+    if (savedMode !== null) setKaraokeMode(savedMode === 'true');
   }, []);
 
   // Initial room load
@@ -108,11 +111,18 @@ const Sing = (): React.ReactElement => {
     return () => clearInterval(interval);
   }, [joinCode, error]);
 
+  function toggleKaraokeMode() {
+    const next = !karaokeMode;
+    setKaraokeMode(next);
+    localStorage.setItem('karaoq_karaoke_mode', String(next));
+  }
+
   async function search() {
     if (!query.trim()) return;
     setSearching(true);
+    const searchQuery = karaokeMode ? `${query.trim()} karaoke` : query;
     try {
-      const results = await searchYoutube(query);
+      const results = await searchYoutube(searchQuery);
       setSongs(results);
     } catch {
       setSongs([]);
@@ -200,7 +210,7 @@ const Sing = (): React.ReactElement => {
             <input
               className={styles.searchInput}
               type="text"
-              placeholder={'Search YouTube (try adding "karaoke")'}
+              placeholder={karaokeMode ? 'Search for a song...' : 'Search YouTube...'}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && search()}
@@ -213,6 +223,18 @@ const Sing = (): React.ReactElement => {
               {searching ? '...' : 'Search'}
             </button>
           </div>
+          <label className={styles.toggleRow}>
+            <span className={styles.toggleLabel}>Auto-add &ldquo;karaoke&rdquo;</span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={karaokeMode}
+              className={`${styles.toggle} ${karaokeMode ? styles.toggleOn : ''}`}
+              onClick={toggleKaraokeMode}
+            >
+              <span className={styles.toggleKnob} />
+            </button>
+          </label>
         </div>
 
         {/* Toast notification */}
