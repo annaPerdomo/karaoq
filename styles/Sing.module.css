@@ -147,6 +147,54 @@
   cursor: not-allowed;
 }
 
+/* Karaoke toggle */
+.toggleRow {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.4rem;
+  cursor: pointer;
+}
+
+.toggleLabel {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.toggle {
+  position: relative;
+  width: 40px;
+  height: 22px;
+  border-radius: 11px;
+  border: none;
+  background: rgba(255, 255, 255, 0.12);
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.2s ease;
+  flex-shrink: 0;
+}
+
+.toggleOn {
+  background: linear-gradient(135deg, #ff2d78, #ff6b35);
+}
+
+.toggleKnob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.2s ease;
+  pointer-events: none;
+}
+
+.toggleOn .toggleKnob {
+  transform: translateX(18px);
+}
+
 /* Toast */
 .toast {
   padding: 0.65rem 1rem;
