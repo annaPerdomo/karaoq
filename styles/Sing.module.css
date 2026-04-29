@@ -41,6 +41,8 @@
 }
 
 .roomBadge strong {
+  font-family: 'Space Mono', 'SF Mono', 'Consolas', monospace;
+  font-weight: 700;
   color: #ffd700;
   letter-spacing: 2px;
 }
