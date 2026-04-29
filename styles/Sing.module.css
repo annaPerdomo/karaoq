@@ -195,6 +195,64 @@
   transform: translateX(18px);
 }
 
+/* Filters */
+.filterSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.filterGroup {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.filterLabel {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  flex-shrink: 0;
+  min-width: 56px;
+}
+
+.filterChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.filterChip {
+  padding: 0.3rem 0.65rem;
+  font-size: 0.75rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-muted);
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.filterChip:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.18);
+  color: var(--text-secondary);
+}
+
+.filterChipActive {
+  background: rgba(0, 240, 255, 0.12);
+  border-color: rgba(0, 240, 255, 0.35);
+  color: #00f0ff;
+}
+
+.filterChipActive:hover {
+  background: rgba(0, 240, 255, 0.18);
+  border-color: rgba(0, 240, 255, 0.5);
+  color: #00f0ff;
+}
+
 /* Toast */
 .toast {
   padding: 0.65rem 1rem;
@@ -619,6 +677,16 @@
 
   .nowSinger {
     font-size: 0.75rem;
+  }
+
+  .filterGroup {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.3rem;
+  }
+
+  .filterLabel {
+    min-width: unset;
   }
 
   .modal {

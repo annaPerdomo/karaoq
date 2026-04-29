@@ -15,6 +15,28 @@ interface YoutubeResult {
   videoId: string;
 }
 
+type VideoDuration = 'any' | 'short' | 'medium' | 'long';
+type SortOrder = 'relevance' | 'viewCount' | 'date' | 'rating';
+
+interface SearchFilters {
+  duration: VideoDuration;
+  sortBy: SortOrder;
+}
+
+const DURATION_OPTIONS: { value: VideoDuration; label: string }[] = [
+  { value: 'any', label: 'Any length' },
+  { value: 'short', label: 'Short (< 4 min)' },
+  { value: 'medium', label: 'Medium (4–20 min)' },
+  { value: 'long', label: 'Long (> 20 min)' },
+];
+
+const SORT_OPTIONS: { value: SortOrder; label: string }[] = [
+  { value: 'relevance', label: 'Relevance' },
+  { value: 'viewCount', label: 'View count' },
+  { value: 'date', label: 'Upload date' },
+  { value: 'rating', label: 'Rating' },
+];
+
 function decodeHtml(html: string): string {
   if (typeof document === 'undefined') return html;
   const txt = document.createElement('textarea');
@@ -22,7 +44,10 @@ function decodeHtml(html: string): string {
   return txt.value;
 }
 
-async function searchYoutube(query: string): Promise<YoutubeResult[]> {
+async function searchYoutube(
+  query: string,
+  filters: SearchFilters
+): Promise<YoutubeResult[]> {
   const params = new URLSearchParams({
     part: 'snippet',
     q: query,
@@ -30,7 +55,12 @@ async function searchYoutube(query: string): Promise<YoutubeResult[]> {
     key: process.env.NEXT_PUBLIC_YOUTUBE_API_KEY!,
     type: 'video',
     maxResults: '8',
+    order: filters.sortBy,
   });
+
+  if (filters.duration !== 'any') {
+    params.set('videoDuration', filters.duration);
+  }
 
   const resp = await fetch(
     'https://www.googleapis.com/youtube/v3/search?' + params
@@ -66,6 +96,11 @@ const Sing = (): React.ReactElement => {
   const [searching, setSearching] = React.useState(false);
   const [justAdded, setJustAdded] = React.useState<string | null>(null);
   const [karaokeMode, setKaraokeMode] = React.useState(true);
+  const [filters, setFilters] = React.useState<SearchFilters>({
+    duration: 'any',
+    sortBy: 'relevance',
+  });
+  const [hasSearched, setHasSearched] = React.useState(false);
 
   // Load saved username and karaoke mode preference
   React.useEffect(() => {
@@ -117,17 +152,35 @@ const Sing = (): React.ReactElement => {
     localStorage.setItem('karaoq_karaoke_mode', String(next));
   }
 
-  async function search() {
+  async function search(overrideFilters?: SearchFilters) {
     if (!query.trim()) return;
     setSearching(true);
+    setHasSearched(true);
     const searchQuery = karaokeMode ? `${query.trim()} karaoke` : query;
     try {
-      const results = await searchYoutube(searchQuery);
+      const results = await searchYoutube(searchQuery, overrideFilters ?? filters);
       setSongs(results);
     } catch {
       setSongs([]);
     }
     setSearching(false);
+  }
+
+  function updateFilter<K extends keyof SearchFilters>(
+    key: K,
+    value: SearchFilters[K]
+  ) {
+    const next = { ...filters, [key]: value };
+    setFilters(next);
+    if (hasSearched && query.trim()) {
+      // Re-search with updated filters
+      setSearching(true);
+      const searchQuery = karaokeMode ? `${query.trim()} karaoke` : query;
+      searchYoutube(searchQuery, next)
+        .then(setSongs)
+        .catch(() => setSongs([]))
+        .finally(() => setSearching(false));
+    }
   }
 
   function openAddModal(song: YoutubeResult) {
@@ -153,6 +206,7 @@ const Sing = (): React.ReactElement => {
     setChosenSong(null);
     setSongs([]);
     setQuery('');
+    setHasSearched(false);
 
     setJustAdded(entry.songTitle);
     setTimeout(() => setJustAdded(null), 3000);
@@ -217,7 +271,7 @@ const Sing = (): React.ReactElement => {
             />
             <button
               className={styles.searchBtn}
-              onClick={search}
+              onClick={() => search()}
               disabled={searching || !query.trim()}
             >
               {searching ? '...' : 'Search'}
@@ -235,6 +289,40 @@ const Sing = (): React.ReactElement => {
               <span className={styles.toggleKnob} />
             </button>
           </label>
+          <div className={styles.filterSection}>
+            <div className={styles.filterGroup}>
+              <span className={styles.filterLabel}>Duration</span>
+              <div className={styles.filterChips}>
+                {DURATION_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    className={`${styles.filterChip} ${
+                      filters.duration === opt.value ? styles.filterChipActive : ''
+                    }`}
+                    onClick={() => updateFilter('duration', opt.value)}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className={styles.filterGroup}>
+              <span className={styles.filterLabel}>Sort by</span>
+              <div className={styles.filterChips}>
+                {SORT_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    className={`${styles.filterChip} ${
+                      filters.sortBy === opt.value ? styles.filterChipActive : ''
+                    }`}
+                    onClick={() => updateFilter('sortBy', opt.value)}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Toast notification */}
