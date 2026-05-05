@@ -23,7 +23,7 @@
 }
 
 .brand {
-  font-family: 'Gugi', cursive;
+  font-family: var(--font-display);
   font-size: 1.3rem;
   background: linear-gradient(135deg, #ff2d78, #00f0ff);
   -webkit-background-clip: text;
@@ -41,7 +41,7 @@
 }
 
 .roomBadge strong {
-  font-family: 'Space Mono', 'SF Mono', 'Consolas', monospace;
+  font-family: var(--font-mono);
   font-weight: 700;
   color: #ffd700;
   letter-spacing: 2px;

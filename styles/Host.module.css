@@ -27,7 +27,7 @@
 }
 
 .brand {
-  font-family: 'Gugi', cursive;
+  font-family: var(--font-display);
   font-size: 1.5rem;
   background: linear-gradient(135deg, #ff2d78, #00f0ff);
   -webkit-background-clip: text;
@@ -61,7 +61,7 @@
 }
 
 .joinCode {
-  font-family: 'Space Mono', 'SF Mono', 'Consolas', monospace;
+  font-family: var(--font-mono);
   font-size: 1.4rem;
   font-weight: 700;
   letter-spacing: 4px;
@@ -266,7 +266,7 @@
 }
 
 .emptyState strong {
-  font-family: 'Space Mono', 'SF Mono', 'Consolas', monospace;
+  font-family: var(--font-mono);
   font-weight: 700;
   color: #ffd700;
   letter-spacing: 2px;
