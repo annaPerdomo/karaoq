@@ -9,31 +9,50 @@ vi.mock("next/router", () => ({
 
 global.fetch = vi.fn().mockResolvedValue({ ok: true });
 
+// IntersectionObserver stub for scroll-reveal
+class MockIntersectionObserver {
+  callback: any;
+  constructor(cb: any) {
+    this.callback = cb;
+  }
+  observe() {
+    this.callback([{ isIntersecting: true }]);
+  }
+  disconnect() {}
+  unobserve() {}
+}
+(global as any).IntersectionObserver = MockIntersectionObserver;
+
+// scrollIntoView stub for jsdom
+Element.prototype.scrollIntoView = vi.fn();
+
 describe("Home component", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     (fetch as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: true });
   });
 
-  it("renders the app title and subtitle", () => {
+  it("renders the brand name and hero headline", () => {
     render(<Home />);
 
-    expect(screen.getByText("KaraoQ")).toBeInTheDocument();
-    expect(screen.getByText("Your one stop shop for YouTube Karaoke!")).toBeInTheDocument();
+    // Brand appears multiple times (nav, demos, footer)
+    expect(screen.getAllByText("KaraoQ").length).toBeGreaterThan(0);
+    expect(screen.getByText(/YouTube Karaoke/)).toBeInTheDocument();
   });
 
-  it("renders HOST and PLAY cards", () => {
+  it("renders the Host and Join CTAs", () => {
     render(<Home />);
 
-    expect(screen.getByRole("heading", { name: "HOST" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "PLAY" })).toBeInTheDocument();
+    // Host button appears in nav, hero, and final CTA
+    expect(screen.getAllByRole("button", { name: /Host a Session/i }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("button", { name: /Join a Session/i }).length).toBeGreaterThan(0);
   });
 
-  it("creates a room and navigates to host view on CREATE click", async () => {
+  it("creates a room and navigates to host view on Host click", async () => {
     render(<Home />);
 
-    const createBtn = screen.getByRole("button", { name: "CREATE" });
-    fireEvent.click(createBtn);
+    const hostBtns = screen.getAllByRole("button", { name: /Host a Session/i });
+    fireEvent.click(hostBtns[0]);
 
     await waitFor(() => {
       expect(fetch).toHaveBeenCalledTimes(1);
@@ -49,7 +68,8 @@ describe("Home component", () => {
   it("generates room codes using only unambiguous characters", async () => {
     render(<Home />);
 
-    fireEvent.click(screen.getByRole("button", { name: "CREATE" }));
+    const hostBtns = screen.getAllByRole("button", { name: /Host a Session/i });
+    fireEvent.click(hostBtns[0]);
 
     await waitFor(() => {
       expect(mockPush).toHaveBeenCalled();
@@ -58,31 +78,32 @@ describe("Home component", () => {
     const path = mockPush.mock.calls[0][0] as string;
     const code = path.split("/").pop()!;
 
-    // Should not contain 0, O, 1, I, or L (ambiguous characters excluded by generateCode)
     expect(code).toMatch(/^[A-Z2-9]{5}$/);
     expect(code).not.toMatch(/[01OIL]/);
   });
 
-  it("shows code input when JOIN is clicked", () => {
+  it("shows code input when Join a Session is clicked", () => {
     render(<Home />);
 
-    fireEvent.click(screen.getByRole("button", { name: "JOIN" }));
+    // Click the first "Join a Session" button (hero)
+    const joinBtns = screen.getAllByRole("button", { name: /Join a Session/i });
+    fireEvent.click(joinBtns[0]);
 
-    expect(screen.getByText("Enter Code")).toBeInTheDocument();
-    expect(screen.getByRole("textbox")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("ROOM CODE")).toBeInTheDocument();
   });
 
   it("navigates to sing view with uppercase code on join", () => {
     render(<Home />);
 
-    fireEvent.click(screen.getByRole("button", { name: "JOIN" }));
+    const joinBtns = screen.getAllByRole("button", { name: /Join a Session/i });
+    fireEvent.click(joinBtns[0]);
 
-    const input = screen.getByRole("textbox");
+    const input = screen.getByPlaceholderText("ROOM CODE");
     fireEvent.change(input, { target: { value: "abc12" } });
 
-    // After expanding, there's a submit JOIN button inside the reveal
-    const joinBtns = screen.getAllByRole("button", { name: "JOIN" });
-    fireEvent.click(joinBtns[joinBtns.length - 1]);
+    // The submit button says "Join" (not "Join a Session")
+    const submitBtns = screen.getAllByRole("button", { name: /^Join$/i });
+    fireEvent.click(submitBtns[submitBtns.length - 1]);
 
     expect(mockPush).toHaveBeenCalledWith("/sing/ABC12");
   });
@@ -90,19 +111,21 @@ describe("Home component", () => {
   it("disables submit button when code is empty", () => {
     render(<Home />);
 
-    fireEvent.click(screen.getByRole("button", { name: "JOIN" }));
+    const joinBtns = screen.getAllByRole("button", { name: /Join a Session/i });
+    fireEvent.click(joinBtns[0]);
 
-    const joinBtns = screen.getAllByRole("button", { name: "JOIN" });
-    const submitBtn = joinBtns[joinBtns.length - 1];
+    const submitBtns = screen.getAllByRole("button", { name: /^Join$/i });
+    const submitBtn = submitBtns[submitBtns.length - 1];
     expect(submitBtn).toBeDisabled();
   });
 
   it("supports Enter key to join", () => {
     render(<Home />);
 
-    fireEvent.click(screen.getByRole("button", { name: "JOIN" }));
+    const joinBtns = screen.getAllByRole("button", { name: /Join a Session/i });
+    fireEvent.click(joinBtns[0]);
 
-    const input = screen.getByRole("textbox");
+    const input = screen.getByPlaceholderText("ROOM CODE");
     fireEvent.change(input, { target: { value: "ROOM1" } });
     fireEvent.keyDown(input, { key: "Enter" });
 

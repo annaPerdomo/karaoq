@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /host/
+Disallow: /sing/
+Disallow: /display/
+
+Sitemap: https://karaoq.live/sitemap.xml
