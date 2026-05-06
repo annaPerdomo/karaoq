@@ -22,9 +22,17 @@ function Reveal({ children, className, delay }: {
 
   React.useEffect(() => {
     const el = ref.current;
-    if (!el) return;
+    if (!el || typeof IntersectionObserver === 'undefined') {
+      setVisible(true);
+      return;
+    }
     const obs = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) setVisible(true); },
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setVisible(true);
+          obs.unobserve(el);
+        }
+      },
       { threshold: 0.1 }
     );
     obs.observe(el);
@@ -327,6 +335,7 @@ const Home = (): React.ReactElement => {
                     <input
                       className={styles.joinInput}
                       placeholder="ROOM CODE"
+                      aria-label="Room code"
                       maxLength={5}
                       value={joinCode}
                       onChange={(e) => setJoinCode(e.target.value.toUpperCase())}

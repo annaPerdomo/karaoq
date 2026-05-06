@@ -14,9 +14,10 @@ class MockIntersectionObserver {
   callback: any;
   constructor(cb: any) {
     this.callback = cb;
-    setTimeout(() => cb([{ isIntersecting: true }]), 0);
   }
-  observe() {}
+  observe() {
+    this.callback([{ isIntersecting: true }]);
+  }
   disconnect() {}
   unobserve() {}
 }
