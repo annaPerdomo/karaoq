@@ -101,6 +101,7 @@ const Sing = (): React.ReactElement => {
     sortBy: 'relevance',
   });
   const [hasSearched, setHasSearched] = React.useState(false);
+  const [mobileQueueOpen, setMobileQueueOpen] = React.useState(false);
 
   // Load saved username and karaoke mode preference
   React.useEffect(() => {
@@ -234,6 +235,8 @@ const Sing = (): React.ReactElement => {
     );
   }
 
+  const queueCount = upcomingSongs.length - (currentSong ? 1 : 0);
+
   return (
     <main className={styles.main}>
       {/* Header */}
@@ -241,168 +244,265 @@ const Sing = (): React.ReactElement => {
         <div className={styles.brand} onClick={() => router.push('/')}>
           KaraoQ
         </div>
-        <div className={styles.roomBadge}>
-          Room: <strong>{joinCode}</strong>
+        <div className={styles.headerRight}>
+          <div className={styles.roomBadge}>
+            Room: <strong>{joinCode}</strong>
+          </div>
         </div>
       </header>
 
-      <div className={styles.body}>
-        {/* Name input */}
-        <div className={styles.nameSection}>
-          <label className={styles.nameLabel}>Your name</label>
-          <input
-            className={styles.nameInput}
-            placeholder="Enter your name"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-          />
-        </div>
-
-        {/* Search */}
-        <div className={styles.searchSection}>
-          <div className={styles.searchBar}>
-            <input
-              className={styles.searchInput}
-              type="text"
-              placeholder={karaokeMode ? 'Search for a song...' : 'Search YouTube...'}
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && search()}
-            />
-            <button
-              className={styles.searchBtn}
-              onClick={() => search()}
-              disabled={searching || !query.trim()}
-            >
-              {searching ? '...' : 'Search'}
-            </button>
-          </div>
-          <label className={styles.toggleRow}>
-            <span className={styles.toggleLabel}>Auto-add &ldquo;karaoke&rdquo;</span>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={karaokeMode}
-              className={`${styles.toggle} ${karaokeMode ? styles.toggleOn : ''}`}
-              onClick={toggleKaraokeMode}
-            >
-              <span className={styles.toggleKnob} />
-            </button>
-          </label>
-          <div className={styles.filterSection}>
-            <div className={styles.filterGroup}>
-              <span className={styles.filterLabel}>Duration</span>
-              <div className={styles.filterChips}>
-                {DURATION_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.value}
-                    className={`${styles.filterChip} ${
-                      filters.duration === opt.value ? styles.filterChipActive : ''
-                    }`}
-                    onClick={() => updateFilter('duration', opt.value)}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
+      <div className={styles.content}>
+        {/* ─── Left panel: search + results ─── */}
+        <div className={styles.searchPanel}>
+          {/* Name + search bar row */}
+          <div className={styles.searchHeader}>
+            <div className={styles.nameSection}>
+              <label className={styles.nameLabel}>Your name</label>
+              <input
+                className={styles.nameInput}
+                placeholder="Enter your name"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+              />
             </div>
-            <div className={styles.filterGroup}>
-              <span className={styles.filterLabel}>Sort by</span>
-              <div className={styles.filterChips}>
-                {SORT_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.value}
-                    className={`${styles.filterChip} ${
-                      filters.sortBy === opt.value ? styles.filterChipActive : ''
-                    }`}
-                    onClick={() => updateFilter('sortBy', opt.value)}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
+
+            <div className={styles.searchBar}>
+              <input
+                className={styles.searchInput}
+                type="text"
+                placeholder={karaokeMode ? 'Search for a song...' : 'Search YouTube...'}
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && search()}
+              />
+              <button
+                className={styles.searchBtn}
+                onClick={() => search()}
+                disabled={searching || !query.trim()}
+              >
+                {searching ? '...' : 'Search'}
+              </button>
             </div>
-          </div>
-        </div>
 
-        {/* Toast notification */}
-        {justAdded && (
-          <div className={styles.toast}>
-            Added &ldquo;{justAdded}&rdquo; to the queue!
-          </div>
-        )}
-
-        {/* Search results */}
-        {songs.length > 0 && (
-          <div className={styles.results}>
-            {songs.map((song) => (
-              <div key={song.videoId} className={styles.resultCard}>
-                <img
-                  src={song.thumbnailUrl}
-                  alt=""
-                  className={styles.resultThumb}
-                />
-                <span className={styles.resultTitle}>{song.title}</span>
+            <div className={styles.searchOptions}>
+              <label className={styles.toggleRow}>
+                <span className={styles.toggleLabel}>Auto-add &ldquo;karaoke&rdquo;</span>
                 <button
-                  className={styles.addBtn}
-                  onClick={() => openAddModal(song)}
-                  disabled={!username.trim()}
-                  title={!username.trim() ? 'Enter your name first' : 'Add to queue'}
+                  type="button"
+                  role="switch"
+                  aria-checked={karaokeMode}
+                  className={`${styles.toggle} ${karaokeMode ? styles.toggleOn : ''}`}
+                  onClick={toggleKaraokeMode}
                 >
-                  +
+                  <span className={styles.toggleKnob} />
                 </button>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Now playing */}
-        {currentSong && (
-          <div className={styles.nowPlaying}>
-            <span className={styles.nowDot} />
-            <span className={styles.nowLabel}>Now Playing:</span>
-            <span className={styles.nowSong}>
-              {decodeHtml(currentSong.songTitle)}
-            </span>
-            <span className={styles.nowSinger}>— {currentSong.userName}</span>
-          </div>
-        )}
-
-        {/* Queue */}
-        <div className={styles.queueSection}>
-          <h3 className={styles.queueTitle}>
-            Up Next
-            {upcomingSongs.length > 1 && (
-              <span className={styles.queueCount}>
-                {upcomingSongs.length - (currentSong ? 1 : 0)} songs
-              </span>
-            )}
-          </h3>
-          {loading ? (
-            <div className={styles.loadingQueue}>
-              <div className={styles.spinner} />
-            </div>
-          ) : upcomingSongs.length > 1 ? (
-            <div className={styles.queueList}>
-              {upcomingSongs.slice(1).map((item, i) => (
-                <div key={item.id} className={styles.queueItem}>
-                  <span className={styles.queueNum}>{i + 1}</span>
-                  <div className={styles.queueInfo}>
-                    <span className={styles.queueSong}>
-                      {decodeHtml(item.songTitle)}
-                    </span>
-                    <span className={styles.queueSinger}>
-                      {item.userName}
-                    </span>
+              </label>
+              <div className={styles.filterSection}>
+                <div className={styles.filterGroup}>
+                  <span className={styles.filterLabel}>Duration</span>
+                  <div className={styles.filterChips}>
+                    {DURATION_OPTIONS.map((opt) => (
+                      <button
+                        key={opt.value}
+                        className={`${styles.filterChip} ${
+                          filters.duration === opt.value ? styles.filterChipActive : ''
+                        }`}
+                        onClick={() => updateFilter('duration', opt.value)}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
                   </div>
+                </div>
+                <div className={styles.filterGroup}>
+                  <span className={styles.filterLabel}>Sort by</span>
+                  <div className={styles.filterChips}>
+                    {SORT_OPTIONS.map((opt) => (
+                      <button
+                        key={opt.value}
+                        className={`${styles.filterChip} ${
+                          filters.sortBy === opt.value ? styles.filterChipActive : ''
+                        }`}
+                        onClick={() => updateFilter('sortBy', opt.value)}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Toast notification */}
+          {justAdded && (
+            <div className={styles.toast}>
+              Added &ldquo;{justAdded}&rdquo; to the queue!
+            </div>
+          )}
+
+          {/* Search results */}
+          {songs.length > 0 && (
+            <div className={styles.results}>
+              {songs.map((song) => (
+                <div key={song.videoId} className={styles.resultCard}>
+                  <img
+                    src={song.thumbnailUrl}
+                    alt=""
+                    className={styles.resultThumb}
+                  />
+                  <div className={styles.resultInfo}>
+                    <span className={styles.resultTitle}>{song.title}</span>
+                  </div>
+                  <button
+                    className={styles.addBtn}
+                    onClick={() => openAddModal(song)}
+                    disabled={!username.trim()}
+                    title={!username.trim() ? 'Enter your name first' : 'Add to queue'}
+                  >
+                    +
+                  </button>
                 </div>
               ))}
             </div>
-          ) : (
-            <p className={styles.emptyQueue}>
-              No songs queued yet — search and add one!
-            </p>
           )}
+
+          {/* Empty state when no search yet */}
+          {!hasSearched && songs.length === 0 && (
+            <div className={styles.searchEmpty}>
+              <div className={styles.searchEmptyIcon}>&#127908;</div>
+              <p>Search for a song to get started</p>
+            </div>
+          )}
+        </div>
+
+        {/* ─── Right panel: queue sidebar (desktop) ─── */}
+        <aside className={styles.sidebar}>
+          {currentSong && (
+            <div className={styles.nowPlaying}>
+              <div className={styles.nowHeader}>
+                <span className={styles.nowDot} />
+                <span className={styles.nowLabel}>Now Playing</span>
+              </div>
+              <p className={styles.nowSong}>
+                {decodeHtml(currentSong.songTitle)}
+              </p>
+              <p className={styles.nowSinger}>{currentSong.userName}</p>
+            </div>
+          )}
+
+          <div className={styles.queueSection}>
+            <div className={styles.queueHeader}>
+              <h3 className={styles.queueTitle}>Up Next</h3>
+              {queueCount > 0 && (
+                <span className={styles.queueBadge}>{queueCount}</span>
+              )}
+            </div>
+            {loading ? (
+              <div className={styles.loadingQueue}>
+                <div className={styles.spinner} />
+              </div>
+            ) : upcomingSongs.length > 1 ? (
+              <div className={styles.queueList}>
+                {upcomingSongs.slice(1).map((item, i) => (
+                  <div key={item.id} className={styles.queueItem}>
+                    <span className={styles.queueNum}>{i + 1}</span>
+                    <div className={styles.queueInfo}>
+                      <span className={styles.queueSong}>
+                        {decodeHtml(item.songTitle)}
+                      </span>
+                      <span className={styles.queueSinger}>
+                        {item.userName}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className={styles.emptyQueue}>
+                <p>No songs queued yet</p>
+                <span>Search and add one!</span>
+              </div>
+            )}
+          </div>
+        </aside>
+
+        {/* ─── Mobile bottom drawer ─── */}
+        <div
+          className={`${styles.mobileDrawer} ${mobileQueueOpen ? styles.mobileDrawerOpen : ''}`}
+        >
+          <button
+            className={styles.drawerHandle}
+            onClick={() => setMobileQueueOpen(!mobileQueueOpen)}
+          >
+            <span className={styles.drawerGrabber} />
+            {currentSong ? (
+              <div className={styles.drawerNowPlaying}>
+                <span className={styles.nowDot} />
+                <span className={styles.drawerSongTitle}>
+                  {decodeHtml(currentSong.songTitle)}
+                </span>
+                <span className={styles.drawerSinger}>{currentSong.userName}</span>
+              </div>
+            ) : (
+              <span className={styles.drawerLabel}>Queue</span>
+            )}
+            {queueCount > 0 && (
+              <span className={styles.drawerBadge}>{queueCount} up next</span>
+            )}
+            <span className={`${styles.drawerChevron} ${mobileQueueOpen ? styles.drawerChevronOpen : ''}`}>
+              &#x25B2;
+            </span>
+          </button>
+
+          <div className={styles.drawerBody}>
+            {currentSong && (
+              <div className={styles.drawerNowSection}>
+                <div className={styles.nowHeader}>
+                  <span className={styles.nowDot} />
+                  <span className={styles.nowLabel}>Now Playing</span>
+                </div>
+                <p className={styles.nowSong}>
+                  {decodeHtml(currentSong.songTitle)}
+                </p>
+                <p className={styles.nowSinger}>{currentSong.userName}</p>
+              </div>
+            )}
+
+            <div className={styles.drawerQueueHeader}>
+              <h3 className={styles.queueTitle}>Up Next</h3>
+              {queueCount > 0 && (
+                <span className={styles.queueBadge}>{queueCount}</span>
+              )}
+            </div>
+
+            {loading ? (
+              <div className={styles.loadingQueue}>
+                <div className={styles.spinner} />
+              </div>
+            ) : upcomingSongs.length > 1 ? (
+              <div className={styles.drawerQueueList}>
+                {upcomingSongs.slice(1).map((item, i) => (
+                  <div key={item.id} className={styles.queueItem}>
+                    <span className={styles.queueNum}>{i + 1}</span>
+                    <div className={styles.queueInfo}>
+                      <span className={styles.queueSong}>
+                        {decodeHtml(item.songTitle)}
+                      </span>
+                      <span className={styles.queueSinger}>
+                        {item.userName}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className={styles.emptyQueue}>
+                <p>No songs queued yet</p>
+                <span>Search and add one!</span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
