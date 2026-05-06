@@ -1,0 +1,418 @@
+.main {
+  min-height: 100vh;
+  display: flex;
+  flex-wrap: wrap;
+  background: var(--bg-primary);
+  overflow: hidden;
+  position: relative;
+}
+
+.loading {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ─── Video area ─── */
+.videoArea {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: stretch;
+  min-height: 100vh;
+  margin-right: 280px;
+}
+
+.video {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: #000;
+}
+
+/* ─── Center states (loading, waiting) ─── */
+.centerState {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.waitingIcon {
+  font-size: 5rem;
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-12px); }
+}
+
+.waitingTitle {
+  font-family: var(--font-display);
+  font-size: 3rem;
+  background: linear-gradient(135deg, #ff2d78, #00f0ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: 6px;
+}
+
+.waitingText {
+  color: var(--text-muted);
+  font-size: 1.2rem;
+}
+
+/* ─── Ready state (song queued but not playing) ─── */
+.readyState {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  position: relative;
+  background: radial-gradient(ellipse at center, rgba(255, 45, 120, 0.05) 0%, transparent 60%);
+}
+
+.readyTag {
+  font-size: 0.8rem;
+  letter-spacing: 4px;
+  color: #00f0ff;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.readySinger {
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, 6vw, 4.5rem);
+  color: var(--text-primary);
+  text-align: center;
+  letter-spacing: 2px;
+  line-height: 1.2;
+}
+
+.readySong {
+  font-size: clamp(1rem, 2vw, 1.4rem);
+  color: var(--text-muted);
+  text-align: center;
+  max-width: 600px;
+  padding: 0 2rem;
+  line-height: 1.5;
+}
+
+.readyPulse {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: rgba(255, 45, 120, 0.15);
+  margin-top: 1rem;
+  animation: readyPulse 2s ease-in-out infinite;
+}
+
+@keyframes readyPulse {
+  0%, 100% { transform: scale(1); opacity: 0.3; }
+  50% { transform: scale(1.5); opacity: 0; }
+}
+
+/* ─── Now playing bar ─── */
+.nowBar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 280px;
+  padding: 1.25rem 2rem 1.5rem;
+  background: rgba(10, 10, 25, 0.97);
+  border-top: 1px solid rgba(255, 45, 120, 0.15);
+  z-index: 10;
+  overflow: hidden;
+}
+
+.nowGlow {
+  position: absolute;
+  top: -1px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, #ff2d78, #ff6b35, #00f0ff, #ff2d78);
+  background-size: 200% 100%;
+  animation: glowSlide 4s linear infinite;
+}
+
+@keyframes glowSlide {
+  0% { background-position: 0% 0%; }
+  100% { background-position: 200% 0%; }
+}
+
+.nowContent {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.nowTop {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.nowDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ff2d78;
+  box-shadow: 0 0 8px #ff2d78, 0 0 20px rgba(255, 45, 120, 0.3);
+  animation: pulse 1.5s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.nowLabel {
+  font-size: 0.65rem;
+  letter-spacing: 3px;
+  color: #ff2d78;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.nowSinger {
+  font-family: var(--font-display);
+  font-size: clamp(1.6rem, 3vw, 2.4rem);
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 1px;
+}
+
+.nowSong {
+  font-size: clamp(0.85rem, 1.5vw, 1.05rem);
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ─── Sidebar (QR + queue) ─── */
+.sidebar {
+  width: 280px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(0, 0, 0, 0.3);
+  height: 100vh;
+  position: fixed;
+  top: 0;
+  right: 0;
+  z-index: 20;
+}
+
+/* ─── QR section ─── */
+.qrSection {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.25rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.qrInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.qrLabel {
+  font-size: 0.55rem;
+  letter-spacing: 2px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.qrUrl {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: 0.5px;
+  word-break: break-all;
+}
+
+.qrCode {
+  font-family: var(--font-mono);
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: 4px;
+  color: #ffd700;
+  text-shadow: 0 0 12px rgba(255, 215, 0, 0.4);
+}
+
+/* ─── Up Next section ─── */
+.upNextSection {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.upNextTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem 1.25rem;
+  font-size: 0.7rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 600;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  flex-shrink: 0;
+}
+
+.upNextCount {
+  font-size: 0.6rem;
+  background: rgba(255, 45, 120, 0.2);
+  color: #ff2d78;
+  padding: 0.1rem 0.5rem;
+  border-radius: 10px;
+  letter-spacing: 0;
+  font-weight: 700;
+}
+
+.upNextList {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.upNextItem {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1.25rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.upNextNum {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  width: 1.2rem;
+  text-align: center;
+  flex-shrink: 0;
+  opacity: 0.5;
+}
+
+.upNextInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.upNextItemSinger {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.upNextItemSong {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.moreCount {
+  padding: 0.75rem 1.25rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-align: center;
+  font-style: italic;
+}
+
+.emptyQueue {
+  padding: 2rem 1.25rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+/* ─── Error state ─── */
+.errorState {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.errorState h2 {
+  font-size: 1.5rem;
+  color: var(--text-primary);
+}
+
+.errorState p {
+  color: var(--text-muted);
+}
+
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid rgba(255, 255, 255, 0.1);
+  border-top-color: #ff2d78;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ─── Responsive ─── */
+@media (max-width: 900px) {
+  .main {
+    flex-direction: column;
+  }
+
+  .videoArea {
+    min-height: 50vh;
+    height: 50vh;
+    margin-right: 0;
+  }
+
+  .sidebar {
+    width: 100%;
+    height: auto;
+    position: relative;
+    border-left: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    max-height: 50vh;
+  }
+
+  .nowBar {
+    right: 0;
+  }
+
+  .qrSection {
+    padding: 1rem;
+  }
+
+  .qrCode {
+    font-size: 1.3rem;
+    letter-spacing: 3px;
+  }
+
+  .readySinger {
+    font-size: 2rem;
+  }
+}
