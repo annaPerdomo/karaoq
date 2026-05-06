@@ -19,6 +19,10 @@
   padding: 0;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 html,
 body {
   background: var(--bg-primary);
@@ -42,4 +46,39 @@ button {
 
 input {
   font-family: inherit;
+}
+
+/* ─── Global App Footer ─── */
+.app-footer {
+  padding: 1.25rem 2rem;
+  border-top: 1px solid rgba(180, 120, 255, 0.08);
+  background: #0a0a18;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.app-footer-logo {
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  color: rgba(200, 180, 255, 0.35);
+  letter-spacing: 3px;
+}
+
+.app-footer-link {
+  font-size: 0.8rem;
+  color: rgba(200, 180, 255, 0.3);
+  transition: color 0.2s;
+}
+.app-footer-link:hover {
+  color: rgba(200, 180, 255, 0.6);
+}
+
+@media (max-width: 600px) {
+  .app-footer {
+    flex-direction: column;
+    gap: 0.5rem;
+    text-align: center;
+    padding: 1rem;
+  }
 }
