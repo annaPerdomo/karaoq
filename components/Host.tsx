@@ -168,7 +168,7 @@ const Host = (): React.ReactElement => {
 
   // Pause polling while the organizer is actively reordering
   const [isPaused, setIsPaused] = React.useState(false);
-  const pauseTimeout = React.useRef<NodeJS.Timeout | null>(null);
+  const pauseTimeout = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -234,7 +234,8 @@ const Host = (): React.ReactElement => {
   // ─── Queue operations ───
 
   function broadcast(q: QueueEntry[], idx: number, playing: boolean) {
-    broadcastRoomState({ queue: q, activeVideoIndex: idx, isPlaying: playing });
+    if (!joinCode) return;
+    broadcastRoomState(joinCode, { queue: q, activeVideoIndex: idx, isPlaying: playing });
   }
 
   async function playNext() {
@@ -385,7 +386,7 @@ const Host = (): React.ReactElement => {
         <div className={styles.joinInfo}>
           <span className={styles.joinLabel}>JOIN AT</span>
           <span className={styles.joinUrl}>
-            {origin || 'karaoq.vercel.app'}
+            {origin || 'karaoq.live'}
           </span>
           <span className={styles.joinLabel}>CODE</span>
           <span className={styles.joinCode}>{joinCode}</span>
@@ -627,7 +628,11 @@ const Host = (): React.ReactElement => {
                           const idx = queue.findIndex((e) => e.id === item.id);
                           if (idx !== -1) {
                             const ok = await updatePosition(joinCode, idx);
-                            if (ok) setActiveIndex(idx);
+                            if (ok) {
+                              setActiveIndex(idx);
+                              setIsPlaying(false);
+                              broadcast(queue, idx, false);
+                            }
                           }
                         }}
                         title="Replay this song"

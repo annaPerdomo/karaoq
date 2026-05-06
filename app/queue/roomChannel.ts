@@ -6,29 +6,32 @@ export interface RoomStateMessage {
   isPlaying: boolean;
 }
 
-const CHANNEL_NAME = "karaoq-room-sync";
-
-let senderChannel: BroadcastChannel | null = null;
-
-function getSenderChannel(): BroadcastChannel | null {
-  if (typeof BroadcastChannel === "undefined") return null;
-  if (!senderChannel) {
-    senderChannel = new BroadcastChannel(CHANNEL_NAME);
-  }
-  return senderChannel;
+function channelName(roomId: string): string {
+  return `karaoq-room-sync:${roomId}`;
 }
 
-export function broadcastRoomState(state: RoomStateMessage) {
-  const channel = getSenderChannel();
+const senderChannels = new Map<string, BroadcastChannel>();
+
+function getSenderChannel(roomId: string): BroadcastChannel | null {
+  if (typeof BroadcastChannel === "undefined") return null;
+  if (!senderChannels.has(roomId)) {
+    senderChannels.set(roomId, new BroadcastChannel(channelName(roomId)));
+  }
+  return senderChannels.get(roomId)!;
+}
+
+export function broadcastRoomState(roomId: string, state: RoomStateMessage) {
+  const channel = getSenderChannel(roomId);
   if (channel) channel.postMessage(state);
 }
 
 export function onRoomState(
+  roomId: string,
   callback: (state: RoomStateMessage) => void
 ): () => void {
   if (typeof BroadcastChannel === "undefined") return () => {};
 
-  const channel = new BroadcastChannel(CHANNEL_NAME);
+  const channel = new BroadcastChannel(channelName(roomId));
   channel.onmessage = (event: MessageEvent<RoomStateMessage>) => {
     callback(event.data);
   };

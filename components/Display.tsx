@@ -57,12 +57,13 @@ const Display = (): React.ReactElement => {
 
   // Instant sync from Host tab via BroadcastChannel
   React.useEffect(() => {
-    return onRoomState((state) => {
+    if (!joinCode) return;
+    return onRoomState(joinCode, (state) => {
       setQueue(state.queue);
       setActiveIndex(state.activeVideoIndex);
       setIsPlaying(state.isPlaying);
     });
-  }, []);
+  }, [joinCode]);
 
   // Poll as fallback (for cross-device, e.g. Chromecast)
   React.useEffect(() => {
@@ -82,7 +83,7 @@ const Display = (): React.ReactElement => {
 
   const currentSong = queue[activeIndex];
   const upNext = queue.slice(activeIndex + 1);
-  const joinUrl = `${origin || 'karaoq.vercel.app'}/sing/${joinCode}`;
+  const joinUrl = `${origin || 'https://karaoq.live'}/sing/${joinCode}`;
 
   if (!joinCode) {
     return <div className={styles.loading}><div className={styles.spinner} /></div>;
@@ -163,7 +164,7 @@ const Display = (): React.ReactElement => {
           <div className={styles.qrInfo}>
             <span className={styles.qrLabel}>JOIN AT</span>
             <span className={styles.qrUrl}>
-              {(origin || 'karaoq.vercel.app').replace(/^https?:\/\//, '')}
+              {(origin || 'karaoq.live').replace(/^https?:\/\//, '')}
             </span>
             <span className={styles.qrLabel}>CODE</span>
             <span className={styles.qrCode}>{joinCode}</span>

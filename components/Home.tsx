@@ -22,8 +22,12 @@ const Home = (): React.ReactElement => {
     setCreating(true);
     const code = generateCode();
     try {
-      await fetch(`/api/queue/${code}`, { method: 'POST' });
-      router.push(`/host/${code}`);
+      const resp = await fetch(`/api/queue/${code}`, { method: 'POST' });
+      if (resp.ok) {
+        router.push(`/host/${code}`);
+      } else {
+        setCreating(false);
+      }
     } catch {
       setCreating(false);
     }
