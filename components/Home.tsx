@@ -14,20 +14,16 @@ function generateCode(): string {
 const Home = (): React.ReactElement => {
   const router = useRouter();
   const [joinCode, setJoinCode] = React.useState('');
-  const [hostCode, setHostCode] = React.useState<string | null>(null);
   const [showJoin, setShowJoin] = React.useState(false);
   const [creating, setCreating] = React.useState(false);
 
-  function handleHost() {
-    setHostCode(generateCode());
-  }
-
-  async function startHosting() {
-    if (!hostCode) return;
+  async function handleHost() {
+    if (creating) return;
     setCreating(true);
+    const code = generateCode();
     try {
-      await fetch(`/api/queue/${hostCode}`, { method: 'POST' });
-      router.push(`/host/${hostCode}`);
+      await fetch(`/api/queue/${code}`, { method: 'POST' });
+      router.push(`/host/${code}`);
     } catch {
       setCreating(false);
     }
@@ -52,23 +48,13 @@ const Home = (): React.ReactElement => {
           <p className={styles.cardDesc}>
             Create a Karaoke queue that other people can join
           </p>
-          {!hostCode ? (
-            <button className={styles.btn} onClick={handleHost}>
-              CREATE
-            </button>
-          ) : (
-            <div className={styles.codeReveal}>
-              <span className={styles.codeLabel}>Your room code</span>
-              <span className={styles.code}>{hostCode}</span>
-              <button
-                className={styles.btn}
-                onClick={startHosting}
-                disabled={creating}
-              >
-                {creating ? 'Creating...' : 'START'}
-              </button>
-            </div>
-          )}
+          <button
+            className={styles.btn}
+            onClick={handleHost}
+            disabled={creating}
+          >
+            {creating ? 'Creating...' : 'CREATE'}
+          </button>
         </div>
 
         {/* PLAY card */}
