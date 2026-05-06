@@ -7,8 +7,65 @@ const HomePage: NextPage = () => {
   return (
     <>
       <Head>
-        <title>KaraoQ — YouTube Karaoke with Friends</title>
-        <meta name="description" content="Host a karaoke session and let your friends queue up songs from YouTube" />
+        <title>KaraoQ — Free YouTube Karaoke App | No Downloads, No Sign-Up</title>
+        <meta
+          name="description"
+          content="Turn any gathering into karaoke night with KaraoQ. Search YouTube for songs, build a shared queue from your phone, and sing with friends. Free, no downloads, works on any device."
+        />
+        <meta name="keywords" content="karaoke app, YouTube karaoke, free karaoke, online karaoke, karaoke with friends, karaoke queue, karaoke night, karaoke party, sing karaoke online" />
+        <link rel="canonical" href="https://karaoq.live" />
+
+        {/* Open Graph */}
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://karaoq.live" />
+        <meta property="og:title" content="KaraoQ — Free YouTube Karaoke App" />
+        <meta
+          property="og:description"
+          content="Turn any gathering into karaoke night. Guests pick songs from their phones, you control the queue — all powered by YouTube. Free and no sign-up needed."
+        />
+        <meta property="og:site_name" content="KaraoQ" />
+        <meta property="og:image" content="https://karaoq.live/og-image.png" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+
+        {/* Twitter Card */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="KaraoQ — Free YouTube Karaoke App" />
+        <meta
+          name="twitter:description"
+          content="Turn any gathering into karaoke night. Search YouTube, build a queue from your phone, and sing. Free forever."
+        />
+        <meta name="twitter:image" content="https://karaoq.live/og-image.png" />
+
+        {/* JSON-LD Structured Data */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'WebApplication',
+              name: 'KaraoQ',
+              url: 'https://karaoq.live',
+              description:
+                'A free YouTube-powered karaoke app. Create a room, share the code, and let your friends queue songs from their phones.',
+              applicationCategory: 'EntertainmentApplication',
+              operatingSystem: 'Any',
+              offers: {
+                '@type': 'Offer',
+                price: '0',
+                priceCurrency: 'USD',
+              },
+              featureList: [
+                'YouTube song search',
+                'Shared karaoke queue',
+                'Real-time sync across devices',
+                'TV display mode with QR code',
+                'Drag and drop queue reordering',
+                'No downloads or sign-up required',
+              ],
+            }),
+          }}
+        />
       </Head>
       <Home />
     </>
