@@ -13,9 +13,9 @@ export default async function handler(
 
   const client = new MongoClient(process.env.MONGODB_URI!);
   const roomId = req.query.id;
-  const activeVideoIndex = parseInt(req.query.activeVideoIndex as string);
+  const isPlaying = req.query.isPlaying === "true";
 
-  if (typeof roomId !== "string" || isNaN(activeVideoIndex)) {
+  if (typeof roomId !== "string") {
     res.status(400).json({ code: 400, message: "Invalid request." });
     return;
   }
@@ -31,9 +31,9 @@ export default async function handler(
     } else {
       await collection.updateOne(
         { id: roomId },
-        { $set: { activeVideoIndex, isPlaying: false } }
+        { $set: { isPlaying } }
       );
-      res.status(200).json({ code: 200, message: "Position updated." });
+      res.status(200).json({ code: 200, message: "Play state updated." });
     }
   } catch (e) {
     console.error(e);

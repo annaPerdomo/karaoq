@@ -22,16 +22,18 @@ export default async function handler(
     if (req.method === "POST") {
       const existing = await collection.findOne({ id: roomId });
       if (existing) {
-        res.status(200).json(existing);
+        // Reset play state whenever host reconnects — they control when songs start
+        await collection.updateOne({ id: roomId }, { $set: { isPlaying: false } });
+        res.status(200).json({ ...existing, isPlaying: false });
       } else {
-        const room: Room = { id: roomId, queue: [], activeVideoIndex: 0 };
+        const room: Room = { id: roomId, queue: [], activeVideoIndex: 0, isPlaying: false };
         await collection.insertOne(room);
         res.status(201).json(room);
       }
     } else if (req.method === "GET") {
       const room = await collection.findOne({ id: roomId });
       if (room) {
-        res.status(200).json(room);
+        res.status(200).json({ ...room, isPlaying: room.isPlaying ?? false });
       } else {
         res.status(404).json({ code: 404, message: "Not found." });
       }
