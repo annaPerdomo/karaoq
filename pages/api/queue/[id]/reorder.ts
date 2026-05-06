@@ -1,6 +1,6 @@
 import { MongoClient } from "mongodb";
 import { NextApiRequest, NextApiResponse } from "next";
-import { Room } from "../../types";
+import { Room, QueueEntry } from "../../types";
 
 export default async function handler(
   req: NextApiRequest,
@@ -13,10 +13,22 @@ export default async function handler(
 
   const client = new MongoClient(process.env.MONGODB_URI!);
   const roomId = req.query.id;
-  const activeVideoIndex = parseInt(req.query.activeVideoIndex as string);
 
-  if (typeof roomId !== "string" || isNaN(activeVideoIndex)) {
-    res.status(400).json({ code: 400, message: "Invalid request." });
+  if (typeof roomId !== "string") {
+    res.status(400).json({ code: 400, message: "Invalid room ID." });
+    return;
+  }
+
+  let body: { queue: QueueEntry[]; activeVideoIndex: number };
+  try {
+    body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
+  } catch {
+    res.status(400).json({ code: 400, message: "Invalid JSON body." });
+    return;
+  }
+
+  if (!Array.isArray(body.queue) || typeof body.activeVideoIndex !== "number") {
+    res.status(400).json({ code: 400, message: "Invalid request body." });
     return;
   }
 
@@ -31,9 +43,9 @@ export default async function handler(
     } else {
       await collection.updateOne(
         { id: roomId },
-        { $set: { activeVideoIndex, isPlaying: false } }
+        { $set: { queue: body.queue, activeVideoIndex: body.activeVideoIndex } }
       );
-      res.status(200).json({ code: 200, message: "Position updated." });
+      res.status(200).json({ code: 200, message: "Queue reordered." });
     }
   } catch (e) {
     console.error(e);

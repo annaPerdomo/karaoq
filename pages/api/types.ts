@@ -7,6 +7,7 @@ export interface Room {
   id: string;
   queue: QueueEntry[];
   activeVideoIndex: number;
+  isPlaying: boolean;
 }
 
 export interface QueueEntry {
