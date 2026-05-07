@@ -3,8 +3,11 @@ import { useRouter } from 'next/router';
 import { v4 as uuidv4 } from 'uuid';
 
 import styles from '../styles/Sing.module.css';
+import CheerBar from './CheerBar';
 import getRoom from '../app/queue/getRoom';
 import postEntryToQueue from '../app/queue/postEntryToQueue';
+import postReaction from '../app/queue/postReaction';
+import { REACTION_COOLDOWN_MS } from '../app/queue/cheerConstants';
 import { QueueEntry } from '../pages/api/types';
 
 const POLL_INTERVAL = 3000;
@@ -36,6 +39,7 @@ const SORT_OPTIONS: { value: SortOrder; label: string }[] = [
   { value: 'date', label: 'Upload date' },
   { value: 'rating', label: 'Rating' },
 ];
+
 
 function decodeHtml(html: string): string {
   if (typeof document === 'undefined') return html;
@@ -91,11 +95,15 @@ const Sing = (): React.ReactElement => {
   const [chosenSong, setChosenSong] = React.useState<YoutubeResult | null>(
     null
   );
+  const [isPlaying, setIsPlaying] = React.useState(false);
+  const [reactionsOn, setReactionsOn] = React.useState(true);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [searching, setSearching] = React.useState(false);
   const [justAdded, setJustAdded] = React.useState<string | null>(null);
   const [karaokeMode, setKaraokeMode] = React.useState(true);
+  const [reactionCooldown, setReactionCooldown] = React.useState(false);
+  const [lastSentEmoji, setLastSentEmoji] = React.useState<string | null>(null);
   const [filters, setFilters] = React.useState<SearchFilters>({
     duration: 'any',
     sortBy: 'relevance',
@@ -122,6 +130,8 @@ const Sing = (): React.ReactElement => {
       if (room) {
         setQueue(room.queue);
         setActiveIndex(room.activeVideoIndex);
+        setIsPlaying(room.isPlaying ?? false);
+        setReactionsOn(room.reactionsEnabled ?? true);
         setLoading(false);
       } else {
         setError('Room not found. Check your code and try again.');
@@ -141,6 +151,8 @@ const Sing = (): React.ReactElement => {
       if (room) {
         setQueue(room.queue);
         setActiveIndex(room.activeVideoIndex);
+        setIsPlaying(room.isPlaying ?? false);
+        setReactionsOn(room.reactionsEnabled ?? true);
       }
     }, POLL_INTERVAL);
 
@@ -211,6 +223,16 @@ const Sing = (): React.ReactElement => {
 
     setJustAdded(entry.songTitle);
     setTimeout(() => setJustAdded(null), 3000);
+  }
+
+  async function sendReaction(emoji: string) {
+    if (!joinCode || reactionCooldown || !username.trim()) return;
+    setReactionCooldown(true);
+    setLastSentEmoji(emoji);
+    setTimeout(() => setLastSentEmoji(null), 1500);
+    setTimeout(() => setReactionCooldown(false), REACTION_COOLDOWN_MS);
+    const id = uuidv4();
+    await postReaction(joinCode, id, emoji, username.trim());
   }
 
   const upcomingSongs = queue.slice(activeIndex);
@@ -425,6 +447,16 @@ const Sing = (): React.ReactElement => {
               </div>
             )}
           </div>
+
+          {/* Cheer bar — below the queue */}
+          {currentSong && isPlaying && reactionsOn && (
+            <CheerBar
+              onReaction={sendReaction}
+              cooldown={reactionCooldown}
+              lastSentEmoji={lastSentEmoji}
+              disabled={!username.trim()}
+            />
+          )}
         </aside>
 
         {/* ─── Mobile bottom drawer ─── */}
@@ -501,6 +533,16 @@ const Sing = (): React.ReactElement => {
                 <p>No songs queued yet</p>
                 <span>Search and add one!</span>
               </div>
+            )}
+
+            {/* Cheer bar — below the queue (mobile) */}
+            {currentSong && isPlaying && reactionsOn && (
+              <CheerBar
+                onReaction={sendReaction}
+                cooldown={reactionCooldown}
+                lastSentEmoji={lastSentEmoji}
+                disabled={!username.trim()}
+              />
             )}
           </div>
         </div>

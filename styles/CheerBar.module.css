@@ -1,0 +1,121 @@
+/* ─── Shared cheer bar ─── */
+.cheerBar {
+  padding: 0.75rem 1rem;
+  border-top: 1px solid rgba(255, 215, 0, 0.15);
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.06), rgba(255, 45, 120, 0.06));
+  position: relative;
+  overflow: hidden;
+  animation: cheerSlideIn 0.35s ease;
+}
+
+@keyframes cheerSlideIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.cheerHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.cheerLabel {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #ffd700;
+  letter-spacing: 0.5px;
+}
+
+.cheerSent {
+  font-size: 0.72rem;
+  color: #22c55e;
+  font-weight: 600;
+  animation: cheerFadeIn 0.3s ease;
+}
+
+@keyframes cheerFadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.cheerEmojis {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-bottom: 0.4rem;
+}
+
+.cheerBtn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.15rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.cheerBtn:hover:not(:disabled) {
+  transform: scale(1.15);
+  background: rgba(255, 215, 0, 0.12);
+  border-color: rgba(255, 215, 0, 0.3);
+  box-shadow: 0 0 12px rgba(255, 215, 0, 0.15);
+}
+
+.cheerBtn:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.cheerBtnCooldown {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.cheerMessages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.cheerMsgBtn {
+  padding: 0.25rem 0.55rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  white-space: nowrap;
+}
+
+.cheerMsgBtn:hover:not(:disabled) {
+  transform: scale(1.05);
+  background: rgba(255, 45, 120, 0.1);
+  border-color: rgba(255, 45, 120, 0.25);
+  color: #ff2d78;
+}
+
+.cheerMsgBtn:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.cheerCooldownBar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #ffd700, #ff2d78);
+  animation: cooldownShrink 3s linear forwards;
+}
+
+@keyframes cooldownShrink {
+  from { width: 100%; }
+  to { width: 0%; }
+}

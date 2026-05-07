@@ -23,6 +23,7 @@
   align-items: stretch;
   min-height: 100vh;
   margin-right: 280px;
+  position: relative;
 }
 
 .video {
@@ -197,6 +198,64 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* ─── Reaction overlay ─── */
+.reactionOverlay {
+  position: absolute;
+  bottom: 80px;
+  left: 0;
+  width: 40%;
+  height: 80%;
+  pointer-events: none;
+  z-index: 8;
+  overflow: hidden;
+}
+
+.reactionBubble {
+  position: absolute;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  opacity: 0;
+  animation: reactionFloat 4s ease-out forwards;
+}
+
+@keyframes reactionFloat {
+  0% {
+    opacity: 0;
+    transform: translateY(0) scale(0.5);
+  }
+  8% {
+    opacity: 1;
+    transform: translateY(-15px) scale(1);
+  }
+  65% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-300px) scale(0.6);
+  }
+}
+
+.reactionEmoji {
+  font-size: 2.5rem;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+  line-height: 1;
+}
+
+.reactionText {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, rgba(255, 45, 120, 0.85), rgba(255, 107, 53, 0.85));
+  padding: 0.35rem 0.75rem;
+  border-radius: 12px;
+  white-space: nowrap;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
 }
 
 /* ─── Sidebar (QR + queue) ─── */
@@ -401,6 +460,16 @@
 
   .nowBar {
     right: 0;
+  }
+
+  .reactionOverlay {
+    width: 50%;
+    bottom: 60px;
+    height: 60%;
+  }
+
+  .reactionEmoji {
+    font-size: 2rem;
   }
 
   .qrSection {

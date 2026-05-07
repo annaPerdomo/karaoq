@@ -65,12 +65,14 @@ describe("POST /api/queue/[id] - Room creation", () => {
       queue: [],
       activeVideoIndex: 0,
       isPlaying: false,
+      reactionsEnabled: true,
     });
     expect(mockCollection.insertOne).toHaveBeenCalledWith({
       id: "ABC12",
       queue: [],
       activeVideoIndex: 0,
       isPlaying: false,
+      reactionsEnabled: true,
     });
   });
 
@@ -124,7 +126,7 @@ describe("GET /api/queue/[id] - Room retrieval", () => {
     await handler(req, res);
 
     expect(res.getStatus()).toBe(200);
-    expect(res.getBody()).toEqual({ ...room, isPlaying: true });
+    expect(res.getBody()).toEqual({ ...room, isPlaying: true, reactionsEnabled: true, reactions: [] });
   });
 
   it("defaults isPlaying to false for legacy rooms", async () => {

@@ -5,9 +5,13 @@ import { QRCodeSVG } from 'qrcode.react';
 import styles from '../styles/Display.module.css';
 import getRoom from '../app/queue/getRoom';
 import { onRoomState } from '../app/queue/roomChannel';
-import { QueueEntry } from '../pages/api/types';
+import { QueueEntry, Reaction } from '../pages/api/types';
 
 const POLL_INTERVAL = 1500;
+
+function isTextReaction(emoji: string): boolean {
+  return emoji.length > 2 && /[a-zA-Z]/.test(emoji);
+}
 
 function decodeHtml(html: string): string {
   if (typeof document === 'undefined') return html;
@@ -26,10 +30,31 @@ const Display = (): React.ReactElement => {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [origin, setOrigin] = React.useState('');
+  const [reactionsOn, setReactionsOn] = React.useState(true);
+  const [visibleReactions, setVisibleReactions] = React.useState<(Reaction & { key: string; left: number })[]>([]);
+  const seenReactionIds = React.useRef(new Set<string>());
 
   React.useEffect(() => {
     setOrigin(window.location.origin);
   }, []);
+
+  function processReactions(reactions: Reaction[] | undefined) {
+    if (!reactions || reactions.length === 0) return;
+    const fresh = reactions.filter((r) => !seenReactionIds.current.has(r.id));
+    if (fresh.length === 0) return;
+    fresh.forEach((r) => seenReactionIds.current.add(r.id));
+    const withKeys = fresh.map((r) => ({
+      ...r,
+      key: r.id,
+      left: 10 + Math.random() * 25,
+    }));
+    setVisibleReactions((prev) => [...prev, ...withKeys]);
+    // Auto-remove after animation
+    setTimeout(() => {
+      const ids = new Set(fresh.map((r) => r.id));
+      setVisibleReactions((prev) => prev.filter((r) => !ids.has(r.key)));
+    }, 4000);
+  }
 
   // Initial room load
   React.useEffect(() => {
@@ -44,6 +69,8 @@ const Display = (): React.ReactElement => {
         setQueue(room.queue);
         setActiveIndex(room.activeVideoIndex);
         setIsPlaying(room.isPlaying ?? false);
+        setReactionsOn(room.reactionsEnabled ?? true);
+        processReactions(room.reactions);
         setLoading(false);
       } else {
         setError('Room not found');
@@ -62,6 +89,8 @@ const Display = (): React.ReactElement => {
       setQueue(state.queue);
       setActiveIndex(state.activeVideoIndex);
       setIsPlaying(state.isPlaying);
+      setReactionsOn(state.reactionsEnabled);
+      processReactions(state.reactions);
     });
   }, [joinCode]);
 
@@ -75,6 +104,8 @@ const Display = (): React.ReactElement => {
         setQueue(room.queue);
         setActiveIndex(room.activeVideoIndex);
         setIsPlaying(room.isPlaying ?? false);
+        setReactionsOn(room.reactionsEnabled ?? true);
+        processReactions(room.reactions);
       }
     }, POLL_INTERVAL);
 
@@ -130,6 +161,25 @@ const Display = (): React.ReactElement => {
             <div className={styles.waitingIcon}>🎤</div>
             <h1 className={styles.waitingTitle}>KaraoQ</h1>
             <p className={styles.waitingText}>Scan to add songs</p>
+          </div>
+        )}
+
+        {/* Reaction overlay */}
+        {reactionsOn && visibleReactions.length > 0 && (
+          <div className={styles.reactionOverlay}>
+            {visibleReactions.map((r) => (
+              <div
+                key={r.key}
+                className={styles.reactionBubble}
+                style={{ left: `${r.left}%` }}
+              >
+                {isTextReaction(r.emoji) ? (
+                  <span className={styles.reactionText}>{r.emoji}</span>
+                ) : (
+                  <span className={styles.reactionEmoji}>{r.emoji}</span>
+                )}
+              </div>
+            ))}
           </div>
         )}
       </div>

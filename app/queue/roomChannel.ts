@@ -1,9 +1,11 @@
-import { QueueEntry } from "../../pages/api/types";
+import { QueueEntry, Reaction } from "../../pages/api/types";
 
 export interface RoomStateMessage {
   queue: QueueEntry[];
   activeVideoIndex: number;
   isPlaying: boolean;
+  reactionsEnabled: boolean;
+  reactions?: Reaction[];
 }
 
 function channelName(roomId: string): string {

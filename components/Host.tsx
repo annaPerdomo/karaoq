@@ -19,6 +19,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 
 import styles from '../styles/Host.module.css';
+import CheerBar from './CheerBar';
 import getRoom from '../app/queue/getRoom';
 import createRoom from '../app/queue/createRoom';
 import updatePosition from '../app/queue/updatePosition';
@@ -26,9 +27,17 @@ import reorderQueue from '../app/queue/reorderQueue';
 import removeFromQueue from '../app/queue/removeFromQueue';
 import setPlaying from '../app/queue/setPlaying';
 import { broadcastRoomState } from '../app/queue/roomChannel';
-import { QueueEntry } from '../pages/api/types';
+import setReactionsEnabled from '../app/queue/setReactionsEnabled';
+import postReaction from '../app/queue/postReaction';
+import { REACTION_COOLDOWN_MS } from '../app/queue/cheerConstants';
+import { QueueEntry, Reaction } from '../pages/api/types';
+import { v4 as uuidv4 } from 'uuid';
 
 const POLL_INTERVAL = 3000;
+
+function isTextReaction(emoji: string): boolean {
+  return emoji.length > 2 && /[a-zA-Z]/.test(emoji);
+}
 
 type SidebarTab = 'upcoming' | 'history';
 
@@ -165,6 +174,11 @@ const Host = (): React.ReactElement => {
   const [activeTab, setActiveTab] = React.useState<SidebarTab>('upcoming');
   const [confirmRemove, setConfirmRemove] = React.useState<string | null>(null);
   const [tvMode, setTvMode] = React.useState(false);
+  const [reactionsOn, setReactionsOn] = React.useState(true);
+  const [reactionCooldown, setReactionCooldown] = React.useState(false);
+  const [lastSentEmoji, setLastSentEmoji] = React.useState<string | null>(null);
+  const [visibleReactions, setVisibleReactions] = React.useState<(Reaction & { key: string; left: number })[]>([]);
+  const seenReactionIds = React.useRef(new Set<string>());
 
   // Pause polling while the organizer is actively reordering
   const [isPaused, setIsPaused] = React.useState(false);
@@ -184,6 +198,23 @@ const Host = (): React.ReactElement => {
     setTvMode(true);
   }
 
+  function processReactions(reactions: Reaction[] | undefined) {
+    if (!reactions || reactions.length === 0) return;
+    const fresh = reactions.filter((r) => !seenReactionIds.current.has(r.id));
+    if (fresh.length === 0) return;
+    fresh.forEach((r) => seenReactionIds.current.add(r.id));
+    const withKeys = fresh.map((r) => ({
+      ...r,
+      key: r.id,
+      left: 10 + Math.random() * 30,
+    }));
+    setVisibleReactions((prev) => [...prev, ...withKeys]);
+    setTimeout(() => {
+      const ids = new Set(fresh.map((r) => r.id));
+      setVisibleReactions((prev) => prev.filter((r) => !ids.has(r.key)));
+    }, 4000);
+  }
+
   // Initial load + ensure room exists
   React.useEffect(() => {
     if (!joinCode) return;
@@ -198,6 +229,8 @@ const Host = (): React.ReactElement => {
         setQueue(room.queue);
         setActiveIndex(room.activeVideoIndex);
         setIsPlaying(room.isPlaying ?? false);
+        setReactionsOn(room.reactionsEnabled ?? true);
+        processReactions(room.reactions);
         setLoading(false);
       } else {
         setError('Room not found');
@@ -219,6 +252,7 @@ const Host = (): React.ReactElement => {
         setQueue(room.queue);
         setActiveIndex(room.activeVideoIndex);
         setIsPlaying(room.isPlaying ?? false);
+        processReactions(room.reactions);
       }
     }, POLL_INTERVAL);
 
@@ -235,7 +269,27 @@ const Host = (): React.ReactElement => {
 
   function broadcast(q: QueueEntry[], idx: number, playing: boolean) {
     if (!joinCode) return;
-    broadcastRoomState(joinCode, { queue: q, activeVideoIndex: idx, isPlaying: playing });
+    broadcastRoomState(joinCode, { queue: q, activeVideoIndex: idx, isPlaying: playing, reactionsEnabled: reactionsOn });
+  }
+
+  async function sendReaction(emoji: string) {
+    if (!joinCode || reactionCooldown) return;
+    setReactionCooldown(true);
+    setLastSentEmoji(emoji);
+    setTimeout(() => setLastSentEmoji(null), 1500);
+    setTimeout(() => setReactionCooldown(false), REACTION_COOLDOWN_MS);
+    const id = uuidv4();
+    await postReaction(joinCode, id, emoji, 'Host');
+  }
+
+  async function toggleReactions() {
+    if (!joinCode) return;
+    const next = !reactionsOn;
+    const ok = await setReactionsEnabled(joinCode, next);
+    if (ok) {
+      setReactionsOn(next);
+      broadcastRoomState(joinCode, { queue, activeVideoIndex: activeIndex, isPlaying, reactionsEnabled: next });
+    }
   }
 
   async function playNext() {
@@ -407,6 +461,20 @@ const Host = (): React.ReactElement => {
             </button>
           )}
           <button
+            className={reactionsOn ? styles.reactionsBtn : styles.reactionsBtnOff}
+            onClick={toggleReactions}
+            title={reactionsOn ? 'Disable audience reactions' : 'Enable audience reactions'}
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="8" cy="6" r="5" />
+              <path d="M5.5 5.5C5.5 5.5 6 4.5 8 4.5C10 4.5 10.5 5.5 10.5 5.5" />
+              <circle cx="6" cy="6" r="0.5" fill="currentColor" />
+              <circle cx="10" cy="6" r="0.5" fill="currentColor" />
+              <path d="M5.5 7.5C5.5 7.5 6.5 9 8 9C9.5 9 10.5 7.5 10.5 7.5" />
+            </svg>
+            {reactionsOn ? 'Reactions On' : 'Reactions Off'}
+          </button>
+          <button
             className={styles.prevBtn}
             onClick={playPrevious}
             disabled={activeIndex <= 0}
@@ -536,6 +604,25 @@ const Host = (): React.ReactElement => {
           )}
         </div>
 
+        {/* Reaction overlay */}
+        {reactionsOn && visibleReactions.length > 0 && (
+          <div className={styles.reactionOverlay}>
+            {visibleReactions.map((r) => (
+              <div
+                key={r.key}
+                className={styles.reactionBubble}
+                style={{ left: `${r.left}%` }}
+              >
+                {isTextReaction(r.emoji) ? (
+                  <span className={styles.reactionText}>{r.emoji}</span>
+                ) : (
+                  <span className={styles.reactionEmoji}>{r.emoji}</span>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Queue sidebar */}
         <div className={styles.sidebar}>
           {/* Tabs */}
@@ -599,6 +686,15 @@ const Host = (): React.ReactElement => {
                 </DndContext>
               ) : (
                 <p className={styles.emptyQueue}>No songs queued yet</p>
+              )}
+
+              {/* Host cheer bar — below the queue */}
+              {reactionsOn && isPlaying && currentSong && (
+                <CheerBar
+                  onReaction={sendReaction}
+                  cooldown={reactionCooldown}
+                  lastSentEmoji={lastSentEmoji}
+                />
               )}
             </>
           )}

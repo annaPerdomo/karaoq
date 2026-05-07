@@ -14,6 +14,7 @@
   .iconSpin, .iconPulse, .iconBounce, .iconWiggle, .iconTilt { animation: none !important; }
   .karaokeFill { animation: none !important; background-position: 0% 0 !important; }
   .demoVideoProgressFill { animation: none !important; }
+  .demoReaction { animation: none !important; display: none !important; }
 }
 
 /* ─── Scroll Reveal ─── */
@@ -817,6 +818,42 @@
   78.01%, 96% { background-position: 0% 0; }
   100% { background-position: 100% 0; }
 }
+
+/* Floating reactions simulation */
+.demoReactions {
+  position: absolute;
+  bottom: 10px;
+  left: 0;
+  width: 40%;
+  height: 80%;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.demoReaction {
+  position: absolute;
+  bottom: 0;
+  font-size: 0.85rem;
+  opacity: 0;
+  animation: demoFloat 4s ease-out infinite;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.5));
+}
+
+@keyframes demoFloat {
+  0% { opacity: 0; transform: translateY(0) scale(0.5); }
+  8% { opacity: 1; transform: translateY(-5px) scale(1); }
+  65% { opacity: 0.8; }
+  100% { opacity: 0; transform: translateY(-90px) scale(0.6); }
+}
+
+.demoR1 { left: 8%; animation-delay: 0s; }
+.demoR2 { left: 22%; animation-delay: 1.2s; }
+.demoR3 { left: 12%; animation-delay: 2.5s; }
+.demoR4 { left: 28%; animation-delay: 0.8s; }
+.demoR5 { left: 5%; animation-delay: 3.2s; }
+.demoR6 { left: 18%; animation-delay: 1.8s; }
+.demoR7 { left: 30%; animation-delay: 2.8s; }
+.demoR8 { left: 15%; animation-delay: 0.4s; }
 
 /* Video progress bar */
 .demoVideoProgress {

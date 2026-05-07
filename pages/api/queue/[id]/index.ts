@@ -26,14 +26,24 @@ export default async function handler(
         await collection.updateOne({ id: roomId }, { $set: { isPlaying: false } });
         res.status(200).json({ ...existing, isPlaying: false });
       } else {
-        const room: Room = { id: roomId, queue: [], activeVideoIndex: 0, isPlaying: false };
+        const room: Room = { id: roomId, queue: [], activeVideoIndex: 0, isPlaying: false, reactionsEnabled: true };
         await collection.insertOne(room);
         res.status(201).json(room);
       }
     } else if (req.method === "GET") {
       const room = await collection.findOne({ id: roomId });
       if (room) {
-        res.status(200).json({ ...room, isPlaying: room.isPlaying ?? false });
+        // Prune stale reactions (>30s old)
+        const now = Date.now();
+        const reactions = (room.reactions ?? []).filter(
+          (r) => now - r.timestamp < 30000
+        );
+        res.status(200).json({
+          ...room,
+          isPlaying: room.isPlaying ?? false,
+          reactionsEnabled: room.reactionsEnabled ?? true,
+          reactions,
+        });
       } else {
         res.status(404).json({ code: 404, message: "Not found." });
       }

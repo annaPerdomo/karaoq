@@ -7,21 +7,21 @@ const HomePage: NextPage = () => {
   return (
     <>
       <Head>
-        <title>KaraoQ — Free YouTube Karaoke App | No Downloads, No Sign-Up</title>
+        <title>KaraoQ — YouTube Karaoke App | No Downloads, No Sign-Up</title>
         <meta
           name="description"
-          content="Turn any gathering into karaoke night with KaraoQ. Search YouTube for songs, build a shared queue from your phone, and sing with friends. Free, no downloads, works on any device."
+          content="Turn any gathering into karaoke night with KaraoQ. Search YouTube for songs, build a shared queue from your phone, and sing with friends. No downloads, works on any device."
         />
-        <meta name="keywords" content="karaoke app, YouTube karaoke, free karaoke, online karaoke, karaoke with friends, karaoke queue, karaoke night, karaoke party, sing karaoke online" />
+        <meta name="keywords" content="karaoke app, YouTube karaoke, online karaoke, karaoke with friends, karaoke queue, karaoke night, karaoke party, sing karaoke online, live reactions" />
         <link rel="canonical" href="https://karaoq.live" />
 
         {/* Open Graph */}
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://karaoq.live" />
-        <meta property="og:title" content="KaraoQ — Free YouTube Karaoke App" />
+        <meta property="og:title" content="KaraoQ — YouTube Karaoke App" />
         <meta
           property="og:description"
-          content="Turn any gathering into karaoke night. Guests pick songs from their phones, you control the queue — all powered by YouTube. Free and no sign-up needed."
+          content="Turn any gathering into karaoke night. Guests pick songs from their phones, you control the queue — all powered by YouTube. No sign-up needed."
         />
         <meta property="og:site_name" content="KaraoQ" />
         <meta property="og:image" content="https://karaoq.live/og-image.png" />
@@ -30,10 +30,10 @@ const HomePage: NextPage = () => {
 
         {/* Twitter Card */}
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="KaraoQ — Free YouTube Karaoke App" />
+        <meta name="twitter:title" content="KaraoQ — YouTube Karaoke App" />
         <meta
           name="twitter:description"
-          content="Turn any gathering into karaoke night. Search YouTube, build a queue from your phone, and sing. Free forever."
+          content="Turn any gathering into karaoke night. Search YouTube, build a queue from your phone, cheer on your friends, and sing."
         />
         <meta name="twitter:image" content="https://karaoq.live/og-image.png" />
 
@@ -47,20 +47,16 @@ const HomePage: NextPage = () => {
               name: 'KaraoQ',
               url: 'https://karaoq.live',
               description:
-                'A free YouTube-powered karaoke app. Create a room, share the code, and let your friends queue songs from their phones.',
+                'A YouTube-powered karaoke app. Create a room, share the code, and let your friends queue songs from their phones.',
               applicationCategory: 'EntertainmentApplication',
               operatingSystem: 'Any',
-              offers: {
-                '@type': 'Offer',
-                price: '0',
-                priceCurrency: 'USD',
-              },
               featureList: [
                 'YouTube song search',
                 'Shared karaoke queue',
                 'Real-time sync across devices',
                 'TV display mode with QR code',
                 'Drag and drop queue reordering',
+                'Live audience reactions',
                 'No downloads or sign-up required',
               ],
             }),
