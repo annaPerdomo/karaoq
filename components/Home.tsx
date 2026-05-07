@@ -177,7 +177,7 @@ function SearchSongDemo() {
   );
 }
 
-// ─── Animated Demo: Display View (video + sidebar) ───
+// ─── Animated Demo: Display View (video + sidebar + reactions) ───
 function DisplayViewDemo() {
   return (
     <div className={styles.demoScreen}>
@@ -202,6 +202,17 @@ function DisplayViewDemo() {
                 <div className={styles.karaokeLine}>
                   <span className={`${styles.karaokeFill} ${styles.sweep5of5}`}>Born and raised in south Detroit</span>
                 </div>
+              </div>
+              {/* Floating reactions simulation */}
+              <div className={styles.demoReactions} aria-hidden="true">
+                <span className={`${styles.demoReaction} ${styles.demoR1}`}>{'\u{1F525}'}</span>
+                <span className={`${styles.demoReaction} ${styles.demoR2}`}>{'\u{1F44F}'}</span>
+                <span className={`${styles.demoReaction} ${styles.demoR3}`}>{'\u{2764}\u{FE0F}'}</span>
+                <span className={`${styles.demoReaction} ${styles.demoR4}`}>{'\u{1F929}'}</span>
+                <span className={`${styles.demoReaction} ${styles.demoR5}`}>{'\u{1F3A4}'}</span>
+                <span className={`${styles.demoReaction} ${styles.demoR6}`}>{'\u{2B50}'}</span>
+                <span className={`${styles.demoReaction} ${styles.demoR7}`}>{'\u{1F525}'}</span>
+                <span className={`${styles.demoReaction} ${styles.demoR8}`}>{'\u{1F64C}'}</span>
               </div>
               <div className={styles.demoVideoProgress}>
                 <div className={styles.demoVideoProgressFill} />
@@ -521,14 +532,15 @@ const Home = (): React.ReactElement => {
                 <div className={styles.featureIcon}>
                   <svg className={styles.iconPulse} width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                     <circle cx="12" cy="12" r="10" />
-                    <line x1="2" y1="12" x2="22" y2="12" />
-                    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                    <path d="M8 14s1.5 2 4 2 4-2 4-2" />
+                    <line x1="9" y1="9" x2="9.01" y2="9" strokeWidth="2.5" />
+                    <line x1="15" y1="9" x2="15.01" y2="9" strokeWidth="2.5" />
                   </svg>
                 </div>
-                <h3 className={styles.featureTitle}>No Downloads</h3>
+                <h3 className={styles.featureTitle}>Live Reactions</h3>
                 <p className={styles.featureDesc}>
-                  Works entirely in the browser. Guests just visit the URL and enter
-                  the code &mdash; that&apos;s it.
+                  The audience cheers with emojis and messages that float across the
+                  display in real time. Hype up the singer!
                 </p>
               </div>
             </Reveal>
