@@ -124,6 +124,49 @@
   box-shadow: 0 2px 12px rgba(0, 240, 255, 0.2);
 }
 
+.reactionsBtn {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.6rem 1rem;
+  background: rgba(255, 215, 0, 0.1);
+  border: 1px solid rgba(255, 215, 0, 0.25);
+  border-radius: 10px;
+  color: #ffd700;
+  font-weight: 500;
+  font-size: 0.85rem;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.reactionsBtn:hover {
+  background: rgba(255, 215, 0, 0.18);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 12px rgba(255, 215, 0, 0.2);
+}
+
+.reactionsBtnOff {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.6rem 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  color: var(--text-muted);
+  font-weight: 500;
+  font-size: 0.85rem;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.reactionsBtnOff:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateY(-1px);
+}
+
 .prevBtn {
   display: flex;
   align-items: center;
@@ -164,6 +207,7 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
+  position: relative;
 }
 
 .video {
@@ -244,6 +288,7 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
+  position: relative;
 }
 
 .songControl {
@@ -363,6 +408,64 @@
 
 .switchModeLink:hover {
   color: var(--text-secondary);
+}
+
+/* ─── Reaction overlay ─── */
+.reactionOverlay {
+  position: absolute;
+  bottom: 60px;
+  left: 0;
+  width: 40%;
+  height: 70%;
+  pointer-events: none;
+  z-index: 5;
+  overflow: hidden;
+}
+
+.reactionBubble {
+  position: absolute;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  opacity: 0;
+  animation: reactionFloat 4s ease-out forwards;
+}
+
+@keyframes reactionFloat {
+  0% {
+    opacity: 0;
+    transform: translateY(0) scale(0.5);
+  }
+  8% {
+    opacity: 1;
+    transform: translateY(-10px) scale(1);
+  }
+  65% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-200px) scale(0.6);
+  }
+}
+
+.reactionEmoji {
+  font-size: 1.8rem;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+  line-height: 1;
+}
+
+.reactionText {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, rgba(255, 45, 120, 0.85), rgba(255, 107, 53, 0.85));
+  padding: 0.25rem 0.6rem;
+  border-radius: 10px;
+  white-space: nowrap;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
 }
 
 /* ─── Sidebar ─── */
@@ -828,6 +931,14 @@
   .tvBtn {
     flex: 1;
     justify-content: center;
+  }
+
+  .reactionsBtn,
+  .reactionsBtnOff {
+    flex: 1;
+    justify-content: center;
+    padding: 0.65rem;
+    font-size: 0.8rem;
   }
 
   .prevBtn {
