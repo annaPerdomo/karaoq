@@ -33,9 +33,18 @@ const Display = (): React.ReactElement => {
   const [reactionsOn, setReactionsOn] = React.useState(true);
   const [visibleReactions, setVisibleReactions] = React.useState<(Reaction & { key: string; left: number })[]>([]);
   const seenReactionIds = React.useRef(new Set<string>());
+  const reactionTimers = React.useRef<ReturnType<typeof setTimeout>[]>([]);
 
   React.useEffect(() => {
     setOrigin(window.location.origin);
+  }, []);
+
+  // Clean up reaction timers on unmount
+  React.useEffect(() => {
+    const timers = reactionTimers.current;
+    return () => {
+      timers.forEach(clearTimeout);
+    };
   }, []);
 
   function processReactions(reactions: Reaction[] | undefined) {
@@ -43,6 +52,11 @@ const Display = (): React.ReactElement => {
     const fresh = reactions.filter((r) => !seenReactionIds.current.has(r.id));
     if (fresh.length === 0) return;
     fresh.forEach((r) => seenReactionIds.current.add(r.id));
+    // Cap the seen set to prevent unbounded growth
+    if (seenReactionIds.current.size > 200) {
+      const entries = Array.from(seenReactionIds.current);
+      seenReactionIds.current = new Set(entries.slice(-100));
+    }
     const withKeys = fresh.map((r) => ({
       ...r,
       key: r.id,
@@ -50,10 +64,11 @@ const Display = (): React.ReactElement => {
     }));
     setVisibleReactions((prev) => [...prev, ...withKeys]);
     // Auto-remove after animation
-    setTimeout(() => {
+    const timer = setTimeout(() => {
       const ids = new Set(fresh.map((r) => r.id));
       setVisibleReactions((prev) => prev.filter((r) => !ids.has(r.key)));
     }, 4000);
+    reactionTimers.current.push(timer);
   }
 
   // Initial room load
