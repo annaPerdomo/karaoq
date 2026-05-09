@@ -229,7 +229,7 @@ const Display = (): React.ReactElement => {
           <div className={styles.qrInfo}>
             <span className={styles.qrLabel}>JOIN AT</span>
             <span className={styles.qrUrl}>
-              {(origin || 'karaoq.live').replace(/^https?:\/\//, '')}
+              {(origin || 'karaoq.live').replace(/^https?:\/\/(www\.)?/, '')}
             </span>
             <span className={styles.qrLabel}>CODE</span>
             <span className={styles.qrCode}>{joinCode}</span>
