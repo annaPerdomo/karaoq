@@ -13,12 +13,14 @@ export default async function handler(
 
   const client = new MongoClient(process.env.MONGODB_URI!);
   const roomId = req.query.id;
-  const enabled = req.query.enabled === "true";
+  const enabledParam = req.query.enabled;
 
-  if (typeof roomId !== "string") {
-    res.status(400).json({ code: 400, message: "Invalid request." });
+  if (typeof roomId !== "string" || (enabledParam !== "true" && enabledParam !== "false")) {
+    res.status(400).json({ code: 400, message: "Invalid request. 'enabled' must be 'true' or 'false'." });
     return;
   }
+
+  const enabled = enabledParam === "true";
 
   try {
     await client.connect();

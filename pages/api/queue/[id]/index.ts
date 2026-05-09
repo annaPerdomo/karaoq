@@ -2,6 +2,8 @@ import { MongoClient } from "mongodb";
 import { NextApiRequest, NextApiResponse } from "next";
 import { ApiError, Room } from "../../types";
 
+const REACTION_TTL_MS = 30000;
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<Room | ApiError>
@@ -33,11 +35,14 @@ export default async function handler(
     } else if (req.method === "GET") {
       const room = await collection.findOne({ id: roomId });
       if (room) {
-        // Prune stale reactions (>30s old)
+        // Prune stale reactions and persist the cleanup
         const now = Date.now();
         const reactions = (room.reactions ?? []).filter(
-          (r) => now - r.timestamp < 30000
+          (r) => now - r.timestamp < REACTION_TTL_MS
         );
+        if (reactions.length !== (room.reactions ?? []).length) {
+          await collection.updateOne({ id: roomId }, { $set: { reactions } });
+        }
         res.status(200).json({
           ...room,
           isPlaying: room.isPlaying ?? false,
@@ -48,7 +53,7 @@ export default async function handler(
         res.status(404).json({ code: 404, message: "Not found." });
       }
     } else {
-      res.status(400).json({ code: 400, message: "Invalid request." });
+      res.status(405).json({ code: 405, message: "Method not allowed." });
     }
   } catch (e) {
     console.error(e);

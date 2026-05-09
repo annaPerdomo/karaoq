@@ -1,25 +1,20 @@
 import { MongoClient } from "mongodb";
 import { NextApiRequest, NextApiResponse } from "next";
 import { ApiError, Reaction, Room } from "../../types";
+import { CHEER_EMOJIS, CHEER_MESSAGES, REACTION_COOLDOWN_MS } from "../../../../app/queue/cheerConstants";
 
-const RATE_LIMIT_MS = 3000;
+const RATE_LIMIT_MS = REACTION_COOLDOWN_MS;
 const MAX_REACTIONS = 50;
 const REACTION_TTL_MS = 30000;
 
-const ALLOWED_REACTIONS = new Set([
-  "\u{1F3A4}", "\u{1F525}", "\u{1F44F}", "\u{2B50}", "\u{1F3B5}",
-  "\u{2764}\u{FE0F}", "\u{1F64C}", "\u{1F929}", "\u{1F483}", "\u{1F3B6}",
-  "Amazing!", "You rock!", "Great voice!", "Encore!",
-  "Wooo!", "Nailed it!", "Bravo!", "Keep going!",
-  "Love it!", "Sing it!",
-]);
+const ALLOWED_REACTIONS = new Set([...CHEER_EMOJIS, ...CHEER_MESSAGES]);
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<{ reactions: Reaction[] } | ApiError>
 ) {
   if (req.method !== "POST") {
-    res.status(400).json({ code: 400, message: "Invalid request." });
+    res.status(405).json({ code: 405, message: "Method not allowed." });
     return;
   }
 
