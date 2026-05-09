@@ -156,6 +156,6 @@ describe("GET /api/queue/[id] - Room retrieval", () => {
     const res = createRes();
     await handler(req, res);
 
-    expect(res.getStatus()).toBe(400);
+    expect(res.getStatus()).toBe(405);
   });
 });
