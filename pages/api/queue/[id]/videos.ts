@@ -21,7 +21,9 @@ export default async function handler(
 
   let body: { entryId: string; userName: string; videoId: string; songTitle: string };
   try {
-    body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
+    const parsed = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
+    if (!parsed || typeof parsed !== "object") throw new Error();
+    body = parsed;
   } catch {
     res.status(400).json({ code: 400, message: "Invalid JSON body." });
     return;

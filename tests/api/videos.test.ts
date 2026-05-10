@@ -104,6 +104,30 @@ describe("POST /api/queue/[id]/videos - Add song to queue", () => {
     expect(mockCollection.findOne).not.toHaveBeenCalled();
   });
 
+  it("returns 400 when body is undefined", async () => {
+    const req = createMockReq({
+      method: "POST",
+      query: { id: "ROOM1" },
+      body: undefined,
+    });
+    const res = createRes();
+    await handler(req, res);
+
+    expect(res.getStatus()).toBe(400);
+  });
+
+  it("returns 400 when body is invalid JSON string", async () => {
+    const req = createMockReq({
+      method: "POST",
+      query: { id: "ROOM1" },
+      body: "{not valid json",
+    });
+    const res = createRes();
+    await handler(req, res);
+
+    expect(res.getStatus()).toBe(400);
+  });
+
   it("rejects non-POST methods", async () => {
     const req = createMockReq({ method: "GET", query: { id: "ROOM1" } });
     const res = createRes();
