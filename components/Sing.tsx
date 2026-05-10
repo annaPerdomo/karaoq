@@ -8,6 +8,7 @@ import getRoom from '../app/queue/getRoom';
 import postEntryToQueue from '../app/queue/postEntryToQueue';
 import postReaction from '../app/queue/postReaction';
 import { REACTION_COOLDOWN_MS } from '../app/queue/cheerConstants';
+import { startSessionTracking } from '../app/queue/trackSession';
 import { QueueEntry } from '../pages/api/types';
 
 const POLL_INTERVAL = 3000;
@@ -133,6 +134,12 @@ const Sing = (): React.ReactElement => {
     setShowWelcome(false);
     setShowTips(true);
   }
+
+  // Session analytics tracking
+  React.useEffect(() => {
+    if (!joinCode || !username || showWelcome) return;
+    return startSessionTracking(joinCode, username, 'singer');
+  }, [joinCode, username, showWelcome]);
 
   // Initial room load
   React.useEffect(() => {
