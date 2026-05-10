@@ -267,6 +267,7 @@ const Host = (): React.ReactElement => {
         setQueue(room.queue);
         setActiveIndex(room.activeVideoIndex);
         setIsPlaying(room.isPlaying ?? false);
+        setReactionsOn(room.reactionsEnabled ?? true);
         processReactions(room.reactions);
       }
     }, POLL_INTERVAL);

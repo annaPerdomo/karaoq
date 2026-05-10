@@ -56,35 +56,62 @@ input {
 
 /* ─── Global App Footer ─── */
 .app-footer {
-  padding: 1.25rem 2rem;
-  border-top: 1px solid rgba(180, 120, 255, 0.08);
-  background: #0a0a18;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 0.4rem 1.5rem;
+  background: rgba(10, 10, 24, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: space-between;
+  z-index: 50;
+  pointer-events: none;
 }
 
 .app-footer-logo {
   font-family: var(--font-display);
-  font-size: 0.9rem;
-  color: rgba(200, 180, 255, 0.35);
+  font-size: 0.7rem;
+  color: rgba(200, 180, 255, 0.25);
   letter-spacing: 3px;
+  pointer-events: auto;
 }
 
 .app-footer-link {
-  font-size: 0.8rem;
-  color: rgba(200, 180, 255, 0.3);
-  transition: color 0.2s;
+  font-size: 0.75rem;
+  color: rgba(200, 180, 255, 0.4);
+  transition: color 0.3s;
+  pointer-events: auto;
+  letter-spacing: 0.3px;
 }
 .app-footer-link:hover {
-  color: rgba(200, 180, 255, 0.6);
+  color: rgba(200, 180, 255, 0.7);
+}
+.app-footer-heart {
+  color: rgba(236, 72, 153, 0.6);
+  display: inline-block;
+  animation: app-heartbeat 1.2s ease-in-out infinite;
+}
+.app-footer-link:hover .app-footer-heart {
+  color: #ec4899;
+}
+@keyframes app-heartbeat {
+  0%, 100% { transform: scale(1); }
+  14% { transform: scale(1.25); }
+  28% { transform: scale(1); }
+  42% { transform: scale(1.2); }
+  56% { transform: scale(1); }
 }
 
 @media (max-width: 600px) {
   .app-footer {
-    flex-direction: column;
-    gap: 0.5rem;
-    text-align: center;
-    padding: 1rem;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 0.4rem 1rem;
+  }
+  .app-footer-logo {
+    display: none;
   }
 }

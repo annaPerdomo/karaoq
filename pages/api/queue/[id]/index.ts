@@ -33,6 +33,7 @@ export default async function handler(
         res.status(201).json(room);
       }
     } else if (req.method === "GET") {
+      res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
       const room = await collection.findOne({ id: roomId });
       if (room) {
         // Prune stale reactions and persist the cleanup

@@ -45,8 +45,8 @@ describe("POST /api/queue/[id]/videos - Add song to queue", () => {
 
     const req = createMockReq({
       method: "POST",
-      query: {
-        id: "ROOM1",
+      query: { id: "ROOM1" },
+      body: {
         entryId: "entry-1",
         userName: "Anna",
         videoId: "dQw4w9WgXcQ",
@@ -77,8 +77,8 @@ describe("POST /api/queue/[id]/videos - Add song to queue", () => {
 
     const req = createMockReq({
       method: "POST",
-      query: {
-        id: "NOPE1",
+      query: { id: "NOPE1" },
+      body: {
         entryId: "e1",
         userName: "Bob",
         videoId: "v1",
@@ -94,13 +94,38 @@ describe("POST /api/queue/[id]/videos - Add song to queue", () => {
   it("returns 400 when required fields are missing", async () => {
     const req = createMockReq({
       method: "POST",
-      query: { id: "ROOM1", entryId: "e1" }, // missing userName, videoId, songTitle
+      query: { id: "ROOM1" },
+      body: { entryId: "e1" }, // missing userName, videoId, songTitle
     });
     const res = createRes();
     await handler(req, res);
 
     expect(res.getStatus()).toBe(400);
     expect(mockCollection.findOne).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 when body is undefined", async () => {
+    const req = createMockReq({
+      method: "POST",
+      query: { id: "ROOM1" },
+      body: undefined,
+    });
+    const res = createRes();
+    await handler(req, res);
+
+    expect(res.getStatus()).toBe(400);
+  });
+
+  it("returns 400 when body is invalid JSON string", async () => {
+    const req = createMockReq({
+      method: "POST",
+      query: { id: "ROOM1" },
+      body: "{not valid json",
+    });
+    const res = createRes();
+    await handler(req, res);
+
+    expect(res.getStatus()).toBe(400);
   });
 
   it("rejects non-POST methods", async () => {
