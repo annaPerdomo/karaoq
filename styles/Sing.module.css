@@ -1,8 +1,10 @@
 .main {
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
   flex-direction: column;
   background: var(--bg-primary);
+  padding-bottom: 2rem;
+  overflow: hidden;
 }
 
 .loadingScreen {
