@@ -110,14 +110,29 @@ const Sing = (): React.ReactElement => {
   });
   const [hasSearched, setHasSearched] = React.useState(false);
   const [mobileQueueOpen, setMobileQueueOpen] = React.useState(false);
+  const [showWelcome, setShowWelcome] = React.useState(true);
+  const [showTips, setShowTips] = React.useState(false);
+  const [welcomeName, setWelcomeName] = React.useState('');
 
   // Load saved username and karaoke mode preference
   React.useEffect(() => {
     const saved = localStorage.getItem('karaoq_username');
-    if (saved) setUsername(saved);
+    if (saved) {
+      setUsername(saved);
+      setShowWelcome(false);
+    }
     const savedMode = localStorage.getItem('karaoq_karaoke_mode');
     if (savedMode !== null) setKaraokeMode(savedMode === 'true');
   }, []);
+
+  function handleWelcomeSubmit() {
+    const name = welcomeName.trim();
+    if (!name) return;
+    setUsername(name);
+    localStorage.setItem('karaoq_username', name);
+    setShowWelcome(false);
+    setShowTips(true);
+  }
 
   // Initial room load
   React.useEffect(() => {
@@ -213,7 +228,12 @@ const Sing = (): React.ReactElement => {
       videoId: chosenSong.videoId,
     };
 
-    await postEntryToQueue(joinCode, entry);
+    const ok = await postEntryToQueue(joinCode, entry);
+    if (!ok) {
+      setShowModal(false);
+      setChosenSong(null);
+      return;
+    }
     setQueue([...queue, entry]);
     setShowModal(false);
     setChosenSong(null);
@@ -257,7 +277,9 @@ const Sing = (): React.ReactElement => {
     );
   }
 
-  const queueCount = upcomingSongs.length - (currentSong ? 1 : 0);
+  const showingNowPlaying = !!(currentSong && isPlaying);
+  const queueItems = showingNowPlaying ? upcomingSongs.slice(1) : upcomingSongs;
+  const queueCount = queueItems.length;
 
   return (
     <main className={styles.main}>
@@ -400,7 +422,7 @@ const Sing = (): React.ReactElement => {
 
         {/* ─── Right panel: queue sidebar (desktop) ─── */}
         <aside className={styles.sidebar}>
-          {currentSong && (
+          {currentSong && isPlaying && (
             <div className={styles.nowPlaying}>
               <div className={styles.nowHeader}>
                 <span className={styles.nowDot} />
@@ -424,9 +446,9 @@ const Sing = (): React.ReactElement => {
               <div className={styles.loadingQueue}>
                 <div className={styles.spinner} />
               </div>
-            ) : upcomingSongs.length > 1 ? (
+            ) : queueItems.length > 0 ? (
               <div className={styles.queueList}>
-                {upcomingSongs.slice(1).map((item, i) => (
+                {queueItems.map((item, i) => (
                   <div key={item.id} className={styles.queueItem}>
                     <span className={styles.queueNum}>{i + 1}</span>
                     <div className={styles.queueInfo}>
@@ -468,7 +490,7 @@ const Sing = (): React.ReactElement => {
             onClick={() => setMobileQueueOpen(!mobileQueueOpen)}
           >
             <span className={styles.drawerGrabber} />
-            {currentSong ? (
+            {currentSong && isPlaying ? (
               <div className={styles.drawerNowPlaying}>
                 <span className={styles.nowDot} />
                 <span className={styles.drawerSongTitle}>
@@ -488,7 +510,7 @@ const Sing = (): React.ReactElement => {
           </button>
 
           <div className={styles.drawerBody}>
-            {currentSong && (
+            {currentSong && isPlaying && (
               <div className={styles.drawerNowSection}>
                 <div className={styles.nowHeader}>
                   <span className={styles.nowDot} />
@@ -512,9 +534,9 @@ const Sing = (): React.ReactElement => {
               <div className={styles.loadingQueue}>
                 <div className={styles.spinner} />
               </div>
-            ) : upcomingSongs.length > 1 ? (
+            ) : queueItems.length > 0 ? (
               <div className={styles.drawerQueueList}>
-                {upcomingSongs.slice(1).map((item, i) => (
+                {queueItems.map((item, i) => (
                   <div key={item.id} className={styles.queueItem}>
                     <span className={styles.queueNum}>{i + 1}</span>
                     <div className={styles.queueInfo}>
@@ -576,6 +598,107 @@ const Sing = (): React.ReactElement => {
                 Cancel
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Welcome name gate */}
+      {showWelcome && !loading && !error && (
+        <div className={styles.welcomeOverlay}>
+          <div className={styles.welcomeCard}>
+            <div className={styles.welcomeLogo}>KaraoQ</div>
+            <p className={styles.welcomeRoom}>
+              Room <strong>{joinCode}</strong>
+            </p>
+            <h2 className={styles.welcomePrompt}>What&apos;s your name?</h2>
+            <input
+              className={styles.welcomeInput}
+              placeholder="Enter your name"
+              value={welcomeName}
+              onChange={(e) => setWelcomeName(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleWelcomeSubmit()}
+              autoFocus
+              maxLength={30}
+            />
+            <button
+              className={styles.welcomeBtn}
+              onClick={handleWelcomeSubmit}
+              disabled={!welcomeName.trim()}
+            >
+              Let&apos;s go
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Tips modal */}
+      {showTips && (
+        <div className={styles.overlay} onClick={() => setShowTips(false)}>
+          <div
+            className={styles.tipsModal}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className={styles.tipsGreeting}>
+              Welcome, {username}!
+            </h2>
+            <p className={styles.tipsSubtext}>Here&apos;s how it works</p>
+
+            <div className={styles.tipsList}>
+              <div className={styles.tipItem}>
+                <div className={styles.tipIcon} style={{ background: 'rgba(255, 45, 120, 0.12)', color: '#ff2d78' }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="11" cy="11" r="8" />
+                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                  </svg>
+                </div>
+                <div className={styles.tipText}>
+                  <span className={styles.tipTitle}>Search &amp; add songs</span>
+                  <span className={styles.tipDesc}>
+                    Find karaoke tracks on YouTube and add them to the shared queue
+                  </span>
+                </div>
+              </div>
+
+              <div className={styles.tipItem}>
+                <div className={styles.tipIcon} style={{ background: 'rgba(0, 240, 255, 0.12)', color: '#00f0ff' }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="8" y1="6" x2="21" y2="6" />
+                    <line x1="8" y1="12" x2="21" y2="12" />
+                    <line x1="8" y1="18" x2="21" y2="18" />
+                    <line x1="3" y1="6" x2="3.01" y2="6" />
+                    <line x1="3" y1="12" x2="3.01" y2="12" />
+                    <line x1="3" y1="18" x2="3.01" y2="18" />
+                  </svg>
+                </div>
+                <div className={styles.tipText}>
+                  <span className={styles.tipTitle}>Watch the queue</span>
+                  <span className={styles.tipDesc}>
+                    See what&apos;s playing now and what&apos;s coming up next
+                  </span>
+                </div>
+              </div>
+
+              <div className={styles.tipItem}>
+                <div className={styles.tipIcon} style={{ background: 'rgba(249, 115, 22, 0.12)', color: '#f97316' }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z" />
+                  </svg>
+                </div>
+                <div className={styles.tipText}>
+                  <span className={styles.tipTitle}>Cheer them on</span>
+                  <span className={styles.tipDesc}>
+                    Send reactions to hype up the current singer
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <button
+              className={styles.btnPink}
+              onClick={() => setShowTips(false)}
+            >
+              Got it!
+            </button>
           </div>
         </div>
       )}

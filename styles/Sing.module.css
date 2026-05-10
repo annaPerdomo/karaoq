@@ -975,4 +975,181 @@
   .searchEmptyIcon {
     font-size: 2.5rem;
   }
+
+  .welcomeCard {
+    padding: 2rem 1.5rem;
+  }
+
+  .welcomePrompt {
+    font-size: 1.15rem;
+  }
+
+  .tipsModal {
+    margin: 0 0.5rem;
+    padding: 1.5rem 1.25rem 1.25rem;
+  }
+}
+
+/* ─── Welcome overlay ─── */
+.welcomeOverlay {
+  position: fixed;
+  inset: 0;
+  background: var(--bg-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  animation: fadeIn 0.3s ease;
+}
+
+.welcomeCard {
+  max-width: 400px;
+  width: 100%;
+  padding: 2.5rem 2rem;
+  text-align: center;
+}
+
+.welcomeLogo {
+  font-family: var(--font-display);
+  font-size: 2.2rem;
+  background: linear-gradient(135deg, #ff2d78, #00f0ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 0.35rem;
+}
+
+.welcomeRoom {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin-bottom: 2.5rem;
+}
+
+.welcomeRoom strong {
+  font-family: var(--font-mono);
+  color: #ffd700;
+  letter-spacing: 2px;
+}
+
+.welcomePrompt {
+  font-size: 1.3rem;
+  color: var(--text-primary);
+  margin-bottom: 1.25rem;
+  font-weight: 600;
+}
+
+.welcomeInput {
+  width: 100%;
+  padding: 0.9rem 1rem;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 14px;
+  color: #fff;
+  font-size: 1.1rem;
+  text-align: center;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  margin-bottom: 1rem;
+  box-sizing: border-box;
+}
+
+.welcomeInput:focus {
+  border-color: #00f0ff;
+  box-shadow: 0 0 0 3px rgba(0, 240, 255, 0.12);
+}
+
+.welcomeInput::placeholder {
+  color: var(--text-muted);
+}
+
+.welcomeBtn {
+  width: 100%;
+  padding: 0.85rem;
+  background: linear-gradient(135deg, #ff2d78, #ff6b35);
+  border: none;
+  border-radius: 14px;
+  color: #fff;
+  font-weight: 600;
+  font-size: 1.05rem;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+  box-shadow: 0 4px 16px rgba(255, 45, 120, 0.3);
+  cursor: pointer;
+}
+
+.welcomeBtn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(255, 45, 120, 0.45);
+}
+
+.welcomeBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ─── Tips modal ─── */
+.tipsModal {
+  background: #1a1a2e;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  padding: 2rem 1.5rem 1.5rem;
+  max-width: 400px;
+  width: 100%;
+  text-align: center;
+  animation: scaleIn 0.25s ease;
+}
+
+.tipsGreeting {
+  font-size: 1.3rem;
+  margin-bottom: 0.2rem;
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.tipsSubtext {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 1.5rem;
+}
+
+.tipsList {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1.75rem;
+  text-align: left;
+}
+
+.tipItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.tipIcon {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.tipText {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.tipTitle {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.tipDesc {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.4;
 }
