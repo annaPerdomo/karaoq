@@ -1,6 +1,7 @@
 import { MongoClient } from "mongodb";
 import { NextApiRequest, NextApiResponse } from "next";
 import { Room } from "../../types";
+import { trackEvent } from "../../../../lib/analytics";
 
 export default async function handler(
   req: NextApiRequest,
@@ -58,6 +59,7 @@ export default async function handler(
           },
         }
       );
+      trackEvent(req, "song_added", { roomId: roomId as string, userName, songTitle, videoId });
       res.status(200).json({ code: 200, message: "Song added." });
     }
   } catch (e) {

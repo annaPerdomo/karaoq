@@ -1,0 +1,101 @@
+import { MongoClient, type Db } from "mongodb";
+import type { NextApiRequest } from "next";
+
+export type EventType =
+  | "room_created"
+  | "song_added"
+  | "reaction_sent"
+  | "session_heartbeat";
+
+export interface AnalyticsEvent {
+  type: EventType;
+  roomId: string;
+  timestamp: Date;
+  country?: string;
+  region?: string;
+  city?: string;
+  userName?: string;
+  songTitle?: string;
+  videoId?: string;
+  emoji?: string;
+  role?: "host" | "singer" | "display";
+  userAgent?: string;
+}
+
+function extractGeo(req: NextApiRequest) {
+  return {
+    country: (req.headers["x-vercel-ip-country"] as string) || undefined,
+    region: (req.headers["x-vercel-ip-region"] as string) || undefined,
+    city: (req.headers["x-vercel-ip-city"] as string) || undefined,
+  };
+}
+
+async function getDb(): Promise<{ client: MongoClient; db: Db }> {
+  const client = new MongoClient(process.env.MONGODB_URI!);
+  await client.connect();
+  return { client, db: client.db(process.env.MONGODB_DB) };
+}
+
+export async function trackEvent(
+  req: NextApiRequest,
+  type: EventType,
+  data: Omit<AnalyticsEvent, "type" | "timestamp" | "country" | "region" | "city" | "userAgent">
+): Promise<void> {
+  let client: MongoClient | undefined;
+  try {
+    ({ client } = await getDb());
+    const db = client.db(process.env.MONGODB_DB);
+    const geo = extractGeo(req);
+    const event: AnalyticsEvent = {
+      type,
+      timestamp: new Date(),
+      userAgent: req.headers["user-agent"] || undefined,
+      ...geo,
+      ...data,
+    };
+    await db.collection("analytics_events").insertOne(event);
+  } catch (e) {
+    // Analytics should never break the main app flow
+    console.error("Analytics tracking error:", e);
+  } finally {
+    if (client) await client.close();
+  }
+}
+
+export async function trackSessionHeartbeat(
+  req: NextApiRequest,
+  roomId: string,
+  userName: string,
+  role: "host" | "singer" | "display"
+): Promise<void> {
+  let client: MongoClient | undefined;
+  try {
+    ({ client } = await getDb());
+    const db = client.db(process.env.MONGODB_DB);
+    const geo = extractGeo(req);
+    const now = new Date();
+    const sessionKey = `${roomId}:${userName}:${role}`;
+
+    await db.collection("analytics_sessions").updateOne(
+      { sessionKey },
+      {
+        $set: {
+          roomId,
+          userName,
+          role,
+          lastSeen: now,
+          ...geo,
+          userAgent: req.headers["user-agent"] || undefined,
+        },
+        $setOnInsert: {
+          firstSeen: now,
+        },
+      },
+      { upsert: true }
+    );
+  } catch (e) {
+    console.error("Session tracking error:", e);
+  } finally {
+    if (client) await client.close();
+  }
+}

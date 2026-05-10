@@ -2,6 +2,7 @@ import { MongoClient } from "mongodb";
 import { NextApiRequest, NextApiResponse } from "next";
 import { ApiError, Reaction, Room } from "../../types";
 import { CHEER_EMOJIS, CHEER_MESSAGES, REACTION_COOLDOWN_MS } from "../../../../app/queue/cheerConstants";
+import { trackEvent } from "../../../../lib/analytics";
 
 const RATE_LIMIT_MS = REACTION_COOLDOWN_MS;
 const MAX_REACTIONS = 50;
@@ -79,6 +80,7 @@ export default async function handler(
       { $set: { reactions: updated } }
     );
 
+    trackEvent(req, "reaction_sent", { roomId: roomId as string, userName: userName!, emoji });
     res.status(200).json({ reactions: updated });
   } catch (e) {
     console.error(e);
