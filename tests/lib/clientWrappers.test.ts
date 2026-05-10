@@ -44,7 +44,7 @@ describe("Client API wrappers", () => {
       const result = await getRoom("XYZ99");
 
       expect(result).toEqual(roomData);
-      expect(mockFetch).toHaveBeenCalledWith("/api/queue/XYZ99");
+      expect(mockFetch).toHaveBeenCalledWith("/api/queue/XYZ99", { cache: "no-store" });
     });
 
     it("returns null on 404", async () => {
@@ -58,7 +58,7 @@ describe("Client API wrappers", () => {
   });
 
   describe("postEntryToQueue", () => {
-    it("encodes entry fields as query params", async () => {
+    it("sends entry fields as JSON body", async () => {
       mockFetch.mockResolvedValue({ ok: true });
       const { default: postEntryToQueue } = await import("../../app/queue/postEntryToQueue");
 
@@ -71,12 +71,15 @@ describe("Client API wrappers", () => {
       await postEntryToQueue("ROOM1", entry);
 
       const [url, options] = mockFetch.mock.calls[0];
+      expect(url).toBe("/api/queue/ROOM1/videos");
       expect(options.method).toBe("POST");
-      expect(url).toContain("/api/queue/ROOM1/videos?");
-      expect(url).toContain("entryId=entry-1");
-      expect(url).toContain("userName=Anna+%26+Bob");
-      expect(url).toContain("videoId=dQw4w9WgXcQ");
-      expect(url).toContain("songTitle=Never+Gonna+Give+You+Up");
+      expect(options.headers).toEqual({ "Content-Type": "application/json" });
+      expect(JSON.parse(options.body)).toEqual({
+        entryId: "entry-1",
+        userName: "Anna & Bob",
+        videoId: "dQw4w9WgXcQ",
+        songTitle: "Never Gonna Give You Up",
+      });
     });
   });
 

@@ -37,6 +37,7 @@ function createRes() {
       body = data;
       return res;
     },
+    setHeader() { return res; },
     getStatus: () => statusCode,
     getBody: () => body,
   };
