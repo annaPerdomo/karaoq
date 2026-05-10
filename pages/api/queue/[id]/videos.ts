@@ -13,10 +13,21 @@ export default async function handler(
 
   const client = new MongoClient(process.env.MONGODB_URI!);
   const roomId = req.query.id;
-  const entryId = req.query.entryId;
-  const userName = req.query.userName;
-  const videoId = req.query.videoId;
-  const songTitle = req.query.songTitle;
+
+  if (typeof roomId !== "string") {
+    res.status(400).json({ code: 400, message: "Invalid room ID." });
+    return;
+  }
+
+  let body: { entryId: string; userName: string; videoId: string; songTitle: string };
+  try {
+    body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
+  } catch {
+    res.status(400).json({ code: 400, message: "Invalid JSON body." });
+    return;
+  }
+
+  const { entryId, userName, videoId, songTitle } = body;
 
   if (
     typeof entryId !== "string" ||
