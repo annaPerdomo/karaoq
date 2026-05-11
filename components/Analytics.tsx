@@ -41,10 +41,8 @@ interface AnalyticsData {
   devices: { _id: string; count: number }[];
 }
 
-function BarChart({ data, labelKey, valueKey, color = '#a78bfa' }: {
+function BarChart({ data, color = '#a78bfa' }: {
   data: { label: string; value: number }[];
-  labelKey?: string;
-  valueKey?: string;
   color?: string;
 }) {
   if (data.length === 0) return <p className={styles.empty}>No data yet</p>;
@@ -104,15 +102,7 @@ const Analytics = (): React.ReactElement => {
   const [data, setData] = React.useState<AnalyticsData | null>(null);
   const [activeTab, setActiveTab] = React.useState<'overview' | 'geo' | 'songs' | 'rooms'>('overview');
 
-  React.useEffect(() => {
-    const saved = localStorage.getItem('karaoq_analytics_secret');
-    if (saved) {
-      setSecret(saved);
-      fetchData(saved);
-    }
-  }, []);
-
-  async function fetchData(s: string) {
+  const fetchData = React.useCallback(async (s: string) => {
     setLoading(true);
     setError(null);
     try {
@@ -135,7 +125,15 @@ const Analytics = (): React.ReactElement => {
       setError('Failed to load analytics data');
     }
     setLoading(false);
-  }
+  }, []);
+
+  React.useEffect(() => {
+    const saved = localStorage.getItem('karaoq_analytics_secret');
+    if (saved) {
+      setSecret(saved);
+      fetchData(saved);
+    }
+  }, [fetchData]);
 
   function handleLogin(e: React.FormEvent) {
     e.preventDefault();

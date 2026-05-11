@@ -22,11 +22,16 @@ export interface AnalyticsEvent {
   userAgent?: string;
 }
 
+function headerString(value: string | string[] | undefined): string | undefined {
+  if (Array.isArray(value)) return value[0];
+  return value || undefined;
+}
+
 function extractGeo(req: NextApiRequest) {
   return {
-    country: (req.headers["x-vercel-ip-country"] as string) || undefined,
-    region: (req.headers["x-vercel-ip-region"] as string) || undefined,
-    city: (req.headers["x-vercel-ip-city"] as string) || undefined,
+    country: headerString(req.headers["x-vercel-ip-country"]),
+    region: headerString(req.headers["x-vercel-ip-region"]),
+    city: headerString(req.headers["x-vercel-ip-city"]),
   };
 }
 
@@ -49,7 +54,7 @@ export async function trackEvent(
     const event: AnalyticsEvent = {
       type,
       timestamp: new Date(),
-      userAgent: req.headers["user-agent"] || undefined,
+      userAgent: headerString(req.headers["user-agent"]),
       ...geo,
       ...data,
     };
@@ -85,7 +90,7 @@ export async function trackSessionHeartbeat(
           role,
           lastSeen: now,
           ...geo,
-          userAgent: req.headers["user-agent"] || undefined,
+          userAgent: headerString(req.headers["user-agent"]),
         },
         $setOnInsert: {
           firstSeen: now,

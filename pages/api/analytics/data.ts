@@ -16,6 +16,8 @@ export default async function handler(
     return;
   }
 
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+
   const client = new MongoClient(process.env.MONGODB_URI!);
 
   try {
