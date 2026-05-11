@@ -5,6 +5,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import styles from '../styles/Display.module.css';
 import getRoom from '../app/queue/getRoom';
 import { onRoomState } from '../app/queue/roomChannel';
+import { startSessionTracking } from '../app/queue/trackSession';
 import { QueueEntry, Reaction } from '../pages/api/types';
 
 const POLL_INTERVAL = 1500;
@@ -38,6 +39,12 @@ const Display = (): React.ReactElement => {
   React.useEffect(() => {
     setOrigin(window.location.origin);
   }, []);
+
+  // Session analytics tracking
+  React.useEffect(() => {
+    if (!joinCode) return;
+    return startSessionTracking(joinCode, 'Display', 'display');
+  }, [joinCode]);
 
   // Clean up reaction timers on unmount
   React.useEffect(() => {

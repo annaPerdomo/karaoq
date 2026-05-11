@@ -1,6 +1,7 @@
 import { MongoClient } from "mongodb";
 import { NextApiRequest, NextApiResponse } from "next";
 import { ApiError, Room } from "../../types";
+import { trackEvent } from "../../../../lib/analytics";
 
 const REACTION_TTL_MS = 30000;
 
@@ -30,6 +31,7 @@ export default async function handler(
       } else {
         const room: Room = { id: roomId, queue: [], activeVideoIndex: 0, isPlaying: false, reactionsEnabled: true };
         await collection.insertOne(room);
+        trackEvent(req, "room_created", { roomId });
         res.status(201).json(room);
       }
     } else if (req.method === "GET") {

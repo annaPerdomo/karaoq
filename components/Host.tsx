@@ -30,6 +30,7 @@ import { broadcastRoomState } from '../app/queue/roomChannel';
 import setReactionsEnabled from '../app/queue/setReactionsEnabled';
 import postReaction from '../app/queue/postReaction';
 import { REACTION_COOLDOWN_MS } from '../app/queue/cheerConstants';
+import { startSessionTracking } from '../app/queue/trackSession';
 import { QueueEntry, Reaction } from '../pages/api/types';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -255,6 +256,12 @@ const Host = (): React.ReactElement => {
 
     init();
     return () => { cancelled = true; };
+  }, [joinCode]);
+
+  // Session analytics tracking
+  React.useEffect(() => {
+    if (!joinCode) return;
+    return startSessionTracking(joinCode, 'Host', 'host');
   }, [joinCode]);
 
   // Poll for queue updates (pauses during drag operations)
