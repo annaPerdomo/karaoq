@@ -50,6 +50,8 @@ export default async function handler(
       sessionData,
       songsPerRoom,
       userAgentData,
+      totalQrPrints,
+      qrPrintsByDay,
     ] = await Promise.all([
       // Total rooms created
       events.countDocuments({ type: "room_created" }),
@@ -280,6 +282,25 @@ export default async function handler(
           { $group: { _id: "$device", count: { $sum: 1 } } },
         ])
         .toArray(),
+
+      // Total QR prints
+      events.countDocuments({ type: "qr_printed" }),
+
+      // QR prints per day (last 30 days)
+      events
+        .aggregate([
+          { $match: { type: "qr_printed", timestamp: { $gte: thirtyDaysAgo } } },
+          {
+            $group: {
+              _id: {
+                $dateToString: { format: "%Y-%m-%d", date: "$timestamp" },
+              },
+              count: { $sum: 1 },
+            },
+          },
+          { $sort: { _id: 1 } },
+        ])
+        .toArray(),
     ]);
 
     const sessionStats = sessionData[0] || {
@@ -310,11 +331,13 @@ export default async function handler(
         singerSessions: sessionStats.singerSessions,
         avgSongsPerRoom: Math.round((songStats.avgSongsPerRoom || 0) * 10) / 10,
         maxSongsPerRoom: songStats.maxSongsPerRoom,
+        totalQrPrints,
       },
       charts: {
         roomsByDay,
         songsByDay,
         hourlyActivity,
+        qrPrintsByDay,
       },
       geo: {
         countries: countryCounts,

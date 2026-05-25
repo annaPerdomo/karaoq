@@ -5,7 +5,8 @@ export type EventType =
   | "room_created"
   | "song_added"
   | "reaction_sent"
-  | "session_heartbeat";
+  | "session_heartbeat"
+  | "qr_printed";
 
 export interface AnalyticsEvent {
   type: EventType;

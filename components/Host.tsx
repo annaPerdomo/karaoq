@@ -884,6 +884,14 @@ const Host = (): React.ReactElement => {
               joinCode={joinCode || ''}
               origin={origin}
               onClose={() => setQrVisible(false)}
+              onPrint={() => {
+                window.open(`/print/${joinCode}`, '_blank');
+                fetch('/api/analytics/print', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ roomId: joinCode }),
+                }).catch(() => {});
+              }}
             />
           )}
 

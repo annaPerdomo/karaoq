@@ -16,11 +16,13 @@ interface AnalyticsData {
     singerSessions: number;
     avgSongsPerRoom: number;
     maxSongsPerRoom: number;
+    totalQrPrints: number;
   };
   charts: {
     roomsByDay: { _id: string; count: number }[];
     songsByDay: { _id: string; count: number }[];
     hourlyActivity: { _id: number; count: number }[];
+    qrPrintsByDay: { _id: string; count: number }[];
   };
   geo: {
     countries: { _id: string; count: number }[];
@@ -230,6 +232,7 @@ const Analytics = (): React.ReactElement => {
             <StatCard label="Rooms This Week" value={overview.roomsThisWeek} />
             <StatCard label="Total Songs Queued" value={overview.totalSongs} />
             <StatCard label="Total Reactions" value={overview.totalReactions} />
+            <StatCard label="QR Prints" value={overview.totalQrPrints} />
             <StatCard label="Unique Singers" value={overview.uniqueUsers} />
             <StatCard
               label="Avg Session"
@@ -256,6 +259,14 @@ const Analytics = (): React.ReactElement => {
             <BarChart
               data={charts.songsByDay.map((d) => ({ label: formatDate(d._id), value: d.count }))}
               color="#f472b6"
+            />
+          </section>
+
+          <section className={styles.section}>
+            <h2 className={styles.sectionTitle}>QR Prints (Last 30 Days)</h2>
+            <BarChart
+              data={charts.qrPrintsByDay.map((d) => ({ label: formatDate(d._id), value: d.count }))}
+              color="#fbbf24"
             />
           </section>
 

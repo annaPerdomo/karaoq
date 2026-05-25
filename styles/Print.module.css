@@ -1,0 +1,161 @@
+/* ─── Screen layout ─── */
+.page {
+  min-height: 100vh;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.card {
+  text-align: center;
+  max-width: 440px;
+  width: 100%;
+}
+
+.brand {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  background: linear-gradient(135deg, #ff2d78, #00f0ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: 4px;
+  margin-bottom: 2rem;
+}
+
+.qr {
+  display: inline-flex;
+  padding: 1.5rem;
+  background: #ffffff;
+  border-radius: 16px;
+  margin-bottom: 1.5rem;
+}
+
+.label {
+  font-size: 0.7rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.url {
+  font-size: 1rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.url strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.code {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: #ffd700;
+}
+
+.actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  margin-top: 2rem;
+}
+
+.printBtn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.75rem;
+  background: linear-gradient(135deg, #ff2d78, #ff6b35);
+  border: none;
+  border-radius: 50px;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: 0 4px 24px rgba(255, 45, 120, 0.4);
+}
+
+.printBtn:hover {
+  transform: scale(1.04);
+  box-shadow: 0 6px 32px rgba(255, 45, 120, 0.6);
+}
+
+.backBtn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.75rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 50px;
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.backBtn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+}
+
+/* ─── Print styles ─── */
+@media print {
+  .page {
+    background: #ffffff;
+    color: #000000;
+    min-height: auto;
+    padding: 0;
+    justify-content: flex-start;
+    padding-top: 10vh;
+  }
+
+  .brand {
+    background: none;
+    -webkit-text-fill-color: #000000;
+    color: #000000;
+    font-size: 2.5rem;
+    margin-bottom: 2.5rem;
+  }
+
+  .qr {
+    padding: 0;
+    background: none;
+    border-radius: 0;
+    margin-bottom: 2rem;
+  }
+
+  .label {
+    color: #666666;
+    font-size: 0.8rem;
+  }
+
+  .url {
+    color: #333333;
+    font-size: 1.1rem;
+  }
+
+  .url strong {
+    color: #000000;
+  }
+
+  .code {
+    color: #000000;
+    text-shadow: none;
+  }
+
+  .actions {
+    display: none;
+  }
+}
