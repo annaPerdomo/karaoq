@@ -188,6 +188,11 @@ const Display = (): React.ReactElement => {
 
   return (
     <main className={styles.main}>
+      {/* Header */}
+      <header className={styles.header}>
+        <div className={styles.brand}>KaraoQ</div>
+      </header>
+
       {/* Video area */}
       <div className={styles.videoArea}>
         {loading ? (
@@ -256,6 +261,14 @@ const Display = (): React.ReactElement => {
           </div>
         </div>
       )}
+
+      {/* Footer */}
+      <div className={styles.footer}>
+        <span className={styles.footerLogo}>KaraoQ</span>
+        <a href="https://variationsonastring.com" target="_blank" rel="noopener noreferrer" className={styles.footerLink}>
+          made with <span className={styles.footerHeart}>&#9829;</span> by variations on a string
+        </a>
+      </div>
 
       {/* Sidebar: Up Next + QR */}
       <div className={styles.sidebar}>

@@ -804,19 +804,19 @@ const Host = (): React.ReactElement => {
                   <div className={styles.transportStatus}>
                     <div className={`${styles.tLabel} ${isPlaying ? styles.tLabelPlaying : styles.tLabelReady}`}>
                       {isPlaying && <span className={styles.tDot} />}
-                      {isPlaying ? 'NOW PLAYING' : 'UP NEXT'}
+                      {isPlaying ? 'ON STAGE' : 'UP NEXT'}
+                    </div>
+                    <div className={styles.tSinger}>
+                      {currentSong.userName}
                     </div>
                     <div className={styles.tSong}>
                       {decodeHtml(currentSong.songTitle)}
-                    </div>
-                    <div className={styles.tDetail}>
-                      <span>{currentSong.userName}</span>
                     </div>
                   </div>
                 ) : (
                   <div className={styles.transportStatus}>
                     <div className={`${styles.tLabel} ${styles.tLabelEmpty}`}>WAITING</div>
-                    <div className={styles.tDetail}>No songs in queue</div>
+                    <div className={styles.tSong}>No songs in queue</div>
                   </div>
                 )}
               </div>

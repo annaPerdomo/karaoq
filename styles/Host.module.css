@@ -237,8 +237,8 @@
 }
 
 .readyLabel {
-  font-size: 0.65rem;
-  letter-spacing: 3px;
+  font-size: 0.8rem;
+  letter-spacing: 4px;
   color: #bf5af2;
   text-transform: uppercase;
   font-weight: 700;
@@ -274,21 +274,22 @@
 }
 
 .controlSinger {
-  font-size: 2.4rem;
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, 6vw, 4.5rem);
   font-weight: 700;
   color: var(--text-primary);
   text-align: center;
-  max-width: 600px;
+  letter-spacing: 2px;
   line-height: 1.2;
   margin: 0;
 }
 
 .controlSong {
-  font-size: 1rem;
+  font-size: clamp(1rem, 2vw, 1.4rem);
   color: var(--text-muted);
   text-align: center;
-  max-width: 500px;
-  line-height: 1.4;
+  max-width: 600px;
+  line-height: 1.5;
 }
 
 .playBtn {
@@ -1071,25 +1072,21 @@
   animation: pulse 1.5s ease-in-out infinite;
 }
 
-.tSong {
-  font-size: 0.85rem;
+.tSinger {
+  font-size: 1.1rem;
+  font-weight: 700;
   color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.tDetail {
-  font-size: 0.72rem;
+.tSong {
+  font-size: 0.78rem;
   color: var(--text-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.tDetail span {
-  color: #00f0ff;
-  font-weight: 500;
 }
 
 .transportControls {
