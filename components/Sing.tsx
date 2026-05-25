@@ -219,19 +219,23 @@ const Sing = (): React.ReactElement => {
             ) : (
               <div className={styles.emptyQueue}>
                 <p>No songs queued yet</p>
-                <span>Search and add one!</span>
+                <span>Search to add songs, or cheer when someone&apos;s on stage!</span>
               </div>
             )}
           </div>
 
           {/* Cheer bar — below the queue */}
-          {currentSong && isPlaying && reactionsOn && (
+          {currentSong && isPlaying && reactionsOn ? (
             <CheerBar
               onReaction={sendReaction}
               cooldown={reactionCooldown}
               lastSentEmoji={lastSentEmoji}
               disabled={!username.trim()}
             />
+          ) : reactionsOn && queueItems.length > 0 && (
+            <div className={styles.cheerHint}>
+              Send reactions like 🔥👏❤️ and words of encouragement to cheer on the performer!
+            </div>
           )}
         </aside>
 
@@ -307,18 +311,22 @@ const Sing = (): React.ReactElement => {
             ) : (
               <div className={styles.emptyQueue}>
                 <p>No songs queued yet</p>
-                <span>Search and add one!</span>
+                <span>Search to add songs, or cheer when someone&apos;s on stage!</span>
               </div>
             )}
 
             {/* Cheer bar — below the queue (mobile) */}
-            {currentSong && isPlaying && reactionsOn && (
+            {currentSong && isPlaying && reactionsOn ? (
               <CheerBar
                 onReaction={sendReaction}
                 cooldown={reactionCooldown}
                 lastSentEmoji={lastSentEmoji}
                 disabled={!username.trim()}
               />
+            ) : reactionsOn && queueItems.length > 0 && (
+              <div className={styles.cheerHint}>
+                Send reactions like 🔥👏❤️ and words of encouragement to cheer on the performer!
+              </div>
             )}
           </div>
         </div>

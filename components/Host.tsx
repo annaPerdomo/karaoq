@@ -805,7 +805,7 @@ const Host = (): React.ReactElement => {
               </div>
               <h2 className={styles.emptyTitle}>KaraoQ</h2>
               <p>
-                {qrVisible ? 'Scan the QR code or visit' : 'Visit'} <strong>{(origin || 'karaoq.live').replace(/^https?:\/\/(www\.)?/, '')}</strong> and enter code <strong>{joinCode}</strong> to add songs!
+                {qrVisible ? 'Scan the QR code or visit' : 'Visit'} <strong>{(origin || 'karaoq.live').replace(/^https?:\/\/(www\.)?/, '')}</strong> and enter code <strong>{joinCode}</strong> to add songs and cheer on the singers!
               </p>
             </div>
           )}

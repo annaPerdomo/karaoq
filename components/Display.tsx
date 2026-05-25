@@ -235,7 +235,7 @@ const Display = (): React.ReactElement => {
               </svg>
             </div>
             <h1 className={styles.waitingTitle}>KaraoQ</h1>
-            <p className={styles.waitingText}>Scan the QR code or visit <strong>{(origin || 'karaoq.live').replace(/^https?:\/\/(www\.)?/, '')}</strong> and enter code <strong>{joinCode}</strong> to add songs!</p>
+            <p className={styles.waitingText}>Scan the QR code or visit <strong>{(origin || 'karaoq.live').replace(/^https?:\/\/(www\.)?/, '')}</strong> and enter code <strong>{joinCode}</strong> to add songs and cheer on the singers!</p>
           </div>
         )}
 
@@ -322,7 +322,7 @@ const Display = (): React.ReactElement => {
             </div>
           ) : (
             <p className={styles.emptyQueue}>
-              No songs queued yet!
+              No songs queued yet — join to add songs and cheer!
             </p>
           )}
         </div>
