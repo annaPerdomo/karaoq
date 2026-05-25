@@ -297,7 +297,7 @@
   align-items: center;
   gap: 0.6rem;
   padding: 1rem 2.5rem;
-  background: linear-gradient(135deg, #8b5cf6, #a855f7, #7c3aed);
+  background: linear-gradient(135deg, #ff2d78, #ff6b35);
   border: none;
   border-radius: 50px;
   color: #fff;
@@ -305,14 +305,14 @@
   font-size: 1.05rem;
   cursor: pointer;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
-  box-shadow: 0 4px 24px rgba(139, 92, 246, 0.4);
+  box-shadow: 0 4px 24px rgba(255, 45, 120, 0.4);
   letter-spacing: 1px;
   margin-top: 0.5rem;
 }
 
 .playBtn:hover {
   transform: scale(1.04);
-  box-shadow: 0 6px 32px rgba(139, 92, 246, 0.6);
+  box-shadow: 0 6px 32px rgba(255, 45, 120, 0.6);
 }
 
 .stopBtn {
@@ -604,17 +604,17 @@
   border-radius: 8px;
   font-size: 0.7rem;
   font-weight: 600;
-  color: #ff2d78;
-  background: rgba(255, 45, 120, 0.12);
-  border: 1px solid rgba(255, 45, 120, 0.2);
+  color: #fff;
+  background: linear-gradient(135deg, #ff2d78, #ff6b35);
+  border: none;
   transition: all 0.12s;
   cursor: pointer;
 }
 
 .sidebarAct:hover {
-  background: rgba(255, 45, 120, 0.2);
-  border-color: rgba(255, 45, 120, 0.35);
-  color: #ff4d90;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 10px rgba(255, 45, 120, 0.4);
+  color: #fff;
 }
 
 .sidebarActActive {
@@ -1124,16 +1124,16 @@
 .tPlay {
   width: 56px;
   height: 48px;
-  background: linear-gradient(135deg, #8b5cf6, #a855f7, #7c3aed);
+  background: linear-gradient(135deg, #ff2d78, #ff6b35);
   color: #fff;
   border-radius: 14px;
-  box-shadow: 0 3px 16px rgba(139, 92, 246, 0.35);
+  box-shadow: 0 3px 16px rgba(255, 45, 120, 0.35);
 }
 
 .tPlay:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 6px 24px rgba(139, 92, 246, 0.5);
-  background: linear-gradient(135deg, #8b5cf6, #a855f7, #7c3aed);
+  box-shadow: 0 6px 24px rgba(255, 45, 120, 0.5);
+  background: linear-gradient(135deg, #ff2d78, #ff6b35);
   color: #fff;
 }
 
@@ -1277,7 +1277,7 @@
 }
 
 .emptyIcon {
-  font-size: 4rem;
+  line-height: 1;
   animation: floatY 2.5s ease-in-out infinite;
 }
 
