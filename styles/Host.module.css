@@ -297,7 +297,7 @@
   align-items: center;
   gap: 0.6rem;
   padding: 1rem 2.5rem;
-  background: linear-gradient(135deg, #ff2d78, #ff6b35);
+  background: linear-gradient(135deg, #8b5cf6, #a855f7, #7c3aed);
   border: none;
   border-radius: 50px;
   color: #fff;
@@ -305,14 +305,14 @@
   font-size: 1.05rem;
   cursor: pointer;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
-  box-shadow: 0 4px 24px rgba(255, 45, 120, 0.4);
+  box-shadow: 0 4px 24px rgba(139, 92, 246, 0.4);
   letter-spacing: 1px;
   margin-top: 0.5rem;
 }
 
 .playBtn:hover {
   transform: scale(1.04);
-  box-shadow: 0 6px 32px rgba(255, 45, 120, 0.6);
+  box-shadow: 0 6px 32px rgba(139, 92, 246, 0.6);
 }
 
 .stopBtn {
@@ -1124,16 +1124,16 @@
 .tPlay {
   width: 56px;
   height: 48px;
-  background: linear-gradient(135deg, #ff2d78, #ff6b35);
+  background: linear-gradient(135deg, #8b5cf6, #a855f7, #7c3aed);
   color: #fff;
   border-radius: 14px;
-  box-shadow: 0 3px 16px rgba(255, 45, 120, 0.35);
+  box-shadow: 0 3px 16px rgba(139, 92, 246, 0.35);
 }
 
 .tPlay:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 6px 24px rgba(255, 45, 120, 0.5);
-  background: linear-gradient(135deg, #ff2d78, #ff6b35);
+  box-shadow: 0 6px 24px rgba(139, 92, 246, 0.5);
+  background: linear-gradient(135deg, #8b5cf6, #a855f7, #7c3aed);
   color: #fff;
 }
 

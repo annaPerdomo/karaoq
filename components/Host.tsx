@@ -71,8 +71,9 @@ const Icons = {
     </svg>
   ),
   play: (
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-      <polygon points="5,2 18,10 5,18" />
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+      <circle cx="10" cy="10" r="9" stroke="currentColor" strokeWidth="1.5" fill="none" />
+      <path d="M8 5.5l7 4.5-7 4.5V5.5z" fill="currentColor" />
     </svg>
   ),
   stop: (
