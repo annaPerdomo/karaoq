@@ -239,12 +239,13 @@
 .readyLabel {
   font-size: 0.65rem;
   letter-spacing: 3px;
-  color: #00f0ff;
+  color: #bf5af2;
   text-transform: uppercase;
   font-weight: 700;
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  text-shadow: 0 0 12px rgba(191, 90, 242, 0.5);
 }
 
 .liveIndicator {
@@ -272,18 +273,22 @@
   50% { opacity: 0.4; }
 }
 
-.controlSong {
-  font-size: 1.3rem;
+.controlSinger {
+  font-size: 2.4rem;
+  font-weight: 700;
   color: var(--text-primary);
+  text-align: center;
+  max-width: 600px;
+  line-height: 1.2;
+  margin: 0;
+}
+
+.controlSong {
+  font-size: 1rem;
+  color: var(--text-muted);
   text-align: center;
   max-width: 500px;
   line-height: 1.4;
-}
-
-.controlSinger {
-  font-size: 1rem;
-  color: var(--text-muted);
-  margin-bottom: 0.25rem;
 }
 
 .playBtn {

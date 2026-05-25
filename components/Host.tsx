@@ -756,8 +756,8 @@ const Host = (): React.ReactElement => {
                 ) : (
                   <>
                     <div className={styles.readyLabel}>UP NEXT</div>
-                    <h2 className={styles.controlSong}>{decodeHtml(currentSong.songTitle)}</h2>
-                    <p className={styles.controlSinger}>{currentSong.userName}</p>
+                    <h1 className={styles.controlSinger}>{currentSong.userName}</h1>
+                    <p className={styles.controlSong}>{decodeHtml(currentSong.songTitle)}</p>
                     <button className={styles.playBtn} onClick={startSong}>
                       {Icons.play} Play on Display
                     </button>
@@ -771,20 +771,19 @@ const Host = (): React.ReactElement => {
               /* ── All-in-one mode: video plays here ── */
               isPlaying ? (
                 <iframe
+                  ref={videoRef}
                   key={currentSong.id}
                   className={styles.video}
-                  src={`https://www.youtube.com/embed/${currentSong.videoId}?autoplay=1&rel=0`}
+                  src={`https://www.youtube.com/embed/${currentSong.videoId}?autoplay=1&rel=0&enablejsapi=1`}
                   allow="autoplay; encrypted-media"
                   allowFullScreen
+                  onLoad={handleIframeLoad}
                 />
               ) : (
                 <div className={styles.songControl}>
                   <div className={styles.readyLabel}>UP NEXT</div>
-                  <h2 className={styles.controlSong}>{decodeHtml(currentSong.songTitle)}</h2>
-                  <p className={styles.controlSinger}>{currentSong.userName}</p>
-                  <button className={styles.playBtn} onClick={startSong}>
-                    {Icons.play} Play
-                  </button>
+                  <h1 className={styles.controlSinger}>{currentSong.userName}</h1>
+                  <p className={styles.controlSong}>{decodeHtml(currentSong.songTitle)}</p>
                 </div>
               )
             )

@@ -212,7 +212,6 @@ const Display = (): React.ReactElement => {
             <p className={styles.readySong}>
               {decodeHtml(currentSong.songTitle)}
             </p>
-            <div className={styles.readyPulse} />
           </div>
         ) : (
           <div className={styles.centerState}>
