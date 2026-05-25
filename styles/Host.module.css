@@ -515,6 +515,15 @@
   border-bottom-color: #ff2d78;
 }
 
+.tabAdd {
+  color: #00f0ff;
+}
+
+.tabAdd.tabActive {
+  color: #00f0ff;
+  border-bottom-color: #00f0ff;
+}
+
 .tabBadge {
   font-size: 0.65rem;
   font-weight: 700;

@@ -4,43 +4,15 @@ import { v4 as uuidv4 } from 'uuid';
 
 import styles from '../styles/Sing.module.css';
 import CheerBar from './CheerBar';
+import SongSearch from './SongSearch';
 import getRoom from '../app/queue/getRoom';
-import postEntryToQueue from '../app/queue/postEntryToQueue';
 import postReaction from '../app/queue/postReaction';
 import { REACTION_COOLDOWN_MS } from '../app/queue/cheerConstants';
 import { startSessionTracking } from '../app/queue/trackSession';
 import { QueueEntry } from '../pages/api/types';
 
+
 const POLL_INTERVAL = 3000;
-
-interface YoutubeResult {
-  title: string;
-  thumbnailUrl: string;
-  videoId: string;
-}
-
-type VideoDuration = 'any' | 'short' | 'medium' | 'long';
-type SortOrder = 'relevance' | 'viewCount' | 'date' | 'rating';
-
-interface SearchFilters {
-  duration: VideoDuration;
-  sortBy: SortOrder;
-}
-
-const DURATION_OPTIONS: { value: VideoDuration; label: string }[] = [
-  { value: 'any', label: 'Any length' },
-  { value: 'short', label: 'Short (< 4 min)' },
-  { value: 'medium', label: 'Medium (4–20 min)' },
-  { value: 'long', label: 'Long (> 20 min)' },
-];
-
-const SORT_OPTIONS: { value: SortOrder; label: string }[] = [
-  { value: 'relevance', label: 'Relevance' },
-  { value: 'viewCount', label: 'View count' },
-  { value: 'date', label: 'Upload date' },
-  { value: 'rating', label: 'Rating' },
-];
-
 
 function decodeHtml(html: string): string {
   if (typeof document === 'undefined') return html;
@@ -49,81 +21,31 @@ function decodeHtml(html: string): string {
   return txt.value;
 }
 
-async function searchYoutube(
-  query: string,
-  filters: SearchFilters
-): Promise<YoutubeResult[]> {
-  const params = new URLSearchParams({
-    part: 'snippet',
-    q: query,
-    videoEmbeddable: 'true',
-    key: process.env.NEXT_PUBLIC_YOUTUBE_API_KEY!,
-    type: 'video',
-    maxResults: '8',
-    order: filters.sortBy,
-  });
-
-  if (filters.duration !== 'any') {
-    params.set('videoDuration', filters.duration);
-  }
-
-  const resp = await fetch(
-    'https://www.googleapis.com/youtube/v3/search?' + params
-  );
-  const data = await resp.json();
-
-  return (
-    data.items?.map((item: any) => ({
-      title: decodeHtml(item.snippet.title),
-      thumbnailUrl:
-        item.snippet.thumbnails.medium?.url ||
-        item.snippet.thumbnails.default?.url,
-      videoId: item.id.videoId,
-    })) ?? []
-  );
-}
-
 const Sing = (): React.ReactElement => {
   const router = useRouter();
   const joinCode = router.query.joinCode as string | undefined;
 
-  const [songs, setSongs] = React.useState<YoutubeResult[]>([]);
-  const [query, setQuery] = React.useState('');
   const [queue, setQueue] = React.useState<QueueEntry[]>([]);
   const [activeIndex, setActiveIndex] = React.useState(0);
   const [username, setUsername] = React.useState('');
-  const [showModal, setShowModal] = React.useState(false);
-  const [chosenSong, setChosenSong] = React.useState<YoutubeResult | null>(
-    null
-  );
   const [isPlaying, setIsPlaying] = React.useState(false);
   const [reactionsOn, setReactionsOn] = React.useState(true);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
-  const [searching, setSearching] = React.useState(false);
-  const [justAdded, setJustAdded] = React.useState<string | null>(null);
-  const [karaokeMode, setKaraokeMode] = React.useState(true);
   const [reactionCooldown, setReactionCooldown] = React.useState(false);
   const [lastSentEmoji, setLastSentEmoji] = React.useState<string | null>(null);
-  const [filters, setFilters] = React.useState<SearchFilters>({
-    duration: 'any',
-    sortBy: 'relevance',
-  });
-  const [hasSearched, setHasSearched] = React.useState(false);
   const [mobileQueueOpen, setMobileQueueOpen] = React.useState(false);
   const [showWelcome, setShowWelcome] = React.useState(true);
   const [showTips, setShowTips] = React.useState(false);
   const [welcomeName, setWelcomeName] = React.useState('');
 
-  // Load saved username and karaoke mode preference
+  // Load saved username
   React.useEffect(() => {
     const saved = localStorage.getItem('karaoq_username');
     if (saved) {
       setUsername(saved);
       setShowWelcome(false);
     }
-    const savedMode = localStorage.getItem('karaoq_karaoke_mode');
-    if (savedMode !== null) setKaraokeMode(savedMode === 'true');
   }, []);
 
   function handleWelcomeSubmit() {
@@ -181,75 +103,9 @@ const Sing = (): React.ReactElement => {
     return () => clearInterval(interval);
   }, [joinCode, error]);
 
-  function toggleKaraokeMode() {
-    const next = !karaokeMode;
-    setKaraokeMode(next);
-    localStorage.setItem('karaoq_karaoke_mode', String(next));
-  }
-
-  async function search(overrideFilters?: SearchFilters) {
-    if (!query.trim()) return;
-    setSearching(true);
-    setHasSearched(true);
-    const searchQuery = karaokeMode ? `${query.trim()} karaoke` : query;
-    try {
-      const results = await searchYoutube(searchQuery, overrideFilters ?? filters);
-      setSongs(results);
-    } catch {
-      setSongs([]);
-    }
-    setSearching(false);
-  }
-
-  function updateFilter<K extends keyof SearchFilters>(
-    key: K,
-    value: SearchFilters[K]
-  ) {
-    const next = { ...filters, [key]: value };
-    setFilters(next);
-    if (hasSearched && query.trim()) {
-      // Re-search with updated filters
-      setSearching(true);
-      const searchQuery = karaokeMode ? `${query.trim()} karaoke` : query;
-      searchYoutube(searchQuery, next)
-        .then(setSongs)
-        .catch(() => setSongs([]))
-        .finally(() => setSearching(false));
-    }
-  }
-
-  function openAddModal(song: YoutubeResult) {
-    setChosenSong(song);
-    setShowModal(true);
-  }
-
-  async function addSong() {
-    if (!chosenSong || !joinCode || !username.trim()) return;
-
-    localStorage.setItem('karaoq_username', username.trim());
-
-    const entry: QueueEntry = {
-      id: uuidv4(),
-      userName: username.trim(),
-      songTitle: chosenSong.title,
-      videoId: chosenSong.videoId,
-    };
-
-    const ok = await postEntryToQueue(joinCode, entry);
-    if (!ok) {
-      setShowModal(false);
-      setChosenSong(null);
-      return;
-    }
+  function handleSongAdded(entry: QueueEntry) {
     setQueue([...queue, entry]);
-    setShowModal(false);
-    setChosenSong(null);
-    setSongs([]);
-    setQuery('');
-    setHasSearched(false);
-
-    setJustAdded(entry.songTitle);
-    setTimeout(() => setJustAdded(null), 3000);
+    localStorage.setItem('karaoq_username', username.trim());
   }
 
   async function sendReaction(emoji: string) {
@@ -305,125 +161,16 @@ const Sing = (): React.ReactElement => {
       <div className={styles.content}>
         {/* ─── Left panel: search + results ─── */}
         <div className={styles.searchPanel}>
-          {/* Name + search bar row */}
-          <div className={styles.searchHeader}>
-            <div className={styles.nameSection}>
-              <label className={styles.nameLabel}>Your name</label>
-              <input
-                className={styles.nameInput}
-                placeholder="Enter your name"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-              />
-            </div>
-
-            <div className={styles.searchBar}>
-              <input
-                className={styles.searchInput}
-                type="text"
-                placeholder={karaokeMode ? 'Search for a song...' : 'Search YouTube...'}
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && search()}
-              />
-              <button
-                className={styles.searchBtn}
-                onClick={() => search()}
-                disabled={searching || !query.trim()}
-              >
-                {searching ? '...' : 'Search'}
-              </button>
-            </div>
-
-            <div className={styles.searchOptions}>
-              <label className={styles.toggleRow}>
-                <span className={styles.toggleLabel}>Auto-add &ldquo;karaoke&rdquo;</span>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={karaokeMode}
-                  className={`${styles.toggle} ${karaokeMode ? styles.toggleOn : ''}`}
-                  onClick={toggleKaraokeMode}
-                >
-                  <span className={styles.toggleKnob} />
-                </button>
-              </label>
-              <div className={styles.filterSection}>
-                <div className={styles.filterGroup}>
-                  <span className={styles.filterLabel}>Duration</span>
-                  <div className={styles.filterChips}>
-                    {DURATION_OPTIONS.map((opt) => (
-                      <button
-                        key={opt.value}
-                        className={`${styles.filterChip} ${
-                          filters.duration === opt.value ? styles.filterChipActive : ''
-                        }`}
-                        onClick={() => updateFilter('duration', opt.value)}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div className={styles.filterGroup}>
-                  <span className={styles.filterLabel}>Sort by</span>
-                  <div className={styles.filterChips}>
-                    {SORT_OPTIONS.map((opt) => (
-                      <button
-                        key={opt.value}
-                        className={`${styles.filterChip} ${
-                          filters.sortBy === opt.value ? styles.filterChipActive : ''
-                        }`}
-                        onClick={() => updateFilter('sortBy', opt.value)}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Toast notification */}
-          {justAdded && (
-            <div className={styles.toast}>
-              Added &ldquo;{justAdded}&rdquo; to the queue!
-            </div>
-          )}
-
-          {/* Search results */}
-          {songs.length > 0 && (
-            <div className={styles.results}>
-              {songs.map((song) => (
-                <div key={song.videoId} className={styles.resultCard}>
-                  <img
-                    src={song.thumbnailUrl}
-                    alt=""
-                    className={styles.resultThumb}
-                  />
-                  <div className={styles.resultInfo}>
-                    <span className={styles.resultTitle}>{song.title}</span>
-                  </div>
-                  <button
-                    className={styles.addBtn}
-                    onClick={() => openAddModal(song)}
-                    disabled={!username.trim()}
-                    title={!username.trim() ? 'Enter your name first' : 'Add to queue'}
-                  >
-                    +
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Empty state when no search yet */}
-          {!hasSearched && songs.length === 0 && (
-            <div className={styles.searchEmpty}>
-              <div className={styles.searchEmptyIcon}>&#127908;</div>
-              <p>Search for a song to get started</p>
-            </div>
+          {joinCode && (
+            <SongSearch
+              roomId={joinCode}
+              userName={username}
+              onSongAdded={handleSongAdded}
+              showFilters={true}
+              showNameInput={true}
+              onNameChange={setUsername}
+              requireName={true}
+            />
           )}
         </div>
 
@@ -576,38 +323,6 @@ const Sing = (): React.ReactElement => {
           </div>
         </div>
       </div>
-
-      {/* Add modal */}
-      {showModal && chosenSong && (
-        <div className={styles.overlay} onClick={() => setShowModal(false)}>
-          <div
-            className={styles.modal}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className={styles.modalTitle}>Add to queue?</h3>
-            <img
-              src={chosenSong.thumbnailUrl}
-              alt=""
-              className={styles.modalThumb}
-            />
-            <p className={styles.modalSong}>{chosenSong.title}</p>
-            <p className={styles.modalAs}>
-              Adding as <strong>{username}</strong>
-            </p>
-            <div className={styles.modalActions}>
-              <button className={styles.btnPink} onClick={addSong}>
-                Add Song
-              </button>
-              <button
-                className={styles.btnGhost}
-                onClick={() => setShowModal(false)}
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Welcome name gate */}
       {showWelcome && !loading && !error && (

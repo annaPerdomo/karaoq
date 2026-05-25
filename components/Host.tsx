@@ -20,6 +20,7 @@ import { CSS } from '@dnd-kit/utilities';
 
 import styles from '../styles/Host.module.css';
 import CheerBar from './CheerBar';
+import SongSearch from './SongSearch';
 import getRoom from '../app/queue/getRoom';
 import createRoom from '../app/queue/createRoom';
 import updatePosition from '../app/queue/updatePosition';
@@ -40,7 +41,7 @@ function isTextReaction(emoji: string): boolean {
   return emoji.length > 2 && /[a-zA-Z]/.test(emoji);
 }
 
-type SidebarTab = 'upcoming' | 'history';
+type SidebarTab = 'upcoming' | 'history' | 'addSong';
 
 // ─── Sortable queue item ───
 function SortableQueueItem({
@@ -172,7 +173,7 @@ const Host = (): React.ReactElement => {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [origin, setOrigin] = React.useState('');
-  const [activeTab, setActiveTab] = React.useState<SidebarTab>('upcoming');
+  const [activeTab, setActiveTab] = React.useState<SidebarTab>('addSong');
   const [confirmRemove, setConfirmRemove] = React.useState<string | null>(null);
   const [tvMode, setTvMode] = React.useState(false);
   const [reactionsOn, setReactionsOn] = React.useState(true);
@@ -182,8 +183,9 @@ const Host = (): React.ReactElement => {
   const seenReactionIds = React.useRef(new Set<string>());
   const reactionTimers = React.useRef<ReturnType<typeof setTimeout>[]>([]);
 
-  // Pause polling while the organizer is actively reordering
+  // Pause polling while the organizer is actively reordering or adding songs
   const [isPaused, setIsPaused] = React.useState(false);
+  const isPausedRef = React.useRef(false);
   const pauseTimeout = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const sensors = useSensors(
@@ -270,7 +272,7 @@ const Host = (): React.ReactElement => {
 
     const interval = setInterval(async () => {
       const room = await getRoom(joinCode);
-      if (room) {
+      if (room && !isPausedRef.current) {
         setQueue(room.queue);
         setActiveIndex(room.activeVideoIndex);
         setIsPlaying(room.isPlaying ?? false);
@@ -284,8 +286,12 @@ const Host = (): React.ReactElement => {
 
   function pausePolling() {
     setIsPaused(true);
+    isPausedRef.current = true;
     if (pauseTimeout.current) clearTimeout(pauseTimeout.current);
-    pauseTimeout.current = setTimeout(() => setIsPaused(false), 5000);
+    pauseTimeout.current = setTimeout(() => {
+      setIsPaused(false);
+      isPausedRef.current = false;
+    }, 5000);
   }
 
   // ─── Queue operations ───
@@ -313,6 +319,13 @@ const Host = (): React.ReactElement => {
       setReactionsOn(next);
       broadcastRoomState(joinCode, { queue, activeVideoIndex: activeIndex, isPlaying, reactionsEnabled: next });
     }
+  }
+
+  function handleSongAdded(entry: QueueEntry) {
+    pausePolling();
+    const newQueue = [...queue, entry];
+    setQueue(newQueue);
+    broadcast(newQueue, activeIndex, isPlaying);
   }
 
   async function playNext() {
@@ -660,6 +673,12 @@ const Host = (): React.ReactElement => {
               )}
             </button>
             <button
+              className={`${styles.tab} ${styles.tabAdd} ${activeTab === 'addSong' ? styles.tabActive : ''}`}
+              onClick={() => setActiveTab('addSong')}
+            >
+              + Add Song
+            </button>
+            <button
               className={`${styles.tab} ${activeTab === 'history' ? styles.tabActive : ''}`}
               onClick={() => setActiveTab('history')}
             >
@@ -720,6 +739,17 @@ const Host = (): React.ReactElement => {
                 />
               )}
             </>
+          )}
+
+          {/* Add Song tab */}
+          {activeTab === 'addSong' && joinCode && (
+            <SongSearch
+              roomId={joinCode}
+              userName="Host"
+              onSongAdded={handleSongAdded}
+              showFilters={false}
+              requireName={false}
+            />
           )}
 
           {/* History tab */}
