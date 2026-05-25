@@ -21,7 +21,8 @@ function decodeHtml(html: string): string {
 
 export default async function searchYoutube(
   query: string,
-  filters: SearchFilters = { duration: 'any', sortBy: 'relevance' }
+  filters: SearchFilters = { duration: 'any', sortBy: 'relevance' },
+  signal?: AbortSignal
 ): Promise<YoutubeResult[]> {
   const params = new URLSearchParams({
     part: 'snippet',
@@ -38,7 +39,8 @@ export default async function searchYoutube(
   }
 
   const resp = await fetch(
-    'https://www.googleapis.com/youtube/v3/search?' + params
+    'https://www.googleapis.com/youtube/v3/search?' + params,
+    signal ? { signal } : undefined
   );
   const data = await resp.json();
 

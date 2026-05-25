@@ -59,6 +59,39 @@ const SongSearch: React.FC<SongSearchProps> = ({
     sortBy: 'relevance',
   });
 
+  const debounceRef = React.useRef<ReturnType<typeof setTimeout>>();
+  const abortRef = React.useRef<AbortController>();
+  const filtersRef = React.useRef(filters);
+  filtersRef.current = filters;
+  const karaokeModeRef = React.useRef(karaokeMode);
+  karaokeModeRef.current = karaokeMode;
+
+  React.useEffect(() => {
+    clearTimeout(debounceRef.current);
+
+    if (query.trim().length < 3) return;
+
+    debounceRef.current = setTimeout(() => {
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+
+      setSearching(true);
+      setHasSearched(true);
+      const q = karaokeModeRef.current ? `${query.trim()} karaoke` : query.trim();
+      searchYoutube(q, filtersRef.current, controller.signal)
+        .then(setResults)
+        .catch((err) => {
+          if (err?.name !== 'AbortError') setResults([]);
+        })
+        .finally(() => {
+          if (!controller.signal.aborted) setSearching(false);
+        });
+    }, 400);
+
+    return () => clearTimeout(debounceRef.current);
+  }, [query]);
+
   React.useEffect(() => {
     const savedMode = localStorage.getItem('karaoq_karaoke_mode');
     if (savedMode !== null) setKaraokeMode(savedMode === 'true');
@@ -68,20 +101,41 @@ const SongSearch: React.FC<SongSearchProps> = ({
     const next = !karaokeMode;
     setKaraokeMode(next);
     localStorage.setItem('karaoq_karaoke_mode', String(next));
+    if (hasSearched && query.trim()) {
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+
+      setSearching(true);
+      const searchQuery = next ? `${query.trim()} karaoke` : query.trim();
+      searchYoutube(searchQuery, filters, controller.signal)
+        .then(setResults)
+        .catch((err) => {
+          if (err?.name !== 'AbortError') setResults([]);
+        })
+        .finally(() => {
+          if (!controller.signal.aborted) setSearching(false);
+        });
+    }
   }
 
   async function search(overrideFilters?: SearchFilters) {
     if (!query.trim()) return;
+    clearTimeout(debounceRef.current);
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     setSearching(true);
     setHasSearched(true);
     const searchQuery = karaokeMode ? `${query.trim()} karaoke` : query.trim();
     try {
-      const res = await searchYoutube(searchQuery, overrideFilters ?? filters);
+      const res = await searchYoutube(searchQuery, overrideFilters ?? filters, controller.signal);
       setResults(res);
-    } catch {
-      setResults([]);
+    } catch (err: any) {
+      if (err?.name !== 'AbortError') setResults([]);
     }
-    setSearching(false);
+    if (!controller.signal.aborted) setSearching(false);
   }
 
   function updateFilter<K extends keyof SearchFilters>(
@@ -91,12 +145,20 @@ const SongSearch: React.FC<SongSearchProps> = ({
     const next = { ...filters, [key]: value };
     setFilters(next);
     if (hasSearched && query.trim()) {
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+
       setSearching(true);
       const searchQuery = karaokeMode ? `${query.trim()} karaoke` : query.trim();
-      searchYoutube(searchQuery, next)
+      searchYoutube(searchQuery, next, controller.signal)
         .then(setResults)
-        .catch(() => setResults([]))
-        .finally(() => setSearching(false));
+        .catch((err) => {
+          if (err?.name !== 'AbortError') setResults([]);
+        })
+        .finally(() => {
+          if (!controller.signal.aborted) setSearching(false);
+        });
     }
   }
 
@@ -148,13 +210,6 @@ const SongSearch: React.FC<SongSearchProps> = ({
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && search()}
         />
-        <button
-          className={styles.searchBtn}
-          onClick={() => search()}
-          disabled={searching || !query.trim()}
-        >
-          {searching ? '...' : 'Search'}
-        </button>
       </div>
 
       <div className={styles.options}>
