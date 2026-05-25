@@ -1,8 +1,7 @@
 import * as React from 'react';
 import { useRouter } from 'next/router';
-import { QRCodeSVG } from 'qrcode.react';
-
 import styles from '../styles/Display.module.css';
+import QrJoinCard from './QrJoinCard';
 import getRoom from '../app/queue/getRoom';
 import { onRoomState, broadcastVideoEnded } from '../app/queue/roomChannel';
 import { startSessionTracking } from '../app/queue/trackSession';
@@ -260,23 +259,11 @@ const Display = (): React.ReactElement => {
 
       {/* Sidebar: Up Next + QR */}
       <div className={styles.sidebar}>
-        <div className={styles.qrSection}>
-          <QRCodeSVG
-            value={joinUrl}
-            size={120}
-            bgColor="transparent"
-            fgColor="#ffffff"
-            level="M"
-          />
-          <div className={styles.qrInfo}>
-            <span className={styles.qrLabel}>JOIN AT</span>
-            <span className={styles.qrUrl}>
-              {(origin || 'karaoq.live').replace(/^https?:\/\/(www\.)?/, '')}
-            </span>
-            <span className={styles.qrLabel}>CODE</span>
-            <span className={styles.qrCode}>{joinCode}</span>
-          </div>
-        </div>
+        <QrJoinCard
+          joinUrl={joinUrl}
+          joinCode={joinCode || ''}
+          origin={origin}
+        />
 
         <div className={styles.upNextSection}>
           <h3 className={styles.upNextTitle}>

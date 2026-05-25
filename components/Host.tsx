@@ -17,10 +17,9 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { QRCodeSVG } from 'qrcode.react';
-
 import styles from '../styles/Host.module.css';
 import CheerBar from './CheerBar';
+import QrJoinCard from './QrJoinCard';
 import SongSearch from './SongSearch';
 import getRoom from '../app/queue/getRoom';
 import createRoom from '../app/queue/createRoom';
@@ -353,7 +352,7 @@ const Host = (): React.ReactElement => {
   const [editingId, setEditingId] = React.useState<string | null>(null);
   const [toast, setToast] = React.useState<string | null>(null);
   const toastTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [qrOverlayOpen, setQrOverlayOpen] = React.useState(false);
+
 
   // Pause polling while the organizer is actively reordering or adding songs
   const [isPaused, setIsPaused] = React.useState(false);
@@ -865,49 +864,13 @@ const Host = (): React.ReactElement => {
         {/* ─── Sidebar ─── */}
         <div className={styles.sidebar}>
           {/* QR code section */}
-          {qrVisible && (
-            <div className={styles.sidebarQr}>
-              <button className={styles.qrThumb} onClick={() => setQrOverlayOpen(true)} title="Show QR code">
-                {joinUrl && (
-                  <QRCodeSVG
-                    value={joinUrl}
-                    size={48}
-                    bgColor="transparent"
-                    fgColor="#ffffffcc"
-                    level="M"
-                  />
-                )}
-              </button>
-              <div className={styles.sidebarQrInfo}>
-                <div className={styles.sidebarQrLabel}>Scan to join</div>
-                <div className={styles.sidebarQrUrl}>{origin ? origin.replace(/^https?:\/\//, '') : 'karaoq.live'}</div>
-                <div className={styles.sidebarQrCode}>{joinCode}</div>
-              </div>
-              <button className={styles.sidebarQrClose} onClick={() => setQrVisible(false)} title="Hide QR code">
-                ×
-              </button>
-            </div>
-          )}
-
-          {/* QR overlay (full screen) */}
-          {qrOverlayOpen && (
-            <div className={styles.qrOverlay} onClick={() => setQrOverlayOpen(false)}>
-              <div className={styles.qrCard} onClick={(e) => e.stopPropagation()}>
-                {joinUrl && (
-                  <QRCodeSVG
-                    value={joinUrl}
-                    size={200}
-                    bgColor="#1a1a2e"
-                    fgColor="#ffffffee"
-                    level="M"
-                    style={{ borderRadius: 12 }}
-                  />
-                )}
-                <div className={styles.qrCardLabel}>Scan to join</div>
-                <div className={styles.qrCardUrl}>{origin ? origin.replace(/^https?:\/\//, '') : 'karaoq.live'}</div>
-                <div className={styles.qrCardCode}>{joinCode}</div>
-              </div>
-            </div>
+          {qrVisible && joinUrl && (
+            <QrJoinCard
+              joinUrl={joinUrl}
+              joinCode={joinCode || ''}
+              origin={origin}
+              onClose={() => setQrVisible(false)}
+            />
           )}
 
           {/* Sidebar header */}
