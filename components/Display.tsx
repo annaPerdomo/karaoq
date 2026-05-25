@@ -4,7 +4,7 @@ import { QRCodeSVG } from 'qrcode.react';
 
 import styles from '../styles/Display.module.css';
 import getRoom from '../app/queue/getRoom';
-import { onRoomState } from '../app/queue/roomChannel';
+import { onRoomState, broadcastVideoEnded } from '../app/queue/roomChannel';
 import { startSessionTracking } from '../app/queue/trackSession';
 import { QueueEntry, Reaction } from '../pages/api/types';
 
@@ -35,6 +35,7 @@ const Display = (): React.ReactElement => {
   const [visibleReactions, setVisibleReactions] = React.useState<(Reaction & { key: string; left: number })[]>([]);
   const seenReactionIds = React.useRef(new Set<string>());
   const reactionTimers = React.useRef<ReturnType<typeof setTimeout>[]>([]);
+  const videoRef = React.useRef<HTMLIFrameElement>(null);
 
   React.useEffect(() => {
     setOrigin(window.location.origin);
@@ -134,6 +135,35 @@ const Display = (): React.ReactElement => {
     return () => clearInterval(interval);
   }, [joinCode, error]);
 
+  // Notify Host when a YouTube video ends (for TV mode)
+  React.useEffect(() => {
+    if (!isPlaying || !joinCode) return;
+    const roomId = joinCode;
+
+    function onMessage(e: MessageEvent) {
+      if (e.origin !== 'https://www.youtube.com') return;
+      try {
+        const data = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
+        if (
+          (data.event === 'onStateChange' && data.info === 0) ||
+          (data.event === 'infoDelivery' && data.info?.playerState === 0)
+        ) {
+          broadcastVideoEnded(roomId);
+        }
+      } catch {}
+    }
+
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+  }, [isPlaying, joinCode]);
+
+  function handleIframeLoad() {
+    videoRef.current?.contentWindow?.postMessage(
+      JSON.stringify({ event: 'listening', id: 'karaoq-display' }),
+      'https://www.youtube.com'
+    );
+  }
+
   const currentSong = queue[activeIndex];
   // When the current song is waiting (not playing), include it in the sidebar list
   // so the sidebar doesn't look empty while the center says "UP NEXT"
@@ -167,11 +197,13 @@ const Display = (): React.ReactElement => {
           </div>
         ) : currentSong && isPlaying ? (
           <iframe
+            ref={videoRef}
             key={currentSong.id}
             className={styles.video}
-            src={`https://www.youtube.com/embed/${currentSong.videoId}?autoplay=1&rel=0&modestbranding=1&iv_load_policy=3`}
+            src={`https://www.youtube.com/embed/${currentSong.videoId}?autoplay=1&rel=0&modestbranding=1&iv_load_policy=3&enablejsapi=1`}
             allow="autoplay; encrypted-media"
             allowFullScreen
+            onLoad={handleIframeLoad}
           />
         ) : currentSong ? (
           <div className={styles.readyState}>

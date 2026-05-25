@@ -39,3 +39,21 @@ export function onRoomState(
   };
   return () => channel.close();
 }
+
+// Video-ended events (Display → Host for TV mode)
+export function broadcastVideoEnded(roomId: string) {
+  if (typeof BroadcastChannel === "undefined") return;
+  const ch = new BroadcastChannel(`karaoq-video-ended:${roomId}`);
+  ch.postMessage(null);
+  ch.close();
+}
+
+export function onVideoEnded(
+  roomId: string,
+  callback: () => void
+): () => void {
+  if (typeof BroadcastChannel === "undefined") return () => {};
+  const ch = new BroadcastChannel(`karaoq-video-ended:${roomId}`);
+  ch.onmessage = () => callback();
+  return () => ch.close();
+}

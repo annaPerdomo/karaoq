@@ -28,7 +28,7 @@ import updatePosition from '../app/queue/updatePosition';
 import reorderQueue from '../app/queue/reorderQueue';
 import removeFromQueue from '../app/queue/removeFromQueue';
 import setPlaying from '../app/queue/setPlaying';
-import { broadcastRoomState } from '../app/queue/roomChannel';
+import { broadcastRoomState, onVideoEnded } from '../app/queue/roomChannel';
 import setReactionsEnabled from '../app/queue/setReactionsEnabled';
 import postReaction from '../app/queue/postReaction';
 import { REACTION_COOLDOWN_MS } from '../app/queue/cheerConstants';
@@ -322,6 +322,7 @@ const Host = (): React.ReactElement => {
   const [visibleReactions, setVisibleReactions] = React.useState<(Reaction & { key: string; left: number })[]>([]);
   const seenReactionIds = React.useRef(new Set<string>());
   const reactionTimers = React.useRef<ReturnType<typeof setTimeout>[]>([]);
+  const videoRef = React.useRef<HTMLIFrameElement>(null);
 
   // Host name (same pattern as Sing's welcome flow)
   const [hostName, setHostName] = React.useState('');
@@ -481,6 +482,64 @@ const Host = (): React.ReactElement => {
     if (!joinCode) return;
     broadcastRoomState(joinCode, { queue: q, activeVideoIndex: idx, isPlaying: playing, reactionsEnabled: reactionsOn });
   }
+
+  // ─── Video end detection ───
+
+  // Use a ref so the postMessage handler always has current state
+  const onVideoEndedRef = React.useRef<() => void>(() => {});
+  onVideoEndedRef.current = async () => {
+    if (!joinCode) return;
+    const nextIdx = activeIndex + 1;
+    if (nextIdx < queue.length) {
+      const ok = await updatePosition(joinCode, nextIdx);
+      if (ok) {
+        setActiveIndex(nextIdx);
+        setIsPlaying(false);
+        broadcast(queue, nextIdx, false);
+      }
+    } else {
+      const ok = await setPlaying(joinCode, false);
+      if (ok) {
+        setIsPlaying(false);
+        broadcast(queue, activeIndex, false);
+      }
+    }
+  };
+
+  // All-in-one mode: listen for YouTube postMessage when the video ends
+  React.useEffect(() => {
+    if (!isPlaying || tvMode) return;
+
+    function onMessage(e: MessageEvent) {
+      if (e.origin !== 'https://www.youtube.com') return;
+      try {
+        const data = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
+        if (
+          (data.event === 'onStateChange' && data.info === 0) ||
+          (data.event === 'infoDelivery' && data.info?.playerState === 0)
+        ) {
+          onVideoEndedRef.current();
+        }
+      } catch {}
+    }
+
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+  }, [isPlaying, tvMode]);
+
+  // All-in-one mode: subscribe to YouTube events when iframe loads
+  function handleIframeLoad() {
+    videoRef.current?.contentWindow?.postMessage(
+      JSON.stringify({ event: 'listening', id: 'karaoq' }),
+      'https://www.youtube.com'
+    );
+  }
+
+  // TV mode: listen for video-ended from Display via BroadcastChannel
+  React.useEffect(() => {
+    if (!joinCode || !tvMode) return;
+    return onVideoEnded(joinCode, () => onVideoEndedRef.current());
+  }, [joinCode, tvMode]);
 
   async function sendReaction(emoji: string) {
     if (!joinCode || reactionCooldown) return;
@@ -767,10 +826,9 @@ const Host = (): React.ReactElement => {
                 <button className={styles.tBtn} onClick={playPrevious} disabled={activeIndex <= 0} title="Previous">
                   {Icons.prev}
                 </button>
-                {isPlaying ? (
-                  <button className={`${styles.tBtn} ${styles.tStop}`} onClick={stopSong} title="Stop">
-                    {Icons.stop}
-                  </button>
+                {isPlaying && !tvMode ? (
+                  // In all-in-one mode, YouTube's native controls handle pause/resume
+                  null
                 ) : (
                   <button className={`${styles.tBtn} ${styles.tPlay}`} onClick={startSong} disabled={!currentSong} title="Play">
                     {Icons.play}
