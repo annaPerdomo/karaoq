@@ -788,10 +788,24 @@ const Host = (): React.ReactElement => {
             )
           ) : (
             <div className={styles.emptyState}>
-              <div className={styles.emptyIcon}>🎤</div>
-              <h2>Waiting for songs...</h2>
+              <div className={styles.emptyIcon}>
+                <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <defs>
+                    <linearGradient id="noteGrad" x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0%" stopColor="#ff2d78" />
+                      <stop offset="100%" stopColor="#00f0ff" />
+                    </linearGradient>
+                  </defs>
+                  <circle cx="18" cy="48" r="8" fill="url(#noteGrad)" />
+                  <circle cx="46" cy="40" r="8" fill="url(#noteGrad)" />
+                  <rect x="24" y="8" width="4" height="40" rx="2" fill="url(#noteGrad)" />
+                  <rect x="52" y="8" width="4" height="32" rx="2" fill="url(#noteGrad)" />
+                  <path d="M26 8 c4-4 22-8 28-4 v8 c-6-4-24 0-28 4z" fill="url(#noteGrad)" />
+                </svg>
+              </div>
+              <h2 className={styles.emptyTitle}>KaraoQ</h2>
               <p>
-                Share code <strong>{joinCode}</strong> with your friends!
+                {qrVisible ? 'Scan the QR code or visit' : 'Visit'} <strong>{(origin || 'karaoq.live').replace(/^https?:\/\/(www\.)?/, '')}</strong> and enter code <strong>{joinCode}</strong> to add songs!
               </p>
             </div>
           )}

@@ -72,7 +72,7 @@
 }
 
 .waitingIcon {
-  font-size: 5rem;
+  line-height: 1;
   animation: float 3s ease-in-out infinite;
 }
 
@@ -94,6 +94,13 @@
 .waitingText {
   color: var(--text-muted);
   font-size: 1.2rem;
+}
+
+.waitingText strong {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: #ffd700;
+  letter-spacing: 1px;
 }
 
 /* ─── Ready state (song queued but not playing) ─── */

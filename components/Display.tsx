@@ -219,9 +219,23 @@ const Display = (): React.ReactElement => {
           </div>
         ) : (
           <div className={styles.centerState}>
-            <div className={styles.waitingIcon}>🎤</div>
+            <div className={styles.waitingIcon}>
+              <svg width="80" height="80" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <linearGradient id="noteGrad" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stopColor="#ff2d78" />
+                    <stop offset="100%" stopColor="#00f0ff" />
+                  </linearGradient>
+                </defs>
+                <circle cx="18" cy="48" r="8" fill="url(#noteGrad)" />
+                <circle cx="46" cy="40" r="8" fill="url(#noteGrad)" />
+                <rect x="24" y="8" width="4" height="40" rx="2" fill="url(#noteGrad)" />
+                <rect x="52" y="8" width="4" height="32" rx="2" fill="url(#noteGrad)" />
+                <path d="M26 8 c4-4 22-8 28-4 v8 c-6-4-24 0-28 4z" fill="url(#noteGrad)" />
+              </svg>
+            </div>
             <h1 className={styles.waitingTitle}>KaraoQ</h1>
-            <p className={styles.waitingText}>Scan to add songs</p>
+            <p className={styles.waitingText}>Scan the QR code or visit <strong>{(origin || 'karaoq.live').replace(/^https?:\/\/(www\.)?/, '')}</strong> and enter code <strong>{joinCode}</strong> to add songs!</p>
           </div>
         )}
 
@@ -308,7 +322,7 @@ const Display = (): React.ReactElement => {
             </div>
           ) : (
             <p className={styles.emptyQueue}>
-              No songs queued — scan to add!
+              No songs queued yet!
             </p>
           )}
         </div>
