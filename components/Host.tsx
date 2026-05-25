@@ -120,6 +120,8 @@ function SettingsPopover({
   onToggleReactions,
   hostName,
   onChangeName,
+  qrVisible,
+  onShowQr,
 }: {
   isOpen: boolean;
   onClose: () => void;
@@ -130,6 +132,8 @@ function SettingsPopover({
   onToggleReactions: () => void;
   hostName: string;
   onChangeName: () => void;
+  qrVisible: boolean;
+  onShowQr: () => void;
 }) {
   const ref = React.useRef<HTMLDivElement>(null);
 
@@ -194,6 +198,29 @@ function SettingsPopover({
           </div>
         </button>
       </div>
+      {!qrVisible && (
+        <>
+          <div className={styles.spSep} />
+          <div className={styles.spGroup}>
+            <div className={styles.spLabel}>QR Code</div>
+            <button className={styles.spBtn} onClick={onShowQr}>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                <rect x="1" y="1" width="6" height="6" rx="1" />
+                <rect x="9" y="1" width="6" height="6" rx="1" />
+                <rect x="1" y="9" width="6" height="6" rx="1" />
+                <rect x="10" y="10" width="2" height="2" />
+                <rect x="13" y="10" width="2" height="2" />
+                <rect x="10" y="13" width="2" height="2" />
+                <rect x="13" y="13" width="2" height="2" />
+              </svg>
+              <div>
+                <div className={styles.spBtnTitle}>Show QR Code</div>
+                <div className={styles.spBtnDesc}>Display join code for guests</div>
+              </div>
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -724,6 +751,8 @@ const Host = (): React.ReactElement => {
           onToggleReactions={toggleReactions}
           hostName={hostName}
           onChangeName={() => { setSettingsOpen(false); setShowWelcome(true); setWelcomeName(hostName); }}
+          qrVisible={qrVisible}
+          onShowQr={() => { setQrVisible(true); setSettingsOpen(false); }}
         />
       </header>
 
@@ -908,11 +937,6 @@ const Host = (): React.ReactElement => {
               >
                 {Icons.plus} Add Song
               </button>
-              {!qrVisible && (
-                <button className={`${styles.sidebarAct} ${styles.sidebarActSecondary}`} onClick={() => setQrVisible(true)} title="Show QR code">
-                  QR
-                </button>
-              )}
             </div>
           </div>
 
