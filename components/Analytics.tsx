@@ -148,6 +148,20 @@ const Analytics = (): React.ReactElement => {
     setSecret('');
   }
 
+  async function handleDeleteRoom(roomId: string) {
+    if (!confirm(`Delete all data for room ${roomId}?`)) return;
+    try {
+      const res = await fetch(`/api/analytics/room?roomId=${roomId}`, {
+        method: 'DELETE',
+        headers: { 'x-analytics-secret': secret },
+      });
+      if (!res.ok) throw new Error('Delete failed');
+      fetchData(secret);
+    } catch {
+      alert('Failed to delete room');
+    }
+  }
+
   if (!authenticated) {
     return (
       <main className={styles.main}>
@@ -298,7 +312,7 @@ const Analytics = (): React.ReactElement => {
             <h2 className={styles.sectionTitle}>Top Cities</h2>
             <BarChart
               data={geo.cities.map((d) => ({
-                label: `${d._id.city}, ${d._id.region || d._id.country}`,
+                label: `${decodeURIComponent(d._id.city)}, ${decodeURIComponent(d._id.region || d._id.country)}`,
                 value: d.count,
               }))}
               color="#f59e0b"
@@ -360,14 +374,22 @@ const Analytics = (): React.ReactElement => {
                   <span>Location</span>
                   <span>Songs</span>
                   <span>People</span>
+                  <span></span>
                 </div>
                 {recentRooms.map((r, i) => (
                   <div key={i} className={styles.roomRow}>
                     <span className={styles.roomCode}>{r.roomId}</span>
                     <span>{formatTimestamp(r.timestamp)}</span>
-                    <span>{r.city ? `${r.city}, ${r.country}` : r.country || '—'}</span>
+                    <span>{r.city ? `${decodeURIComponent(r.city)}, ${r.country}` : r.country || '—'}</span>
                     <span>{r.songs}</span>
                     <span>{r.participants}</span>
+                    <button
+                      className={styles.deleteBtn}
+                      onClick={() => handleDeleteRoom(r.roomId)}
+                      title="Delete room data"
+                    >
+                      &times;
+                    </button>
                   </div>
                 ))}
               </div>
