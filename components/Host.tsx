@@ -332,8 +332,7 @@ const Host = (): React.ReactElement => {
   React.useEffect(() => {
     const saved = localStorage.getItem('karaoq_host_name');
     if (saved) {
-      setHostName(saved);
-      setShowWelcome(false);
+      setWelcomeName(saved);
     }
   }, []);
 

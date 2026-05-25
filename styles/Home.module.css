@@ -219,7 +219,7 @@
 }
 
 .joinInput {
-  width: 130px;
+  width: 160px;
   padding: 0.85rem 1rem;
   background: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(168, 85, 247, 0.4);
@@ -242,6 +242,35 @@
 .joinInput:focus {
   border-color: rgba(168, 85, 247, 0.7);
   box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15);
+}
+
+.hostPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  animation: fadeSlideIn 0.3s ease;
+}
+.hostDivider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.hostDividerLine {
+  flex: 1;
+  height: 1px;
+  background: rgba(168, 85, 247, 0.25);
+}
+.hostDividerText {
+  color: rgba(200, 180, 255, 0.5);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.hostError {
+  color: #f87171;
+  font-size: 0.8rem;
+  margin: 0;
+  text-align: center;
 }
 
 @keyframes fadeSlideIn {
@@ -1397,6 +1426,7 @@
     width: 100%;
   }
   .joinInput { width: 100%; }
+  .hostPanel { width: 100%; }
   .phoneFrame { width: 200px; height: 400px; }
   .phoneFrameSm { width: 200px; height: 400px; }
   .tvFrame { width: 280px; }

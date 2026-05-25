@@ -264,24 +264,41 @@ function DisplayViewDemo() {
 }
 
 // ─── Main Home / Landing Page ───
+const CUSTOM_CODE_PATTERN = /^[A-Z0-9]{3,12}$/;
+
 const Home = (): React.ReactElement => {
   const router = useRouter();
   const [joinCode, setJoinCode] = React.useState('');
   const [showJoin, setShowJoin] = React.useState(false);
+  const [showHost, setShowHost] = React.useState(false);
+  const [customCode, setCustomCode] = React.useState('');
   const [creating, setCreating] = React.useState(false);
+  const [hostError, setHostError] = React.useState('');
 
-  async function handleHost() {
+  async function handleHost(useCustom = false) {
     if (creating) return;
+    const code = useCustom ? customCode.trim().toUpperCase() : generateCode();
+    if (useCustom && !CUSTOM_CODE_PATTERN.test(code)) {
+      setHostError('Code must be 3\u201312 letters or numbers');
+      return;
+    }
+    setHostError('');
     setCreating(true);
-    const code = generateCode();
     try {
-      const resp = await fetch(`/api/queue/${code}`, { method: 'POST' });
+      const headers: Record<string, string> = {};
+      if (useCustom) headers['x-custom-code'] = '1';
+      const resp = await fetch(`/api/queue/${code}`, { method: 'POST', headers });
       if (resp.ok) {
         router.push(`/host/${code}`);
+      } else if (resp.status === 409) {
+        setHostError('That code is already in use');
+        setCreating(false);
       } else {
+        setHostError('Something went wrong. Try again.');
         setCreating(false);
       }
     } catch {
+      setHostError('Something went wrong. Try again.');
       setCreating(false);
     }
   }
@@ -307,7 +324,7 @@ const Home = (): React.ReactElement => {
           }}>
             Join a Session
           </button>
-          <button className={styles.navCta} onClick={handleHost} disabled={creating}>
+          <button className={styles.navCta} onClick={() => handleHost()} disabled={creating}>
             {creating ? 'Creating...' : 'Host a Session'}
           </button>
         </div>
@@ -327,13 +344,53 @@ const Home = (): React.ReactElement => {
                 their phones, you control the queue &mdash; all powered by YouTube.
               </p>
               <div className={styles.heroCtas}>
-                <button
-                  className={styles.btnPrimary}
-                  onClick={handleHost}
-                  disabled={creating}
-                >
-                  {creating ? 'Creating...' : 'Host a Session'}
-                </button>
+                {!showHost ? (
+                  <button
+                    className={styles.btnPrimary}
+                    onClick={() => setShowHost(true)}
+                    disabled={creating}
+                  >
+                    Host a Session
+                  </button>
+                ) : (
+                  <div className={styles.hostPanel}>
+                    <button
+                      className={styles.btnPrimary}
+                      onClick={() => handleHost(false)}
+                      disabled={creating}
+                    >
+                      {creating ? 'Creating...' : 'Create with Random Join Code'}
+                    </button>
+                    <div className={styles.hostDivider}>
+                      <span className={styles.hostDividerLine} />
+                      <span className={styles.hostDividerText}>or</span>
+                      <span className={styles.hostDividerLine} />
+                    </div>
+                    <div className={styles.joinRow}>
+                      <input
+                        className={styles.joinInput}
+                        placeholder="YOUR CODE"
+                        aria-label="Custom room code"
+                        maxLength={12}
+                        value={customCode}
+                        onChange={(e) => {
+                          setCustomCode(e.target.value.toUpperCase());
+                          setHostError('');
+                        }}
+                        onKeyDown={(e) => e.key === 'Enter' && handleHost(true)}
+                        autoFocus
+                      />
+                      <button
+                        className={styles.btnOutline}
+                        onClick={() => handleHost(true)}
+                        disabled={creating || !customCode.trim()}
+                      >
+                        {creating ? 'Creating...' : 'Create with Custom Join Code'}
+                      </button>
+                    </div>
+                    {hostError && <p className={styles.hostError}>{hostError}</p>}
+                  </div>
+                )}
                 {!showJoin ? (
                   <button
                     className={styles.btnOutline}
@@ -347,7 +404,7 @@ const Home = (): React.ReactElement => {
                       className={styles.joinInput}
                       placeholder="ROOM CODE"
                       aria-label="Room code"
-                      maxLength={5}
+                      maxLength={12}
                       value={joinCode}
                       onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
                       onKeyDown={(e) => e.key === 'Enter' && handleJoin()}
@@ -623,10 +680,13 @@ const Home = (): React.ReactElement => {
             <div className={styles.ctaButtons}>
               <button
                 className={styles.btnPrimary}
-                onClick={handleHost}
+                onClick={() => {
+                  setShowHost(true);
+                  document.querySelector(`.${styles.hero}`)?.scrollIntoView({ behavior: 'smooth' });
+                }}
                 disabled={creating}
               >
-                {creating ? 'Creating...' : 'Host a Session'}
+                Host a Session
               </button>
               <button
                 className={styles.btnOutline}

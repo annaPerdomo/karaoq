@@ -23,8 +23,12 @@ export default async function handler(
     const collection = db.collection<Room>("rooms");
 
     if (req.method === "POST") {
+      const isCustom = req.headers["x-custom-code"] === "1";
       const existing = await collection.findOne({ id: roomId });
-      if (existing) {
+      if (existing && isCustom) {
+        // Custom code already taken — tell the client to pick another
+        res.status(409).json({ code: 409, message: "Room code already in use." });
+      } else if (existing) {
         // Reset play state whenever host reconnects — they control when songs start
         await collection.updateOne({ id: roomId }, { $set: { isPlaying: false } });
         res.status(200).json({ ...existing, isPlaying: false });
