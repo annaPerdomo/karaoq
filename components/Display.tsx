@@ -135,7 +135,11 @@ const Display = (): React.ReactElement => {
   }, [joinCode, error]);
 
   const currentSong = queue[activeIndex];
-  const upNext = queue.slice(activeIndex + 1);
+  // When the current song is waiting (not playing), include it in the sidebar list
+  // so the sidebar doesn't look empty while the center says "UP NEXT"
+  const upNext = currentSong && !isPlaying
+    ? queue.slice(activeIndex)
+    : queue.slice(activeIndex + 1);
   const joinUrl = `${origin || 'https://karaoq.live'}/sing/${joinCode}`;
 
   if (!joinCode) {

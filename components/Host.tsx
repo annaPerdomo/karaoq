@@ -17,6 +17,7 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { QRCodeSVG } from 'qrcode.react';
 
 import styles from '../styles/Host.module.css';
 import CheerBar from './CheerBar';
@@ -41,26 +42,180 @@ function isTextReaction(emoji: string): boolean {
   return emoji.length > 2 && /[a-zA-Z]/.test(emoji);
 }
 
-type SidebarTab = 'upcoming' | 'history' | 'addSong';
+// ─── Icons ───
+const Icons = {
+  drag: (
+    <svg width="12" height="18" viewBox="0 0 12 18" fill="currentColor" opacity="0.3">
+      <circle cx="3" cy="3" r="1.5" /><circle cx="9" cy="3" r="1.5" />
+      <circle cx="3" cy="9" r="1.5" /><circle cx="9" cy="9" r="1.5" />
+      <circle cx="3" cy="15" r="1.5" /><circle cx="9" cy="15" r="1.5" />
+    </svg>
+  ),
+  moveTop: (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+      <line x1="3" y1="2" x2="11" y2="2" /><polyline points="4,9 7,5 10,9" /><line x1="7" y1="5" x2="7" y2="12" />
+    </svg>
+  ),
+  edit: (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M8.5 2.5l3 3L4.5 12.5H1.5v-3l7-7z" />
+    </svg>
+  ),
+  remove: (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+      <line x1="3" y1="3" x2="11" y2="11" /><line x1="11" y1="3" x2="3" y2="11" />
+    </svg>
+  ),
+  replay: (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 2v4h4" /><path d="M3 10a5 5 0 1 0 1-6.5L2 6" />
+    </svg>
+  ),
+  play: (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+      <polygon points="5,2 18,10 5,18" />
+    </svg>
+  ),
+  stop: (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+      <rect x="2" y="2" width="12" height="12" rx="2" />
+    </svg>
+  ),
+  prev: (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+      <polyline points="11,4 6,9 11,14" />
+    </svg>
+  ),
+  next: (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+      <polyline points="7,4 12,9 7,14" />
+    </svg>
+  ),
+  gear: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12.22 2h-.44a2 2 0 00-2 2v.18a2 2 0 01-1 1.73l-.43.25a2 2 0 01-2 0l-.15-.08a2 2 0 00-2.73.73l-.22.38a2 2 0 00.73 2.73l.15.1a2 2 0 011 1.72v.51a2 2 0 01-1 1.74l-.15.09a2 2 0 00-.73 2.73l.22.38a2 2 0 002.73.73l.15-.08a2 2 0 012 0l.43.25a2 2 0 011 1.73V20a2 2 0 002 2h.44a2 2 0 002-2v-.18a2 2 0 011-1.73l.43-.25a2 2 0 012 0l.15.08a2 2 0 002.73-.73l.22-.39a2 2 0 00-.73-2.73l-.15-.08a2 2 0 01-1-1.74v-.5a2 2 0 011-1.74l.15-.09a2 2 0 00.73-2.73l-.22-.38a2 2 0 00-2.73-.73l-.15.08a2 2 0 01-2 0l-.43-.25a2 2 0 01-1-1.73V4a2 2 0 00-2-2z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  ),
+  tv: (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="1" y="2" width="16" height="11" rx="1.5" /><line x1="6" y1="16" x2="12" y2="16" /><line x1="9" y1="13" x2="9" y2="16" />
+    </svg>
+  ),
+  plus: (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+      <line x1="8" y1="3" x2="8" y2="13" /><line x1="3" y1="8" x2="13" y2="8" />
+    </svg>
+  ),
+};
+
+// ─── Settings Popover ───
+function SettingsPopover({
+  isOpen,
+  onClose,
+  tvMode,
+  onOpenTv,
+  onSwitchLocal,
+  reactionsOn,
+  onToggleReactions,
+  hostName,
+  onChangeName,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  tvMode: boolean;
+  onOpenTv: () => void;
+  onSwitchLocal: () => void;
+  reactionsOn: boolean;
+  onToggleReactions: () => void;
+  hostName: string;
+  onChangeName: () => void;
+}) {
+  const ref = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (!isOpen) return;
+    const handler = (e: PointerEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node) && !(e.target as Element).closest(`.${styles.gearBtn}`)) {
+        onClose();
+      }
+    };
+    const t = setTimeout(() => document.addEventListener('pointerdown', handler), 10);
+    return () => { clearTimeout(t); document.removeEventListener('pointerdown', handler); };
+  }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div ref={ref} className={styles.settingsPopover}>
+      <div className={styles.spGroup}>
+        <div className={styles.spLabel}>Display</div>
+        {tvMode ? (
+          <button className={styles.spBtn} onClick={onSwitchLocal}>
+            {Icons.tv}
+            <div>
+              <div className={styles.spBtnTitle}>Watch Here</div>
+              <div className={styles.spBtnDesc}>Show video in this window</div>
+            </div>
+          </button>
+        ) : (
+          <button className={styles.spBtn} onClick={onOpenTv}>
+            {Icons.tv}
+            <div>
+              <div className={styles.spBtnTitle}>Open TV Display</div>
+              <div className={styles.spBtnDesc}>Cast to a TV or projector</div>
+            </div>
+          </button>
+        )}
+      </div>
+      <div className={styles.spSep} />
+      <div className={styles.spGroup}>
+        <div className={styles.spLabel}>Audience</div>
+        <button className={styles.spToggleRow} onClick={onToggleReactions}>
+          <div>
+            <div className={styles.spBtnTitle}>Reactions</div>
+            <div className={styles.spBtnDesc}>
+              {reactionsOn ? 'Audience can send cheers' : 'Reactions disabled'}
+            </div>
+          </div>
+          <div className={`${styles.toggle} ${reactionsOn ? styles.toggleOn : ''}`}>
+            <div className={styles.toggleThumb} />
+          </div>
+        </button>
+      </div>
+      <div className={styles.spSep} />
+      <div className={styles.spGroup}>
+        <div className={styles.spLabel}>Host</div>
+        <button className={styles.spBtn} onClick={onChangeName}>
+          {Icons.edit}
+          <div>
+            <div className={styles.spBtnTitle}>{hostName}</div>
+            <div className={styles.spBtnDesc}>Change your name</div>
+          </div>
+        </button>
+      </div>
+    </div>
+  );
+}
 
 // ─── Sortable queue item ───
 function SortableQueueItem({
   item,
   index,
   isFirst,
-  isLast,
+  editing,
   onMoveTop,
-  onMoveUp,
-  onMoveDown,
+  onEdit,
+  onEditSave,
   onRemove,
 }: {
   item: QueueEntry;
   index: number;
   isFirst: boolean;
-  isLast: boolean;
+  editing: boolean;
   onMoveTop: () => void;
-  onMoveUp: () => void;
-  onMoveDown: () => void;
+  onEdit: () => void;
+  onEditSave: (name: string) => void;
   onRemove: () => void;
 }) {
   const {
@@ -71,6 +226,18 @@ function SortableQueueItem({
     transition,
     isDragging,
   } = useSortable({ id: item.id });
+
+  const [editName, setEditName] = React.useState(item.userName);
+  const inputRef = React.useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    if (editing) {
+      setEditName(item.userName);
+      setTimeout(() => inputRef.current?.select(), 50);
+    }
+  }, [editing, item.userName]);
+
+  const save = () => onEditSave(editName);
 
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
@@ -83,7 +250,7 @@ function SortableQueueItem({
     <div
       ref={setNodeRef}
       style={style}
-      className={`${styles.queueItem} ${isDragging ? styles.queueItemDragging : ''}`}
+      className={`${styles.queueItem} ${isDragging ? styles.queueItemDragging : ''} ${editing ? styles.queueItemEditing : ''}`}
     >
       <button
         className={styles.dragHandle}
@@ -91,71 +258,45 @@ function SortableQueueItem({
         {...listeners}
         aria-label="Drag to reorder"
       >
-        <svg width="12" height="18" viewBox="0 0 12 18" fill="currentColor">
-          <circle cx="3" cy="3" r="1.5" />
-          <circle cx="9" cy="3" r="1.5" />
-          <circle cx="3" cy="9" r="1.5" />
-          <circle cx="9" cy="9" r="1.5" />
-          <circle cx="3" cy="15" r="1.5" />
-          <circle cx="9" cy="15" r="1.5" />
-        </svg>
+        {Icons.drag}
       </button>
       <span className={styles.queueNum}>{index + 1}</span>
       <div className={styles.queueInfo}>
-        <span className={styles.queueSong}>
-          {decodeHtml(item.songTitle)}
-        </span>
-        <span className={styles.queueSinger}>{item.userName}</span>
+        <div className={styles.queueSingerLine}>
+          {editing ? (
+            <input
+              ref={inputRef}
+              className={styles.editInput}
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              onBlur={save}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') save();
+                if (e.key === 'Escape') onEditSave(item.userName);
+              }}
+            />
+          ) : (
+            <span className={styles.queueSingerName}>{item.userName}</span>
+          )}
+        </div>
+        <div className={styles.queueSong}>{decodeHtml(item.songTitle)}</div>
       </div>
       <div className={styles.queueActions}>
         {!isFirst && (
-          <>
-            <button
-              className={styles.actionBtn}
-              onClick={onMoveTop}
-              title="Move to top"
-              aria-label="Move to top"
-            >
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                <line x1="3" y1="2" x2="11" y2="2" />
-                <polyline points="4,9 7,5 10,9" />
-                <line x1="7" y1="5" x2="7" y2="12" />
-              </svg>
-            </button>
-            <button
-              className={styles.actionBtn}
-              onClick={onMoveUp}
-              title="Move up"
-              aria-label="Move up"
-            >
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                <polyline points="4,9 7,4 10,9" />
-              </svg>
-            </button>
-          </>
-        )}
-        {!isLast && (
-          <button
-            className={styles.actionBtn}
-            onClick={onMoveDown}
-            title="Move down"
-            aria-label="Move down"
-          >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              <polyline points="4,5 7,10 10,5" />
-            </svg>
+          <button className={styles.actionBtn} onClick={onMoveTop} title="Move to top" aria-label="Move to top">
+            {Icons.moveTop}
           </button>
         )}
         <button
-          className={`${styles.actionBtn} ${styles.removeBtn}`}
-          onClick={onRemove}
-          title="Remove from queue"
-          aria-label="Remove from queue"
+          className={`${styles.actionBtn} ${editing ? styles.actionBtnActive : ''}`}
+          onClick={onEdit}
+          title="Edit singer name"
+          aria-label="Edit singer name"
         >
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-            <line x1="3" y1="3" x2="11" y2="11" />
-            <line x1="11" y1="3" x2="3" y2="11" />
-          </svg>
+          {Icons.edit}
+        </button>
+        <button className={`${styles.actionBtn} ${styles.removeBtn}`} onClick={onRemove} title="Remove" aria-label="Remove">
+          {Icons.remove}
         </button>
       </div>
     </div>
@@ -173,7 +314,6 @@ const Host = (): React.ReactElement => {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [origin, setOrigin] = React.useState('');
-  const [activeTab, setActiveTab] = React.useState<SidebarTab>('addSong');
   const [confirmRemove, setConfirmRemove] = React.useState<string | null>(null);
   const [tvMode, setTvMode] = React.useState(false);
   const [reactionsOn, setReactionsOn] = React.useState(true);
@@ -182,6 +322,37 @@ const Host = (): React.ReactElement => {
   const [visibleReactions, setVisibleReactions] = React.useState<(Reaction & { key: string; left: number })[]>([]);
   const seenReactionIds = React.useRef(new Set<string>());
   const reactionTimers = React.useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  // Host name (same pattern as Sing's welcome flow)
+  const [hostName, setHostName] = React.useState('');
+  const [showWelcome, setShowWelcome] = React.useState(true);
+  const [welcomeName, setWelcomeName] = React.useState('');
+
+  React.useEffect(() => {
+    const saved = localStorage.getItem('karaoq_host_name');
+    if (saved) {
+      setHostName(saved);
+      setShowWelcome(false);
+    }
+  }, []);
+
+  function handleWelcomeSubmit() {
+    const name = welcomeName.trim();
+    if (!name) return;
+    setHostName(name);
+    localStorage.setItem('karaoq_host_name', name);
+    setShowWelcome(false);
+  }
+
+  // New state for redesigned layout
+  const [settingsOpen, setSettingsOpen] = React.useState(false);
+  const [searchOpen, setSearchOpen] = React.useState(false);
+  const [historyOpen, setHistoryOpen] = React.useState(false);
+  const [qrVisible, setQrVisible] = React.useState(true);
+  const [editingId, setEditingId] = React.useState<string | null>(null);
+  const [toast, setToast] = React.useState<string | null>(null);
+  const toastTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [qrOverlayOpen, setQrOverlayOpen] = React.useState(false);
 
   // Pause polling while the organizer is actively reordering or adding songs
   const [isPaused, setIsPaused] = React.useState(false);
@@ -197,9 +368,20 @@ const Host = (): React.ReactElement => {
     setOrigin(window.location.origin);
   }, []);
 
+  function showToast(msg: string) {
+    setToast(null);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    requestAnimationFrame(() => {
+      setToast(msg);
+      toastTimer.current = setTimeout(() => setToast(null), 2000);
+    });
+  }
+
   function openTvDisplay() {
     window.open(`/display/${joinCode}`, '_blank');
     setTvMode(true);
+    setSettingsOpen(false);
+    showToast('TV Display opened');
   }
 
   // Clean up reaction timers on unmount
@@ -215,7 +397,6 @@ const Host = (): React.ReactElement => {
     const fresh = reactions.filter((r) => !seenReactionIds.current.has(r.id));
     if (fresh.length === 0) return;
     fresh.forEach((r) => seenReactionIds.current.add(r.id));
-    // Cap the seen set to prevent unbounded growth
     if (seenReactionIds.current.size > 200) {
       const entries = Array.from(seenReactionIds.current);
       seenReactionIds.current = new Set(entries.slice(-100));
@@ -263,7 +444,7 @@ const Host = (): React.ReactElement => {
   // Session analytics tracking
   React.useEffect(() => {
     if (!joinCode) return;
-    return startSessionTracking(joinCode, 'Host', 'host');
+    return startSessionTracking(joinCode, hostName || 'Host', 'host');
   }, [joinCode]);
 
   // Poll for queue updates (pauses during drag operations)
@@ -308,7 +489,7 @@ const Host = (): React.ReactElement => {
     setTimeout(() => setLastSentEmoji(null), 1500);
     setTimeout(() => setReactionCooldown(false), REACTION_COOLDOWN_MS);
     const id = uuidv4();
-    await postReaction(joinCode, id, emoji, 'Host');
+    await postReaction(joinCode, id, emoji, hostName || 'Host');
   }
 
   async function toggleReactions() {
@@ -318,6 +499,7 @@ const Host = (): React.ReactElement => {
     if (ok) {
       setReactionsOn(next);
       broadcastRoomState(joinCode, { queue, activeVideoIndex: activeIndex, isPlaying, reactionsEnabled: next });
+      showToast(next ? 'Reactions enabled' : 'Reactions disabled');
     }
   }
 
@@ -326,6 +508,8 @@ const Host = (): React.ReactElement => {
     const newQueue = [...queue, entry];
     setQueue(newQueue);
     broadcast(newQueue, activeIndex, isPlaying);
+    showToast(`Added "${decodeHtml(entry.songTitle)}"`);
+    setSearchOpen(false);
   }
 
   async function playNext() {
@@ -386,28 +570,14 @@ const Host = (): React.ReactElement => {
     if (idx <= 0) return;
     const moved = arrayMove(upNext, idx, 0);
     await handleReorder(moved);
-  }
-
-  async function moveUp(entryId: string) {
-    const upNext = queue.slice(activeIndex + 1);
-    const idx = upNext.findIndex((e) => e.id === entryId);
-    if (idx <= 0) return;
-    const moved = arrayMove(upNext, idx, idx - 1);
-    await handleReorder(moved);
-  }
-
-  async function moveDown(entryId: string) {
-    const upNext = queue.slice(activeIndex + 1);
-    const idx = upNext.findIndex((e) => e.id === entryId);
-    if (idx === -1 || idx >= upNext.length - 1) return;
-    const moved = arrayMove(upNext, idx, idx + 1);
-    await handleReorder(moved);
+    showToast('Moved to top of queue');
   }
 
   async function removeSong(entryId: string) {
     if (!joinCode) return;
     pausePolling();
 
+    const entry = queue.find((e) => e.id === entryId);
     const entryIndex = queue.findIndex((e) => e.id === entryId);
     if (entryIndex === -1) return;
 
@@ -424,6 +594,12 @@ const Host = (): React.ReactElement => {
     setConfirmRemove(null);
     broadcast(newQueue, newActiveIndex, isPlaying);
     await removeFromQueue(joinCode, entryId);
+    if (entry) showToast(`Removed "${decodeHtml(entry.songTitle)}"`);
+  }
+
+  function editSave(id: string, newName: string) {
+    setQueue((prev) => prev.map((e) => (e.id === id ? { ...e, userName: newName } : e)));
+    setEditingId(null);
   }
 
   function handleDragEnd(event: DragEndEvent) {
@@ -440,15 +616,16 @@ const Host = (): React.ReactElement => {
   }
 
   const currentSong = queue[activeIndex];
-  const upNext = queue.slice(activeIndex + 1);
-  const history = queue.slice(0, activeIndex);
+  // When the current song is waiting (not playing), include it in the sidebar
+  // so the queue doesn't look empty while the player shows "UP NEXT"
+  const upNext = currentSong && !isPlaying
+    ? queue.slice(activeIndex)
+    : queue.slice(activeIndex + 1);
+  const historyItems = queue.slice(0, activeIndex);
 
-  // Count unique singers in the upcoming queue
-  const singerCounts = upNext.reduce<Record<string, number>>((acc, item) => {
-    acc[item.userName] = (acc[item.userName] || 0) + 1;
-    return acc;
-  }, {});
-  const uniqueSingers = Object.keys(singerCounts).length;
+  const uniqueSingers = new Set(upNext.map((s) => s.userName)).size;
+
+  const joinUrl = origin ? `${origin}/sing/${joinCode}` : '';
 
   if (!joinCode) return <div className={styles.loading}>Loading...</div>;
 
@@ -468,75 +645,33 @@ const Host = (): React.ReactElement => {
 
   return (
     <main className={styles.main}>
-      {/* Top bar */}
+      {/* ─── Header ─── */}
       <header className={styles.header}>
         <div className={styles.brand} onClick={() => router.push('/')}>
           KaraoQ
         </div>
-        <div className={styles.joinInfo}>
-          <span className={styles.joinLabel}>JOIN AT</span>
-          <span className={styles.joinUrl}>
-            {origin || 'karaoq.live'}
-          </span>
-          <span className={styles.joinLabel}>CODE</span>
-          <span className={styles.joinCode}>{joinCode}</span>
-        </div>
-        <div className={styles.headerControls}>
-          {!tvMode && (
-            <button
-              className={styles.tvBtn}
-              onClick={openTvDisplay}
-              title="Opens a clean display in a new tab — perfect for casting to a TV or projector"
-            >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="1" y="2" width="14" height="10" rx="1" />
-                <line x1="5" y1="14" x2="11" y2="14" />
-                <line x1="8" y1="12" x2="8" y2="14" />
-              </svg>
-              Open TV Display
-            </button>
-          )}
-          <button
-            className={reactionsOn ? styles.reactionsBtn : styles.reactionsBtnOff}
-            onClick={toggleReactions}
-            title={reactionsOn ? 'Disable audience reactions' : 'Enable audience reactions'}
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="8" cy="6" r="5" />
-              <path d="M5.5 5.5C5.5 5.5 6 4.5 8 4.5C10 4.5 10.5 5.5 10.5 5.5" />
-              <circle cx="6" cy="6" r="0.5" fill="currentColor" />
-              <circle cx="10" cy="6" r="0.5" fill="currentColor" />
-              <path d="M5.5 7.5C5.5 7.5 6.5 9 8 9C9.5 9 10.5 7.5 10.5 7.5" />
-            </svg>
-            {reactionsOn ? 'Reactions On' : 'Reactions Off'}
-          </button>
-          <button
-            className={styles.prevBtn}
-            onClick={playPrevious}
-            disabled={activeIndex <= 0}
-            title="Go back to previous song"
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              <polyline points="10,3 5,8 10,13" />
-            </svg>
-            Previous
-          </button>
-          <button
-            className={styles.nextBtn}
-            onClick={playNext}
-            disabled={activeIndex + 1 >= queue.length}
-          >
-            Next Song
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              <polyline points="6,3 11,8 6,13" />
-            </svg>
-          </button>
-        </div>
+        <button
+          className={`${styles.gearBtn} ${settingsOpen ? styles.gearBtnOpen : ''}`}
+          onClick={() => setSettingsOpen(!settingsOpen)}
+        >
+          {Icons.gear}
+        </button>
+        <SettingsPopover
+          isOpen={settingsOpen}
+          onClose={() => setSettingsOpen(false)}
+          tvMode={tvMode}
+          onOpenTv={openTvDisplay}
+          onSwitchLocal={() => { setTvMode(false); setSettingsOpen(false); }}
+          reactionsOn={reactionsOn}
+          onToggleReactions={toggleReactions}
+          hostName={hostName}
+          onChangeName={() => { setSettingsOpen(false); setShowWelcome(true); setWelcomeName(hostName); }}
+        />
       </header>
 
-      {/* Main content */}
+      {/* ─── Content ─── */}
       <div className={styles.content}>
-        {/* Player area: video inline OR control panel depending on mode */}
+        {/* Player area */}
         <div className={tvMode ? styles.controlPanel : styles.playerArea}>
           {loading ? (
             <div className={styles.emptyState}>
@@ -545,7 +680,7 @@ const Host = (): React.ReactElement => {
             </div>
           ) : currentSong ? (
             tvMode ? (
-              /* ── Display mode: control panel only ── */
+              /* ── TV Display mode: control panel ── */
               <div className={styles.songControl}>
                 {isPlaying ? (
                   <>
@@ -553,78 +688,43 @@ const Host = (): React.ReactElement => {
                       <span className={styles.liveDot} />
                       <span>PLAYING ON DISPLAY</span>
                     </div>
-                    <h2 className={styles.controlSong}>
-                      {decodeHtml(currentSong.songTitle)}
-                    </h2>
+                    <h2 className={styles.controlSong}>{decodeHtml(currentSong.songTitle)}</h2>
                     <p className={styles.controlSinger}>{currentSong.userName}</p>
                     <button className={styles.stopBtn} onClick={stopSong}>
-                      <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor">
-                        <rect x="3" y="3" width="12" height="12" rx="2" />
-                      </svg>
-                      Stop
+                      {Icons.stop} Stop
                     </button>
                   </>
                 ) : (
                   <>
                     <div className={styles.readyLabel}>UP NEXT</div>
-                    <h2 className={styles.controlSong}>
-                      {decodeHtml(currentSong.songTitle)}
-                    </h2>
+                    <h2 className={styles.controlSong}>{decodeHtml(currentSong.songTitle)}</h2>
                     <p className={styles.controlSinger}>{currentSong.userName}</p>
                     <button className={styles.playBtn} onClick={startSong}>
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                        <polygon points="6,3 20,12 6,21" />
-                      </svg>
-                      Play on Display
+                      {Icons.play} Play on Display
                     </button>
                   </>
                 )}
-                <button
-                  className={styles.switchModeLink}
-                  onClick={() => setTvMode(false)}
-                >
+                <button className={styles.switchModeLink} onClick={() => setTvMode(false)}>
                   Show video here instead
                 </button>
               </div>
             ) : (
               /* ── All-in-one mode: video plays here ── */
               isPlaying ? (
-                <>
-                  <iframe
-                    key={currentSong.id}
-                    className={styles.video}
-                    src={`https://www.youtube.com/embed/${currentSong.videoId}?autoplay=1&rel=0`}
-                    allow="autoplay; encrypted-media"
-                    allowFullScreen
-                  />
-                  <div className={styles.nowPlaying}>
-                    <span className={styles.nowPlayingDot} />
-                    <span className={styles.nowPlayingLabel}>NOW PLAYING</span>
-                    <span className={styles.nowPlayingSong}>
-                      {decodeHtml(currentSong.songTitle)}
-                    </span>
-                    <span className={styles.nowPlayingSinger}>
-                      {currentSong.userName}
-                    </span>
-                    <button className={styles.inlineStopBtn} onClick={stopSong}>
-                      <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
-                        <rect x="2" y="2" width="10" height="10" rx="1.5" />
-                      </svg>
-                    </button>
-                  </div>
-                </>
+                <iframe
+                  key={currentSong.id}
+                  className={styles.video}
+                  src={`https://www.youtube.com/embed/${currentSong.videoId}?autoplay=1&rel=0`}
+                  allow="autoplay; encrypted-media"
+                  allowFullScreen
+                />
               ) : (
                 <div className={styles.songControl}>
                   <div className={styles.readyLabel}>UP NEXT</div>
-                  <h2 className={styles.controlSong}>
-                    {decodeHtml(currentSong.songTitle)}
-                  </h2>
+                  <h2 className={styles.controlSong}>{decodeHtml(currentSong.songTitle)}</h2>
                   <p className={styles.controlSinger}>{currentSong.userName}</p>
                   <button className={styles.playBtn} onClick={startSong}>
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                      <polygon points="6,3 20,12 6,21" />
-                    </svg>
-                    Play
+                    {Icons.play} Play
                   </button>
                 </div>
               )
@@ -638,17 +738,63 @@ const Host = (): React.ReactElement => {
               </p>
             </div>
           )}
+
+          {/* ─── Transport bar ─── */}
+          <div className={styles.transport}>
+            <div className={styles.transportMain}>
+              <div className={styles.transportInfo}>
+                {currentSong ? (
+                  <div className={styles.transportStatus}>
+                    <div className={`${styles.tLabel} ${isPlaying ? styles.tLabelPlaying : styles.tLabelReady}`}>
+                      {isPlaying && <span className={styles.tDot} />}
+                      {isPlaying ? 'NOW PLAYING' : 'UP NEXT'}
+                    </div>
+                    <div className={styles.tSong}>
+                      {decodeHtml(currentSong.songTitle)}
+                    </div>
+                    <div className={styles.tDetail}>
+                      <span>{currentSong.userName}</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className={styles.transportStatus}>
+                    <div className={`${styles.tLabel} ${styles.tLabelEmpty}`}>WAITING</div>
+                    <div className={styles.tDetail}>No songs in queue</div>
+                  </div>
+                )}
+              </div>
+              <div className={styles.transportControls}>
+                <button className={styles.tBtn} onClick={playPrevious} disabled={activeIndex <= 0} title="Previous">
+                  {Icons.prev}
+                </button>
+                {isPlaying ? (
+                  <button className={`${styles.tBtn} ${styles.tStop}`} onClick={stopSong} title="Stop">
+                    {Icons.stop}
+                  </button>
+                ) : (
+                  <button className={`${styles.tBtn} ${styles.tPlay}`} onClick={startSong} disabled={!currentSong} title="Play">
+                    {Icons.play}
+                  </button>
+                )}
+                <button className={styles.tBtn} onClick={playNext} disabled={activeIndex + 1 >= queue.length} title="Next Song">
+                  {Icons.next}
+                </button>
+              </div>
+            </div>
+            <div className={styles.transportFooter}>
+              <span className={styles.transportLogo}>KaraoQ</span>
+              <a href="https://variationsonastring.com" target="_blank" rel="noopener noreferrer" className={styles.transportLink}>
+                made with <span className={styles.transportHeart}>&#9829;</span> by variations on a string
+              </a>
+            </div>
+          </div>
         </div>
 
         {/* Reaction overlay */}
         {reactionsOn && visibleReactions.length > 0 && (
           <div className={styles.reactionOverlay}>
             {visibleReactions.map((r) => (
-              <div
-                key={r.key}
-                className={styles.reactionBubble}
-                style={{ left: `${r.left}%` }}
-              >
+              <div key={r.key} className={styles.reactionBubble} style={{ left: `${r.left}%` }}>
                 {isTextReaction(r.emoji) ? (
                   <span className={styles.reactionText}>{r.emoji}</span>
                 ) : (
@@ -659,153 +805,194 @@ const Host = (): React.ReactElement => {
           </div>
         )}
 
-        {/* Queue sidebar */}
+        {/* ─── Sidebar ─── */}
         <div className={styles.sidebar}>
-          {/* Tabs */}
-          <div className={styles.tabBar}>
-            <button
-              className={`${styles.tab} ${activeTab === 'upcoming' ? styles.tabActive : ''}`}
-              onClick={() => setActiveTab('upcoming')}
-            >
-              Up Next
-              {upNext.length > 0 && (
-                <span className={styles.tabBadge}>{upNext.length}</span>
-              )}
-            </button>
-            <button
-              className={`${styles.tab} ${styles.tabAdd} ${activeTab === 'addSong' ? styles.tabActive : ''}`}
-              onClick={() => setActiveTab('addSong')}
-            >
-              + Add Song
-            </button>
-            <button
-              className={`${styles.tab} ${activeTab === 'history' ? styles.tabActive : ''}`}
-              onClick={() => setActiveTab('history')}
-            >
-              History
-              {history.length > 0 && (
-                <span className={styles.tabBadgeHistory}>{history.length}</span>
-              )}
-            </button>
-          </div>
-
-          {/* Upcoming tab */}
-          {activeTab === 'upcoming' && (
-            <>
-              {upNext.length > 0 && (
-                <div className={styles.queueStats}>
-                  <span>{upNext.length} song{upNext.length !== 1 ? 's' : ''}</span>
-                  <span className={styles.statDot} />
-                  <span>{uniqueSingers} singer{uniqueSingers !== 1 ? 's' : ''}</span>
-                </div>
-              )}
-              {upNext.length > 0 ? (
-                <DndContext
-                  sensors={sensors}
-                  collisionDetection={closestCenter}
-                  onDragEnd={handleDragEnd}
-                >
-                  <SortableContext
-                    items={upNext.map((e) => e.id)}
-                    strategy={verticalListSortingStrategy}
-                  >
-                    <div className={styles.queueList}>
-                      {upNext.map((item, i) => (
-                        <SortableQueueItem
-                          key={item.id}
-                          item={item}
-                          index={i}
-                          isFirst={i === 0}
-                          isLast={i === upNext.length - 1}
-                          onMoveTop={() => moveToTop(item.id)}
-                          onMoveUp={() => moveUp(item.id)}
-                          onMoveDown={() => moveDown(item.id)}
-                          onRemove={() => setConfirmRemove(item.id)}
-                        />
-                      ))}
-                    </div>
-                  </SortableContext>
-                </DndContext>
-              ) : (
-                <p className={styles.emptyQueue}>No songs queued yet</p>
-              )}
-
-              {/* Host cheer bar — below the queue */}
-              {reactionsOn && isPlaying && currentSong && (
-                <CheerBar
-                  onReaction={sendReaction}
-                  cooldown={reactionCooldown}
-                  lastSentEmoji={lastSentEmoji}
-                />
-              )}
-            </>
+          {/* QR code section */}
+          {qrVisible && (
+            <div className={styles.sidebarQr}>
+              <button className={styles.qrThumb} onClick={() => setQrOverlayOpen(true)} title="Show QR code">
+                {joinUrl && (
+                  <QRCodeSVG
+                    value={joinUrl}
+                    size={48}
+                    bgColor="transparent"
+                    fgColor="#ffffffcc"
+                    level="M"
+                  />
+                )}
+              </button>
+              <div className={styles.sidebarQrInfo}>
+                <div className={styles.sidebarQrLabel}>Scan to join</div>
+                <div className={styles.sidebarQrUrl}>{origin ? origin.replace(/^https?:\/\//, '') : 'karaoq.live'}</div>
+                <div className={styles.sidebarQrCode}>{joinCode}</div>
+              </div>
+              <button className={styles.sidebarQrClose} onClick={() => setQrVisible(false)} title="Hide QR code">
+                ×
+              </button>
+            </div>
           )}
 
-          {/* Add Song tab */}
-          {activeTab === 'addSong' && joinCode && (
-            <SongSearch
-              roomId={joinCode}
-              userName="Host"
-              onSongAdded={handleSongAdded}
-              showFilters={false}
-              requireName={false}
+          {/* QR overlay (full screen) */}
+          {qrOverlayOpen && (
+            <div className={styles.qrOverlay} onClick={() => setQrOverlayOpen(false)}>
+              <div className={styles.qrCard} onClick={(e) => e.stopPropagation()}>
+                {joinUrl && (
+                  <QRCodeSVG
+                    value={joinUrl}
+                    size={200}
+                    bgColor="#1a1a2e"
+                    fgColor="#ffffffee"
+                    level="M"
+                    style={{ borderRadius: 12 }}
+                  />
+                )}
+                <div className={styles.qrCardLabel}>Scan to join</div>
+                <div className={styles.qrCardUrl}>{origin ? origin.replace(/^https?:\/\//, '') : 'karaoq.live'}</div>
+                <div className={styles.qrCardCode}>{joinCode}</div>
+              </div>
+            </div>
+          )}
+
+          {/* Sidebar header */}
+          <div className={styles.sidebarHeader}>
+            <div className={styles.sidebarTitle}>
+              Up Next
+              {upNext.length > 0 && <span className={styles.sidebarBadge}>{upNext.length}</span>}
+            </div>
+            <div className={styles.sidebarActions}>
+              <button
+                className={`${styles.sidebarAct} ${searchOpen ? styles.sidebarActActive : ''}`}
+                onClick={() => setSearchOpen(!searchOpen)}
+              >
+                {Icons.plus} Add Song
+              </button>
+              {!qrVisible && (
+                <button className={`${styles.sidebarAct} ${styles.sidebarActSecondary}`} onClick={() => setQrVisible(true)} title="Show QR code">
+                  QR
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Queue stats */}
+          {upNext.length > 0 && (
+            <div className={styles.queueStats}>
+              <span>{upNext.length} song{upNext.length !== 1 ? 's' : ''}</span>
+              <span className={styles.statDot} />
+              <span>{uniqueSingers} singer{uniqueSingers !== 1 ? 's' : ''}</span>
+            </div>
+          )}
+
+          {/* Queue list */}
+          {upNext.length > 0 ? (
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={upNext.map((e) => e.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className={styles.queueList}>
+                  {upNext.map((item, i) => (
+                    <SortableQueueItem
+                      key={item.id}
+                      item={item}
+                      index={i}
+                      isFirst={i === 0}
+                      editing={editingId === item.id}
+                      onMoveTop={() => moveToTop(item.id)}
+                      onEdit={() => setEditingId(editingId === item.id ? null : item.id)}
+                      onEditSave={(name) => editSave(item.id, name)}
+                      onRemove={() => setConfirmRemove(item.id)}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
+          ) : (
+            <p className={styles.emptyQueue}>No songs queued yet</p>
+          )}
+
+          {/* Host cheer bar — below the queue */}
+          {reactionsOn && isPlaying && currentSong && (
+            <CheerBar
+              onReaction={sendReaction}
+              cooldown={reactionCooldown}
+              lastSentEmoji={lastSentEmoji}
             />
           )}
 
-          {/* History tab */}
-          {activeTab === 'history' && (
-            <>
-              {history.length > 0 ? (
-                <div className={styles.queueList}>
-                  {[...history].reverse().map((item, i) => (
-                    <div key={item.id} className={styles.historyItem}>
-                      <span className={styles.historyNum}>
-                        {history.length - i}
-                      </span>
-                      <div className={styles.queueInfo}>
-                        <span className={styles.queueSong}>
-                          {decodeHtml(item.songTitle)}
-                        </span>
-                        <span className={styles.queueSinger}>
-                          {item.userName}
-                        </span>
-                      </div>
-                      <button
-                        className={styles.replayBtn}
-                        onClick={async () => {
-                          if (!joinCode) return;
-                          const idx = queue.findIndex((e) => e.id === item.id);
-                          if (idx !== -1) {
-                            const ok = await updatePosition(joinCode, idx);
-                            if (ok) {
-                              setActiveIndex(idx);
-                              setIsPlaying(false);
-                              broadcast(queue, idx, false);
-                            }
-                          }
-                        }}
-                        title="Replay this song"
-                        aria-label="Replay this song"
-                      >
-                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M2 2v4h4" />
-                          <path d="M3 10a5 5 0 1 0 1-6.5L2 6" />
-                        </svg>
-                      </button>
+          {/* History drawer */}
+          <button
+            className={`${styles.historyToggle} ${historyOpen ? styles.historyToggleOpen : ''}`}
+            onClick={() => setHistoryOpen(!historyOpen)}
+          >
+            <svg width="10" height="6" viewBox="0 0 10 6" fill="currentColor">
+              <path d="M0 0l5 6 5-6z" />
+            </svg>
+            History
+            {historyItems.length > 0 && <span className={styles.historyBadge}>{historyItems.length}</span>}
+          </button>
+          {historyOpen && (
+            <div className={styles.historyList}>
+              {historyItems.length > 0 ? (
+                [...historyItems].reverse().map((item, i) => (
+                  <div key={item.id} className={styles.historyItem}>
+                    <span className={styles.historyNum}>{historyItems.length - i}</span>
+                    <div className={styles.queueInfo}>
+                      <div className={styles.queueSong}>{decodeHtml(item.songTitle)}</div>
+                      <div className={styles.queueArtist}>{item.userName}</div>
                     </div>
-                  ))}
-                </div>
+                    <button
+                      className={styles.replayBtn}
+                      onClick={async () => {
+                        if (!joinCode) return;
+                        const idx = queue.findIndex((e) => e.id === item.id);
+                        if (idx !== -1) {
+                          const ok = await updatePosition(joinCode, idx);
+                          if (ok) {
+                            setActiveIndex(idx);
+                            setIsPlaying(false);
+                            broadcast(queue, idx, false);
+                          }
+                        }
+                      }}
+                      title="Replay this song"
+                      aria-label="Replay this song"
+                    >
+                      {Icons.replay}
+                    </button>
+                  </div>
+                ))
               ) : (
-                <p className={styles.emptyQueue}>
-                  No songs played yet — history will appear here
-                </p>
+                <p className={styles.emptyQueue}>No songs played yet</p>
               )}
-            </>
+            </div>
+          )}
+
+          {/* Search overlay */}
+          {searchOpen && joinCode && (
+            <div className={styles.searchOverlay}>
+              <div className={styles.searchOverlayHead}>
+                <button className={styles.searchClose} onClick={() => setSearchOpen(false)} title="Close search">
+                  ×
+                </button>
+              </div>
+              <SongSearch
+                roomId={joinCode}
+                userName={hostName || 'Host'}
+                onSongAdded={handleSongAdded}
+                showFilters={false}
+                requireName={false}
+              />
+            </div>
           )}
         </div>
       </div>
 
-      {/* Remove confirmation modal */}
+      {/* ─── Confirm modal ─── */}
       {confirmRemove && (
         <div className={styles.overlay} onClick={() => setConfirmRemove(null)}>
           <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
@@ -818,19 +1005,45 @@ const Host = (): React.ReactElement => {
               })()}
             </p>
             <div className={styles.modalActions}>
-              <button
-                className={styles.btnDanger}
-                onClick={() => removeSong(confirmRemove)}
-              >
+              <button className={styles.btnDanger} onClick={() => removeSong(confirmRemove)}>
                 Remove
               </button>
-              <button
-                className={styles.btnGhost}
-                onClick={() => setConfirmRemove(null)}
-              >
+              <button className={styles.btnGhost} onClick={() => setConfirmRemove(null)}>
                 Cancel
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Toast ─── */}
+      {toast && <div className={styles.toast} key={toast}>{toast}</div>}
+
+      {/* ─── Welcome name prompt ─── */}
+      {showWelcome && !loading && !error && (
+        <div className={styles.welcomeOverlay}>
+          <div className={styles.welcomeCard}>
+            <div className={styles.welcomeLogo}>KaraoQ</div>
+            <p className={styles.welcomeRoom}>
+              Room <strong>{joinCode}</strong>
+            </p>
+            <h2 className={styles.welcomePrompt}>What&apos;s your name?</h2>
+            <input
+              className={styles.welcomeInput}
+              placeholder="Enter your name"
+              value={welcomeName}
+              onChange={(e) => setWelcomeName(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleWelcomeSubmit()}
+              autoFocus
+              maxLength={30}
+            />
+            <button
+              className={styles.welcomeBtn}
+              onClick={handleWelcomeSubmit}
+              disabled={!welcomeName.trim()}
+            >
+              Let&apos;s go
+            </button>
           </div>
         </div>
       )}
