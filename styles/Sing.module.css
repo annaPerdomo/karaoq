@@ -1,14 +1,24 @@
 .main {
-  height: 100vh;
+  height: 100dvh;
+  height: 100vh; /* fallback for older browsers */
   display: flex;
   flex-direction: column;
   background: var(--bg-primary);
   padding-bottom: 2rem;
   overflow: hidden;
+
+  @supports (height: 100dvh) {
+    height: 100dvh;
+  }
 }
 
 .loadingScreen {
+  min-height: 100dvh;
   min-height: 100vh;
+
+  @supports (min-height: 100dvh) {
+    min-height: 100dvh;
+  }
   display: flex;
   align-items: center;
   justify-content: center;
@@ -302,7 +312,7 @@
 /* ─── Search results: responsive grid ─── */
 .results {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 0.5rem;
 }
 
@@ -347,8 +357,8 @@
 }
 
 .addBtn {
-  width: 42px;
-  height: 42px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   border: 2px solid rgba(0, 240, 255, 0.3);
   background: rgba(0, 240, 255, 0.08);
@@ -817,9 +827,9 @@
   }
 
   .addBtn {
-    width: 38px;
-    height: 38px;
-    min-width: 38px;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
     font-size: 1.2rem;
   }
 
