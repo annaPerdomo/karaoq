@@ -19,9 +19,9 @@ function decodeHtml(html: string): string {
   return txt.value;
 }
 
-export default async function searchYoutube(
+async function searchWithYoutubeApi(
   query: string,
-  filters: SearchFilters = { duration: 'any', sortBy: 'relevance' },
+  filters: SearchFilters,
   signal?: AbortSignal
 ): Promise<YoutubeResult[]> {
   const params = new URLSearchParams({
@@ -42,7 +42,12 @@ export default async function searchYoutube(
     'https://www.googleapis.com/youtube/v3/search?' + params,
     signal ? { signal } : undefined
   );
+
+  if (!resp.ok) throw new Error(`YouTube API ${resp.status}`);
+
   const data = await resp.json();
+
+  if (data.error) throw new Error(data.error.message || 'YouTube API error');
 
   return (
     data.items?.map((item: any) => ({
@@ -53,4 +58,35 @@ export default async function searchYoutube(
       videoId: item.id.videoId,
     })) ?? []
   );
+}
+
+async function searchWithFallback(
+  query: string,
+  signal?: AbortSignal
+): Promise<YoutubeResult[]> {
+  const params = new URLSearchParams({ q: query });
+  const resp = await fetch(`/api/search?${params}`, signal ? { signal } : undefined);
+  if (!resp.ok) return [];
+  const data = await resp.json();
+  return Array.isArray(data)
+    ? data.map((item: any) => ({
+        title: decodeHtml(item.title ?? ''),
+        thumbnailUrl: item.thumbnailUrl ?? '',
+        videoId: item.videoId ?? '',
+      }))
+    : [];
+}
+
+export default async function searchYoutube(
+  query: string,
+  filters: SearchFilters = { duration: 'any', sortBy: 'relevance' },
+  signal?: AbortSignal
+): Promise<YoutubeResult[]> {
+  try {
+    return await searchWithYoutubeApi(query, filters, signal);
+  } catch (err: any) {
+    if (err?.name === 'AbortError') throw err;
+    console.warn('YouTube API failed, falling back to server-side search:', err.message);
+    return searchWithFallback(query, signal);
+  }
 }
