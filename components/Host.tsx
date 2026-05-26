@@ -797,8 +797,8 @@ const Host = (): React.ReactElement => {
                       <span className={styles.liveDot} />
                       <span>PLAYING ON DISPLAY</span>
                     </div>
-                    <h2 className={styles.controlSong}>{decodeHtml(currentSong.songTitle)}</h2>
                     <p className={styles.controlSinger}>{currentSong.userName}</p>
+                    <h2 className={styles.controlSong}>{decodeHtml(currentSong.songTitle)}</h2>
                     <button className={styles.stopBtn} onClick={stopSong}>
                       {Icons.stop} Stop
                     </button>
@@ -1030,8 +1030,8 @@ const Host = (): React.ReactElement => {
                   <div key={item.id} className={styles.historyItem}>
                     <span className={styles.historyNum}>{historyItems.length - i}</span>
                     <div className={styles.queueInfo}>
-                      <div className={styles.queueSong}>{decodeHtml(item.songTitle)}</div>
                       <div className={styles.queueArtist}>{item.userName}</div>
+                      <div className={styles.queueSong}>{decodeHtml(item.songTitle)}</div>
                     </div>
                     <button
                       className={styles.replayBtn}

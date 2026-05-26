@@ -172,11 +172,6 @@ const Sing = (): React.ReactElement => {
               requireName={true}
             />
           )}
-          <div className={styles.inlineFooter}>
-            <a href="https://variationsonastring.com" target="_blank" rel="noopener noreferrer" className={styles.inlineFooterLink}>
-              made with <span className={styles.inlineFooterHeart}>&#9829;</span> by variations on a string
-            </a>
-          </div>
         </div>
 
         {/* ─── Right panel: queue sidebar (desktop) ─── */}
@@ -211,11 +206,11 @@ const Sing = (): React.ReactElement => {
                   <div key={item.id} className={styles.queueItem}>
                     <span className={styles.queueNum}>{i + 1}</span>
                     <div className={styles.queueInfo}>
-                      <span className={styles.queueSong}>
-                        {decodeHtml(item.songTitle)}
-                      </span>
                       <span className={styles.queueSinger}>
                         {item.userName}
+                      </span>
+                      <span className={styles.queueSong}>
+                        {decodeHtml(item.songTitle)}
                       </span>
                     </div>
                   </div>
@@ -292,11 +287,11 @@ const Sing = (): React.ReactElement => {
                   <div key={item.id} className={styles.queueItem}>
                     <span className={styles.queueNum}>{i + 1}</span>
                     <div className={styles.queueInfo}>
-                      <span className={styles.queueSong}>
-                        {decodeHtml(item.songTitle)}
-                      </span>
                       <span className={styles.queueSinger}>
                         {item.userName}
+                      </span>
+                      <span className={styles.queueSong}>
+                        {decodeHtml(item.songTitle)}
                       </span>
                     </div>
                   </div>

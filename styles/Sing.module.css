@@ -1001,42 +1001,6 @@
   }
 }
 
-/* ─── Inline footer (scrolls with content, no overlap) ─── */
-.inlineFooter {
-  text-align: center;
-  padding: 1.5rem 1rem 0.75rem;
-}
-
-.inlineFooterLink {
-  font-size: 0.72rem;
-  color: rgba(200, 180, 255, 0.35);
-  text-decoration: none;
-  transition: color 0.3s;
-  letter-spacing: 0.3px;
-}
-
-.inlineFooterLink:hover {
-  color: rgba(200, 180, 255, 0.7);
-}
-
-.inlineFooterHeart {
-  color: rgba(236, 72, 153, 0.6);
-  display: inline-block;
-  animation: heartbeat 1.2s ease-in-out infinite;
-}
-
-.inlineFooterLink:hover .inlineFooterHeart {
-  color: #ec4899;
-}
-
-@keyframes heartbeat {
-  0%, 100% { transform: scale(1); }
-  14% { transform: scale(1.25); }
-  28% { transform: scale(1); }
-  42% { transform: scale(1.2); }
-  56% { transform: scale(1); }
-}
-
 /* ─── Cheer hint ─── */
 .cheerHint {
   padding: 0.75rem 1.2rem;

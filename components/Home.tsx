@@ -159,15 +159,15 @@ function SearchSongDemo() {
             <div className={styles.demoQueueRow}>
               <span className={styles.demoQueueNum}>1</span>
               <div>
-                <div className={styles.demoQueueSong}>Bohemian Rhapsody</div>
                 <div className={styles.demoQueueSinger}>Mike</div>
+                <div className={styles.demoQueueSong}>Bohemian Rhapsody</div>
               </div>
             </div>
             <div className={`${styles.demoQueueRow} ${styles.demoQueueHighlight}`}>
               <span className={styles.demoQueueNum}>2</span>
               <div>
-                <div className={styles.demoQueueSong}>Golden</div>
                 <div className={styles.demoQueueSinger}>Sarah</div>
+                <div className={styles.demoQueueSong}>Golden</div>
               </div>
             </div>
           </div>

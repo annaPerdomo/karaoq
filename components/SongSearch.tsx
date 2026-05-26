@@ -488,6 +488,12 @@ const SongSearch: React.FC<SongSearchProps> = ({
                     Pick a random song for me
                   </button>
                 </div>
+
+                <div className={styles.inlineFooter}>
+                  <a href="https://variationsonastring.com" target="_blank" rel="noopener noreferrer" className={styles.inlineFooterLink}>
+                    made with <span className={styles.inlineFooterHeart}>&#9829;</span> by variations on a string
+                  </a>
+                </div>
               </>
             )}
           </div>
