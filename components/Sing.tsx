@@ -172,6 +172,11 @@ const Sing = (): React.ReactElement => {
               requireName={true}
             />
           )}
+          <div className={styles.inlineFooter}>
+            <a href="https://variationsonastring.com" target="_blank" rel="noopener noreferrer" className={styles.inlineFooterLink}>
+              made with <span className={styles.inlineFooterHeart}>&#9829;</span> by variations on a string
+            </a>
+          </div>
         </div>
 
         {/* ─── Right panel: queue sidebar (desktop) ─── */}
