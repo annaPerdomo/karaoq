@@ -78,36 +78,12 @@ const SongSearch: React.FC<SongSearchProps> = ({
   const karaokeModeRef = React.useRef(karaokeMode);
   karaokeModeRef.current = karaokeMode;
 
+  // Clear results when query is emptied
   React.useEffect(() => {
-    clearTimeout(debounceRef.current);
-
-    if (query.trim().length < 3) {
-      if (query.trim().length === 0 && hasSearched) {
-        setHasSearched(false);
-        setResults([]);
-      }
-      return;
+    if (query.trim().length === 0 && hasSearched) {
+      setHasSearched(false);
+      setResults([]);
     }
-
-    debounceRef.current = setTimeout(() => {
-      abortRef.current?.abort();
-      const controller = new AbortController();
-      abortRef.current = controller;
-
-      setSearching(true);
-      setHasSearched(true);
-      const q = karaokeModeRef.current ? `${query.trim()} karaoke` : query.trim();
-      searchYoutube(q, filtersRef.current, controller.signal)
-        .then(setResults)
-        .catch((err) => {
-          if (err?.name !== 'AbortError') setResults([]);
-        })
-        .finally(() => {
-          if (!controller.signal.aborted) setSearching(false);
-        });
-    }, 400);
-
-    return () => clearTimeout(debounceRef.current);
   }, [query]);
 
   React.useEffect(() => {
@@ -285,15 +261,13 @@ const SongSearch: React.FC<SongSearchProps> = ({
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && search()}
         />
-        {query && (
-          <button
-            className={styles.clearBtn}
-            onClick={() => { setQuery(''); setHasSearched(false); setResults([]); }}
-            aria-label="Clear search"
-          >
-            &times;
-          </button>
-        )}
+        <button
+          className={styles.searchBtn}
+          onClick={() => search()}
+          disabled={!query.trim() || searching}
+        >
+          Search
+        </button>
       </div>
 
       <div className={styles.options}>

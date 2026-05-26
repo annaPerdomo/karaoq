@@ -61,6 +61,28 @@
   border-color: rgba(255, 45, 120, 0.4);
 }
 
+.searchBtn {
+  padding: 0.6rem 1rem;
+  background: linear-gradient(135deg, #ff2d78, #ff6b35);
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.82rem;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform 0.12s ease, opacity 0.12s ease;
+}
+
+.searchBtn:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.searchBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .clearBtn {
   position: absolute;
   right: 1.4rem;
