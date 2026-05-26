@@ -166,7 +166,7 @@ const Sing = (): React.ReactElement => {
               roomId={joinCode}
               userName={username}
               onSongAdded={handleSongAdded}
-              showFilters={true}
+              showFilters={false}
               showNameInput={true}
               onNameChange={setUsername}
               requireName={true}
@@ -182,10 +182,10 @@ const Sing = (): React.ReactElement => {
                 <span className={styles.nowDot} />
                 <span className={styles.nowLabel}>Now Playing</span>
               </div>
+              <p className={styles.nowSinger}>{currentSong.userName}</p>
               <p className={styles.nowSong}>
                 {decodeHtml(currentSong.songTitle)}
               </p>
-              <p className={styles.nowSinger}>{currentSong.userName}</p>
             </div>
           )}
 
@@ -249,13 +249,15 @@ const Sing = (): React.ReactElement => {
           >
             <span className={styles.drawerGrabber} />
             {currentSong && isPlaying ? (
-              <div className={styles.drawerNowPlaying}>
+              <>
                 <span className={styles.nowDot} />
-                <span className={styles.drawerSongTitle}>
-                  {decodeHtml(currentSong.songTitle)}
-                </span>
-                <span className={styles.drawerSinger}>{currentSong.userName}</span>
-              </div>
+                <div className={styles.drawerNowPlaying}>
+                  <span className={styles.drawerSinger}>{currentSong.userName}</span>
+                  <span className={styles.drawerSongTitle}>
+                    {decodeHtml(currentSong.songTitle)}
+                  </span>
+                </div>
+              </>
             ) : (
               <span className={styles.drawerLabel}>Queue</span>
             )}
@@ -268,19 +270,6 @@ const Sing = (): React.ReactElement => {
           </button>
 
           <div className={styles.drawerBody}>
-            {currentSong && isPlaying && (
-              <div className={styles.drawerNowSection}>
-                <div className={styles.nowHeader}>
-                  <span className={styles.nowDot} />
-                  <span className={styles.nowLabel}>Now Playing</span>
-                </div>
-                <p className={styles.nowSong}>
-                  {decodeHtml(currentSong.songTitle)}
-                </p>
-                <p className={styles.nowSinger}>{currentSong.userName}</p>
-              </div>
-            )}
-
             <div className={styles.drawerQueueHeader}>
               <h3 className={styles.queueTitle}>Up Next</h3>
               {queueCount > 0 && (

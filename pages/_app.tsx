@@ -19,7 +19,8 @@ function MyApp({ Component, pageProps }: AppProps) {
   const isDisplay = router.pathname.startsWith('/display');
   const isHost = router.pathname.startsWith('/host');
   const isAdmin = router.pathname.startsWith('/admin');
-  const showFooter = !isLanding && !isDisplay && !isHost && !isAdmin;
+  const isSing = router.pathname.startsWith('/sing');
+  const showFooter = !isLanding && !isDisplay && !isHost && !isAdmin && !isSing;
 
   return (
     <>
