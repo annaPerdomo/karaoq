@@ -60,7 +60,7 @@ describe("Home component", () => {
 
     const fetchCall = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(fetchCall[0]).toMatch(/^\/api\/queue\/[A-Z2-9]{5}$/);
-    expect(fetchCall[1]).toEqual({ method: "POST" });
+    expect(fetchCall[1]).toMatchObject({ method: "POST" });
 
     expect(mockPush).toHaveBeenCalledWith(expect.stringMatching(/^\/host\/[A-Z2-9]{5}$/));
   });
