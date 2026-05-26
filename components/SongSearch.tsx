@@ -61,6 +61,7 @@ const SongSearch: React.FC<SongSearchProps> = ({
   const [karaokeMode, setKaraokeMode] = React.useState(true);
   const [hasSearched, setHasSearched] = React.useState(false);
   const [justAdded, setJustAdded] = React.useState<string | null>(null);
+  const [addError, setAddError] = React.useState<string | null>(null);
   const [confirmSong, setConfirmSong] = React.useState<YoutubeResult | null>(null);
   const [activeTab, setActiveTab] = React.useState(SONG_SECTIONS[0].id);
   const [activeCategory, setActiveCategory] = React.useState<string | null>(null);
@@ -237,15 +238,25 @@ const SongSearch: React.FC<SongSearchProps> = ({
       videoId: song.videoId,
     };
 
-    const ok = await postEntryToQueue(roomId, entry);
+    let ok = false;
+    try {
+      ok = await postEntryToQueue(roomId, entry);
+    } catch {
+      ok = false;
+    }
     if (ok) {
       onSongAdded(entry);
       setResults([]);
       setQuery('');
       setHasSearched(false);
       setConfirmSong(null);
+      setAddError(null);
       setJustAdded(entry.songTitle);
       setTimeout(() => setJustAdded(null), 3000);
+    } else {
+      setConfirmSong(null);
+      setAddError(song.title);
+      setTimeout(() => setAddError(null), 4000);
     }
   }
 
@@ -340,6 +351,12 @@ const SongSearch: React.FC<SongSearchProps> = ({
       {justAdded && (
         <div className={styles.toast}>
           Added &ldquo;{justAdded}&rdquo; to the queue!
+        </div>
+      )}
+
+      {addError && (
+        <div className={styles.toastError}>
+          Failed to add song. Check your connection and try again.
         </div>
       )}
 
