@@ -153,7 +153,7 @@ const Sing = (): React.ReactElement => {
         </div>
         <div className={styles.headerRight}>
           <div className={styles.roomBadge}>
-            Room: <strong>{joinCode}</strong>
+            Room: <strong>{joinCode?.toUpperCase()}</strong>
           </div>
         </div>
       </header>
@@ -327,7 +327,7 @@ const Sing = (): React.ReactElement => {
           <div className={styles.welcomeCard}>
             <div className={styles.welcomeLogo}>KaraoQ</div>
             <p className={styles.welcomeRoom}>
-              Room <strong>{joinCode}</strong>
+              Room <strong>{joinCode?.toUpperCase()}</strong>
             </p>
             <h2 className={styles.welcomePrompt}>What&apos;s your name?</h2>
             <input

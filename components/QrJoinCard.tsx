@@ -25,7 +25,7 @@ const QrJoinCard = ({ joinUrl, joinCode, origin, onClose, onPrint }: QrJoinCardP
         />
         <span className={styles.label}>SCAN TO JOIN</span>
       </div>
-      <span className={styles.alt}>or join <strong>{displayUrl}</strong> and enter <strong className={styles.code}>{joinCode}</strong></span>
+      <span className={styles.alt}>or join <strong>{displayUrl}</strong> and enter <strong className={styles.code}>{joinCode.toUpperCase()}</strong></span>
       {(onPrint || onClose) && (
         <div className={styles.actions}>
           {onPrint && (

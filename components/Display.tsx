@@ -235,7 +235,7 @@ const Display = (): React.ReactElement => {
               </svg>
             </div>
             <h1 className={styles.waitingTitle}>KaraoQ</h1>
-            <p className={styles.waitingText}>Scan the QR code or visit <strong>{(origin || 'karaoq.live').replace(/^https?:\/\/(www\.)?/, '')}</strong> and enter code <strong>{joinCode}</strong> to add songs and cheer on the singers!</p>
+            <p className={styles.waitingText}>Scan the QR code or visit <strong>{(origin || 'karaoq.live').replace(/^https?:\/\/(www\.)?/, '')}</strong> and enter code <strong>{joinCode?.toUpperCase()}</strong> to add songs and cheer on the singers!</p>
           </div>
         )}
 

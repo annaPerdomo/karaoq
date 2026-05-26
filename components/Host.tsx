@@ -375,7 +375,10 @@ const Host = (): React.ReactElement => {
   const [settingsOpen, setSettingsOpen] = React.useState(false);
   const [searchOpen, setSearchOpen] = React.useState(false);
   const [historyOpen, setHistoryOpen] = React.useState(false);
-  const [qrVisible, setQrVisible] = React.useState(true);
+  const [qrVisible, setQrVisible] = React.useState(() => {
+    if (typeof window === 'undefined') return true;
+    return window.innerWidth > 1024;
+  });
   const [editingId, setEditingId] = React.useState<string | null>(null);
   const [toast, setToast] = React.useState<string | null>(null);
   const toastTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -856,7 +859,7 @@ const Host = (): React.ReactElement => {
               </div>
               <h2 className={styles.emptyTitle}>KaraoQ</h2>
               <p>
-                {qrVisible ? 'Scan the QR code or visit' : 'Visit'} <strong>{(origin || 'karaoq.live').replace(/^https?:\/\/(www\.)?/, '')}</strong> and enter code <strong>{joinCode}</strong> to add songs and cheer on the singers!
+                {qrVisible ? 'Scan the QR code or visit' : 'Visit'} <strong>{(origin || 'karaoq.live').replace(/^https?:\/\/(www\.)?/, '')}</strong> and enter code <strong>{joinCode?.toUpperCase()}</strong> to add songs and cheer on the singers!
               </p>
             </div>
           )}
@@ -1113,7 +1116,7 @@ const Host = (): React.ReactElement => {
           <div className={styles.welcomeCard}>
             <div className={styles.welcomeLogo}>KaraoQ</div>
             <p className={styles.welcomeRoom}>
-              Room <strong>{joinCode}</strong>
+              Room <strong>{joinCode?.toUpperCase()}</strong>
             </p>
             <h2 className={styles.welcomePrompt}>What&apos;s your name?</h2>
             <input

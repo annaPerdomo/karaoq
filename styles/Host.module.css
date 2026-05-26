@@ -1449,7 +1449,7 @@
 /* ─── Responsive ─── */
 @media (max-width: 1024px) {
   .sidebar {
-    width: 300px;
+    width: 260px;
   }
 
   .header {
