@@ -116,9 +116,11 @@ describe("POST /api/queue/[id]/remove - Remove entry from queue", () => {
     expect(updateCall.activeVideoIndex).toBe(0);
   });
 
-  it("clamps activeVideoIndex when removing the current (last) song", async () => {
+  it("keeps activeVideoIndex when removing the current (last) song so UI shows empty state", async () => {
     // Queue: [a, b], activeVideoIndex = 1 (on "b", the last entry)
-    // Remove "b" → new queue has 1 entry, activeVideoIndex should clamp to 0
+    // Remove "b" → new queue has 1 entry, activeVideoIndex stays at 1
+    // so it points past the queue and the UI shows the empty state
+    // instead of resurrecting "a" from history.
     const room: Room = {
       id: "ROOM1",
       queue: makeQueue("a", "b"),
@@ -136,7 +138,7 @@ describe("POST /api/queue/[id]/remove - Remove entry from queue", () => {
     await handler(req, res);
 
     const updateCall = mockCollection.updateOne.mock.calls[0][1].$set;
-    expect(updateCall.activeVideoIndex).toBe(0);
+    expect(updateCall.activeVideoIndex).toBe(1);
     expect(updateCall.queue).toHaveLength(1);
   });
 

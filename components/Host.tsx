@@ -650,11 +650,31 @@ const Host = (): React.ReactElement => {
   }
 
   async function moveToTop(entryId: string) {
-    const upNext = queue.slice(activeIndex + 1);
-    const idx = upNext.findIndex((e) => e.id === entryId);
-    if (idx <= 0) return;
-    const moved = arrayMove(upNext, idx, 0);
-    await handleReorder(moved);
+    if (!joinCode) return;
+
+    if (!isPlaying) {
+      // When paused, the sidebar shows queue.slice(activeIndex) including the
+      // current "UP NEXT" song.  Moving to top should place the clicked song
+      // at activeIndex so it becomes the new "UP NEXT".
+      const fullUpcoming = queue.slice(activeIndex);
+      const idx = fullUpcoming.findIndex((e) => e.id === entryId);
+      if (idx <= 0) return;
+      const moved = arrayMove(fullUpcoming, idx, 0);
+
+      pausePolling();
+      const history = queue.slice(0, activeIndex);
+      const newQueue = [...history, ...moved];
+      setQueue(newQueue);
+      await reorderQueue(joinCode, newQueue, activeIndex);
+      broadcast(newQueue, activeIndex, isPlaying);
+    } else {
+      // When playing, only reorder the upcoming portion after the active song.
+      const upcoming = queue.slice(activeIndex + 1);
+      const idx = upcoming.findIndex((e) => e.id === entryId);
+      if (idx <= 0) return;
+      const moved = arrayMove(upcoming, idx, 0);
+      await handleReorder(moved);
+    }
     showToast('Moved to top of queue');
   }
 
@@ -670,9 +690,10 @@ const Host = (): React.ReactElement => {
     let newActiveIndex = activeIndex;
     if (entryIndex < activeIndex) {
       newActiveIndex = Math.max(0, newActiveIndex - 1);
-    } else if (entryIndex === activeIndex) {
-      newActiveIndex = Math.min(newActiveIndex, Math.max(0, newQueue.length - 1));
     }
+    // When removing the active song, keep the index — the next song slides
+    // into place.  If nothing remains at that index, activeIndex >= queue.length
+    // and the UI correctly shows the empty state.
 
     setQueue(newQueue);
     setActiveIndex(newActiveIndex);
@@ -703,7 +724,8 @@ const Host = (): React.ReactElement => {
   const currentSong = queue[activeIndex];
   // When the current song is waiting (not playing), include it in the sidebar
   // so the queue doesn't look empty while the player shows "UP NEXT"
-  const upNext = currentSong && !isPlaying
+  const includesCurrent = !!(currentSong && !isPlaying);
+  const upNext = includesCurrent
     ? queue.slice(activeIndex)
     : queue.slice(activeIndex + 1);
   const historyItems = queue.slice(0, activeIndex);

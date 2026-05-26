@@ -39,15 +39,14 @@ export default async function handler(
 
     const newQueue = room.queue.filter((e) => e.id !== entryId);
 
-    // Adjust activeVideoIndex if removing an entry before or at the current song
+    // Adjust activeVideoIndex if removing an entry before the current song
     let newActiveIndex = room.activeVideoIndex;
     if (entryIndex < room.activeVideoIndex) {
       newActiveIndex = Math.max(0, newActiveIndex - 1);
-    } else if (entryIndex === room.activeVideoIndex) {
-      // Removing current song: keep index (next song slides into position)
-      // But clamp to not exceed new queue length
-      newActiveIndex = Math.min(newActiveIndex, Math.max(0, newQueue.length - 1));
     }
+    // When removing the active song, keep the index — the next song slides
+    // into place.  If nothing remains at that index, activeVideoIndex >= queue.length
+    // and the UI correctly shows the empty state.
 
     await collection.updateOne(
       { id: roomId },
