@@ -497,7 +497,7 @@
   font-size: 0.72rem;
   letter-spacing: 2px;
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: #ff2d78;
   font-weight: 600;
 }
 
@@ -554,7 +554,7 @@
 
 .queueSinger {
   font-size: 0.72rem;
-  color: var(--text-muted);
+  color: #00f0ff;
 }
 
 .emptyQueue {
@@ -763,7 +763,7 @@
 
   .searchPanel {
     padding: 0.75rem 1rem 1.5rem;
-    padding-bottom: 5rem; /* space for the fixed drawer handle */
+    padding-bottom: 4rem; /* space for the fixed drawer handle */
   }
 
   .nameSection {
@@ -850,7 +850,7 @@
     background: var(--bg-secondary);
     border-top: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 16px 16px 0 0;
-    max-height: 4.25rem; /* collapsed: just the handle */
+    max-height: 3.25rem; /* collapsed: just the handle */
     transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1),
                 box-shadow 0.35s ease;
     overflow: hidden;
@@ -867,7 +867,7 @@
     display: flex;
     align-items: center;
     gap: 0.6rem;
-    padding: 0.6rem 1rem 0.5rem;
+    padding: 0.3rem 1rem 0.3rem;
     background: none;
     border: none;
     color: var(--text-primary);
@@ -875,12 +875,12 @@
     text-align: left;
     flex-shrink: 0;
     position: relative;
-    min-height: 4.25rem;
+    min-height: 3.25rem;
   }
 
   .drawerGrabber {
     position: absolute;
-    top: 0.4rem;
+    top: 0.2rem;
     left: 50%;
     transform: translateX(-50%);
     width: 32px;
