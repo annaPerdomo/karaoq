@@ -52,6 +52,12 @@ export default async function handler(
       userAgentData,
       totalQrPrints,
       qrPrintsByDay,
+      suggestionTotal,
+      suggestionBySource,
+      suggestionBySection,
+      suggestionByCategory,
+      suggestionTopSongs,
+      suggestionsByDay,
     ] = await Promise.all([
       // Total rooms created
       events.countDocuments({ type: "room_created" }),
@@ -301,6 +307,68 @@ export default async function handler(
           { $sort: { _id: 1 } },
         ])
         .toArray(),
+
+      // Total suggestion uses
+      events.countDocuments({ type: "suggestion_used" }),
+
+      // Suggestion uses by source (random / song_pick / genre_chip)
+      events
+        .aggregate([
+          { $match: { type: "suggestion_used" } },
+          { $group: { _id: "$suggestionSource", count: { $sum: 1 } } },
+          { $sort: { count: -1 } },
+        ])
+        .toArray(),
+
+      // Suggestion uses by section (genre / voice-type / spanish / kpop / japanese)
+      events
+        .aggregate([
+          { $match: { type: "suggestion_used", sectionId: { $exists: true, $ne: null } } },
+          { $group: { _id: "$sectionId", count: { $sum: 1 } } },
+          { $sort: { count: -1 } },
+        ])
+        .toArray(),
+
+      // Suggestion uses by category
+      events
+        .aggregate([
+          { $match: { type: "suggestion_used", categoryId: { $exists: true, $ne: null } } },
+          { $group: { _id: "$categoryId", count: { $sum: 1 } } },
+          { $sort: { count: -1 } },
+          { $limit: 20 },
+        ])
+        .toArray(),
+
+      // Top suggested songs clicked
+      events
+        .aggregate([
+          { $match: { type: "suggestion_used", suggestionSource: "song_pick", songTitle: { $exists: true } } },
+          {
+            $group: {
+              _id: { title: "$songTitle", artist: "$userName" },
+              count: { $sum: 1 },
+            },
+          },
+          { $sort: { count: -1 } },
+          { $limit: 20 },
+        ])
+        .toArray(),
+
+      // Suggestion uses per day (last 30 days)
+      events
+        .aggregate([
+          { $match: { type: "suggestion_used", timestamp: { $gte: thirtyDaysAgo } } },
+          {
+            $group: {
+              _id: {
+                $dateToString: { format: "%Y-%m-%d", date: "$timestamp" },
+              },
+              count: { $sum: 1 },
+            },
+          },
+          { $sort: { _id: 1 } },
+        ])
+        .toArray(),
     ]);
 
     const sessionStats = sessionData[0] || {
@@ -349,6 +417,14 @@ export default async function handler(
       },
       recentRooms,
       devices: userAgentData,
+      suggestions: {
+        total: suggestionTotal,
+        bySource: suggestionBySource,
+        bySection: suggestionBySection,
+        byCategory: suggestionByCategory,
+        topSongs: suggestionTopSongs,
+        byDay: suggestionsByDay,
+      },
     });
   } catch (e) {
     console.error("Analytics query error:", e);

@@ -41,6 +41,14 @@ interface AnalyticsData {
     participants: number;
   }[];
   devices: { _id: string; count: number }[];
+  suggestions: {
+    total: number;
+    bySource: { _id: string; count: number }[];
+    bySection: { _id: string; count: number }[];
+    byCategory: { _id: string; count: number }[];
+    topSongs: { _id: { title: string; artist: string }; count: number }[];
+    byDay: { _id: string; count: number }[];
+  };
 }
 
 function BarChart({ data, color = '#a78bfa' }: {
@@ -102,7 +110,7 @@ const Analytics = (): React.ReactElement => {
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [data, setData] = React.useState<AnalyticsData | null>(null);
-  const [activeTab, setActiveTab] = React.useState<'overview' | 'geo' | 'songs' | 'rooms'>('overview');
+  const [activeTab, setActiveTab] = React.useState<'overview' | 'geo' | 'songs' | 'suggestions' | 'rooms'>('overview');
 
   const fetchData = React.useCallback(async (s: string) => {
     setLoading(true);
@@ -196,7 +204,7 @@ const Analytics = (): React.ReactElement => {
     );
   }
 
-  const { overview, charts, geo, rankings, recentRooms, devices } = data;
+  const { overview, charts, geo, rankings, recentRooms, devices, suggestions } = data;
 
   const mobileCount = devices.find((d) => d._id === 'Mobile')?.count || 0;
   const desktopCount = devices.find((d) => d._id === 'Desktop')?.count || 0;
@@ -213,7 +221,7 @@ const Analytics = (): React.ReactElement => {
       </header>
 
       <nav className={styles.tabs}>
-        {(['overview', 'geo', 'songs', 'rooms'] as const).map((tab) => (
+        {(['overview', 'geo', 'songs', 'suggestions', 'rooms'] as const).map((tab) => (
           <button
             key={tab}
             className={`${styles.tab} ${activeTab === tab ? styles.tabActive : ''}`}
@@ -367,6 +375,78 @@ const Analytics = (): React.ReactElement => {
               data={rankings.topUsers.map((u) => ({ label: u._id, value: u.count }))}
               color="#c084fc"
             />
+          </section>
+        </div>
+      )}
+
+      {activeTab === 'suggestions' && (
+        <div className={styles.tabContent}>
+          <div className={styles.statGrid}>
+            <StatCard label="Total Suggestion Uses" value={suggestions.total} />
+            {suggestions.bySource.map((s) => (
+              <StatCard
+                key={s._id}
+                label={
+                  s._id === 'random' ? 'Random Button' :
+                  s._id === 'song_pick' ? 'Song Picks' :
+                  'Genre Chips'
+                }
+                value={s.count}
+                sub={suggestions.total > 0 ? `${Math.round((s.count / suggestions.total) * 100)}% of total` : undefined}
+              />
+            ))}
+          </div>
+
+          <section className={styles.section}>
+            <h2 className={styles.sectionTitle}>Suggestion Uses (Last 30 Days)</h2>
+            <BarChart
+              data={suggestions.byDay.map((d) => ({ label: formatDate(d._id), value: d.count }))}
+              color="#34d399"
+            />
+          </section>
+
+          <section className={styles.section}>
+            <h2 className={styles.sectionTitle}>By Section</h2>
+            <BarChart
+              data={suggestions.bySection.map((d) => ({
+                label: d._id === 'genre' ? 'Genre' :
+                       d._id === 'voice-type' ? 'Voice Type' :
+                       d._id === 'spanish' ? 'Spanish' :
+                       d._id === 'kpop' ? 'K-Pop' :
+                       d._id === 'japanese' ? 'Japanese' :
+                       d._id,
+                value: d.count,
+              }))}
+              color="#60a5fa"
+            />
+          </section>
+
+          <section className={styles.section}>
+            <h2 className={styles.sectionTitle}>Top Categories</h2>
+            <BarChart
+              data={suggestions.byCategory.map((d) => ({ label: d._id, value: d.count }))}
+              color="#f59e0b"
+            />
+          </section>
+
+          <section className={styles.section}>
+            <h2 className={styles.sectionTitle}>Most Clicked Song Suggestions</h2>
+            {suggestions.topSongs.length === 0 ? (
+              <p className={styles.empty}>No song suggestions clicked yet</p>
+            ) : (
+              <div className={styles.songList}>
+                {suggestions.topSongs.map((s, i) => (
+                  <div key={i} className={styles.songRow}>
+                    <span className={styles.songRank}>#{i + 1}</span>
+                    <div className={styles.songInfo}>
+                      <span className={styles.songTitle}>{s._id.title}</span>
+                      <span className={styles.songLink}>{s._id.artist}</span>
+                    </div>
+                    <span className={styles.songCount}>{s.count}x</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </section>
         </div>
       )}

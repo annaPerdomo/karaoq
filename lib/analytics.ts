@@ -6,7 +6,8 @@ export type EventType =
   | "song_added"
   | "reaction_sent"
   | "session_heartbeat"
-  | "qr_printed";
+  | "qr_printed"
+  | "suggestion_used";
 
 export interface AnalyticsEvent {
   type: EventType;
@@ -21,6 +22,9 @@ export interface AnalyticsEvent {
   emoji?: string;
   role?: "host" | "singer" | "display";
   userAgent?: string;
+  suggestionSource?: "random" | "song_pick" | "genre_chip";
+  sectionId?: string;
+  categoryId?: string;
 }
 
 function headerString(value: string | string[] | undefined): string | undefined {
