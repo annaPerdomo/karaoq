@@ -84,7 +84,7 @@ const SongSearch: React.FC<SongSearchProps> = ({
       setHasSearched(false);
       setResults([]);
     }
-  }, [query]);
+  }, [query, hasSearched]);
 
   React.useEffect(() => {
     const savedMode = localStorage.getItem('karaoq_karaoke_mode');
@@ -338,6 +338,7 @@ const SongSearch: React.FC<SongSearchProps> = ({
         <div className={styles.results}>
           {results.map((song) => (
             <div key={song.videoId} className={styles.resultCard}>
+              {/* eslint-disable-next-line @next/next/no-img-element -- external YouTube thumbnails; Next optimization adds cost/latency without benefit */}
               <img
                 src={song.thumbnailUrl}
                 alt=""
@@ -505,6 +506,7 @@ const SongSearch: React.FC<SongSearchProps> = ({
         <div className={styles.overlay} onClick={() => setConfirmSong(null)}>
           <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
             <h3 className={styles.modalTitle}>Add to queue?</h3>
+            {/* eslint-disable-next-line @next/next/no-img-element -- external YouTube thumbnail; Next optimization adds cost/latency without benefit */}
             <img
               src={confirmSong.thumbnailUrl}
               alt=""

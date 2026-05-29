@@ -475,7 +475,7 @@ const Host = (): React.ReactElement => {
   React.useEffect(() => {
     if (!joinCode) return;
     return startSessionTracking(joinCode, hostName || 'Host', 'host');
-  }, [joinCode]);
+  }, [joinCode, hostName]);
 
   // Poll for queue updates (pauses during drag operations)
   React.useEffect(() => {
