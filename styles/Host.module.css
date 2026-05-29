@@ -1457,6 +1457,18 @@
   }
 }
 
+/* ─── Tablet / iPad: wrap song titles instead of truncating ─── */
+@media (min-width: 769px) and (max-width: 1200px) {
+  /* Keep the sidebar narrow so the player stays large, but let the song
+     title wrap onto multiple lines instead of truncating with an ellipsis. */
+  .queueSong {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    line-height: 1.3;
+  }
+}
+
 @media (max-width: 768px) {
   .header {
     flex-wrap: wrap;
