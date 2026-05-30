@@ -1451,7 +1451,7 @@
 /* ─── Responsive ─── */
 @media (max-width: 1200px) {
   .sidebar {
-    width: 220px;
+    width: 300px;
   }
 
   .header {
@@ -1459,15 +1459,57 @@
   }
 }
 
-/* ─── Tablet / iPad: wrap song titles instead of truncating ─── */
+/* ─── Tablet / iPad: read the whole entry + tappable actions ─── */
 @media (min-width: 769px) and (max-width: 1200px) {
-  /* Keep the sidebar narrow so the player stays large, but let the song
-     title wrap onto multiple lines instead of truncating with an ellipsis. */
+  /* Let the singer name and song title wrap fully so the host can read the
+     entire queue entry at a glance instead of truncating with an ellipsis. */
+  .queueItem {
+    flex-wrap: wrap;
+    align-items: flex-start;
+    padding: 0.7rem 0.6rem;
+  }
+
+  .queueNum {
+    margin-top: 0.1rem;
+  }
+
+  .queueSingerName {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    word-break: break-word;
+  }
+
   .queueSong {
     white-space: normal;
     overflow: visible;
     text-overflow: clip;
     line-height: 1.3;
+    word-break: break-word;
+  }
+
+  /* Touch screens can't hover, so the move/edit/remove controls go on their
+     own full-width row beneath the song where they're always visible and
+     large enough to tap — without stealing horizontal space from the text. */
+  .queueActions {
+    opacity: 1;
+    flex-basis: 100%;
+    justify-content: flex-end;
+    gap: 0.4rem;
+    margin-top: 0.5rem;
+  }
+
+  .actionBtn {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+/* Any touch device (e.g. iPad in landscape past 1200px) has no hover, so the
+   queue actions must stay visible rather than appearing only on :hover. */
+@media (hover: none) {
+  .queueActions {
+    opacity: 1;
   }
 }
 
