@@ -351,7 +351,6 @@ const Host = (): React.ReactElement => {
   const reactionTimers = React.useRef<ReturnType<typeof setTimeout>[]>([]);
   const videoRef = React.useRef<HTMLIFrameElement>(null);
 
-  // Host name (same pattern as Sing's welcome flow)
   const [hostName, setHostName] = React.useState('');
   const [showWelcome, setShowWelcome] = React.useState(true);
   const [welcomeName, setWelcomeName] = React.useState('');
@@ -371,7 +370,6 @@ const Host = (): React.ReactElement => {
     setShowWelcome(false);
   }
 
-  // New state for redesigned layout
   const [settingsOpen, setSettingsOpen] = React.useState(false);
   const [searchOpen, setSearchOpen] = React.useState(false);
   const [historyOpen, setHistoryOpen] = React.useState(false);
@@ -414,7 +412,6 @@ const Host = (): React.ReactElement => {
     showToast('TV Display opened');
   }
 
-  // Clean up reaction timers on unmount
   React.useEffect(() => {
     const timers = reactionTimers.current;
     return () => {
@@ -444,7 +441,6 @@ const Host = (): React.ReactElement => {
     reactionTimers.current.push(timer);
   }
 
-  // Initial load + ensure room exists
   React.useEffect(() => {
     if (!joinCode) return;
 
@@ -471,7 +467,6 @@ const Host = (): React.ReactElement => {
     return () => { cancelled = true; };
   }, [joinCode]);
 
-  // Session analytics tracking
   React.useEffect(() => {
     if (!joinCode) return;
     return startSessionTracking(joinCode, hostName || 'Host', 'host');
@@ -656,9 +651,8 @@ const Host = (): React.ReactElement => {
     if (!joinCode) return;
 
     if (!isPlaying) {
-      // When paused, the sidebar shows queue.slice(activeIndex) including the
-      // current "UP NEXT" song.  Moving to top should place the clicked song
-      // at activeIndex so it becomes the new "UP NEXT".
+      // Paused: the current "UP NEXT" song is part of the list, so move within
+      // queue.slice(activeIndex) to keep the clicked song at activeIndex.
       const fullUpcoming = queue.slice(activeIndex);
       const idx = fullUpcoming.findIndex((e) => e.id === entryId);
       if (idx <= 0) return;
@@ -671,7 +665,6 @@ const Host = (): React.ReactElement => {
       await reorderQueue(joinCode, newQueue, activeIndex);
       broadcast(newQueue, activeIndex, isPlaying);
     } else {
-      // When playing, only reorder the upcoming portion after the active song.
       const upcoming = queue.slice(activeIndex + 1);
       const idx = upcoming.findIndex((e) => e.id === entryId);
       if (idx <= 0) return;
@@ -679,6 +672,34 @@ const Host = (): React.ReactElement => {
       await handleReorder(moved);
     }
     showToast('Moved to top of queue');
+  }
+
+  // Move one history entry back into the queue as the next song, leaving the
+  // rest of history and the active pointer in place.
+  async function replayFromHistory(entryId: string) {
+    if (!joinCode) return;
+
+    const idx = queue.findIndex((e) => e.id === entryId);
+    if (idx === -1 || idx >= activeIndex) return;
+
+    const entry = queue[idx];
+    const withoutSong = queue.filter((e) => e.id !== entryId);
+    // Removing a history entry shifts the active song down by one; slot the
+    // restored song right after it (or at the top when nothing is playing).
+    const newActiveIndex = activeIndex - 1;
+    const insertAt = isPlaying ? activeIndex : newActiveIndex;
+    const newQueue = [
+      ...withoutSong.slice(0, insertAt),
+      entry,
+      ...withoutSong.slice(insertAt),
+    ];
+
+    pausePolling();
+    setQueue(newQueue);
+    setActiveIndex(newActiveIndex);
+    await reorderQueue(joinCode, newQueue, newActiveIndex);
+    broadcast(newQueue, newActiveIndex, isPlaying);
+    showToast(`Restored "${decodeHtml(entry.songTitle)}"`);
   }
 
   async function removeSong(entryId: string) {
@@ -694,9 +715,6 @@ const Host = (): React.ReactElement => {
     if (entryIndex < activeIndex) {
       newActiveIndex = Math.max(0, newActiveIndex - 1);
     }
-    // When removing the active song, keep the index — the next song slides
-    // into place.  If nothing remains at that index, activeIndex >= queue.length
-    // and the UI correctly shows the empty state.
 
     setQueue(newQueue);
     setActiveIndex(newActiveIndex);
@@ -725,8 +743,7 @@ const Host = (): React.ReactElement => {
   }
 
   const currentSong = queue[activeIndex];
-  // When the current song is waiting (not playing), include it in the sidebar
-  // so the queue doesn't look empty while the player shows "UP NEXT"
+  // Keep the waiting current song in the sidebar so it isn't empty during "UP NEXT".
   const includesCurrent = !!(currentSong && !isPlaying);
   const upNext = includesCurrent
     ? queue.slice(activeIndex)
@@ -1038,22 +1055,12 @@ const Host = (): React.ReactElement => {
                     </div>
                     <button
                       className={styles.replayBtn}
-                      onClick={async () => {
-                        if (!joinCode) return;
-                        const idx = queue.findIndex((e) => e.id === item.id);
-                        if (idx !== -1) {
-                          const ok = await updatePosition(joinCode, idx);
-                          if (ok) {
-                            setActiveIndex(idx);
-                            setIsPlaying(false);
-                            broadcast(queue, idx, false);
-                          }
-                        }
-                      }}
-                      title="Replay this song"
-                      aria-label="Replay this song"
+                      onClick={() => replayFromHistory(item.id)}
+                      title="Restore this song to the queue"
+                      aria-label="Restore this song to the queue"
                     >
                       {Icons.replay}
+                      <span className={styles.replayBtnLabel}>Restore</span>
                     </button>
                   </div>
                 ))

@@ -896,27 +896,29 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 50%;
-  color: var(--text-muted);
+  gap: 0.4rem;
+  height: 32px;
+  padding: 0 0.75rem;
+  background: rgba(0, 240, 255, 0.08);
+  border: 1px solid rgba(0, 240, 255, 0.22);
+  border-radius: 999px;
+  color: #00f0ff;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
   cursor: pointer;
   flex-shrink: 0;
-  opacity: 0;
   transition: all 0.15s;
 }
 
-.historyItem:hover .replayBtn {
-  opacity: 1;
+.replayBtnLabel {
+  line-height: 1;
 }
 
 .replayBtn:hover {
-  background: rgba(0, 240, 255, 0.12);
-  border-color: rgba(0, 240, 255, 0.3);
-  color: #00f0ff;
-  transform: scale(1.1);
+  background: rgba(0, 240, 255, 0.16);
+  border-color: rgba(0, 240, 255, 0.45);
+  transform: scale(1.04);
 }
 
 /* ─── Search overlay ─── */
@@ -1506,10 +1508,6 @@
   }
 
   .queueActions {
-    opacity: 1;
-  }
-
-  .replayBtn {
     opacity: 1;
   }
 
