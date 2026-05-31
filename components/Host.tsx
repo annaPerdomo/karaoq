@@ -20,6 +20,7 @@ import { CSS } from '@dnd-kit/utilities';
 import styles from '../styles/Host.module.css';
 import CheerBar from './CheerBar';
 import QrJoinCard from './QrJoinCard';
+import { normalizeRoomId } from '../lib/roomCode';
 import SongSearch from './SongSearch';
 import getRoom from '../app/queue/getRoom';
 import createRoom from '../app/queue/createRoom';
@@ -333,7 +334,7 @@ function SortableQueueItem({
 // ─── Main Host component ───
 const Host = (): React.ReactElement => {
   const router = useRouter();
-  const joinCode = router.query.joinCode as string | undefined;
+  const joinCode = normalizeRoomId(router.query.joinCode) as string | undefined;
 
   const [queue, setQueue] = React.useState<QueueEntry[]>([]);
   const [activeIndex, setActiveIndex] = React.useState(0);

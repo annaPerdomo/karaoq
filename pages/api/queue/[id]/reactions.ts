@@ -3,6 +3,7 @@ import { NextApiRequest, NextApiResponse } from "next";
 import { ApiError, Reaction, Room } from "../../types";
 import { CHEER_EMOJIS, CHEER_MESSAGES, REACTION_COOLDOWN_MS } from "../../../../app/queue/cheerConstants";
 import { trackEvent } from "../../../../lib/analytics";
+import { normalizeRoomId } from "../../../../lib/roomCode";
 
 const RATE_LIMIT_MS = REACTION_COOLDOWN_MS;
 const MAX_REACTIONS = 50;
@@ -20,7 +21,7 @@ export default async function handler(
   }
 
   const client = new MongoClient(process.env.MONGODB_URI!);
-  const roomId = req.query.id;
+  const roomId = normalizeRoomId(req.query.id);
   const emoji = req.query.emoji as string | undefined;
   const userName = req.query.userName as string | undefined;
   const reactionId = req.query.reactionId as string | undefined;
