@@ -6,6 +6,7 @@ import styles from '../styles/Sing.module.css';
 import CheerBar from './CheerBar';
 import SongSearch from './SongSearch';
 import getRoom from '../app/queue/getRoom';
+import { normalizeRoomId } from '../lib/roomCode';
 import postReaction from '../app/queue/postReaction';
 import { REACTION_COOLDOWN_MS } from '../app/queue/cheerConstants';
 import { startSessionTracking } from '../app/queue/trackSession';
@@ -23,7 +24,7 @@ function decodeHtml(html: string): string {
 
 const Sing = (): React.ReactElement => {
   const router = useRouter();
-  const joinCode = router.query.joinCode as string | undefined;
+  const joinCode = normalizeRoomId(router.query.joinCode) as string | undefined;
 
   const [queue, setQueue] = React.useState<QueueEntry[]>([]);
   const [activeIndex, setActiveIndex] = React.useState(0);

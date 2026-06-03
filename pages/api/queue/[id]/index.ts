@@ -2,6 +2,7 @@ import { MongoClient } from "mongodb";
 import { NextApiRequest, NextApiResponse } from "next";
 import { ApiError, Room } from "../../types";
 import { trackEvent } from "../../../../lib/analytics";
+import { normalizeRoomId } from "../../../../lib/roomCode";
 
 const REACTION_TTL_MS = 30000;
 
@@ -10,7 +11,7 @@ export default async function handler(
   res: NextApiResponse<Room | ApiError>
 ) {
   const client = new MongoClient(process.env.MONGODB_URI!);
-  const roomId = req.query.id;
+  const roomId = normalizeRoomId(req.query.id);
 
   if (typeof roomId !== "string") {
     res.status(400).json({ code: 400, message: "Invalid request." });

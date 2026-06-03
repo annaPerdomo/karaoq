@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import styles from '../styles/Display.module.css';
 import QrJoinCard from './QrJoinCard';
 import getRoom from '../app/queue/getRoom';
+import { normalizeRoomId } from '../lib/roomCode';
 import { onRoomState, broadcastVideoEnded } from '../app/queue/roomChannel';
 import { startSessionTracking } from '../app/queue/trackSession';
 import { QueueEntry, Reaction } from '../pages/api/types';
@@ -22,7 +23,7 @@ function decodeHtml(html: string): string {
 
 const Display = (): React.ReactElement => {
   const router = useRouter();
-  const joinCode = router.query.joinCode as string | undefined;
+  const joinCode = normalizeRoomId(router.query.joinCode) as string | undefined;
 
   const [queue, setQueue] = React.useState<QueueEntry[]>([]);
   const [activeIndex, setActiveIndex] = React.useState(0);

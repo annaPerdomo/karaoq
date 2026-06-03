@@ -1,6 +1,7 @@
 import { MongoClient } from "mongodb";
 import { NextApiRequest, NextApiResponse } from "next";
 import { Room } from "../../types";
+import { normalizeRoomId } from "../../../../lib/roomCode";
 
 export default async function handler(
   req: NextApiRequest,
@@ -12,7 +13,7 @@ export default async function handler(
   }
 
   const client = new MongoClient(process.env.MONGODB_URI!);
-  const roomId = req.query.id;
+  const roomId = normalizeRoomId(req.query.id);
   const activeVideoIndex = parseInt(req.query.activeVideoIndex as string);
 
   if (typeof roomId !== "string" || isNaN(activeVideoIndex)) {
