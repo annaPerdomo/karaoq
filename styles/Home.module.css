@@ -50,6 +50,7 @@
 .navLogo {
   font-family: var(--font-display);
   font-size: 1.4rem;
+  color: #fff;
   background: linear-gradient(135deg, #ff2d78, #00f0ff);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;

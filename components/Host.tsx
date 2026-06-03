@@ -437,7 +437,9 @@ const Host = ({ remote = false }: { remote?: boolean } = {}): React.ReactElement
   }
 
   async function copyCohostLink() {
-    const url = `${origin}/remote/${joinCode}`;
+    if (!joinCode) return;
+    const base = origin || window.location.origin;
+    const url = `${base}/remote/${joinCode}`;
     setSettingsOpen(false);
     try {
       await navigator.clipboard.writeText(url);
