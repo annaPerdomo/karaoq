@@ -114,9 +114,11 @@ const Icons = {
 function SettingsPopover({
   isOpen,
   onClose,
+  remote,
   tvMode,
   onOpenTv,
   onSwitchLocal,
+  onCopyCohostLink,
   reactionsOn,
   onToggleReactions,
   hostName,
@@ -126,9 +128,11 @@ function SettingsPopover({
 }: {
   isOpen: boolean;
   onClose: () => void;
+  remote: boolean;
   tvMode: boolean;
   onOpenTv: () => void;
   onSwitchLocal: () => void;
+  onCopyCohostLink: () => void;
   reactionsOn: boolean;
   onToggleReactions: () => void;
   hostName: string;
@@ -153,44 +157,59 @@ function SettingsPopover({
 
   return (
     <div ref={ref} className={styles.settingsPopover}>
-      <div className={styles.spGroup}>
-        <div className={styles.spLabel}>Display</div>
-        {tvMode ? (
-          <button className={styles.spBtn} onClick={onSwitchLocal}>
-            {Icons.tv}
-            <div>
-              <div className={styles.spBtnTitle}>Watch Here</div>
-              <div className={styles.spBtnDesc}>Show video in this window</div>
-            </div>
-          </button>
-        ) : (
-          <button className={styles.spBtn} onClick={onOpenTv}>
-            {Icons.tv}
-            <div>
-              <div className={styles.spBtnTitle}>Open TV Display</div>
-              <div className={styles.spBtnDesc}>Cast to a TV or projector</div>
-            </div>
-          </button>
-        )}
-      </div>
-      <div className={styles.spSep} />
-      <div className={styles.spGroup}>
-        <div className={styles.spLabel}>Audience</div>
-        <button className={styles.spToggleRow} onClick={onToggleReactions}>
-          <div>
-            <div className={styles.spBtnTitle}>Reactions</div>
-            <div className={styles.spBtnDesc}>
-              {reactionsOn ? 'Audience can send cheers' : 'Reactions disabled'}
-            </div>
+      {!remote && (
+        <>
+          <div className={styles.spGroup}>
+            <div className={styles.spLabel}>Display</div>
+            {tvMode ? (
+              <button className={styles.spBtn} onClick={onSwitchLocal}>
+                {Icons.tv}
+                <div>
+                  <div className={styles.spBtnTitle}>Watch Here</div>
+                  <div className={styles.spBtnDesc}>Show video in this window</div>
+                </div>
+              </button>
+            ) : (
+              <button className={styles.spBtn} onClick={onOpenTv}>
+                {Icons.tv}
+                <div>
+                  <div className={styles.spBtnTitle}>Open TV Display</div>
+                  <div className={styles.spBtnDesc}>Cast to a TV or projector</div>
+                </div>
+              </button>
+            )}
           </div>
-          <div className={`${styles.toggle} ${reactionsOn ? styles.toggleOn : ''}`}>
-            <div className={styles.toggleThumb} />
+          <div className={styles.spSep} />
+          <div className={styles.spGroup}>
+            <div className={styles.spLabel}>Co-host</div>
+            <button className={styles.spBtn} onClick={onCopyCohostLink}>
+              {Icons.plus}
+              <div>
+                <div className={styles.spBtnTitle}>Copy co-host link</div>
+                <div className={styles.spBtnDesc}>Let someone manage the queue from their phone</div>
+              </div>
+            </button>
           </div>
-        </button>
-      </div>
-      <div className={styles.spSep} />
+          <div className={styles.spSep} />
+          <div className={styles.spGroup}>
+            <div className={styles.spLabel}>Audience</div>
+            <button className={styles.spToggleRow} onClick={onToggleReactions}>
+              <div>
+                <div className={styles.spBtnTitle}>Reactions</div>
+                <div className={styles.spBtnDesc}>
+                  {reactionsOn ? 'Audience can send cheers' : 'Reactions disabled'}
+                </div>
+              </div>
+              <div className={`${styles.toggle} ${reactionsOn ? styles.toggleOn : ''}`}>
+                <div className={styles.toggleThumb} />
+              </div>
+            </button>
+          </div>
+          <div className={styles.spSep} />
+        </>
+      )}
       <div className={styles.spGroup}>
-        <div className={styles.spLabel}>Host</div>
+        <div className={styles.spLabel}>{remote ? 'Co-host' : 'Host'}</div>
         <button className={styles.spBtn} onClick={onChangeName}>
           {Icons.edit}
           <div>
@@ -199,7 +218,7 @@ function SettingsPopover({
           </div>
         </button>
       </div>
-      {!qrVisible && (
+      {!remote && !qrVisible && (
         <>
           <div className={styles.spSep} />
           <div className={styles.spGroup}>
@@ -332,7 +351,11 @@ function SortableQueueItem({
 }
 
 // ─── Main Host component ───
-const Host = (): React.ReactElement => {
+// `remote` renders a co-host control surface: it manages the queue (add /
+// remove / reorder / restore) but never embeds the player, never controls
+// transport, and never resets playback — so it can't disrupt the song playing
+// on the real host screen.
+const Host = ({ remote = false }: { remote?: boolean } = {}): React.ReactElement => {
   const router = useRouter();
   const joinCode = normalizeRoomId(router.query.joinCode) as string | undefined;
 
@@ -413,6 +436,17 @@ const Host = (): React.ReactElement => {
     showToast('TV Display opened');
   }
 
+  async function copyCohostLink() {
+    const url = `${origin}/remote/${joinCode}`;
+    setSettingsOpen(false);
+    try {
+      await navigator.clipboard.writeText(url);
+      showToast('Co-host link copied');
+    } catch {
+      showToast(url);
+    }
+  }
+
   React.useEffect(() => {
     const timers = reactionTimers.current;
     return () => {
@@ -448,7 +482,9 @@ const Host = (): React.ReactElement => {
     let cancelled = false;
 
     async function init() {
-      await createRoom(joinCode!);
+      // A co-host only reads the room — never create it (createRoom resets
+      // isPlaying, which would stop the song on the real host screen).
+      if (!remote) await createRoom(joinCode!);
       const room = await getRoom(joinCode!);
       if (cancelled) return;
       if (room) {
@@ -466,7 +502,7 @@ const Host = (): React.ReactElement => {
 
     init();
     return () => { cancelled = true; };
-  }, [joinCode]);
+  }, [joinCode, remote]);
 
   React.useEffect(() => {
     if (!joinCode) return;
@@ -533,7 +569,7 @@ const Host = (): React.ReactElement => {
 
   // All-in-one mode: listen for YouTube postMessage when the video ends
   React.useEffect(() => {
-    if (!isPlaying || tvMode) return;
+    if (remote || !isPlaying || tvMode) return;
 
     function onMessage(e: MessageEvent) {
       if (e.origin !== 'https://www.youtube.com') return;
@@ -550,7 +586,7 @@ const Host = (): React.ReactElement => {
 
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
-  }, [isPlaying, tvMode]);
+  }, [isPlaying, tvMode, remote]);
 
   // All-in-one mode: subscribe to YouTube events when iframe loads
   function handleIframeLoad() {
@@ -562,9 +598,9 @@ const Host = (): React.ReactElement => {
 
   // TV mode: listen for video-ended from Display via BroadcastChannel
   React.useEffect(() => {
-    if (!joinCode || !tvMode) return;
+    if (remote || !joinCode || !tvMode) return;
     return onVideoEnded(joinCode, () => onVideoEndedRef.current());
-  }, [joinCode, tvMode]);
+  }, [joinCode, tvMode, remote]);
 
   async function sendReaction(emoji: string) {
     if (!joinCode || reactionCooldown) return;
@@ -777,6 +813,7 @@ const Host = (): React.ReactElement => {
       <header className={styles.header}>
         <div className={styles.brand} onClick={() => router.push('/')}>
           KaraoQ
+          {remote && <span className={styles.cohostBadge}>Co-host</span>}
         </div>
         <button
           className={`${styles.gearBtn} ${settingsOpen ? styles.gearBtnOpen : ''}`}
@@ -787,9 +824,11 @@ const Host = (): React.ReactElement => {
         <SettingsPopover
           isOpen={settingsOpen}
           onClose={() => setSettingsOpen(false)}
+          remote={remote}
           tvMode={tvMode}
           onOpenTv={openTvDisplay}
           onSwitchLocal={() => { setTvMode(false); setSettingsOpen(false); }}
+          onCopyCohostLink={copyCohostLink}
           reactionsOn={reactionsOn}
           onToggleReactions={toggleReactions}
           hostName={hostName}
@@ -809,7 +848,22 @@ const Host = (): React.ReactElement => {
               <p>Loading room...</p>
             </div>
           ) : currentSong ? (
-            tvMode ? (
+            remote ? (
+              /* ── Co-host mode: status only, no player or audio ── */
+              <div className={styles.songControl}>
+                {isPlaying ? (
+                  <div className={styles.liveIndicator}>
+                    <span className={styles.liveDot} />
+                    <span>NOW PLAYING</span>
+                  </div>
+                ) : (
+                  <div className={styles.readyLabel}>UP NEXT</div>
+                )}
+                <h1 className={styles.controlSinger}>{currentSong.userName}</h1>
+                <p className={styles.controlSong}>{decodeHtml(currentSong.songTitle)}</p>
+                <p className={styles.cohostNote}>Playback is controlled on the host screen</p>
+              </div>
+            ) : tvMode ? (
               /* ── TV Display mode: control panel ── */
               <div className={styles.songControl}>
                 {isPlaying ? (
@@ -882,7 +936,8 @@ const Host = (): React.ReactElement => {
             </div>
           )}
 
-          {/* ─── Transport bar ─── */}
+          {/* ─── Transport bar (host only — co-hosts don't control playback) ─── */}
+          {!remote && (
           <div className={styles.transport}>
             <div className={styles.transportMain}>
               <div className={styles.transportInfo}>
@@ -930,10 +985,11 @@ const Host = (): React.ReactElement => {
               </a>
             </div>
           </div>
+          )}
         </div>
 
         {/* Reaction overlay */}
-        {reactionsOn && visibleReactions.length > 0 && (
+        {!remote && reactionsOn && visibleReactions.length > 0 && (
           <div className={styles.reactionOverlay}>
             {visibleReactions.map((r) => (
               <div key={r.key} className={styles.reactionBubble} style={{ left: `${r.left}%` }}>
@@ -1025,7 +1081,7 @@ const Host = (): React.ReactElement => {
           )}
 
           {/* Host cheer bar — below the queue */}
-          {reactionsOn && isPlaying && currentSong && (
+          {!remote && reactionsOn && isPlaying && currentSong && (
             <CheerBar
               onReaction={sendReaction}
               cooldown={reactionCooldown}
