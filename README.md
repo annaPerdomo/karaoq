@@ -1,6 +1,25 @@
-# karaoq
+<div align="center">
 
-Browser-based karaoke queue manager powered by YouTube. A host creates a room, shares a 5-character code, and singers search for songs, join the queue, and perform — all from their phones. No downloads, no DJ software, no hardware. Just a screen and a join code.
+# 🎤 karaoq
+
+### YouTube Karaoke. Zero Setup.
+
+Turn any gathering into karaoke night. A host creates a room and shares a 5-character code; guests search YouTube and queue songs from their phones — no downloads, no DJ software, no hardware. Just a screen and a join code.
+
+[![Live Demo](https://img.shields.io/badge/Live_Demo-karaoq.live-A855F7?style=for-the-badge&logo=vercel&logoColor=white)](https://karaoq.live)
+
+![Next.js](https://img.shields.io/badge/Next.js_14-000000?style=flat&logo=nextdotjs&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat&logo=typescript&logoColor=white)
+![React](https://img.shields.io/badge/React-20232A?style=flat&logo=react&logoColor=61DAFB)
+![MongoDB](https://img.shields.io/badge/MongoDB_Atlas-47A248?style=flat&logo=mongodb&logoColor=white)
+![YouTube API](https://img.shields.io/badge/YouTube_Data_API-FF0000?style=flat&logo=youtube&logoColor=white)
+![Vercel](https://img.shields.io/badge/Vercel-000000?style=flat&logo=vercel&logoColor=white)
+
+<img src="docs/screenshot.png" alt="karaoq — YouTube Karaoke, zero setup" width="100%" />
+
+</div>
+
+> **Built on** the open-source [hack-in-the-heights/karaoq](https://github.com/hack-in-the-heights/karaoq) project. My work here re-architected the realtime layer (swapped Pusher for serverless-friendly polling), moved persistence to MongoDB Atlas, and added the host/singer flows documented below. See the **Trade-offs** and **What I'd Do Differently** sections for the engineering decisions behind it.
 
 ## Features
 
