@@ -1,8 +1,11 @@
 User-agent: *
 Allow: /
+
+# Private/internal endpoints — block crawling entirely.
 Disallow: /api/
-Disallow: /host/
-Disallow: /sing/
-Disallow: /display/
+Disallow: /admin/
+
+# Room pages (host/sing/display/remote/print) are ephemeral and carry a
+# `noindex` meta tag. They're left crawlable so that tag is actually honored.
 
 Sitemap: https://karaoq.live/sitemap.xml
