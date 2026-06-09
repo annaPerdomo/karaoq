@@ -9,6 +9,7 @@ const HostPage: NextPage = () => {
       <Head>
         <title>KaraoQ — Hosting</title>
         <meta name="description" content="Hosting a KaraoQ session" />
+        <meta name="robots" content="noindex, nofollow" />
       </Head>
       <Host />
     </>

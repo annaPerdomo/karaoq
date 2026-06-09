@@ -9,6 +9,7 @@ const DisplayPage: NextPage = () => {
       <Head>
         <title>KaraoQ — Display</title>
         <meta name="description" content="KaraoQ display for casting" />
+        <meta name="robots" content="noindex, nofollow" />
       </Head>
       <Display />
     </>

@@ -9,6 +9,7 @@ const SingPage: NextPage = () => {
       <Head>
         <title>KaraoQ — Add Songs</title>
         <meta name="description" content="Add songs to the KaraoQ queue" />
+        <meta name="robots" content="noindex, nofollow" />
       </Head>
       <Sing />
     </>

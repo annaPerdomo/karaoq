@@ -9,6 +9,7 @@ const RemotePage: NextPage = () => {
       <Head>
         <title>KaraoQ — Co-host</title>
         <meta name="description" content="Co-hosting a KaraoQ session" />
+        <meta name="robots" content="noindex, nofollow" />
       </Head>
       <Host remote />
     </>

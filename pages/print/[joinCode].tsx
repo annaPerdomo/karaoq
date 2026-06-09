@@ -35,6 +35,7 @@ const PrintPage: NextPage = () => {
     <>
       <Head>
         <title>KaraoQ — Print QR Code</title>
+        <meta name="robots" content="noindex, nofollow" />
       </Head>
       <main className={styles.page}>
         <div className={styles.card}>
