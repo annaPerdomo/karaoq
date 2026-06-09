@@ -1,6 +1,7 @@
 import '../styles/globals.css'
 import type { AppProps } from 'next/app'
 import { useRouter } from 'next/router'
+import { Analytics } from '@vercel/analytics/next'
 
 function AppFooter() {
   return (
@@ -26,6 +27,7 @@ function MyApp({ Component, pageProps }: AppProps) {
     <>
       <Component {...pageProps} />
       {showFooter && <AppFooter />}
+      <Analytics />
     </>
   );
 }
