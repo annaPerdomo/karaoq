@@ -1,7 +1,7 @@
 import type { NextPage } from 'next';
 import Head from 'next/head';
 
-import Home from '../components/Home';
+import Home, { FAQ_ITEMS } from '../components/Home';
 
 const HomePage: NextPage = () => {
   return (
@@ -24,9 +24,11 @@ const HomePage: NextPage = () => {
           content="Turn any gathering into karaoke night. Guests pick songs from their phones, you control the queue — all powered by YouTube. No sign-up needed."
         />
         <meta property="og:site_name" content="KaraoQ" />
+        <meta property="og:locale" content="en_US" />
         <meta property="og:image" content="https://karaoq.live/og-image.png" />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
+        <meta property="og:image:alt" content="KaraoQ — YouTube karaoke from your phone, no downloads or sign-up" />
 
         {/* Twitter Card */}
         <meta name="twitter:card" content="summary_large_image" />
@@ -36,6 +38,7 @@ const HomePage: NextPage = () => {
           content="Turn any gathering into karaoke night. Search YouTube, build a queue from your phone, cheer on your friends, and sing."
         />
         <meta name="twitter:image" content="https://karaoq.live/og-image.png" />
+        <meta name="twitter:image:alt" content="KaraoQ — YouTube karaoke from your phone, no downloads or sign-up" />
 
         {/* JSON-LD Structured Data */}
         <script
@@ -59,6 +62,25 @@ const HomePage: NextPage = () => {
                 'Live audience reactions',
                 'No downloads or sign-up required',
               ],
+            }),
+          }}
+        />
+
+        {/* JSON-LD FAQ — mirrors the visible FAQ section */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'FAQPage',
+              mainEntity: FAQ_ITEMS.map((item) => ({
+                '@type': 'Question',
+                name: item.question,
+                acceptedAnswer: {
+                  '@type': 'Answer',
+                  text: item.answer,
+                },
+              })),
             }),
           }}
         />

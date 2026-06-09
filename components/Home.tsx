@@ -2,6 +2,43 @@ import { useRouter } from 'next/router';
 import * as React from 'react';
 import styles from '../styles/Home.module.css';
 
+// ─── FAQ content ───
+// Exported so the landing page can mirror it in FAQPage structured data.
+// Google requires the JSON-LD text to match the visible answers, so keep both
+// sourced from here.
+export const FAQ_ITEMS: { question: string; answer: string }[] = [
+  {
+    question: 'Is KaraoQ free to use?',
+    answer:
+      'Yes. KaraoQ is free to host and free to join. Songs play from YouTube, so there is nothing to buy or rent.',
+  },
+  {
+    question: 'Do I need to download an app?',
+    answer:
+      'No downloads and no installs. KaraoQ runs entirely in your web browser on phones, tablets, laptops, and smart TVs.',
+  },
+  {
+    question: 'Do my guests need an account to sing?',
+    answer:
+      'No sign-up is required for anyone. Guests scan a QR code or enter the room code, then start adding songs from their own phones.',
+  },
+  {
+    question: 'How do guests join the karaoke session?',
+    answer:
+      'Create a room to get a short join code and QR code. Share either one, and guests can search YouTube and queue songs from their phones in seconds.',
+  },
+  {
+    question: 'Where do the karaoke songs come from?',
+    answer:
+      'Every song streams from YouTube, so you have millions of karaoke tracks, lyric videos, and instrumentals to choose from — no separate karaoke library needed.',
+  },
+  {
+    question: 'Can I use KaraoQ at a bar, party, or venue?',
+    answer:
+      'Absolutely. Cast the queue to any screen and let guests add songs from their phones. It works just as well for house parties, team events, and venue karaoke nights.',
+  },
+];
+
 function generateCode(): string {
   const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
   let result = '';
@@ -667,6 +704,27 @@ const Home = (): React.ReactElement => {
                 </p>
               </div>
             </Reveal>
+          </div>
+        </section>
+
+        {/* ─── FAQ ─── */}
+        <section className={styles.faqSection}>
+          <Reveal>
+            <h2 className={styles.sectionTitle}>Frequently Asked Questions</h2>
+            <p className={styles.sectionSub}>
+              Everything you need to know before your first song.
+            </p>
+          </Reveal>
+
+          <div className={styles.faqList}>
+            {FAQ_ITEMS.map((item, i) => (
+              <Reveal key={item.question} delay={i * 60}>
+                <details className={styles.faqItem}>
+                  <summary className={styles.faqQuestion}>{item.question}</summary>
+                  <p className={styles.faqAnswer}>{item.answer}</p>
+                </details>
+              </Reveal>
+            ))}
           </div>
         </section>
 
