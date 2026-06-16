@@ -108,6 +108,11 @@ const Icons = {
       <line x1="8" y1="3" x2="8" y2="13" /><line x1="3" y1="8" x2="13" y2="8" />
     </svg>
   ),
+  chevronRight: (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="5,3 10,7 5,11" />
+    </svg>
+  ),
 };
 
 // ─── Settings Popover ───
@@ -397,6 +402,7 @@ const Host = ({ remote = false }: { remote?: boolean } = {}): React.ReactElement
   const [settingsOpen, setSettingsOpen] = React.useState(false);
   const [searchOpen, setSearchOpen] = React.useState(false);
   const [historyOpen, setHistoryOpen] = React.useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = React.useState(false);
   const [qrVisible, setQrVisible] = React.useState(() => {
     if (typeof window === 'undefined') return true;
     return window.innerWidth > 1024;
@@ -676,10 +682,10 @@ const Host = ({ remote = false }: { remote?: boolean } = {}): React.ReactElement
     }
   }
 
-  async function handleReorder(newUpcoming: QueueEntry[]) {
+  async function handleReorder(newUpcoming: QueueEntry[], start = activeIndex + 1) {
     if (!joinCode) return;
     pausePolling();
-    const history = queue.slice(0, activeIndex + 1);
+    const history = queue.slice(0, start);
     const newQueue = [...history, ...newUpcoming];
     setQueue(newQueue);
     await reorderQueue(joinCode, newQueue, activeIndex);
@@ -772,13 +778,17 @@ const Host = ({ remote = false }: { remote?: boolean } = {}): React.ReactElement
     const { active, over } = event;
     if (!over || active.id === over.id) return;
 
-    const upNext = queue.slice(activeIndex + 1);
+    // Match the rendered list: when paused, the on-stage "next up" song is part
+    // of the sidebar (queue.slice(activeIndex)); otherwise it starts after it.
+    const includesCurrent = !!(queue[activeIndex] && !isPlaying);
+    const start = includesCurrent ? activeIndex : activeIndex + 1;
+    const upNext = queue.slice(start);
     const oldIndex = upNext.findIndex((e) => e.id === active.id);
     const newIndex = upNext.findIndex((e) => e.id === over.id);
     if (oldIndex === -1 || newIndex === -1) return;
 
     const moved = arrayMove(upNext, oldIndex, newIndex);
-    handleReorder(moved);
+    handleReorder(moved, start);
   }
 
   const currentSong = queue[activeIndex];
@@ -1006,7 +1016,20 @@ const Host = ({ remote = false }: { remote?: boolean } = {}): React.ReactElement
         )}
 
         {/* ─── Sidebar ─── */}
-        <div className={styles.sidebar}>
+        <div className={`${styles.sidebar} ${sidebarCollapsed ? styles.sidebarCollapsed : ''}`}>
+          {sidebarCollapsed ? (
+            <button
+              className={styles.sidebarReopen}
+              onClick={() => setSidebarCollapsed(false)}
+              title="Show queue"
+              aria-label="Show queue"
+            >
+              <span className={styles.sidebarReopenIcon}>{Icons.chevronRight}</span>
+              <span className={styles.sidebarReopenLabel}>Up Next</span>
+              {upNext.length > 0 && <span className={styles.sidebarBadge}>{upNext.length}</span>}
+            </button>
+          ) : (
+          <>
           {/* QR code section */}
           {qrVisible && joinUrl && (
             <QrJoinCard
@@ -1037,6 +1060,14 @@ const Host = ({ remote = false }: { remote?: boolean } = {}): React.ReactElement
                 onClick={() => setSearchOpen(!searchOpen)}
               >
                 {Icons.plus} Add Song
+              </button>
+              <button
+                className={styles.sidebarCollapseBtn}
+                onClick={() => setSidebarCollapsed(true)}
+                title="Hide queue"
+                aria-label="Hide queue"
+              >
+                {Icons.chevronRight}
               </button>
             </div>
           </div>
@@ -1145,6 +1176,8 @@ const Host = ({ remote = false }: { remote?: boolean } = {}): React.ReactElement
                 requireName={false}
               />
             </div>
+          )}
+          </>
           )}
         </div>
       </div>

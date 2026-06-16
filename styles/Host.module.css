@@ -422,6 +422,63 @@
   position: relative;
 }
 
+/* ─── Collapsed sidebar: thin reopen rail ─── */
+.sidebarCollapsed {
+  width: 44px;
+}
+
+.sidebarReopen {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.9rem 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #ff2d78;
+  transition: background 0.15s;
+}
+
+.sidebarReopen:hover {
+  background: rgba(255, 45, 120, 0.08);
+}
+
+.sidebarReopenLabel {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+}
+
+.sidebarReopenIcon {
+  display: flex;
+  transform: rotate(180deg);
+}
+
+.sidebarCollapseBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.sidebarCollapseBtn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-secondary);
+}
+
 /* ─── Sidebar QR section ─── */
 .sidebarQr {
   display: flex;
@@ -1534,6 +1591,28 @@
     border-left: none;
     border-top: 1px solid rgba(255, 255, 255, 0.06);
     max-height: 45vh;
+  }
+
+  /* Stacked layout: a thin vertical rail wastes a whole row, so collapse to a
+     short full-width bar with a horizontal label instead. */
+  .sidebarCollapsed {
+    width: 100%;
+    max-height: none;
+  }
+
+  .sidebarReopen {
+    flex-direction: row;
+    justify-content: center;
+    height: auto;
+    padding: 0.7rem 1rem;
+  }
+
+  .sidebarReopenLabel {
+    writing-mode: horizontal-tb;
+  }
+
+  .sidebarReopenIcon {
+    transform: rotate(-90deg);
   }
 
   .playerArea {
