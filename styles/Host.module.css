@@ -54,7 +54,9 @@
   height: 42px;
   border-radius: 10px;
   color: var(--text-muted);
-  transition: background 0.15s, color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s;
   margin-left: auto;
   flex-shrink: 0;
   cursor: pointer;
@@ -84,8 +86,14 @@
 }
 
 @keyframes popIn {
-  from { opacity: 0; transform: translateY(-4px) scale(0.97); }
-  to { opacity: 1; transform: none; }
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 .spGroup {
@@ -269,8 +277,13 @@
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
 }
 
 .controlSinger {
@@ -304,7 +317,9 @@
   font-weight: 700;
   font-size: 1.05rem;
   cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
   box-shadow: 0 4px 24px rgba(255, 45, 120, 0.4);
   letter-spacing: 1px;
   margin-top: 0.5rem;
@@ -404,7 +419,11 @@
   font-size: 0.9rem;
   font-weight: 700;
   color: #fff;
-  background: linear-gradient(135deg, rgba(255, 45, 120, 0.85), rgba(255, 107, 53, 0.85));
+  background: linear-gradient(
+    135deg,
+    rgba(255, 45, 120, 0.85),
+    rgba(255, 107, 53, 0.85)
+  );
   padding: 0.25rem 0.6rem;
   border-radius: 10px;
   white-space: nowrap;
@@ -423,7 +442,10 @@
 }
 
 /* ─── Collapsed sidebar: thin reopen rail ─── */
-.sidebarCollapsed {
+/* Use .sidebar.sidebarCollapsed (specificity 0,2,0) so the collapsed width wins
+   over the responsive `.sidebar { width: 300px }` rule that comes later in the
+   file — otherwise on tablet/iPad (≤1200px) the rail keeps the full width. */
+.sidebar.sidebarCollapsed {
   width: 44px;
 }
 
@@ -683,7 +705,9 @@
   border: none;
   border-radius: 10px;
   cursor: pointer;
-  transition: transform 0.15s, background 0.15s;
+  transition:
+    transform 0.15s,
+    background 0.15s;
 }
 
 .qrShelfThumb:hover {
@@ -985,7 +1009,9 @@
   font-weight: 600;
   letter-spacing: 1px;
   text-transform: uppercase;
-  transition: background 0.12s, color 0.12s;
+  transition:
+    background 0.12s,
+    color 0.12s;
   flex-shrink: 0;
   background: none;
   border-left: none;
@@ -1032,7 +1058,9 @@
   padding: 0.6rem 1rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.04);
   opacity: 0.55;
-  transition: opacity 0.15s, background 0.12s;
+  transition:
+    opacity 0.15s,
+    background 0.12s;
 }
 
 .historyItem:hover {
@@ -1107,7 +1135,9 @@
   color: var(--text-muted);
   font-size: 1.2rem;
   flex-shrink: 0;
-  transition: background 0.12s, color 0.12s;
+  transition:
+    background 0.12s,
+    color 0.12s;
   background: none;
   border: none;
   cursor: pointer;
@@ -1181,8 +1211,13 @@
 }
 
 @keyframes heartbeat {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.15); }
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.15);
+  }
 }
 
 .transportInfo {
@@ -1325,8 +1360,12 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .modal {
@@ -1340,8 +1379,14 @@
 }
 
 @keyframes slideUp {
-  from { transform: translateY(10px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+  from {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 /* ─── QR popout modal ─── */
@@ -1375,7 +1420,9 @@
   border: none;
   border-radius: 8px;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s;
 }
 
 .qrModalClose:hover {
@@ -1449,7 +1496,9 @@
   font-weight: 600;
   font-size: 0.85rem;
   cursor: pointer;
-  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.12s ease;
 }
 
 .btnDanger:hover {
@@ -1487,17 +1536,28 @@
   font-size: 0.8rem;
   color: var(--text-secondary);
   z-index: 250;
-  animation: toastIn 0.2s ease, toastOut 0.3s ease 1.5s forwards;
+  animation:
+    toastIn 0.2s ease,
+    toastOut 0.3s ease 1.5s forwards;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 
 @keyframes toastIn {
-  from { opacity: 0; transform: translateX(-50%) translateY(8px); }
-  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
 }
 
 @keyframes toastOut {
-  to { opacity: 0; transform: translateX(-50%) translateY(-8px); }
+  to {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-8px);
+  }
 }
 
 /* ─── Empty / error states ─── */
@@ -1518,8 +1578,13 @@
 }
 
 @keyframes floatY {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
 }
 
 .emptyTitle {
@@ -1553,7 +1618,9 @@
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .errorCard {
@@ -1643,7 +1710,9 @@
   font-size: 1rem;
   outline: none;
   font-family: inherit;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
   margin-bottom: 1rem;
   box-sizing: border-box;
 }
@@ -1667,7 +1736,10 @@
   font-weight: 700;
   font-size: 1rem;
   letter-spacing: 0.5px;
-  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    opacity 0.15s ease;
   box-shadow: 0 4px 16px rgba(255, 45, 120, 0.3);
   cursor: pointer;
 }
@@ -1772,7 +1844,7 @@
 
   /* Stacked layout: a thin vertical rail wastes a whole row, so collapse to a
      short full-width bar with a horizontal label instead. */
-  .sidebarCollapsed {
+  .sidebar.sidebarCollapsed {
     width: 100%;
     max-height: none;
   }
