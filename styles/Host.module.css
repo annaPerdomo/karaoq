@@ -292,51 +292,6 @@
   line-height: 1.5;
 }
 
-.playBtn {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  padding: 1rem 2.5rem;
-  background: linear-gradient(135deg, #ff2d78, #ff6b35);
-  border: none;
-  border-radius: 50px;
-  color: #fff;
-  font-weight: 700;
-  font-size: 1.05rem;
-  cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-  box-shadow: 0 4px 24px rgba(255, 45, 120, 0.4);
-  letter-spacing: 1px;
-  margin-top: 0.5rem;
-}
-
-.playBtn:hover {
-  transform: scale(1.04);
-  box-shadow: 0 6px 32px rgba(255, 45, 120, 0.6);
-}
-
-.stopBtn {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 2rem;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 50px;
-  color: var(--text-secondary);
-  font-weight: 600;
-  font-size: 0.95rem;
-  cursor: pointer;
-  transition: all 0.15s;
-  margin-top: 0.5rem;
-}
-
-.stopBtn:hover {
-  background: rgba(255, 60, 60, 0.12);
-  border-color: rgba(255, 60, 60, 0.3);
-  color: #ff4444;
-}
-
 .switchModeLink {
   margin-top: 1.5rem;
   background: none;
@@ -479,142 +434,6 @@
   color: var(--text-secondary);
 }
 
-/* ─── Sidebar QR section ─── */
-.sidebarQr {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(255, 255, 255, 0.02);
-  position: relative;
-}
-
-.qrThumb {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 56px;
-  height: 56px;
-  padding: 4px;
-  background: rgba(255, 255, 255, 0.06);
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.15s;
-  flex-shrink: 0;
-  border: none;
-}
-
-.qrThumb:hover {
-  background: rgba(255, 255, 255, 0.15);
-  transform: scale(1.08);
-}
-
-.sidebarQrInfo {
-  flex: 1;
-  min-width: 0;
-}
-
-.sidebarQrLabel {
-  font-size: 0.6rem;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  font-weight: 600;
-}
-
-.sidebarQrUrl {
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-  margin-top: 0.15rem;
-}
-
-.sidebarQrCode {
-  font-family: var(--font-mono);
-  font-size: 1.1rem;
-  font-weight: 700;
-  letter-spacing: 4px;
-  color: #ffd700;
-  text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
-  margin-top: 0.1rem;
-}
-
-.sidebarQrClose {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  width: 22px;
-  height: 22px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 6px;
-  color: var(--text-muted);
-  font-size: 1rem;
-  line-height: 1;
-  transition: all 0.12s;
-  opacity: 0;
-  background: none;
-  border: none;
-  cursor: pointer;
-}
-
-.sidebarQr:hover .sidebarQrClose {
-  opacity: 1;
-}
-
-.sidebarQrClose:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--text-primary);
-}
-
-/* ─── QR overlay ─── */
-.qrOverlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(12px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 400;
-  animation: fadeIn 0.15s;
-}
-
-.qrCard {
-  background: var(--bg-secondary);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 24px;
-  padding: 2.5rem 2rem 2rem;
-  text-align: center;
-  animation: slideUp 0.2s ease;
-  min-width: 280px;
-}
-
-.qrCardLabel {
-  margin-top: 1.5rem;
-  font-size: 0.7rem;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: var(--text-muted);
-}
-
-.qrCardUrl {
-  margin-top: 0.4rem;
-  font-size: 0.95rem;
-  color: var(--text-secondary);
-}
-
-.qrCardCode {
-  font-family: var(--font-mono);
-  font-size: 2.2rem;
-  font-weight: 700;
-  letter-spacing: 8px;
-  color: #ffd700;
-  text-shadow: 0 0 16px rgba(255, 215, 0, 0.4);
-  margin-top: 0.6rem;
-}
-
 /* ─── Sidebar header ─── */
 .sidebarHeader {
   display: flex;
@@ -625,115 +444,10 @@
   flex-shrink: 0;
 }
 
-.sidebarTitle {
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 1.2px;
-  text-transform: uppercase;
-  color: #ff2d78;
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  background: none;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-}
-
-.sidebarTitle:hover {
-  opacity: 0.85;
-}
-
-/* Shared drawer caret (Up Next / History / QR) — points down when open */
-.drawerCaret {
-  transition: transform 0.2s;
-}
-
-.sidebarTitleClosed .drawerCaret {
-  transform: rotate(-90deg);
-}
-
-/* Pins History / cheers / QR to the bottom regardless of queue height. */
-.sidebarBottom {
-  margin-top: auto;
-  display: flex;
-  flex-direction: column;
-  flex-shrink: 0;
-  min-height: 0;
-}
-
-/* ─── QR code drawer ─── */
-.qrShelf {
-  display: flex;
-  gap: 0.75rem;
-  padding: 0.85rem 1rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.04);
-  background: rgba(255, 255, 255, 0.02);
-}
-
-.qrShelfThumb {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 80px;
-  height: 80px;
-  padding: 6px;
-  flex-shrink: 0;
-  background: rgba(255, 255, 255, 0.06);
-  border: none;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: transform 0.15s, background 0.15s;
-}
-
-.qrShelfThumb:hover {
-  background: rgba(255, 255, 255, 0.12);
-  transform: scale(1.04);
-}
-
-.qrShelfInfo {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 0.15rem;
-  min-width: 0;
-}
-
-.qrShelfHint {
-  font-size: 0.62rem;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  font-weight: 600;
-  color: var(--text-muted);
-}
-
-.qrShelfAlt {
-  font-size: 0.78rem;
-  color: var(--text-secondary);
-}
-
 .qrShelfCode {
   font-family: var(--font-mono);
   letter-spacing: 2px;
   color: #ffd700;
-}
-
-.qrShelfPrint {
-  align-self: flex-start;
-  margin-top: 0.3rem;
-  padding: 0.25rem 0.6rem;
-  font-size: 0.7rem;
-  font-weight: 600;
-  color: var(--text-secondary);
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 7px;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-
-.qrShelfPrint:hover {
-  background: rgba(255, 255, 255, 0.12);
 }
 
 .sidebarBadge {
@@ -744,51 +458,6 @@
   padding: 0.1rem 0.4rem;
   border-radius: 10px;
   letter-spacing: 0;
-}
-
-.sidebarActions {
-  display: flex;
-  gap: 0.35rem;
-}
-
-.sidebarAct {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.35rem;
-  height: 30px;
-  padding: 0 0.75rem;
-  border-radius: 8px;
-  font-size: 0.7rem;
-  font-weight: 600;
-  color: #fff;
-  background: linear-gradient(135deg, #ff2d78, #ff6b35);
-  border: none;
-  transition: all 0.12s;
-  cursor: pointer;
-}
-
-.sidebarAct:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 10px rgba(255, 45, 120, 0.4);
-  color: #fff;
-}
-
-.sidebarActActive {
-  background: rgba(0, 240, 255, 0.15);
-  border-color: rgba(0, 240, 255, 0.3);
-  color: #00f0ff;
-}
-
-.sidebarActSecondary {
-  color: var(--text-muted);
-  background: rgba(255, 255, 255, 0.06);
-  border-color: transparent;
-}
-
-.sidebarActSecondary:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--text-secondary);
 }
 
 /* ─── Queue stats ─── */
@@ -972,41 +641,7 @@
   color: #00f0ff;
 }
 
-/* ─── History drawer ─── */
-.historyToggle {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  width: 100%;
-  padding: 0.55rem 1rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-  color: var(--text-muted);
-  font-size: 0.68rem;
-  font-weight: 600;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  transition: background 0.12s, color 0.12s;
-  flex-shrink: 0;
-  background: none;
-  border-left: none;
-  border-right: none;
-  border-bottom: none;
-  cursor: pointer;
-}
-
-.historyToggle:hover {
-  background: rgba(255, 255, 255, 0.03);
-  color: var(--text-secondary);
-}
-
-.historyToggle svg {
-  transition: transform 0.2s;
-}
-
-.historyToggleOpen svg {
-  transform: rotate(180deg);
-}
-
+/* ─── History list ─── */
 .historyBadge {
   font-size: 0.6rem;
   font-weight: 700;
@@ -1344,21 +979,7 @@
   to { transform: translateY(0); opacity: 1; }
 }
 
-/* ─── QR popout modal ─── */
-.qrModal {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  background: var(--bg-secondary);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 16px;
-  padding: 2rem 2rem 1.5rem;
-  max-width: 360px;
-  width: 90%;
-  animation: slideUp 0.2s ease;
-}
-
+/* ─── QR modal pieces (shared by the Invite panel) ─── */
 .qrModalClose {
   position: absolute;
   top: 0.75rem;
@@ -1510,16 +1131,6 @@
   justify-content: center;
   gap: 0.75rem;
   color: var(--text-secondary);
-}
-
-.emptyIcon {
-  line-height: 1;
-  animation: floatY 2.5s ease-in-out infinite;
-}
-
-@keyframes floatY {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
 }
 
 .emptyTitle {
@@ -1836,4 +1447,552 @@
   font-size: 0.85rem;
   color: rgba(255, 255, 255, 0.45);
   letter-spacing: 0.02em;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Redesign — explicit play mode, one Invite surface, tabbed sidebar.
+   Same dark theme / pink-cyan accents as the rest of the host UI.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ─── Header right-side actions ─── */
+.headerActions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+/* gearBtn carries margin-left:auto for the standalone layout; inside the
+   actions cluster it should sit snug next to Invite. */
+.headerActions .gearBtn {
+  margin-left: 0;
+}
+
+/* ─── Play-mode pill (where the video is playing) ─── */
+.modePillWrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.modePill {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  height: 36px;
+  padding: 0 0.7rem;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.modePill:hover {
+  background: rgba(255, 255, 255, 0.09);
+  color: var(--text-primary);
+}
+
+.modePill > svg {
+  color: #00f0ff;
+}
+
+.modePillCaret {
+  display: flex;
+  color: var(--text-muted);
+}
+
+.menuBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+}
+
+.modeMenu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  width: 260px;
+  background: var(--bg-secondary);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  padding: 0.5rem;
+  z-index: 200;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  animation: popIn 0.15s ease;
+}
+
+.modeMenu .spLabel {
+  padding: 0.35rem 0.5rem 0.4rem;
+  margin-bottom: 0;
+}
+
+.modeMenuItem {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  width: 100%;
+  padding: 0.6rem;
+  border-radius: 8px;
+  text-align: left;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.modeMenuItem:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.modeMenuItem svg {
+  color: #00f0ff;
+  flex-shrink: 0;
+}
+
+.modeMenuItemActive {
+  background: rgba(0, 240, 255, 0.08);
+}
+
+.modeCheck {
+  margin-left: auto;
+  color: #00f0ff;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+/* ─── Invite button ─── */
+.inviteBtn {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  height: 36px;
+  padding: 0 0.85rem;
+  border-radius: 10px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #fff;
+  background: linear-gradient(135deg, #ff2d78, #ff6b35);
+  border: none;
+  cursor: pointer;
+  transition: transform 0.12s, box-shadow 0.12s;
+}
+
+.inviteBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 14px rgba(255, 45, 120, 0.4);
+}
+
+.inviteBtn svg {
+  color: #fff;
+}
+
+/* ─── Sidebar tabs (Up Next / History) ─── */
+.sidebarTabs {
+  display: flex;
+  gap: 0.25rem;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 9px;
+  padding: 3px;
+}
+
+.sidebarTab {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: 7px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.sidebarTab:hover {
+  color: var(--text-secondary);
+}
+
+.sidebarTabActive {
+  background: rgba(255, 45, 120, 0.15);
+  color: #ff2d78;
+}
+
+/* ─── Add-song button ─── */
+.addSongBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  margin: 0.6rem 0.75rem;
+  height: 40px;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #fff;
+  background: linear-gradient(135deg, #ff2d78, #ff6b35);
+  border: none;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform 0.12s, box-shadow 0.12s;
+}
+
+.addSongBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 14px rgba(255, 45, 120, 0.4);
+}
+
+.addSongBtnActive {
+  background: rgba(0, 240, 255, 0.15);
+  color: #00f0ff;
+  box-shadow: none;
+}
+
+.addSongBtnActive:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+/* ─── Sidebar bottom cluster (cheers + persistent join code) ─── */
+.sidebarBottom {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+/* ─── Contextual cheers (only while a song is on stage) ─── */
+.cheersLive {
+  flex-shrink: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 45, 120, 0.03);
+}
+
+/* ─── Always-visible "Scan to join" card ─── */
+.joinCard {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.02);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s;
+}
+
+.joinCard:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.joinCardQr {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 96px;
+  height: 96px;
+  padding: 5px;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+}
+
+.joinCardInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.joinCardLabel {
+  font-size: 0.62rem;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: #ff2d78;
+}
+
+.joinCardUrl {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.joinCardCode {
+  font-family: var(--font-mono);
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 3px;
+  color: #ffd700;
+  text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+}
+
+.joinCardEnlarge {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  margin-top: 0.2rem;
+}
+
+/* ─── Empty-state join card (host, no songs yet) ─── */
+.emptyJoinCard {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 1.5rem 1.75rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+}
+
+.emptyJoinQr {
+  display: flex;
+  padding: 0.6rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  flex-shrink: 0;
+}
+
+.emptyJoinInfo {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  text-align: left;
+}
+
+.emptyJoinKicker {
+  font-size: 0.65rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: #ff2d78;
+}
+
+.emptyJoinText {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.emptyJoinText strong {
+  color: var(--text-secondary);
+  font-family: inherit;
+  letter-spacing: 0;
+}
+
+.emptyJoinCode {
+  font-family: var(--font-mono);
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: 6px;
+  color: #ffd700;
+  text-shadow: 0 0 16px rgba(255, 215, 0, 0.35);
+  margin: 0.1rem 0 0.3rem;
+}
+
+.emptyJoinPrint {
+  padding: 0.35rem 0.8rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.emptyJoinPrint:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.emptyHint {
+  margin-top: 1.25rem;
+  font-size: 0.85rem;
+}
+
+.emptyHint strong {
+  color: #ff2d78;
+  font-family: inherit;
+  letter-spacing: 0;
+}
+
+/* On a narrow / stacked layout, let the join card go vertical. */
+@media (max-width: 560px) {
+  .emptyJoinCard {
+    flex-direction: column;
+    gap: 1rem;
+    text-align: center;
+  }
+
+  .emptyJoinInfo {
+    align-items: center;
+    text-align: center;
+  }
+}
+
+/* ─── Invite panel (modal) ─── */
+.invitePanel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: var(--bg-secondary);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 1.75rem 1.75rem 1.5rem;
+  max-width: 360px;
+  width: 90%;
+  animation: slideUp 0.2s ease;
+}
+
+.inviteTitle {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 1rem;
+}
+
+.inviteSep {
+  width: 100%;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  margin: 1.25rem 0 1rem;
+}
+
+.cohostRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  width: 100%;
+}
+
+.cohostIcon {
+  display: flex;
+  color: #00f0ff;
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.cohostInfo {
+  text-align: left;
+}
+
+.cohostBtn {
+  margin-top: 0.85rem;
+  width: 100%;
+  padding: 0.6rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.cohostBtn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text-primary);
+}
+
+/* ─── First-run mode chooser ─── */
+.modeChooserCard {
+  max-width: 460px;
+  width: 100%;
+  padding: 2.5rem 2rem;
+  text-align: center;
+}
+
+.modeOptions {
+  display: flex;
+  gap: 1rem;
+  margin: 0.5rem 0 1.25rem;
+}
+
+.modeOption {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1.5rem 1rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  cursor: pointer;
+  text-align: center;
+  transition: transform 0.15s, border-color 0.15s, background 0.15s;
+}
+
+.modeOption:hover {
+  transform: translateY(-2px);
+  border-color: rgba(0, 240, 255, 0.4);
+  background: rgba(0, 240, 255, 0.06);
+}
+
+.modeOptionIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: rgba(0, 240, 255, 0.1);
+  color: #00f0ff;
+}
+
+.modeOptionIcon svg {
+  width: 24px;
+  height: 24px;
+}
+
+.modeOptionTitle {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.modeOptionDesc {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.modeChooserHint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+@media (max-width: 480px) {
+  .modeOptions {
+    flex-direction: column;
+  }
+}
+
+/* Keep the header compact on small screens: the mode pill collapses to its
+   icon, and Invite drops its label. */
+@media (max-width: 640px) {
+  .modePillText {
+    display: none;
+  }
+}
+
+@media (max-width: 520px) {
+  .inviteBtnText {
+    display: none;
+  }
+
+  .inviteBtn {
+    padding: 0 0.7rem;
+  }
 }
