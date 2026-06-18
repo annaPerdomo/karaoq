@@ -46,7 +46,6 @@ export default async function handler(
       hourlyActivity,
       topSongs,
       topUsers,
-      recentRooms,
       sessionData,
       songsPerRoom,
       userAgentData,
@@ -170,47 +169,6 @@ export default async function handler(
           { $group: { _id: "$userName", count: { $sum: 1 } } },
           { $sort: { count: -1 } },
           { $limit: 20 },
-        ])
-        .toArray(),
-
-      // Recent rooms (last 20)
-      events
-        .aggregate([
-          { $match: { type: "room_created" } },
-          { $sort: { timestamp: -1 } },
-          { $limit: 20 },
-          {
-            $lookup: {
-              from: "analytics_events",
-              let: { rid: "$roomId" },
-              pipeline: [
-                { $match: { $expr: { $and: [{ $eq: ["$roomId", "$$rid"] }, { $eq: ["$type", "song_added"] }] } } },
-                { $count: "total" },
-              ],
-              as: "songCount",
-            },
-          },
-          {
-            $lookup: {
-              from: "analytics_sessions",
-              let: { rid: "$roomId" },
-              pipeline: [
-                { $match: { $expr: { $eq: ["$roomId", "$$rid"] } } },
-                { $count: "total" },
-              ],
-              as: "participantCount",
-            },
-          },
-          {
-            $project: {
-              roomId: 1,
-              timestamp: 1,
-              country: 1,
-              city: 1,
-              songs: { $ifNull: [{ $arrayElemAt: ["$songCount.total", 0] }, 0] },
-              participants: { $ifNull: [{ $arrayElemAt: ["$participantCount.total", 0] }, 0] },
-            },
-          },
         ])
         .toArray(),
 
@@ -415,7 +373,6 @@ export default async function handler(
         topSongs,
         topUsers,
       },
-      recentRooms,
       devices: userAgentData,
       suggestions: {
         total: suggestionTotal,

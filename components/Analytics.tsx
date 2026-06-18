@@ -32,14 +32,6 @@ interface AnalyticsData {
     topSongs: { _id: { title: string; videoId: string }; count: number }[];
     topUsers: { _id: string; count: number }[];
   };
-  recentRooms: {
-    roomId: string;
-    timestamp: string;
-    country?: string;
-    city?: string;
-    songs: number;
-    participants: number;
-  }[];
   devices: { _id: string; count: number }[];
   suggestions: {
     total: number;
@@ -50,6 +42,17 @@ interface AnalyticsData {
     byDay: { _id: string; count: number }[];
   };
 }
+
+interface RoomRow {
+  roomId: string;
+  timestamp: string;
+  country?: string;
+  city?: string;
+  songs: number;
+  participants: number;
+}
+
+const ROOMS_PAGE_SIZE = 25;
 
 function BarChart({ data, color = '#a78bfa' }: {
   data: { label: string; value: number }[];
@@ -111,6 +114,12 @@ const Analytics = (): React.ReactElement => {
   const [error, setError] = React.useState<string | null>(null);
   const [data, setData] = React.useState<AnalyticsData | null>(null);
   const [activeTab, setActiveTab] = React.useState<'overview' | 'geo' | 'songs' | 'suggestions' | 'rooms'>('overview');
+  const [rooms, setRooms] = React.useState<RoomRow[]>([]);
+  const [roomsHasMore, setRoomsHasMore] = React.useState(false);
+  const [roomsLoading, setRoomsLoading] = React.useState(false);
+  const [roomsLoaded, setRoomsLoaded] = React.useState(false);
+  const [mergeSource, setMergeSource] = React.useState<string | null>(null);
+  const sentinelRef = React.useRef<HTMLDivElement | null>(null);
 
   const fetchData = React.useCallback(async (s: string) => {
     setLoading(true);
@@ -137,6 +146,26 @@ const Analytics = (): React.ReactElement => {
     setLoading(false);
   }, []);
 
+  const loadRooms = React.useCallback(
+    async (skip: number, replace: boolean) => {
+      setRoomsLoading(true);
+      try {
+        const res = await fetch(`/api/analytics/rooms?skip=${skip}&limit=${ROOMS_PAGE_SIZE}`, {
+          headers: { 'x-analytics-secret': secret },
+        });
+        if (!res.ok) throw new Error('Failed to load rooms');
+        const json = await res.json();
+        setRooms((prev) => (replace ? json.rooms : [...prev, ...json.rooms]));
+        setRoomsHasMore(Boolean(json.hasMore));
+      } catch {
+        setRoomsHasMore(false);
+      }
+      setRoomsLoaded(true);
+      setRoomsLoading(false);
+    },
+    [secret]
+  );
+
   React.useEffect(() => {
     const saved = localStorage.getItem('karaoq_analytics_secret');
     if (saved) {
@@ -144,6 +173,28 @@ const Analytics = (): React.ReactElement => {
       fetchData(saved);
     }
   }, [fetchData]);
+
+  // Load the first page of rooms the first time the Rooms tab is opened.
+  React.useEffect(() => {
+    if (activeTab === 'rooms' && authenticated && !roomsLoaded && !roomsLoading) {
+      loadRooms(0, true);
+    }
+  }, [activeTab, authenticated, roomsLoaded, roomsLoading, loadRooms]);
+
+  // Infinite scroll: load the next page when the sentinel enters view.
+  React.useEffect(() => {
+    if (activeTab !== 'rooms' || !roomsHasMore || roomsLoading) return;
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) loadRooms(rooms.length, false);
+      },
+      { rootMargin: '300px' }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [activeTab, roomsHasMore, roomsLoading, rooms.length, loadRooms]);
 
   function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -156,6 +207,9 @@ const Analytics = (): React.ReactElement => {
     setAuthenticated(false);
     setData(null);
     setSecret('');
+    setRooms([]);
+    setRoomsLoaded(false);
+    setMergeSource(null);
   }
 
   async function handleDeleteRoom(roomId: string) {
@@ -166,9 +220,44 @@ const Analytics = (): React.ReactElement => {
         headers: { 'x-analytics-secret': secret },
       });
       if (!res.ok) throw new Error('Delete failed');
-      fetchData(secret);
+      if (mergeSource === roomId) setMergeSource(null);
+      loadRooms(0, true);
     } catch {
       alert('Failed to delete room');
+    }
+  }
+
+  function handleMergeClick(roomId: string) {
+    if (mergeSource === null) {
+      setMergeSource(roomId);
+      return;
+    }
+    if (mergeSource === roomId) {
+      setMergeSource(null);
+      return;
+    }
+    const source = mergeSource;
+    if (
+      !confirm(
+        `Merge ${source} into ${roomId}? All of ${source}'s songs and people move into ${roomId}, and ${source} is removed.`
+      )
+    )
+      return;
+    handleMerge(source, roomId);
+  }
+
+  async function handleMerge(source: string, target: string) {
+    try {
+      const res = await fetch('/api/analytics/merge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-analytics-secret': secret },
+        body: JSON.stringify({ source, target }),
+      });
+      if (!res.ok) throw new Error('Merge failed');
+      setMergeSource(null);
+      loadRooms(0, true);
+    } catch {
+      alert('Failed to merge rooms');
     }
   }
 
@@ -204,7 +293,7 @@ const Analytics = (): React.ReactElement => {
     );
   }
 
-  const { overview, charts, geo, rankings, recentRooms, devices, suggestions } = data;
+  const { overview, charts, geo, rankings, devices, suggestions } = data;
 
   const mobileCount = devices.find((d) => d._id === 'Mobile')?.count || 0;
   const desktopCount = devices.find((d) => d._id === 'Desktop')?.count || 0;
@@ -454,36 +543,79 @@ const Analytics = (): React.ReactElement => {
       {activeTab === 'rooms' && (
         <div className={styles.tabContent}>
           <section className={styles.section}>
-            <h2 className={styles.sectionTitle}>Recent Rooms</h2>
-            {recentRooms.length === 0 ? (
-              <p className={styles.empty}>No rooms created yet</p>
-            ) : (
-              <div className={styles.roomTable}>
-                <div className={styles.roomHeader}>
-                  <span>Code</span>
-                  <span>Created</span>
-                  <span>Location</span>
-                  <span>Songs</span>
-                  <span>People</span>
-                  <span></span>
-                </div>
-                {recentRooms.map((r, i) => (
-                  <div key={i} className={styles.roomRow}>
-                    <span className={styles.roomCode}>{r.roomId}</span>
-                    <span>{formatTimestamp(r.timestamp)}</span>
-                    <span>{r.city ? `${decodeURIComponent(r.city)}, ${r.country}` : r.country || '—'}</span>
-                    <span>{r.songs}</span>
-                    <span>{r.participants}</span>
-                    <button
-                      className={styles.deleteBtn}
-                      onClick={() => handleDeleteRoom(r.roomId)}
-                      title="Delete room data"
-                    >
-                      &times;
-                    </button>
-                  </div>
-                ))}
+            <h2 className={styles.sectionTitle}>Rooms</h2>
+            {mergeSource && (
+              <div className={styles.mergeBanner}>
+                <span>
+                  Merging <strong>{mergeSource}</strong> — click another room&rsquo;s merge
+                  button to fold it in.
+                </span>
+                <button className={styles.mergeCancel} onClick={() => setMergeSource(null)}>
+                  Cancel
+                </button>
               </div>
+            )}
+            {rooms.length === 0 ? (
+              <p className={styles.empty}>{roomsLoading ? 'Loading…' : 'No rooms created yet'}</p>
+            ) : (
+              <>
+                <div className={styles.roomTable}>
+                  <div className={styles.roomHeader}>
+                    <span>Code</span>
+                    <span>Created</span>
+                    <span>Location</span>
+                    <span>Songs</span>
+                    <span>People</span>
+                    <span></span>
+                  </div>
+                  {rooms.map((r, i) => (
+                    <div
+                      key={`${r.roomId}-${i}`}
+                      className={`${styles.roomRow} ${mergeSource === r.roomId ? styles.roomRowMerging : ''}`}
+                    >
+                      <a
+                        className={styles.roomCode}
+                        href={`/host/${r.roomId}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {r.roomId}
+                      </a>
+                      <span>{formatTimestamp(r.timestamp)}</span>
+                      <span>{r.city ? `${decodeURIComponent(r.city)}, ${r.country}` : r.country || '—'}</span>
+                      <span>{r.songs}</span>
+                      <span>{r.participants}</span>
+                      <div className={styles.roomActions}>
+                        <button
+                          className={`${styles.mergeBtn} ${mergeSource === r.roomId ? styles.mergeBtnActive : ''}`}
+                          onClick={() => handleMergeClick(r.roomId)}
+                          title={
+                            mergeSource === null
+                              ? 'Merge this room into another'
+                              : mergeSource === r.roomId
+                                ? 'Cancel merge'
+                                : `Merge ${mergeSource} into ${r.roomId}`
+                          }
+                        >
+                          ⧉
+                        </button>
+                        <button
+                          className={styles.deleteBtn}
+                          onClick={() => handleDeleteRoom(r.roomId)}
+                          title="Delete room data"
+                        >
+                          &times;
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div ref={sentinelRef} />
+                {roomsLoading && <p className={styles.empty}>Loading…</p>}
+                {!roomsHasMore && !roomsLoading && (
+                  <p className={styles.roomsEnd}>{rooms.length} rooms total</p>
+                )}
+              </>
             )}
           </section>
         </div>
