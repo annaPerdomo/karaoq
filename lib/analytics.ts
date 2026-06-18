@@ -76,7 +76,8 @@ export async function trackSessionHeartbeat(
   req: NextApiRequest,
   roomId: string,
   userName: string,
-  role: "host" | "singer" | "display"
+  role: "host" | "singer" | "display",
+  clientId?: string
 ): Promise<void> {
   let client: MongoClient | undefined;
   try {
@@ -84,7 +85,10 @@ export async function trackSessionHeartbeat(
     const db = client.db(process.env.MONGODB_DB);
     const geo = extractGeo(req);
     const now = new Date();
-    const sessionKey = `${roomId}:${userName}:${role}`;
+    // Key on the stable per-browser clientId so name edits update the same
+    // session doc instead of spawning a new one. Fall back to userName for
+    // older clients that don't send a clientId.
+    const sessionKey = `${roomId}:${clientId || userName}:${role}`;
 
     await db.collection("analytics_sessions").updateOne(
       { sessionKey },
@@ -93,6 +97,7 @@ export async function trackSessionHeartbeat(
           roomId,
           userName,
           role,
+          clientId,
           lastSeen: now,
           ...geo,
           userAgent: headerString(req.headers["user-agent"]),
