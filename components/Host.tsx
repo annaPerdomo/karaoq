@@ -44,6 +44,10 @@ function playModeStorageKey(joinCode: string): string {
   return `karaoq_play_mode_${joinCode}`;
 }
 
+function qrHiddenStorageKey(joinCode: string): string {
+  return `karaoq_qr_hidden_${joinCode}`;
+}
+
 function isTextReaction(emoji: string): boolean {
   return emoji.length > 2 && /[a-zA-Z]/.test(emoji);
 }
@@ -232,17 +236,6 @@ const Icons = {
       <path d="M11.5 3.1a2.5 2.5 0 010 4.8" />
     </svg>
   ),
-  qr: (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-      <rect x="1" y="1" width="6" height="6" rx="1" />
-      <rect x="9" y="1" width="6" height="6" rx="1" />
-      <rect x="1" y="9" width="6" height="6" rx="1" />
-      <rect x="10" y="10" width="2" height="2" />
-      <rect x="13" y="10" width="2" height="2" />
-      <rect x="10" y="13" width="2" height="2" />
-      <rect x="13" y="13" width="2" height="2" />
-    </svg>
-  ),
   plus: (
     <svg
       width="16"
@@ -279,8 +272,9 @@ const Icons = {
 };
 
 // ─── Settings popover ───
-// Just the genuine "set once" preferences now — playback mode lives in the
-// header pill, and inviting people lives in the Invite panel.
+// The room's "set once" controls: audience reactions, the co-host invite, and
+// the host's name. Playback mode lives in the header pill, and inviting singers
+// lives in the Invite panel.
 function SettingsPopover({
   isOpen,
   onClose,
@@ -289,6 +283,7 @@ function SettingsPopover({
   onToggleReactions,
   hostName,
   onChangeName,
+  onInviteCohost,
 }: {
   isOpen: boolean;
   onClose: () => void;
@@ -297,6 +292,7 @@ function SettingsPopover({
   onToggleReactions: () => void;
   hostName: string;
   onChangeName: () => void;
+  onInviteCohost: () => void;
 }) {
   const ref = React.useRef<HTMLDivElement>(null);
 
@@ -342,6 +338,19 @@ function SettingsPopover({
                 className={`${styles.toggle} ${reactionsOn ? styles.toggleOn : ""}`}
               >
                 <div className={styles.toggleThumb} />
+              </div>
+            </button>
+          </div>
+          <div className={styles.spSep} />
+          <div className={styles.spGroup}>
+            <div className={styles.spLabel}>Co-hosts</div>
+            <button className={styles.spBtn} onClick={onInviteCohost}>
+              {Icons.users}
+              <div>
+                <div className={styles.spBtnTitle}>Bring on a co-host</div>
+                <div className={styles.spBtnDesc}>
+                  Show a QR code or copy a link so a friend can manage the queue.
+                </div>
               </div>
             </button>
           </div>
@@ -511,16 +520,24 @@ const Host = ({
   const [playMode, setPlayMode] = React.useState<PlayMode | null>(
     remote ? "here" : null,
   );
+  // Whether we've checked localStorage for a remembered choice yet. The chooser
+  // must wait for this — otherwise a remembered host would be re-prompted in the
+  // window before the restore lands.
+  const [playModeRestored, setPlayModeRestored] = React.useState(false);
   const tvMode = playMode === "tv";
 
   const [hostName, setHostName] = React.useState("");
   const [showWelcome, setShowWelcome] = React.useState(true);
   const [welcomeName, setWelcomeName] = React.useState("");
 
+  // A name from a previous session (or set on the landing page when starting
+  // the queue) means we can skip the welcome prompt entirely on reload.
   React.useEffect(() => {
     const saved = localStorage.getItem("karaoq_host_name");
     if (saved) {
+      setHostName(saved);
       setWelcomeName(saved);
+      setShowWelcome(false);
     }
   }, []);
 
@@ -534,7 +551,13 @@ const Host = ({
 
   const [settingsOpen, setSettingsOpen] = React.useState(false);
   const [modeMenuOpen, setModeMenuOpen] = React.useState(false);
-  const [inviteOpen, setInviteOpen] = React.useState(false);
+  const [cohostOpen, setCohostOpen] = React.useState(false);
+  // The join QR sits in a drawer the host can tuck away — handy when this
+  // screen is what's cast and the code isn't needed mid-song. Open by default
+  // on wide screens; the choice is remembered per-room. A tap opens a big,
+  // scannable popout.
+  const [qrShelfOpen, setQrShelfOpen] = React.useState(true);
+  const [qrModalOpen, setQrModalOpen] = React.useState(false);
   const [searchOpen, setSearchOpen] = React.useState(false);
   const [sidebarTab, setSidebarTab] = React.useState<"queue" | "history">(
     "queue",
@@ -560,6 +583,36 @@ const Host = ({
     setOrigin(window.location.origin);
   }, []);
 
+  // Restore where this device last played video for this room, so a refresh
+  // keeps the host's setup instead of re-asking. Runs the moment we know the
+  // room code — independent of room loading — so the chooser never flashes.
+  React.useEffect(() => {
+    if (remote) {
+      setPlayModeRestored(true);
+      return;
+    }
+    if (!joinCode) return;
+    const saved = localStorage.getItem(playModeStorageKey(joinCode));
+    if (saved === "tv" || saved === "here") setPlayMode(saved);
+    setPlayModeRestored(true);
+  }, [joinCode, remote]);
+
+  // Restore whether this host had the join QR open for this room; fall back to
+  // open on wide screens, tucked away on narrow ones.
+  React.useEffect(() => {
+    if (!joinCode) return;
+    const saved = localStorage.getItem(qrHiddenStorageKey(joinCode));
+    setQrShelfOpen(saved === null ? window.innerWidth > 1024 : saved !== "1");
+  }, [joinCode]);
+
+  function toggleQrShelf() {
+    const next = !qrShelfOpen;
+    setQrShelfOpen(next);
+    if (joinCode) {
+      localStorage.setItem(qrHiddenStorageKey(joinCode), next ? "0" : "1");
+    }
+  }
+
   function showToast(msg: string) {
     setToast(null);
     if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -572,7 +625,6 @@ const Host = ({
   function closeHeaderMenus() {
     setSettingsOpen(false);
     setModeMenuOpen(false);
-    setInviteOpen(false);
   }
 
   function rememberMode(mode: PlayMode) {
@@ -645,14 +697,6 @@ const Host = ({
       // A co-host only reads the room — never create it (createRoom resets
       // isPlaying, which would stop the song on the real host screen).
       if (!remote) await createRoom(joinCode!);
-      // Restore where this device was last playing video for this room, so a
-      // refresh keeps the host's setup instead of silently switching surfaces.
-      if (!remote) {
-        const savedMode = localStorage.getItem(playModeStorageKey(joinCode!));
-        if (savedMode === "tv" || savedMode === "here") {
-          setPlayMode(savedMode);
-        }
-      }
       const room = await getRoom(joinCode!);
       if (cancelled) return;
       if (room) {
@@ -979,10 +1023,12 @@ const Host = ({
   const uniqueSingers = new Set(upNext.map((s) => s.userName)).size;
 
   const joinUrl = origin ? `${origin}/sing/${joinCode}` : "";
+  const cohostUrl = origin ? `${origin}/remote/${joinCode}` : "";
   const displayUrl = (origin || "karaoq.live").replace(
     /^https?:\/\/(www\.)?/,
     "",
   );
+  const cohostDisplayUrl = cohostUrl.replace(/^https?:\/\/(www\.)?/, "");
 
   function printQr() {
     window.open(`/print/${joinCode}`, "_blank");
@@ -996,7 +1042,12 @@ const Host = ({
   // First-run chooser: only once the room is ready, the host has a name, and
   // we don't already know where they want the video to play.
   const showModeChooser =
-    !remote && !loading && !error && !showWelcome && playMode === null;
+    !remote &&
+    !loading &&
+    !error &&
+    !showWelcome &&
+    playModeRestored &&
+    playMode === null;
 
   if (!joinCode) return <div className={styles.loading}>Loading...</div>;
 
@@ -1032,7 +1083,6 @@ const Host = ({
               onClick={() => {
                 setModeMenuOpen((o) => !o);
                 setSettingsOpen(false);
-                setInviteOpen(false);
               }}
               title="Where the karaoke video is playing"
             >
@@ -1087,25 +1137,11 @@ const Host = ({
         )}
 
         <div className={styles.headerActions}>
-          {!remote && (
-            <button
-              className={styles.inviteBtn}
-              onClick={() => {
-                setInviteOpen(true);
-                setSettingsOpen(false);
-                setModeMenuOpen(false);
-              }}
-            >
-              {Icons.qr}
-              <span className={styles.inviteBtnText}>Invite</span>
-            </button>
-          )}
           <button
             className={`${styles.gearBtn} ${settingsOpen ? styles.gearBtnOpen : ""}`}
             onClick={() => {
               setSettingsOpen(!settingsOpen);
               setModeMenuOpen(false);
-              setInviteOpen(false);
             }}
             aria-label="Settings"
           >
@@ -1123,6 +1159,10 @@ const Host = ({
             setSettingsOpen(false);
             setShowWelcome(true);
             setWelcomeName(hostName);
+          }}
+          onInviteCohost={() => {
+            setSettingsOpen(false);
+            setCohostOpen(true);
           }}
         />
       </header>
@@ -1237,15 +1277,17 @@ const Host = ({
                   </div>
                 )}
                 <div className={styles.emptyJoinInfo}>
-                  <div className={styles.emptyJoinKicker}>How to join</div>
+                  <div className={styles.emptyJoinKicker}>Scan to join</div>
                   <p className={styles.emptyJoinText}>
-                    Scan the code, or visit{" "}
-                    <strong>{displayUrl}</strong>
+                    or visit <strong>{displayUrl}</strong> and enter
                   </p>
                   <div className={styles.emptyJoinCode}>
                     {joinCode?.toUpperCase()}
                   </div>
-                  <button className={styles.emptyJoinPrint} onClick={printQr}>
+                  <button
+                    className={styles.emptyJoinPrint}
+                    onClick={printQr}
+                  >
                     Print join code
                   </button>
                 </div>
@@ -1515,9 +1557,11 @@ const Host = ({
 
               {/* Bottom cluster, pinned below the queue:
                   - Cheers, contextual (only while a song is on stage).
-                  - An always-visible join code so guests can scan and join at
-                    any point in the night — not gated behind the Invite modal.
-                    Tapping it opens the larger QR / print / co-host panel. */}
+                  - The "Scan to join" QR card (same component/wording as the
+                    Display screen) so guests can scan all night, with its own
+                    print + hide controls. A host can tuck it away (remembered
+                    per-room) and restore it from the slim "Show join code"
+                    button. */}
               <div className={styles.sidebarBottom}>
                 {!remote && reactionsOn && isPlaying && currentSong && (
                   <div className={styles.cheersLive}>
@@ -1529,31 +1573,53 @@ const Host = ({
                   </div>
                 )}
                 {!remote && joinUrl && (
-                  <button
-                    className={styles.joinCard}
-                    onClick={() => setInviteOpen(true)}
-                    title="Tap to enlarge or print the join code"
-                  >
-                    <span className={styles.joinCardQr}>
-                      <QRCodeSVG
-                        value={joinUrl}
-                        size={88}
-                        bgColor="transparent"
-                        fgColor="#ffffff"
-                        level="M"
-                      />
-                    </span>
-                    <span className={styles.joinCardInfo}>
-                      <span className={styles.joinCardLabel}>Scan to join</span>
-                      <span className={styles.joinCardUrl}>{displayUrl}</span>
-                      <span className={styles.joinCardCode}>
-                        {(joinCode || "").toUpperCase()}
-                      </span>
-                      <span className={styles.joinCardEnlarge}>
-                        Tap to enlarge · Print
-                      </span>
-                    </span>
-                  </button>
+                  <>
+                    <button
+                      className={`${styles.drawerToggle} ${qrShelfOpen ? styles.drawerToggleOpen : ""}`}
+                      onClick={toggleQrShelf}
+                      aria-expanded={qrShelfOpen}
+                    >
+                      <svg
+                        className={styles.drawerCaret}
+                        width="10"
+                        height="6"
+                        viewBox="0 0 10 6"
+                        fill="currentColor"
+                      >
+                        <path d="M0 0l5 6 5-6z" />
+                      </svg>
+                      Scan to join
+                    </button>
+                    {qrShelfOpen && (
+                      <div className={styles.qrShelf}>
+                        <button
+                          className={styles.qrShelfThumb}
+                          onClick={() => setQrModalOpen(true)}
+                          title="Enlarge QR code"
+                          aria-label="Enlarge QR code"
+                        >
+                          <QRCodeSVG
+                            value={joinUrl}
+                            size={72}
+                            bgColor="transparent"
+                            fgColor="#ffffff"
+                            level="M"
+                          />
+                        </button>
+                        <div className={styles.qrShelfInfo}>
+                          <span className={styles.qrShelfHint}>
+                            Tap code to enlarge
+                          </span>
+                          <span className={styles.qrShelfAlt}>
+                            or visit <strong>{displayUrl}</strong> and enter
+                          </span>
+                          <span className={styles.qrShelfCode}>
+                            {(joinCode || "").toUpperCase()}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
 
@@ -1583,30 +1649,75 @@ const Host = ({
         </div>
       </div>
 
-      {/* ─── Invite panel ─── */}
-      {inviteOpen && (
-        <div className={styles.overlay} onClick={() => setInviteOpen(false)}>
+      {/* ─── Co-host invite modal ─── */}
+      {cohostOpen && (
+        <div className={styles.overlay} onClick={() => setCohostOpen(false)}>
           <div className={styles.invitePanel} onClick={(e) => e.stopPropagation()}>
             <button
               className={styles.qrModalClose}
-              onClick={() => setInviteOpen(false)}
+              onClick={() => setCohostOpen(false)}
               title="Close"
               aria-label="Close"
             >
               &times;
             </button>
-            <h3 className={styles.inviteTitle}>Invite singers</h3>
-            {joinUrl && (
+            <h3 className={styles.inviteTitle}>Bring on a co-host</h3>
+            <p className={styles.cohostLede}>
+              A co-host helps you run the night from their own phone. Here is
+              how to add one:
+            </p>
+            <ol className={styles.cohostSteps}>
+              <li>Have your co-host scan the code below, or send them the link.</li>
+              <li>It opens karaoq on their phone, ready to help.</li>
+              <li>They can search for songs and manage the queue.</li>
+              <li>You stay in charge of playing, pausing, and skipping.</li>
+            </ol>
+            {cohostUrl && (
               <div className={styles.qrModalCode}>
                 <QRCodeSVG
-                  value={joinUrl}
+                  value={cohostUrl}
                   size={220}
                   bgColor="transparent"
-                  fgColor="#ffffff"
+                  fgColor="#00f0ff"
                   level="M"
                 />
               </div>
             )}
+            <p className={styles.qrModalScan}>Scan</p>
+            <p className={styles.qrModalAlt}>
+              or send them this link:
+            </p>
+            <p className={styles.cohostLink}>
+              <strong>{cohostDisplayUrl}</strong>
+            </p>
+            <button className={styles.qrModalPrint} onClick={copyCohostLink}>
+              Copy co-host link
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ─── QR code popout (enlarge) ─── */}
+      {qrModalOpen && joinUrl && (
+        <div className={styles.overlay} onClick={() => setQrModalOpen(false)}>
+          <div className={styles.invitePanel} onClick={(e) => e.stopPropagation()}>
+            <button
+              className={styles.qrModalClose}
+              onClick={() => setQrModalOpen(false)}
+              title="Close"
+              aria-label="Close"
+            >
+              &times;
+            </button>
+            <div className={styles.qrModalCode}>
+              <QRCodeSVG
+                value={joinUrl}
+                size={260}
+                bgColor="transparent"
+                fgColor="#ffffff"
+                level="M"
+              />
+            </div>
             <p className={styles.qrModalScan}>Scan to join</p>
             <p className={styles.qrModalAlt}>
               or visit <strong>{displayUrl}</strong> and enter code{" "}
@@ -1614,24 +1725,6 @@ const Host = ({
                 {(joinCode || "").toUpperCase()}
               </strong>
             </p>
-            <button className={styles.qrModalPrint} onClick={printQr}>
-              Print join code
-            </button>
-
-            <div className={styles.inviteSep} />
-
-            <div className={styles.cohostRow}>
-              <span className={styles.cohostIcon}>{Icons.users}</span>
-              <div className={styles.cohostInfo}>
-                <div className={styles.spBtnTitle}>Bring on a co-host</div>
-                <div className={styles.spBtnDesc}>
-                  Share a link so a friend can manage the queue from their phone.
-                </div>
-              </div>
-            </div>
-            <button className={styles.cohostBtn} onClick={copyCohostLink}>
-              Copy co-host link
-            </button>
           </div>
         </div>
       )}
