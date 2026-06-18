@@ -378,7 +378,10 @@
 }
 
 /* ─── Collapsed sidebar: thin reopen rail ─── */
-.sidebarCollapsed {
+/* Use .sidebar.sidebarCollapsed (specificity 0,2,0) so the collapsed width wins
+   over the responsive `.sidebar { width: 300px }` rule that comes later in the
+   file — otherwise on tablet/iPad (≤1200px) the rail keeps the full width. */
+.sidebar.sidebarCollapsed {
   width: 44px;
 }
 
@@ -1383,7 +1386,7 @@
 
   /* Stacked layout: a thin vertical rail wastes a whole row, so collapse to a
      short full-width bar with a horizontal label instead. */
-  .sidebarCollapsed {
+  .sidebar.sidebarCollapsed {
     width: 100%;
     max-height: none;
   }
