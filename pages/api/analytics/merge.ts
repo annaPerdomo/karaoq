@@ -46,6 +46,17 @@ export default async function handler(
     const events = db.collection("analytics_events");
     const sessions = db.collection("analytics_sessions");
 
+    // Make sure the target is a real room — otherwise we'd reassign events into
+    // a code that never appears in the Rooms list and orphan the source's data.
+    const targetExists = await events.countDocuments(
+      { roomId: target, type: "room_created" },
+      { limit: 1 }
+    );
+    if (!targetExists) {
+      res.status(404).json({ code: 404, message: "Target room not found." });
+      return;
+    }
+
     // Reassign every event except room_created — keeping the target's single
     // creation event so the merged room doesn't show up twice in the list.
     const reassigned = await events.updateMany(

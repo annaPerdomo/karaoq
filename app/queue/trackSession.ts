@@ -1,5 +1,18 @@
 const HEARTBEAT_INTERVAL = 60000; // 60 seconds
 
+function randomId(): string {
+  try {
+    if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
+  } catch {
+    // fall through to the time/random id
+  }
+  return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+// Per-tab fallback for when localStorage is blocked (private mode). Generated
+// once so storage-blocked users don't all collapse into one shared session.
+let fallbackClientId: string | null = null;
+
 // A stable per-browser id so a session is counted once regardless of how many
 // times the user edits their name. Without this, every keystroke in the name
 // field upserted a new analytics_sessions doc, massively inflating head counts.
@@ -8,15 +21,13 @@ function getClientId(): string {
     const KEY = "karaoq_client_id";
     let id = localStorage.getItem(KEY);
     if (!id) {
-      id =
-        typeof crypto !== "undefined" && crypto.randomUUID
-          ? crypto.randomUUID()
-          : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      id = randomId();
       localStorage.setItem(KEY, id);
     }
     return id;
   } catch {
-    return "anon";
+    if (!fallbackClientId) fallbackClientId = randomId();
+    return fallbackClientId;
   }
 }
 

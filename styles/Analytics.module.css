@@ -507,6 +507,21 @@ a.roomCode:hover {
   padding: 0.75rem 0;
 }
 
+.retryBtn {
+  background: none;
+  border: 1px solid #a78bfa;
+  color: #a78bfa;
+  cursor: pointer;
+  font-size: 0.75rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 4px;
+  margin-left: 0.25rem;
+}
+
+.retryBtn:hover {
+  background: rgba(167, 139, 250, 0.12);
+}
+
 /* ─── Responsive ─── */
 @media (max-width: 600px) {
   .main {

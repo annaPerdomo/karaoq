@@ -118,6 +118,7 @@ const Analytics = (): React.ReactElement => {
   const [roomsHasMore, setRoomsHasMore] = React.useState(false);
   const [roomsLoading, setRoomsLoading] = React.useState(false);
   const [roomsLoaded, setRoomsLoaded] = React.useState(false);
+  const [roomsError, setRoomsError] = React.useState(false);
   const [mergeSource, setMergeSource] = React.useState<string | null>(null);
   const sentinelRef = React.useRef<HTMLDivElement | null>(null);
 
@@ -149,6 +150,7 @@ const Analytics = (): React.ReactElement => {
   const loadRooms = React.useCallback(
     async (skip: number, replace: boolean) => {
       setRoomsLoading(true);
+      setRoomsError(false);
       try {
         const res = await fetch(`/api/analytics/rooms?skip=${skip}&limit=${ROOMS_PAGE_SIZE}`, {
           headers: { 'x-analytics-secret': secret },
@@ -159,7 +161,10 @@ const Analytics = (): React.ReactElement => {
         setRoomsHasMore(Boolean(json.hasMore));
       } catch {
         setRoomsHasMore(false);
+        setRoomsError(true);
       }
+      // Mark as loaded even on failure so the auto-load effect doesn't retry in
+      // a loop; the error state offers a manual retry instead.
       setRoomsLoaded(true);
       setRoomsLoading(false);
     },
@@ -209,6 +214,7 @@ const Analytics = (): React.ReactElement => {
     setSecret('');
     setRooms([]);
     setRoomsLoaded(false);
+    setRoomsError(false);
     setMergeSource(null);
   }
 
@@ -556,7 +562,18 @@ const Analytics = (): React.ReactElement => {
               </div>
             )}
             {rooms.length === 0 ? (
-              <p className={styles.empty}>{roomsLoading ? 'Loading…' : 'No rooms created yet'}</p>
+              roomsLoading ? (
+                <p className={styles.empty}>Loading…</p>
+              ) : roomsError ? (
+                <p className={styles.empty}>
+                  Couldn&rsquo;t load rooms.{' '}
+                  <button className={styles.retryBtn} onClick={() => loadRooms(0, true)}>
+                    Retry
+                  </button>
+                </p>
+              ) : (
+                <p className={styles.empty}>No rooms created yet</p>
+              )
             ) : (
               <>
                 <div className={styles.roomTable}>

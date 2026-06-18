@@ -553,10 +553,11 @@ const Host = ({
   const [modeMenuOpen, setModeMenuOpen] = React.useState(false);
   const [cohostOpen, setCohostOpen] = React.useState(false);
   // The join QR sits in a drawer the host can tuck away — handy when this
-  // screen is what's cast and the code isn't needed mid-song. Open by default
-  // on wide screens; the choice is remembered per-room. A tap opens a big,
-  // scannable popout.
-  const [qrShelfOpen, setQrShelfOpen] = React.useState(true);
+  // screen is what's cast and the code isn't needed mid-song. Starts closed to
+  // avoid a flash on narrow screens; the restore effect opens it on wide
+  // screens (and honors the per-room choice). A tap opens a big, scannable
+  // popout.
+  const [qrShelfOpen, setQrShelfOpen] = React.useState(false);
   const [qrModalOpen, setQrModalOpen] = React.useState(false);
   const [searchOpen, setSearchOpen] = React.useState(false);
   const [sidebarTab, setSidebarTab] = React.useState<"queue" | "history">(
@@ -620,11 +621,6 @@ const Host = ({
       setToast(msg);
       toastTimer.current = setTimeout(() => setToast(null), 2000);
     });
-  }
-
-  function closeHeaderMenus() {
-    setSettingsOpen(false);
-    setModeMenuOpen(false);
   }
 
   function rememberMode(mode: PlayMode) {
