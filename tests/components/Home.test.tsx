@@ -49,6 +49,8 @@ describe("Home component", () => {
   });
 
   it("creates a room and navigates to host view on Host click", async () => {
+    // Hosting now requires a name; seed a saved one (returning-host path).
+    localStorage.setItem("karaoq_host_name", "Tester");
     render(<Home />);
 
     const hostBtns = screen.getAllByRole("button", { name: /Host a Session/i });
@@ -66,6 +68,7 @@ describe("Home component", () => {
   });
 
   it("generates room codes using only unambiguous characters", async () => {
+    localStorage.setItem("karaoq_host_name", "Tester");
     render(<Home />);
 
     const hostBtns = screen.getAllByRole("button", { name: /Host a Session/i });
