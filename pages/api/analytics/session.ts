@@ -10,7 +10,7 @@ export default async function handler(
     return;
   }
 
-  let body: { roomId?: string; userName?: string; role?: string };
+  let body: { roomId?: string; userName?: string; role?: string; clientId?: string };
   try {
     body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
     if (!body || typeof body !== "object") throw new Error();
@@ -19,7 +19,7 @@ export default async function handler(
     return;
   }
 
-  const { roomId, userName, role } = body;
+  const { roomId, userName, role, clientId } = body;
 
   if (
     typeof roomId !== "string" ||
@@ -31,6 +31,12 @@ export default async function handler(
     return;
   }
 
-  await trackSessionHeartbeat(req, roomId, userName, role as "host" | "singer" | "display");
+  await trackSessionHeartbeat(
+    req,
+    roomId,
+    userName,
+    role as "host" | "singer" | "display",
+    typeof clientId === "string" ? clientId : undefined
+  );
   res.status(200).json({ ok: true });
 }

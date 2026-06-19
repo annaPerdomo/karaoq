@@ -388,7 +388,7 @@
 
 .roomHeader {
   display: grid;
-  grid-template-columns: 70px 1fr 1fr 60px 60px 32px;
+  grid-template-columns: 70px 1fr 1fr 60px 60px 72px;
   gap: 0.5rem;
   padding: 0.5rem 0.75rem;
   color: var(--text-muted);
@@ -400,7 +400,7 @@
 
 .roomRow {
   display: grid;
-  grid-template-columns: 70px 1fr 1fr 60px 60px 32px;
+  grid-template-columns: 70px 1fr 1fr 60px 60px 72px;
   gap: 0.5rem;
   padding: 0.6rem 0.75rem;
   background: var(--bg-secondary);
@@ -409,10 +409,26 @@
   align-items: center;
 }
 
+.roomRowMerging {
+  border-color: #a78bfa;
+  box-shadow: 0 0 0 1px #a78bfa;
+}
+
+.roomActions {
+  display: flex;
+  gap: 0.3rem;
+  justify-content: flex-end;
+}
+
 .roomCode {
   font-family: var(--font-mono);
   color: #a78bfa;
   font-weight: 600;
+  text-decoration: none;
+}
+
+a.roomCode:hover {
+  text-decoration: underline;
 }
 
 .deleteBtn {
@@ -430,6 +446,80 @@
 .deleteBtn:hover {
   color: #f87171;
   border-color: #f87171;
+}
+
+.mergeBtn {
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.95rem;
+  line-height: 1;
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.mergeBtn:hover {
+  color: #a78bfa;
+  border-color: #a78bfa;
+}
+
+.mergeBtnActive {
+  color: #a78bfa;
+  border-color: #a78bfa;
+  background: rgba(167, 139, 250, 0.12);
+}
+
+.mergeBanner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.6rem 0.85rem;
+  margin-bottom: 0.75rem;
+  background: rgba(167, 139, 250, 0.12);
+  border: 1px solid #a78bfa;
+  border-radius: 6px;
+  font-size: 0.8rem;
+}
+
+.mergeCancel {
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.mergeCancel:hover {
+  color: #fff;
+  border-color: #fff;
+}
+
+.roomsEnd {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  padding: 0.75rem 0;
+}
+
+.retryBtn {
+  background: none;
+  border: 1px solid #a78bfa;
+  color: #a78bfa;
+  cursor: pointer;
+  font-size: 0.75rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 4px;
+  margin-left: 0.25rem;
+}
+
+.retryBtn:hover {
+  background: rgba(167, 139, 250, 0.12);
 }
 
 /* ─── Responsive ─── */

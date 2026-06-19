@@ -311,15 +311,30 @@ const Home = (): React.ReactElement => {
   const [customCode, setCustomCode] = React.useState('');
   const [creating, setCreating] = React.useState(false);
   const [hostError, setHostError] = React.useState('');
+  const [hostName, setHostName] = React.useState('');
+
+  // Pre-fill the host's name from a previous session so returning hosts can
+  // start a queue without retyping it.
+  React.useEffect(() => {
+    const saved = localStorage.getItem('karaoq_host_name');
+    if (saved) setHostName(saved);
+  }, []);
 
   async function handleHost(useCustom = false) {
     if (creating) return;
+    const name = hostName.trim();
+    if (!name) {
+      setHostError('Enter your name to start');
+      return;
+    }
     const code = useCustom ? customCode.trim().toUpperCase() : generateCode();
     if (useCustom && !CUSTOM_CODE_PATTERN.test(code)) {
       setHostError('Code must be 3\u201312 letters or numbers');
       return;
     }
     setHostError('');
+    // Carry the name into the host view so the queue starts already set up.
+    localStorage.setItem('karaoq_host_name', name);
     setCreating(true);
     try {
       const headers: Record<string, string> = {};
@@ -391,6 +406,19 @@ const Home = (): React.ReactElement => {
                   </button>
                 ) : (
                   <div className={styles.hostPanel}>
+                    <input
+                      className={styles.nameInput}
+                      placeholder="Your name"
+                      aria-label="Your name"
+                      maxLength={30}
+                      value={hostName}
+                      onChange={(e) => {
+                        setHostName(e.target.value);
+                        setHostError('');
+                      }}
+                      onKeyDown={(e) => e.key === 'Enter' && handleHost(false)}
+                      autoFocus
+                    />
                     <button
                       className={styles.btnPrimary}
                       onClick={() => handleHost(false)}
@@ -415,7 +443,6 @@ const Home = (): React.ReactElement => {
                           setHostError('');
                         }}
                         onKeyDown={(e) => e.key === 'Enter' && handleHost(true)}
-                        autoFocus
                       />
                       <button
                         className={styles.btnOutline}

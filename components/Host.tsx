@@ -38,6 +38,16 @@ import { v4 as uuidv4 } from "uuid";
 
 const POLL_INTERVAL = 3000;
 
+type PlayMode = "here" | "tv";
+
+function playModeStorageKey(joinCode: string): string {
+  return `karaoq_play_mode_${joinCode}`;
+}
+
+function qrHiddenStorageKey(joinCode: string): string {
+  return `karaoq_qr_hidden_${joinCode}`;
+}
+
 function isTextReaction(emoji: string): boolean {
   return emoji.length > 2 && /[a-zA-Z]/.test(emoji);
 }
@@ -193,6 +203,39 @@ const Icons = {
       <line x1="9" y1="13" x2="9" y2="16" />
     </svg>
   ),
+  monitor: (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 18 18"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <rect x="2" y="3" width="14" height="9" rx="1.5" />
+      <path d="M9 12v3" />
+      <path d="M5 15.5h8" />
+    </svg>
+  ),
+  users: (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 18 18"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M12 15.5v-1.2a2.8 2.8 0 00-2.8-2.8H5.3a2.8 2.8 0 00-2.8 2.8v1.2" />
+      <circle cx="7.25" cy="5.5" r="2.5" />
+      <path d="M15.5 15.5v-1.2a2.8 2.8 0 00-2.1-2.7" />
+      <path d="M11.5 3.1a2.5 2.5 0 010 4.8" />
+    </svg>
+  ),
   plus: (
     <svg
       width="16"
@@ -205,6 +248,11 @@ const Icons = {
     >
       <line x1="8" y1="3" x2="8" y2="13" />
       <line x1="3" y1="8" x2="13" y2="8" />
+    </svg>
+  ),
+  caret: (
+    <svg width="10" height="6" viewBox="0 0 10 6" fill="currentColor">
+      <path d="M0 0l5 6 5-6z" />
     </svg>
   ),
   chevronRight: (
@@ -223,35 +271,28 @@ const Icons = {
   ),
 };
 
-// ─── Settings Popover ───
+// ─── Settings popover ───
+// The room's "set once" controls: audience reactions, the co-host invite, and
+// the host's name. Playback mode lives in the header pill, and inviting singers
+// lives in the Invite panel.
 function SettingsPopover({
   isOpen,
   onClose,
   remote,
-  tvMode,
-  onOpenTv,
-  onSwitchLocal,
-  onCopyCohostLink,
   reactionsOn,
   onToggleReactions,
   hostName,
   onChangeName,
-  qrVisible,
-  onShowQr,
+  onInviteCohost,
 }: {
   isOpen: boolean;
   onClose: () => void;
   remote: boolean;
-  tvMode: boolean;
-  onOpenTv: () => void;
-  onSwitchLocal: () => void;
-  onCopyCohostLink: () => void;
   reactionsOn: boolean;
   onToggleReactions: () => void;
   hostName: string;
   onChangeName: () => void;
-  qrVisible: boolean;
-  onShowQr: () => void;
+  onInviteCohost: () => void;
 }) {
   const ref = React.useRef<HTMLDivElement>(null);
 
@@ -283,44 +324,6 @@ function SettingsPopover({
       {!remote && (
         <>
           <div className={styles.spGroup}>
-            <div className={styles.spLabel}>Display</div>
-            {tvMode ? (
-              <button className={styles.spBtn} onClick={onSwitchLocal}>
-                {Icons.tv}
-                <div>
-                  <div className={styles.spBtnTitle}>Watch Here</div>
-                  <div className={styles.spBtnDesc}>
-                    Show video in this window
-                  </div>
-                </div>
-              </button>
-            ) : (
-              <button className={styles.spBtn} onClick={onOpenTv}>
-                {Icons.tv}
-                <div>
-                  <div className={styles.spBtnTitle}>Open TV Display</div>
-                  <div className={styles.spBtnDesc}>
-                    Cast to a TV or projector
-                  </div>
-                </div>
-              </button>
-            )}
-          </div>
-          <div className={styles.spSep} />
-          <div className={styles.spGroup}>
-            <div className={styles.spLabel}>Co-host</div>
-            <button className={styles.spBtn} onClick={onCopyCohostLink}>
-              {Icons.plus}
-              <div>
-                <div className={styles.spBtnTitle}>Copy co-host link</div>
-                <div className={styles.spBtnDesc}>
-                  Let someone manage the queue from their phone
-                </div>
-              </div>
-            </button>
-          </div>
-          <div className={styles.spSep} />
-          <div className={styles.spGroup}>
             <div className={styles.spLabel}>Audience</div>
             <button className={styles.spToggleRow} onClick={onToggleReactions}>
               <div>
@@ -339,6 +342,19 @@ function SettingsPopover({
             </button>
           </div>
           <div className={styles.spSep} />
+          <div className={styles.spGroup}>
+            <div className={styles.spLabel}>Co-hosts</div>
+            <button className={styles.spBtn} onClick={onInviteCohost}>
+              {Icons.users}
+              <div>
+                <div className={styles.spBtnTitle}>Bring on a co-host</div>
+                <div className={styles.spBtnDesc}>
+                  Show a QR code or copy a link so a friend can manage the queue.
+                </div>
+              </div>
+            </button>
+          </div>
+          <div className={styles.spSep} />
         </>
       )}
       <div className={styles.spGroup}>
@@ -351,36 +367,6 @@ function SettingsPopover({
           </div>
         </button>
       </div>
-      {!remote && !qrVisible && (
-        <>
-          <div className={styles.spSep} />
-          <div className={styles.spGroup}>
-            <div className={styles.spLabel}>QR Code</div>
-            <button className={styles.spBtn} onClick={onShowQr}>
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 16 16"
-                fill="currentColor"
-              >
-                <rect x="1" y="1" width="6" height="6" rx="1" />
-                <rect x="9" y="1" width="6" height="6" rx="1" />
-                <rect x="1" y="9" width="6" height="6" rx="1" />
-                <rect x="10" y="10" width="2" height="2" />
-                <rect x="13" y="10" width="2" height="2" />
-                <rect x="10" y="13" width="2" height="2" />
-                <rect x="13" y="13" width="2" height="2" />
-              </svg>
-              <div>
-                <div className={styles.spBtnTitle}>Show QR Code</div>
-                <div className={styles.spBtnDesc}>
-                  Display join code for guests
-                </div>
-              </div>
-            </button>
-          </div>
-        </>
-      )}
     </div>
   );
 }
@@ -518,7 +504,6 @@ const Host = ({
   const [error, setError] = React.useState<string | null>(null);
   const [origin, setOrigin] = React.useState("");
   const [confirmRemove, setConfirmRemove] = React.useState<string | null>(null);
-  const [tvMode, setTvMode] = React.useState(false);
   const [reactionsOn, setReactionsOn] = React.useState(true);
   const [reactionCooldown, setReactionCooldown] = React.useState(false);
   const [lastSentEmoji, setLastSentEmoji] = React.useState<string | null>(null);
@@ -529,14 +514,30 @@ const Host = ({
   const reactionTimers = React.useRef<ReturnType<typeof setTimeout>[]>([]);
   const videoRef = React.useRef<HTMLIFrameElement>(null);
 
+  // ─── Where the video plays. `null` until the host has chosen (or we've
+  // restored a previous choice), which is what triggers the first-run chooser.
+  // Co-hosts never play video, so they stay in the default "here" surface.
+  const [playMode, setPlayMode] = React.useState<PlayMode | null>(
+    remote ? "here" : null,
+  );
+  // Whether we've checked localStorage for a remembered choice yet. The chooser
+  // must wait for this — otherwise a remembered host would be re-prompted in the
+  // window before the restore lands.
+  const [playModeRestored, setPlayModeRestored] = React.useState(false);
+  const tvMode = playMode === "tv";
+
   const [hostName, setHostName] = React.useState("");
   const [showWelcome, setShowWelcome] = React.useState(true);
   const [welcomeName, setWelcomeName] = React.useState("");
 
+  // A name from a previous session (or set on the landing page when starting
+  // the queue) means we can skip the welcome prompt entirely on reload.
   React.useEffect(() => {
     const saved = localStorage.getItem("karaoq_host_name");
     if (saved) {
+      setHostName(saved);
       setWelcomeName(saved);
+      setShowWelcome(false);
     }
   }, []);
 
@@ -549,16 +550,20 @@ const Host = ({
   }
 
   const [settingsOpen, setSettingsOpen] = React.useState(false);
-  const [searchOpen, setSearchOpen] = React.useState(false);
-  const [historyOpen, setHistoryOpen] = React.useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = React.useState(false);
-  const [queueOpen, setQueueOpen] = React.useState(true);
-  const [cheersOpen, setCheersOpen] = React.useState(true);
-  const [qrShelfOpen, setQrShelfOpen] = React.useState(() => {
-    if (typeof window === "undefined") return true;
-    return window.innerWidth > 1024;
-  });
+  const [modeMenuOpen, setModeMenuOpen] = React.useState(false);
+  const [cohostOpen, setCohostOpen] = React.useState(false);
+  // The join QR sits in a drawer the host can tuck away — handy when this
+  // screen is what's cast and the code isn't needed mid-song. Starts closed to
+  // avoid a flash on narrow screens; the restore effect opens it on wide
+  // screens (and honors the per-room choice). A tap opens a big, scannable
+  // popout.
+  const [qrShelfOpen, setQrShelfOpen] = React.useState(false);
   const [qrModalOpen, setQrModalOpen] = React.useState(false);
+  const [searchOpen, setSearchOpen] = React.useState(false);
+  const [sidebarTab, setSidebarTab] = React.useState<"queue" | "history">(
+    "queue",
+  );
+  const [sidebarCollapsed, setSidebarCollapsed] = React.useState(false);
   const [editingId, setEditingId] = React.useState<string | null>(null);
   const [toast, setToast] = React.useState<string | null>(null);
   const toastTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -579,6 +584,36 @@ const Host = ({
     setOrigin(window.location.origin);
   }, []);
 
+  // Restore where this device last played video for this room, so a refresh
+  // keeps the host's setup instead of re-asking. Runs the moment we know the
+  // room code — independent of room loading — so the chooser never flashes.
+  React.useEffect(() => {
+    if (remote) {
+      setPlayModeRestored(true);
+      return;
+    }
+    if (!joinCode) return;
+    const saved = localStorage.getItem(playModeStorageKey(joinCode));
+    if (saved === "tv" || saved === "here") setPlayMode(saved);
+    setPlayModeRestored(true);
+  }, [joinCode, remote]);
+
+  // Restore whether this host had the join QR open for this room; fall back to
+  // open on wide screens, tucked away on narrow ones.
+  React.useEffect(() => {
+    if (!joinCode) return;
+    const saved = localStorage.getItem(qrHiddenStorageKey(joinCode));
+    setQrShelfOpen(saved === null ? window.innerWidth > 1024 : saved !== "1");
+  }, [joinCode]);
+
+  function toggleQrShelf() {
+    const next = !qrShelfOpen;
+    setQrShelfOpen(next);
+    if (joinCode) {
+      localStorage.setItem(qrHiddenStorageKey(joinCode), next ? "0" : "1");
+    }
+  }
+
   function showToast(msg: string) {
     setToast(null);
     if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -588,18 +623,30 @@ const Host = ({
     });
   }
 
+  function rememberMode(mode: PlayMode) {
+    if (joinCode) localStorage.setItem(playModeStorageKey(joinCode), mode);
+  }
+
+  // Choose "this screen" — the simplest setup, nothing else to open.
+  function playHere() {
+    setPlayMode("here");
+    rememberMode("here");
+    setModeMenuOpen(false);
+  }
+
+  // Choose "separate TV" — open (or re-open) the display window to cast.
   function openTvDisplay() {
     window.open(`/display/${joinCode}`, "_blank");
-    setTvMode(true);
-    setSettingsOpen(false);
-    showToast("TV Display opened");
+    setPlayMode("tv");
+    rememberMode("tv");
+    setModeMenuOpen(false);
+    showToast("Display window opened");
   }
 
   async function copyCohostLink() {
     if (!joinCode) return;
     const base = origin || window.location.origin;
     const url = `${base}/remote/${joinCode}`;
-    setSettingsOpen(false);
     try {
       await navigator.clipboard.writeText(url);
       showToast("Co-host link copied");
@@ -972,10 +1019,12 @@ const Host = ({
   const uniqueSingers = new Set(upNext.map((s) => s.userName)).size;
 
   const joinUrl = origin ? `${origin}/sing/${joinCode}` : "";
+  const cohostUrl = origin ? `${origin}/remote/${joinCode}` : "";
   const displayUrl = (origin || "karaoq.live").replace(
     /^https?:\/\/(www\.)?/,
     "",
   );
+  const cohostDisplayUrl = cohostUrl.replace(/^https?:\/\/(www\.)?/, "");
 
   function printQr() {
     window.open(`/print/${joinCode}`, "_blank");
@@ -985,6 +1034,16 @@ const Host = ({
       body: JSON.stringify({ roomId: joinCode }),
     }).catch(() => {});
   }
+
+  // First-run chooser: only once the room is ready, the host has a name, and
+  // we don't already know where they want the video to play.
+  const showModeChooser =
+    !remote &&
+    !loading &&
+    !error &&
+    !showWelcome &&
+    playModeRestored &&
+    playMode === null;
 
   if (!joinCode) return <div className={styles.loading}>Loading...</div>;
 
@@ -1010,23 +1069,85 @@ const Host = ({
           KaraoQ
           {remote && <span className={styles.cohostBadge}>Co-host</span>}
         </div>
-        <button
-          className={`${styles.gearBtn} ${settingsOpen ? styles.gearBtnOpen : ""}`}
-          onClick={() => setSettingsOpen(!settingsOpen)}
-        >
-          {Icons.gear}
-        </button>
+
+        {/* Playback-mode pill — always shows where the video is playing and
+            switches in one tap. */}
+        {!remote && (
+          <div className={styles.modePillWrap}>
+            <button
+              className={styles.modePill}
+              onClick={() => {
+                setModeMenuOpen((o) => !o);
+                setSettingsOpen(false);
+              }}
+              title="Where the karaoke video is playing"
+            >
+              {tvMode ? Icons.tv : Icons.monitor}
+              <span className={styles.modePillText}>
+                {tvMode ? "Playing on a different screen" : "Playing here"}
+              </span>
+              <span className={styles.modePillCaret}>{Icons.caret}</span>
+            </button>
+            {modeMenuOpen && (
+              <>
+                <div
+                  className={styles.menuBackdrop}
+                  onClick={() => setModeMenuOpen(false)}
+                />
+                <div className={styles.modeMenu}>
+                  <div className={styles.spLabel}>Where the video plays</div>
+                  <button
+                    className={`${styles.modeMenuItem} ${!tvMode ? styles.modeMenuItemActive : ""}`}
+                    onClick={playHere}
+                  >
+                    {Icons.monitor}
+                    <div>
+                      <div className={styles.spBtnTitle}>On this screen</div>
+                      <div className={styles.spBtnDesc}>
+                        Video plays right here
+                      </div>
+                    </div>
+                    {!tvMode && <span className={styles.modeCheck}>✓</span>}
+                  </button>
+                  <button
+                    className={`${styles.modeMenuItem} ${tvMode ? styles.modeMenuItemActive : ""}`}
+                    onClick={openTvDisplay}
+                  >
+                    {Icons.tv}
+                    <div>
+                      <div className={styles.spBtnTitle}>
+                        On a different screen
+                      </div>
+                      <div className={styles.spBtnDesc}>
+                        {tvMode
+                          ? "Re-open the display window"
+                          : "Cast to a TV or projector"}
+                      </div>
+                    </div>
+                    {tvMode && <span className={styles.modeCheck}>✓</span>}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        <div className={styles.headerActions}>
+          <button
+            className={`${styles.gearBtn} ${settingsOpen ? styles.gearBtnOpen : ""}`}
+            onClick={() => {
+              setSettingsOpen(!settingsOpen);
+              setModeMenuOpen(false);
+            }}
+            aria-label="Settings"
+          >
+            {Icons.gear}
+          </button>
+        </div>
         <SettingsPopover
           isOpen={settingsOpen}
           onClose={() => setSettingsOpen(false)}
           remote={remote}
-          tvMode={tvMode}
-          onOpenTv={openTvDisplay}
-          onSwitchLocal={() => {
-            setTvMode(false);
-            setSettingsOpen(false);
-          }}
-          onCopyCohostLink={copyCohostLink}
           reactionsOn={reactionsOn}
           onToggleReactions={toggleReactions}
           hostName={hostName}
@@ -1035,11 +1156,9 @@ const Host = ({
             setShowWelcome(true);
             setWelcomeName(hostName);
           }}
-          qrVisible={qrShelfOpen}
-          onShowQr={() => {
-            setQrShelfOpen(true);
-            setSidebarCollapsed(false);
+          onInviteCohost={() => {
             setSettingsOpen(false);
+            setCohostOpen(true);
           }}
         />
       </header>
@@ -1074,13 +1193,14 @@ const Host = ({
                 </p>
               </div>
             ) : tvMode ? (
-              /* ── TV Display mode: control panel ── */
+              /* ── TV Display mode: status panel; playback runs from the
+                   transport bar so there's one set of controls. ── */
               <div className={styles.songControl}>
                 {isPlaying ? (
                   <>
                     <div className={styles.liveIndicator}>
                       <span className={styles.liveDot} />
-                      <span>PLAYING ON DISPLAY</span>
+                      <span>PLAYING ON A DIFFERENT SCREEN</span>
                     </div>
                     <p className={styles.controlSinger}>
                       {currentSong.userName}
@@ -1088,9 +1208,6 @@ const Host = ({
                     <h2 className={styles.controlSong}>
                       {decodeHtml(currentSong.songTitle)}
                     </h2>
-                    <button className={styles.stopBtn} onClick={stopSong}>
-                      {Icons.stop} Stop
-                    </button>
                   </>
                 ) : (
                   <>
@@ -1101,16 +1218,13 @@ const Host = ({
                     <p className={styles.controlSong}>
                       {decodeHtml(currentSong.songTitle)}
                     </p>
-                    <button className={styles.playBtn} onClick={startSong}>
-                      {Icons.play} Play on Display
-                    </button>
                   </>
                 )}
                 <button
                   className={styles.switchModeLink}
-                  onClick={() => setTvMode(false)}
+                  onClick={openTvDisplay}
                 >
-                  Show video here instead
+                  Display window closed? Re-open it
                 </button>
               </div>
             ) : /* ── All-in-one mode: video plays here ── */
@@ -1133,52 +1247,49 @@ const Host = ({
                 </p>
               </div>
             )
-          ) : (
+          ) : remote ? (
+            /* ── Co-host, empty queue ── */
             <div className={styles.emptyState}>
-              <div className={styles.emptyIcon}>
-                <svg
-                  width="64"
-                  height="64"
-                  viewBox="0 0 64 64"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <defs>
-                    <linearGradient id="noteGrad" x1="0" y1="0" x2="1" y2="1">
-                      <stop offset="0%" stopColor="#ff2d78" />
-                      <stop offset="100%" stopColor="#00f0ff" />
-                    </linearGradient>
-                  </defs>
-                  <circle cx="18" cy="48" r="8" fill="url(#noteGrad)" />
-                  <circle cx="46" cy="40" r="8" fill="url(#noteGrad)" />
-                  <rect
-                    x="24"
-                    y="8"
-                    width="4"
-                    height="40"
-                    rx="2"
-                    fill="url(#noteGrad)"
-                  />
-                  <rect
-                    x="52"
-                    y="8"
-                    width="4"
-                    height="32"
-                    rx="2"
-                    fill="url(#noteGrad)"
-                  />
-                  <path
-                    d="M26 8 c4-4 22-8 28-4 v8 c-6-4-24 0-28 4z"
-                    fill="url(#noteGrad)"
-                  />
-                </svg>
-              </div>
               <h2 className={styles.emptyTitle}>KaraoQ</h2>
               <p>
-                {qrShelfOpen ? "Scan the QR code or visit" : "Visit"}{" "}
-                <strong>{displayUrl}</strong> and enter code{" "}
-                <strong>{joinCode?.toUpperCase()}</strong> to add songs and
-                cheer on the singers!
+                No songs in the queue yet. Add songs from the panel — playback
+                is controlled on the host screen.
+              </p>
+            </div>
+          ) : (
+            /* ── Host, empty queue: this is the moment to get people in, so
+                 the join code + QR are front and center. ── */
+            <div className={styles.emptyState}>
+              <div className={styles.emptyJoinCard}>
+                {joinUrl && (
+                  <div className={styles.emptyJoinQr}>
+                    <QRCodeSVG
+                      value={joinUrl}
+                      size={148}
+                      bgColor="transparent"
+                      fgColor="#ffffff"
+                      level="M"
+                    />
+                  </div>
+                )}
+                <div className={styles.emptyJoinInfo}>
+                  <div className={styles.emptyJoinKicker}>Scan to join</div>
+                  <p className={styles.emptyJoinText}>
+                    or visit <strong>{displayUrl}</strong> and enter
+                  </p>
+                  <div className={styles.emptyJoinCode}>
+                    {joinCode?.toUpperCase()}
+                  </div>
+                  <button
+                    className={styles.emptyJoinPrint}
+                    onClick={printQr}
+                  >
+                    Print join code
+                  </button>
+                </div>
+              </div>
+              <p className={styles.emptyHint}>
+                Songs your guests add will line up in <strong>Up Next</strong> →
               </p>
             </div>
           )}
@@ -1221,12 +1332,24 @@ const Host = ({
                   >
                     {Icons.prev}
                   </button>
-                  {isPlaying && !tvMode ? null : ( // In all-in-one mode, YouTube's native controls handle pause/resume
+                  {isPlaying ? (
+                    // While playing on a TV the host needs a Stop here; in
+                    // all-in-one mode YouTube's own controls handle pause.
+                    tvMode ? (
+                      <button
+                        className={`${styles.tBtn} ${styles.tStop}`}
+                        onClick={stopSong}
+                        title="Stop"
+                      >
+                        {Icons.stop}
+                      </button>
+                    ) : null
+                  ) : (
                     <button
                       className={`${styles.tBtn} ${styles.tPlay}`}
                       onClick={startSong}
                       disabled={!currentSong}
-                      title="Play"
+                      title={tvMode ? "Play on the other screen" : "Play"}
                     >
                       {Icons.play}
                     </button>
@@ -1298,48 +1421,52 @@ const Host = ({
             </button>
           ) : (
             <>
-              {/* Sidebar header — title doubles as the Up Next collapse toggle */}
+              {/* Sidebar header: two tabs (Up Next / History) + collapse. */}
               <div className={styles.sidebarHeader}>
-                <button
-                  className={`${styles.sidebarTitle} ${queueOpen ? "" : styles.sidebarTitleClosed}`}
-                  onClick={() => setQueueOpen(!queueOpen)}
-                  aria-expanded={queueOpen}
-                  title={queueOpen ? "Collapse queue" : "Expand queue"}
-                >
-                  <svg
-                    className={styles.drawerCaret}
-                    width="10"
-                    height="6"
-                    viewBox="0 0 10 6"
-                    fill="currentColor"
-                  >
-                    <path d="M0 0l5 6 5-6z" />
-                  </svg>
-                  Up Next
-                  {upNext.length > 0 && (
-                    <span className={styles.sidebarBadge}>{upNext.length}</span>
-                  )}
-                </button>
-                <div className={styles.sidebarActions}>
+                <div className={styles.sidebarTabs}>
                   <button
-                    className={`${styles.sidebarAct} ${searchOpen ? styles.sidebarActActive : ""}`}
-                    onClick={() => setSearchOpen(!searchOpen)}
+                    className={`${styles.sidebarTab} ${sidebarTab === "queue" ? styles.sidebarTabActive : ""}`}
+                    onClick={() => setSidebarTab("queue")}
                   >
-                    {Icons.plus} Add Song
+                    Up Next
+                    {upNext.length > 0 && (
+                      <span className={styles.sidebarBadge}>
+                        {upNext.length}
+                      </span>
+                    )}
                   </button>
                   <button
-                    className={styles.sidebarCollapseBtn}
-                    onClick={() => setSidebarCollapsed(true)}
-                    title="Hide panel"
-                    aria-label="Hide panel"
+                    className={`${styles.sidebarTab} ${sidebarTab === "history" ? styles.sidebarTabActive : ""}`}
+                    onClick={() => setSidebarTab("history")}
                   >
-                    {Icons.chevronRight}
+                    History
+                    {historyItems.length > 0 && (
+                      <span className={styles.historyBadge}>
+                        {historyItems.length}
+                      </span>
+                    )}
                   </button>
                 </div>
+                <button
+                  className={styles.sidebarCollapseBtn}
+                  onClick={() => setSidebarCollapsed(true)}
+                  title="Hide panel"
+                  aria-label="Hide panel"
+                >
+                  {Icons.chevronRight}
+                </button>
               </div>
 
-              {/* Queue stats + list (collapsible) */}
-              {queueOpen && (
+              {/* Primary action: add a song. */}
+              <button
+                className={`${styles.addSongBtn} ${searchOpen ? styles.addSongBtnActive : ""}`}
+                onClick={() => setSearchOpen(!searchOpen)}
+              >
+                {Icons.plus} Add a song
+              </button>
+
+              {/* Up Next tab */}
+              {sidebarTab === "queue" && (
                 <>
                   {upNext.length > 0 && (
                     <div className={styles.queueStats}>
@@ -1390,141 +1517,105 @@ const Host = ({
                 </>
               )}
 
-              {/* Bottom cluster — pinned below the queue: History, cheers, QR */}
-              {/* Cheer drawer — only while a song is on stage */}
-              {!remote && reactionsOn && isPlaying && currentSong && (
-                <>
-                  <button
-                    className={`${styles.historyToggle} ${cheersOpen ? styles.historyToggleOpen : ""}`}
-                    onClick={() => setCheersOpen(!cheersOpen)}
-                  >
-                    <svg
-                      className={styles.drawerCaret}
-                      width="10"
-                      height="6"
-                      viewBox="0 0 10 6"
-                      fill="currentColor"
-                    >
-                      <path d="M0 0l5 6 5-6z" />
-                    </svg>
-                    Cheers
-                  </button>
-                  {cheersOpen && (
+              {/* History tab */}
+              {sidebarTab === "history" && (
+                <div className={styles.historyList}>
+                  {historyItems.length > 0 ? (
+                    [...historyItems].reverse().map((item, i) => (
+                      <div key={item.id} className={styles.historyItem}>
+                        <span className={styles.historyNum}>
+                          {historyItems.length - i}
+                        </span>
+                        <div className={styles.queueInfo}>
+                          <div className={styles.queueArtist}>
+                            {item.userName}
+                          </div>
+                          <div className={styles.queueSong}>
+                            {decodeHtml(item.songTitle)}
+                          </div>
+                        </div>
+                        <button
+                          className={styles.replayBtn}
+                          onClick={() => replayFromHistory(item.id)}
+                          title="Restore this song to the queue"
+                          aria-label="Restore this song to the queue"
+                        >
+                          {Icons.replay}
+                          <span className={styles.replayBtnLabel}>Restore</span>
+                        </button>
+                      </div>
+                    ))
+                  ) : (
+                    <p className={styles.emptyQueue}>No songs played yet</p>
+                  )}
+                </div>
+              )}
+
+              {/* Bottom cluster, pinned below the queue:
+                  - Cheers, contextual (only while a song is on stage).
+                  - The "Scan to join" QR card (same component/wording as the
+                    Display screen) so guests can scan all night, with its own
+                    print + hide controls. A host can tuck it away (remembered
+                    per-room) and restore it from the slim "Show join code"
+                    button. */}
+              <div className={styles.sidebarBottom}>
+                {!remote && reactionsOn && isPlaying && currentSong && (
+                  <div className={styles.cheersLive}>
                     <CheerBar
                       onReaction={sendReaction}
                       cooldown={reactionCooldown}
                       lastSentEmoji={lastSentEmoji}
                     />
-                  )}
-                </>
-              )}
-              <div className={styles.sidebarBottom}>
-                {/* History drawer */}
-                <button
-                  className={`${styles.historyToggle} ${historyOpen ? styles.historyToggleOpen : ""}`}
-                  onClick={() => setHistoryOpen(!historyOpen)}
-                >
-                  <svg
-                    className={styles.drawerCaret}
-                    width="10"
-                    height="6"
-                    viewBox="0 0 10 6"
-                    fill="currentColor"
-                  >
-                    <path d="M0 0l5 6 5-6z" />
-                  </svg>
-                  History
-                  {historyItems.length > 0 && (
-                    <span className={styles.historyBadge}>
-                      {historyItems.length}
-                    </span>
-                  )}
-                </button>
-                {historyOpen && (
-                  <div className={styles.historyList}>
-                    {historyItems.length > 0 ? (
-                      [...historyItems].reverse().map((item, i) => (
-                        <div key={item.id} className={styles.historyItem}>
-                          <span className={styles.historyNum}>
-                            {historyItems.length - i}
-                          </span>
-                          <div className={styles.queueInfo}>
-                            <div className={styles.queueArtist}>
-                              {item.userName}
-                            </div>
-                            <div className={styles.queueSong}>
-                              {decodeHtml(item.songTitle)}
-                            </div>
-                          </div>
-                          <button
-                            className={styles.replayBtn}
-                            onClick={() => replayFromHistory(item.id)}
-                            title="Restore this song to the queue"
-                            aria-label="Restore this song to the queue"
-                          >
-                            {Icons.replay}
-                            <span className={styles.replayBtnLabel}>
-                              Restore
-                            </span>
-                          </button>
-                        </div>
-                      ))
-                    ) : (
-                      <p className={styles.emptyQueue}>No songs played yet</p>
-                    )}
                   </div>
                 )}
-
-                {/* QR code drawer */}
-                <button
-                  className={`${styles.historyToggle} ${qrShelfOpen ? styles.historyToggleOpen : ""}`}
-                  onClick={() => setQrShelfOpen(!qrShelfOpen)}
-                >
-                  <svg
-                    className={styles.drawerCaret}
-                    width="10"
-                    height="6"
-                    viewBox="0 0 10 6"
-                    fill="currentColor"
-                  >
-                    <path d="M0 0l5 6 5-6z" />
-                  </svg>
-                  QR Code
-                </button>
-                {qrShelfOpen && joinUrl && (
-                  <div className={styles.qrShelf}>
+                {!remote && joinUrl && (
+                  <>
                     <button
-                      className={styles.qrShelfThumb}
-                      onClick={() => setQrModalOpen(true)}
-                      title="Enlarge QR code"
-                      aria-label="Enlarge QR code"
+                      className={`${styles.drawerToggle} ${qrShelfOpen ? styles.drawerToggleOpen : ""}`}
+                      onClick={toggleQrShelf}
+                      aria-expanded={qrShelfOpen}
                     >
-                      <QRCodeSVG
-                        value={joinUrl}
-                        size={72}
-                        bgColor="transparent"
-                        fgColor="#ffffff"
-                        level="M"
-                      />
+                      <svg
+                        className={styles.drawerCaret}
+                        width="10"
+                        height="6"
+                        viewBox="0 0 10 6"
+                        fill="currentColor"
+                      >
+                        <path d="M0 0l5 6 5-6z" />
+                      </svg>
+                      Scan to join
                     </button>
-                    <div className={styles.qrShelfInfo}>
-                      <span className={styles.qrShelfHint}>
-                        Tap code to enlarge
-                      </span>
-                      <span className={styles.qrShelfAlt}>
-                        or visit <strong>{displayUrl}</strong>
-                      </span>
-                      <span className={styles.qrShelfAlt}>
-                        code{" "}
-                        <strong className={styles.qrShelfCode}>
-                          {(joinCode || "").toUpperCase()}
-                        </strong>
-                      </span>
-                      <button className={styles.qrShelfPrint} onClick={printQr}>
-                        Print
-                      </button>
-                    </div>
-                  </div>
+                    {qrShelfOpen && (
+                      <div className={styles.qrShelf}>
+                        <button
+                          className={styles.qrShelfThumb}
+                          onClick={() => setQrModalOpen(true)}
+                          title="Enlarge QR code"
+                          aria-label="Enlarge QR code"
+                        >
+                          <QRCodeSVG
+                            value={joinUrl}
+                            size={72}
+                            bgColor="transparent"
+                            fgColor="#ffffff"
+                            level="M"
+                          />
+                        </button>
+                        <div className={styles.qrShelfInfo}>
+                          <span className={styles.qrShelfHint}>
+                            Tap code to enlarge
+                          </span>
+                          <span className={styles.qrShelfAlt}>
+                            or visit <strong>{displayUrl}</strong> and enter
+                          </span>
+                          <span className={styles.qrShelfCode}>
+                            {(joinCode || "").toUpperCase()}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
 
@@ -1554,11 +1645,58 @@ const Host = ({
         </div>
       </div>
 
-      {/* ─── Confirm modal ─── */}
-      {/* ─── QR code popout ─── */}
+      {/* ─── Co-host invite modal ─── */}
+      {cohostOpen && (
+        <div className={styles.overlay} onClick={() => setCohostOpen(false)}>
+          <div className={styles.invitePanel} onClick={(e) => e.stopPropagation()}>
+            <button
+              className={styles.qrModalClose}
+              onClick={() => setCohostOpen(false)}
+              title="Close"
+              aria-label="Close"
+            >
+              &times;
+            </button>
+            <h3 className={styles.inviteTitle}>Bring on a co-host</h3>
+            <p className={styles.cohostLede}>
+              A co-host helps you run the night from their own phone. Here is
+              how to add one:
+            </p>
+            <ol className={styles.cohostSteps}>
+              <li>Have your co-host scan the code below, or send them the link.</li>
+              <li>It opens karaoq on their phone, ready to help.</li>
+              <li>They can search for songs and manage the queue.</li>
+              <li>You stay in charge of playing, pausing, and skipping.</li>
+            </ol>
+            {cohostUrl && (
+              <div className={styles.qrModalCode}>
+                <QRCodeSVG
+                  value={cohostUrl}
+                  size={220}
+                  bgColor="transparent"
+                  fgColor="#00f0ff"
+                  level="M"
+                />
+              </div>
+            )}
+            <p className={styles.qrModalScan}>Scan</p>
+            <p className={styles.qrModalAlt}>
+              or send them this link:
+            </p>
+            <p className={styles.cohostLink}>
+              <strong>{cohostDisplayUrl}</strong>
+            </p>
+            <button className={styles.qrModalPrint} onClick={copyCohostLink}>
+              Copy co-host link
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ─── QR code popout (enlarge) ─── */}
       {qrModalOpen && joinUrl && (
         <div className={styles.overlay} onClick={() => setQrModalOpen(false)}>
-          <div className={styles.qrModal} onClick={(e) => e.stopPropagation()}>
+          <div className={styles.invitePanel} onClick={(e) => e.stopPropagation()}>
             <button
               className={styles.qrModalClose}
               onClick={() => setQrModalOpen(false)}
@@ -1583,13 +1721,11 @@ const Host = ({
                 {(joinCode || "").toUpperCase()}
               </strong>
             </p>
-            <button className={styles.qrModalPrint} onClick={printQr}>
-              Print QR code
-            </button>
           </div>
         </div>
       )}
 
+      {/* ─── Confirm remove modal ─── */}
       {confirmRemove && (
         <div className={styles.overlay} onClick={() => setConfirmRemove(null)}>
           <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
@@ -1651,6 +1787,42 @@ const Host = ({
             >
               Let&apos;s go
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ─── First-run: where will the video play? ─── */}
+      {showModeChooser && (
+        <div className={styles.welcomeOverlay}>
+          <div className={styles.modeChooserCard}>
+            <div className={styles.welcomeLogo}>KaraoQ</div>
+            <p className={styles.welcomeRoom}>
+              Room <strong>{joinCode?.toUpperCase()}</strong>
+            </p>
+            <h2 className={styles.welcomePrompt}>How are you hosting tonight?</h2>
+            <div className={styles.modeOptions}>
+              <button className={styles.modeOption} onClick={playHere}>
+                <span className={styles.modeOptionIcon}>{Icons.monitor}</span>
+                <span className={styles.modeOptionTitle}>On this screen</span>
+                <span className={styles.modeOptionDesc}>
+                  The video plays right here — great when this screen (or a
+                  laptop plugged into the TV) is what everyone watches.
+                </span>
+              </button>
+              <button className={styles.modeOption} onClick={openTvDisplay}>
+                <span className={styles.modeOptionIcon}>{Icons.tv}</span>
+                <span className={styles.modeOptionTitle}>
+                  On a different screen
+                </span>
+                <span className={styles.modeOptionDesc}>
+                  Opens a display window to cast to a TV or projector. You keep
+                  the controls here on your phone, tablet, or laptop.
+                </span>
+              </button>
+            </div>
+            <p className={styles.modeChooserHint}>
+              You can switch anytime from the bar up top.
+            </p>
           </div>
         </div>
       )}
