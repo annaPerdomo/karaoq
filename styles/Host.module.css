@@ -650,7 +650,8 @@
 }
 
 .historyList {
-  max-height: 30vh;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
   border-top: 1px solid rgba(255, 255, 255, 0.04);
   scrollbar-width: thin;
