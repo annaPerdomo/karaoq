@@ -8,4 +8,4 @@ Disallow: /admin/
 # Room pages (host/sing/display/remote/print) are ephemeral and carry a
 # `noindex` meta tag. They're left crawlable so that tag is actually honored.
 
-Sitemap: https://karaoq.live/sitemap.xml
+Sitemap: https://www.karaoq.live/sitemap.xml

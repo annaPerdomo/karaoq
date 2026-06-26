@@ -13,11 +13,11 @@ const HomePage: NextPage = () => {
           content="Turn any gathering into karaoke night with KaraoQ. Search YouTube for songs, build a shared queue from your phone, and sing with friends. No downloads, works on any device."
         />
         <meta name="keywords" content="karaoke app, YouTube karaoke, online karaoke, karaoke with friends, karaoke queue, karaoke night, karaoke party, sing karaoke online, live reactions" />
-        <link rel="canonical" href="https://karaoq.live" />
+        <link rel="canonical" href="https://www.karaoq.live" />
 
         {/* Open Graph */}
         <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://karaoq.live" />
+        <meta property="og:url" content="https://www.karaoq.live" />
         <meta property="og:title" content="KaraoQ — YouTube Karaoke App" />
         <meta
           property="og:description"
@@ -25,7 +25,7 @@ const HomePage: NextPage = () => {
         />
         <meta property="og:site_name" content="KaraoQ" />
         <meta property="og:locale" content="en_US" />
-        <meta property="og:image" content="https://karaoq.live/og-image.png" />
+        <meta property="og:image" content="https://www.karaoq.live/og-image.png" />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
         <meta property="og:image:alt" content="KaraoQ — YouTube karaoke from your phone, no downloads or sign-up" />
@@ -37,7 +37,7 @@ const HomePage: NextPage = () => {
           name="twitter:description"
           content="Turn any gathering into karaoke night. Search YouTube, build a queue from your phone, cheer on your friends, and sing."
         />
-        <meta name="twitter:image" content="https://karaoq.live/og-image.png" />
+        <meta name="twitter:image" content="https://www.karaoq.live/og-image.png" />
         <meta name="twitter:image:alt" content="KaraoQ — YouTube karaoke from your phone, no downloads or sign-up" />
 
         {/* JSON-LD Structured Data */}
@@ -48,7 +48,7 @@ const HomePage: NextPage = () => {
               '@context': 'https://schema.org',
               '@type': 'WebApplication',
               name: 'KaraoQ',
-              url: 'https://karaoq.live',
+              url: 'https://www.karaoq.live',
               description:
                 'A YouTube-powered karaoke app. Create a room, share the code, and let your friends queue songs from their phones.',
               applicationCategory: 'EntertainmentApplication',
