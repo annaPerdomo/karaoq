@@ -307,11 +307,12 @@ const Home = (): React.ReactElement => {
   const router = useRouter();
   const [joinCode, setJoinCode] = React.useState('');
   const [showJoin, setShowJoin] = React.useState(false);
-  const [showHost, setShowHost] = React.useState(false);
+  const [showCustom, setShowCustom] = React.useState(false);
   const [customCode, setCustomCode] = React.useState('');
   const [creating, setCreating] = React.useState(false);
   const [hostError, setHostError] = React.useState('');
   const [hostName, setHostName] = React.useState('');
+  const nameInputRef = React.useRef<HTMLInputElement>(null);
 
   // Pre-fill the host's name from a previous session so returning hosts can
   // start a queue without retyping it.
@@ -362,6 +363,30 @@ const Home = (): React.ReactElement => {
     }
   }
 
+  function scrollToHero() {
+    document
+      .querySelector(`.${styles.hero}`)
+      ?.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  // Nav / footer "Host" CTAs: returning hosts (name already saved) get
+  // one-click hosting; first-timers are sent to the hero form with the name
+  // field focused, instead of a silent error.
+  function handleHostCta() {
+    if (creating) return;
+    if (!hostName.trim()) {
+      scrollToHero();
+      nameInputRef.current?.focus();
+      return;
+    }
+    handleHost(false);
+  }
+
+  function handleJoinCta() {
+    setShowJoin(true);
+    scrollToHero();
+  }
+
   return (
     <>
       {/* ─── Navigation ─── */}
@@ -370,14 +395,11 @@ const Home = (): React.ReactElement => {
         <div className={styles.navLinks}>
           <a href="#how-it-works" className={styles.navLink}>How It Works</a>
           <a href="#features" className={styles.navLink}>Features</a>
-          <button className={styles.navCtaOutline} onClick={() => {
-            setShowJoin(true);
-            document.querySelector(`.${styles.hero}`)?.scrollIntoView({ behavior: 'smooth' });
-          }}>
+          <button className={styles.navCtaOutline} onClick={handleJoinCta}>
             Join a Session
           </button>
-          <button className={styles.navCta} onClick={() => handleHost()} disabled={creating}>
-            {creating ? 'Creating...' : 'Host a Session'}
+          <button className={styles.navCta} onClick={handleHostCta} disabled={creating}>
+            {creating ? 'Creating…' : 'Host a Session'}
           </button>
         </div>
       </nav>
@@ -396,45 +418,38 @@ const Home = (): React.ReactElement => {
                 their phones, you control the queue &mdash; all powered by YouTube.
               </p>
               <div className={styles.heroCtas}>
-                {!showHost ? (
-                  <button
-                    className={styles.btnPrimary}
-                    onClick={() => setShowHost(true)}
-                    disabled={creating}
-                  >
-                    Host a Session
-                  </button>
-                ) : (
-                  <div className={styles.hostPanel}>
-                    <input
-                      className={styles.nameInput}
-                      placeholder="Your name"
-                      aria-label="Your name"
-                      maxLength={30}
-                      value={hostName}
-                      onChange={(e) => {
-                        setHostName(e.target.value);
-                        setHostError('');
-                      }}
-                      onKeyDown={(e) => e.key === 'Enter' && handleHost(false)}
-                      autoFocus
-                    />
+                {/* Primary path: name + one button starts a room. Custom codes
+                    are a power feature, tucked behind a small toggle. */}
+                <div className={styles.hostPanel}>
+                  <input
+                    ref={nameInputRef}
+                    className={styles.nameInput}
+                    placeholder="Your name"
+                    aria-label="Your name"
+                    maxLength={30}
+                    value={hostName}
+                    onChange={(e) => {
+                      setHostName(e.target.value);
+                      setHostError('');
+                    }}
+                    onKeyDown={(e) =>
+                      e.key === 'Enter' && handleHost(showCustom)
+                    }
+                  />
+
+                  {!showCustom ? (
                     <button
                       className={styles.btnPrimary}
                       onClick={() => handleHost(false)}
                       disabled={creating}
                     >
-                      {creating ? 'Creating...' : 'Create with Random Join Code'}
+                      {creating ? 'Creating…' : 'Start a Room'}
                     </button>
-                    <div className={styles.hostDivider}>
-                      <span className={styles.hostDividerLine} />
-                      <span className={styles.hostDividerText}>or</span>
-                      <span className={styles.hostDividerLine} />
-                    </div>
+                  ) : (
                     <div className={styles.joinRow}>
                       <input
                         className={styles.joinInput}
-                        placeholder="YOUR CODE"
+                        placeholder="CUSTOM CODE"
                         aria-label="Custom room code"
                         maxLength={12}
                         value={customCode}
@@ -443,46 +458,67 @@ const Home = (): React.ReactElement => {
                           setHostError('');
                         }}
                         onKeyDown={(e) => e.key === 'Enter' && handleHost(true)}
+                        autoFocus
                       />
                       <button
-                        className={styles.btnOutline}
+                        className={styles.btnPrimary}
                         onClick={() => handleHost(true)}
                         disabled={creating || !customCode.trim()}
                       >
-                        {creating ? 'Creating...' : 'Create with Custom Join Code'}
+                        {creating ? 'Creating…' : 'Create'}
                       </button>
                     </div>
-                    {hostError && <p className={styles.hostError}>{hostError}</p>}
-                  </div>
-                )}
-                {!showJoin ? (
+                  )}
+
                   <button
-                    className={styles.btnOutline}
-                    onClick={() => setShowJoin(true)}
+                    type="button"
+                    className={styles.textToggle}
+                    onClick={() => {
+                      setShowCustom((v) => !v);
+                      setHostError('');
+                    }}
                   >
-                    Join a Session
+                    {showCustom
+                      ? 'Use a random code instead'
+                      : 'Use a custom room code'}
                   </button>
-                ) : (
-                  <div className={styles.joinRow}>
-                    <input
-                      className={styles.joinInput}
-                      placeholder="ROOM CODE"
-                      aria-label="Room code"
-                      maxLength={12}
-                      value={joinCode}
-                      onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-                      onKeyDown={(e) => e.key === 'Enter' && handleJoin()}
-                      autoFocus
-                    />
+
+                  {hostError && <p className={styles.hostError}>{hostError}</p>}
+                </div>
+
+                {/* Secondary path: joining with a code (most guests arrive by
+                    scanning a QR, so this stays lightweight). */}
+                <div className={styles.joinPrompt}>
+                  {!showJoin ? (
                     <button
-                      className={styles.btnOutline}
-                      onClick={handleJoin}
-                      disabled={!joinCode.trim()}
+                      type="button"
+                      className={styles.joinLink}
+                      onClick={() => setShowJoin(true)}
                     >
-                      Join
+                      Have a code? <span>Join a session →</span>
                     </button>
-                  </div>
-                )}
+                  ) : (
+                    <div className={styles.joinRow}>
+                      <input
+                        className={styles.joinInput}
+                        placeholder="ROOM CODE"
+                        aria-label="Room code"
+                        maxLength={12}
+                        value={joinCode}
+                        onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                        onKeyDown={(e) => e.key === 'Enter' && handleJoin()}
+                        autoFocus
+                      />
+                      <button
+                        className={styles.btnOutline}
+                        onClick={handleJoin}
+                        disabled={!joinCode.trim()}
+                      >
+                        Join
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
               <p className={styles.heroNote}>No account needed. Ready in seconds.</p>
             </div>
@@ -765,21 +801,12 @@ const Home = (): React.ReactElement => {
             <div className={styles.ctaButtons}>
               <button
                 className={styles.btnPrimary}
-                onClick={() => {
-                  setShowHost(true);
-                  document.querySelector(`.${styles.hero}`)?.scrollIntoView({ behavior: 'smooth' });
-                }}
+                onClick={handleHostCta}
                 disabled={creating}
               >
-                Host a Session
+                {creating ? 'Creating…' : 'Host a Session'}
               </button>
-              <button
-                className={styles.btnOutline}
-                onClick={() => {
-                  setShowJoin(true);
-                  document.querySelector(`.${styles.hero}`)?.scrollIntoView({ behavior: 'smooth' });
-                }}
-              >
+              <button className={styles.btnOutline} onClick={handleJoinCta}>
                 Join a Session
               </button>
             </div>

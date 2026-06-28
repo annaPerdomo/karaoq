@@ -168,8 +168,9 @@
 
 .heroCtas {
   display: flex;
-  gap: 0.75rem;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 0.85rem;
+  max-width: 380px;
   margin-bottom: 1rem;
 }
 
@@ -223,7 +224,8 @@
 }
 
 .joinInput {
-  width: 160px;
+  flex: 1;
+  min-width: 0;
   padding: 0.85rem 1rem;
   background: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(168, 85, 247, 0.4);
@@ -273,22 +275,44 @@
   border-color: rgba(168, 85, 247, 0.7);
   box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15);
 }
-.hostDivider {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-.hostDividerLine {
-  flex: 1;
-  height: 1px;
-  background: rgba(168, 85, 247, 0.25);
-}
-.hostDividerText {
-  color: rgba(200, 180, 255, 0.5);
+/* Small, de-emphasized toggle for the custom-code power feature. */
+.textToggle {
+  align-self: flex-start;
+  background: none;
+  border: none;
+  padding: 0.1rem 0.25rem;
+  color: rgba(200, 180, 255, 0.55);
   font-size: 0.8rem;
-  text-transform: uppercase;
-  letter-spacing: 1px;
+  cursor: pointer;
+  transition: color 0.15s;
 }
+.textToggle:hover {
+  color: rgba(200, 180, 255, 0.9);
+}
+
+/* Secondary "join with a code" prompt, separated from the host block. */
+.joinPrompt {
+  margin-top: 0.15rem;
+  padding-top: 0.95rem;
+  border-top: 1px solid rgba(168, 85, 247, 0.18);
+}
+.joinLink {
+  background: none;
+  border: none;
+  padding: 0;
+  color: rgba(200, 180, 255, 0.7);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+.joinLink span {
+  color: #c4b5fd;
+  font-weight: 600;
+}
+.joinLink:hover span {
+  color: #fff;
+}
+
 .hostError {
   color: #f87171;
   font-size: 0.8rem;
@@ -1484,7 +1508,7 @@
     text-align: center;
   }
   .heroSub { max-width: 100%; }
-  .heroCtas { justify-content: center; }
+  .heroCtas { margin-left: auto; margin-right: auto; }
   .heroDevice { margin-top: 1rem; }
   .phoneFrame { width: 240px; height: 480px; }
 
@@ -1505,10 +1529,7 @@
   .hero { padding: 6rem 1.25rem 3rem; }
   .heroTitle { font-size: 1.8rem; }
   .heroSub { font-size: 0.95rem; }
-  .heroCtas {
-    flex-direction: column;
-    align-items: center;
-  }
+  .heroCtas { max-width: 100%; }
   .joinRow {
     flex-direction: column;
     align-items: stretch;
