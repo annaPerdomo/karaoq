@@ -4,6 +4,7 @@ import type { NextApiRequest } from "next";
 export type EventType =
   | "room_created"
   | "song_added"
+  | "search_performed"
   | "reaction_sent"
   | "session_heartbeat"
   | "qr_printed"

@@ -44,6 +44,8 @@ interface SongSearchProps {
   onNameChange?: (name: string) => void;
   /** Whether song add requires a non-empty userName. Defaults to true. */
   requireName?: boolean;
+  /** Who is searching — recorded with the search_performed funnel event. */
+  role?: "host" | "singer" | "display";
 }
 
 const SongSearch: React.FC<SongSearchProps> = ({
@@ -54,6 +56,7 @@ const SongSearch: React.FC<SongSearchProps> = ({
   showNameInput = false,
   onNameChange,
   requireName = true,
+  role,
 }) => {
   const [query, setQuery] = React.useState('');
   const [results, setResults] = React.useState<YoutubeResult[]>([]);
@@ -115,6 +118,7 @@ const SongSearch: React.FC<SongSearchProps> = ({
 
   async function search(overrideFilters?: SearchFilters) {
     if (!query.trim()) return;
+    trackFirstSearch();
     clearTimeout(debounceRef.current);
     abortRef.current?.abort();
     const controller = new AbortController();
@@ -156,6 +160,19 @@ const SongSearch: React.FC<SongSearchProps> = ({
     }
   }
 
+  // Fire a one-time funnel event the first time this room runs a search, so we
+  // can tell "joined but never searched" apart from "searched but didn't add".
+  const searchTrackedRef = React.useRef(false);
+  function trackFirstSearch() {
+    if (searchTrackedRef.current) return;
+    searchTrackedRef.current = true;
+    fetch('/api/analytics/search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ roomId, role }),
+    }).catch(() => {});
+  }
+
   function trackSuggestion(
     source: 'random' | 'song_pick' | 'genre_chip',
     extra?: { sectionId?: string; categoryId?: string; songTitle?: string; songArtist?: string }
@@ -168,6 +185,7 @@ const SongSearch: React.FC<SongSearchProps> = ({
   }
 
   function searchSuggestion(song: SongSuggestion, sectionId?: string, categoryId?: string) {
+    trackFirstSearch();
     const q = buildSongQuery(song);
     setQuery(q);
     setActiveCategory(null);

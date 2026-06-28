@@ -594,7 +594,10 @@ const Host = ({
     }
     if (!joinCode) return;
     const saved = localStorage.getItem(playModeStorageKey(joinCode));
-    if (saved === "tv" || saved === "here") setPlayMode(saved);
+    // Default new hosts to "here" — the zero-setup option — so the room is
+    // immediately usable instead of blocking on a first-run chooser. They can
+    // switch to a separate TV anytime from the mode pill up top.
+    setPlayMode(saved === "tv" ? "tv" : "here");
     setPlayModeRestored(true);
   }, [joinCode, remote]);
 
@@ -1035,16 +1038,6 @@ const Host = ({
     }).catch(() => {});
   }
 
-  // First-run chooser: only once the room is ready, the host has a name, and
-  // we don't already know where they want the video to play.
-  const showModeChooser =
-    !remote &&
-    !loading &&
-    !error &&
-    !showWelcome &&
-    playModeRestored &&
-    playMode === null;
-
   if (!joinCode) return <div className={styles.loading}>Loading...</div>;
 
   if (error) {
@@ -1257,40 +1250,53 @@ const Host = ({
               </p>
             </div>
           ) : (
-            /* ── Host, empty queue: this is the moment to get people in, so
-                 the join code + QR are front and center. ── */
+            /* ── Host, empty queue: make the room playable right now. Adding
+                 the first song is the primary action; inviting guests to pile
+                 on is offered as a secondary step. ── */
             <div className={styles.emptyState}>
-              <div className={styles.emptyJoinCard}>
-                {joinUrl && (
-                  <div className={styles.emptyJoinQr}>
-                    <QRCodeSVG
-                      value={joinUrl}
-                      size={148}
-                      bgColor="transparent"
-                      fgColor="#ffffff"
-                      level="M"
-                    />
+              <div className={styles.emptyStage}>
+                <h2 className={styles.emptyTitle}>Your stage is ready</h2>
+                <p className={styles.emptyStageLede}>
+                  Add the first song and start singing — guests can join and
+                  pile on the queue anytime.
+                </p>
+                <button
+                  className={styles.emptyAddBtn}
+                  onClick={() => setSearchOpen(true)}
+                >
+                  {Icons.plus} Add the first song
+                </button>
+              </div>
+
+              <div className={styles.emptyInvite}>
+                <span className={styles.emptyInviteLabel}>
+                  Want the room adding songs too? Have them join:
+                </span>
+                <div className={styles.emptyInviteRow}>
+                  {joinUrl && (
+                    <div className={styles.emptyInviteQr}>
+                      <QRCodeSVG
+                        value={joinUrl}
+                        size={92}
+                        bgColor="transparent"
+                        fgColor="#ffffff"
+                        level="M"
+                      />
+                    </div>
+                  )}
+                  <div className={styles.emptyInviteInfo}>
+                    <div className={styles.emptyJoinKicker}>
+                      Scan, or visit {displayUrl}
+                    </div>
+                    <div className={styles.emptyInviteCode}>
+                      {joinCode?.toUpperCase()}
+                    </div>
+                    <button className={styles.emptyJoinPrint} onClick={printQr}>
+                      Print join code
+                    </button>
                   </div>
-                )}
-                <div className={styles.emptyJoinInfo}>
-                  <div className={styles.emptyJoinKicker}>Scan to join</div>
-                  <p className={styles.emptyJoinText}>
-                    or visit <strong>{displayUrl}</strong> and enter
-                  </p>
-                  <div className={styles.emptyJoinCode}>
-                    {joinCode?.toUpperCase()}
-                  </div>
-                  <button
-                    className={styles.emptyJoinPrint}
-                    onClick={printQr}
-                  >
-                    Print join code
-                  </button>
                 </div>
               </div>
-              <p className={styles.emptyHint}>
-                Songs your guests add will line up in <strong>Up Next</strong> →
-              </p>
             </div>
           )}
 
@@ -1637,6 +1643,7 @@ const Host = ({
                     onSongAdded={handleSongAdded}
                     showFilters={false}
                     requireName={false}
+                    role="host"
                   />
                 </div>
               )}
@@ -1787,42 +1794,6 @@ const Host = ({
             >
               Let&apos;s go
             </button>
-          </div>
-        </div>
-      )}
-
-      {/* ─── First-run: where will the video play? ─── */}
-      {showModeChooser && (
-        <div className={styles.welcomeOverlay}>
-          <div className={styles.modeChooserCard}>
-            <div className={styles.welcomeLogo}>KaraoQ</div>
-            <p className={styles.welcomeRoom}>
-              Room <strong>{joinCode?.toUpperCase()}</strong>
-            </p>
-            <h2 className={styles.welcomePrompt}>How are you hosting tonight?</h2>
-            <div className={styles.modeOptions}>
-              <button className={styles.modeOption} onClick={playHere}>
-                <span className={styles.modeOptionIcon}>{Icons.monitor}</span>
-                <span className={styles.modeOptionTitle}>On this screen</span>
-                <span className={styles.modeOptionDesc}>
-                  The video plays right here — great when this screen (or a
-                  laptop plugged into the TV) is what everyone watches.
-                </span>
-              </button>
-              <button className={styles.modeOption} onClick={openTvDisplay}>
-                <span className={styles.modeOptionIcon}>{Icons.tv}</span>
-                <span className={styles.modeOptionTitle}>
-                  On a different screen
-                </span>
-                <span className={styles.modeOptionDesc}>
-                  Opens a display window to cast to a TV or projector. You keep
-                  the controls here on your phone, tablet, or laptop.
-                </span>
-              </button>
-            </div>
-            <p className={styles.modeChooserHint}>
-              You can switch anytime from the bar up top.
-            </p>
           </div>
         </div>
       )}
