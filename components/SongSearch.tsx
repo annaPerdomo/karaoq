@@ -90,14 +90,18 @@ const SongSearch: React.FC<SongSearchProps> = ({
   }, [query, hasSearched]);
 
   React.useEffect(() => {
-    const savedMode = localStorage.getItem('karaoq_karaoke_mode');
-    if (savedMode !== null) setKaraokeMode(savedMode === 'true');
+    try {
+      const savedMode = localStorage.getItem('karaoq_karaoke_mode');
+      if (savedMode !== null) setKaraokeMode(savedMode === 'true');
+    } catch {}
   }, []);
 
   function toggleKaraokeMode() {
     const next = !karaokeMode;
     setKaraokeMode(next);
-    localStorage.setItem('karaoq_karaoke_mode', String(next));
+    try {
+      localStorage.setItem('karaoq_karaoke_mode', String(next));
+    } catch {}
     if (hasSearched && query.trim()) {
       abortRef.current?.abort();
       const controller = new AbortController();
@@ -166,11 +170,17 @@ const SongSearch: React.FC<SongSearchProps> = ({
   function trackFirstSearch() {
     if (searchTrackedRef.current) return;
     searchTrackedRef.current = true;
-    fetch('/api/analytics/search', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ roomId, role }),
-    }).catch(() => {});
+    const payload = JSON.stringify({ roomId, role });
+    if (navigator.sendBeacon) {
+      navigator.sendBeacon('/api/analytics/search', payload);
+    } else {
+      fetch('/api/analytics/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: payload,
+        keepalive: true,
+      }).catch(() => {});
+    }
   }
 
   function trackSuggestion(

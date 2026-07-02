@@ -2,19 +2,80 @@
    KaraoQ Landing Page Styles
    ═══════════════════════════════════════════ */
 
-/* ─── Reduced motion ─── */
+/* ─── Reduced motion ───
+   Every demo freezes on its most informative, self-consistent state instead
+   of animating (or, worse, going blank). */
 @media (prefers-reduced-motion: reduce) {
   .reveal { transition: none !important; }
-  .frame1of2, .frame2of2,
-  .frame1of3, .frame2of3, .frame3of3 { display: none !important; }
-  .demoTyping { width: auto !important; animation: none !important; }
-  .phoneFrame, .phoneFrameSm { animation: none !important; }
-  .demoStageDot { animation: none !important; }
   .eqBar { animation: none !important; height: 12px !important; }
-  .iconSpin, .iconPulse, .iconBounce, .iconWiggle, .iconTilt { animation: none !important; }
-  .karaokeFill { animation: none !important; background-position: 0% 0 !important; }
-  .demoVideoProgressFill { animation: none !important; }
-  .demoReaction { animation: none !important; display: none !important; }
+
+  /* Hero: hold the moment after Sarah's song has landed — results showing,
+     queue at 4 songs, lyrics part-lit mid-song, a cheer just sent. */
+  .hpResultsCycle, .hpAddTap, .hpCheerTap { animation: none !important; }
+  .hpToast { animation: none !important; opacity: 0 !important; }
+  .hpCheerSent { animation: none !important; opacity: 1 !important; }
+  .hpDrawerDot, .hpNowDot { animation: none !important; }
+  .hpBadgeA { animation: none !important; opacity: 0 !important; }
+  .hpBadgeB { animation: none !important; opacity: 1 !important; }
+  .hdQueueItemNew {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+    background: rgba(255, 255, 255, 0.035) !important;
+  }
+  .hdCountA { animation: none !important; opacity: 0 !important; }
+  .hdCountB { animation: none !important; opacity: 1 !important; }
+  .hdReaction { animation: none !important; display: none !important; }
+  .hdNowDot, .hdVideoProgressFill { animation: none !important; }
+  .hdLyrics { animation: none !important; opacity: 1 !important; }
+  .hdLyricLine { animation: none !important; }
+  .hdSweepA { background-position: 0% 0 !important; }
+  .hdSweepB { background-position: 50% 0 !important; }
+  .hdSweepC { background-position: 100% 0 !important; }
+
+  /* Step 1: hold the "stage is ready" beat. */
+  .srFrame1, .srFrame3 { display: none !important; }
+  .srFrame2 { animation: none !important; opacity: 1 !important; }
+  .srStartPress, .srResumePress, .srResumeDot { animation: none !important; }
+
+  /* Step 2: hold the just-searched state — results up, queue built. */
+  .demoTyping {
+    width: 6.5ch !important;
+    animation: none !important;
+    border-right-color: transparent !important;
+  }
+  .qbSearchPress, .qbAddTap { animation: none !important; }
+  .qbDiscovery { animation: none !important; opacity: 0 !important; }
+  .qbResults { animation: none !important; opacity: 1 !important; transform: none !important; }
+  .qbToast { animation: none !important; opacity: 0 !important; }
+  .qbRowYours, .qbRowFriend {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+    background: rgba(255, 255, 255, 0.03) !important;
+  }
+  .qbCount1, .qbCount2 { animation: none !important; opacity: 0 !important; }
+  .qbCount3 { animation: none !important; opacity: 1 !important; }
+
+  /* Step 3: hold mid-song — lyrics part-lit, queue already advanced. */
+  .dpReady { animation: none !important; opacity: 0 !important; }
+  .dpPlaying { animation: none !important; opacity: 1 !important; }
+  .dpLyricLine { animation: none !important; }
+  .dpSweep1 { background-position: 0% 0 !important; }
+  .dpSweep2 { background-position: 50% 0 !important; }
+  .dpSweep3 { background-position: 100% 0 !important; }
+  .dpReaction { animation: none !important; display: none !important; }
+  .dpProgressFill, .dpNowDot { animation: none !important; }
+  .dpRowLeaving {
+    animation: none !important;
+    opacity: 0 !important;
+    max-height: 0 !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    margin-bottom: 0 !important;
+  }
+  .dpNumA, .dpCount4 { animation: none !important; opacity: 0 !important; }
+  .dpNumB, .dpCount3 { animation: none !important; opacity: 1 !important; }
 }
 
 /* ─── Scroll Reveal ─── */
@@ -180,6 +241,87 @@
   letter-spacing: 0.5px;
 }
 
+/* Resume banner — a returning host's room from earlier tonight. Green reads
+   as "live/ongoing", distinct from the purple create/join paths below it. */
+.resumeCard {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.7rem 0.9rem;
+  border-radius: 14px;
+  background: linear-gradient(160deg, rgba(16, 185, 129, 0.12), rgba(16, 185, 129, 0.03));
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  animation: fadeSlideIn 0.3s ease;
+}
+
+.resumeDot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.8);
+  animation: resumePulse 2s ease-in-out infinite;
+}
+
+@keyframes resumePulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+.resumeText {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.82rem;
+  color: rgba(210, 240, 225, 0.85);
+  line-height: 1.45;
+  text-align: left;
+}
+
+.resumeText strong {
+  color: #fff;
+  font-family: var(--font-mono);
+  letter-spacing: 1.5px;
+}
+
+.resumeBtn {
+  flex-shrink: 0;
+  padding: 0.5rem 1rem;
+  border: 1px solid rgba(16, 185, 129, 0.5);
+  border-radius: 50px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #fff;
+  background: rgba(16, 185, 129, 0.15);
+  white-space: nowrap;
+  transition: background 0.2s, border-color 0.2s, transform 0.15s;
+}
+.resumeBtn:hover {
+  background: rgba(16, 185, 129, 0.3);
+  border-color: rgba(16, 185, 129, 0.8);
+  transform: translateY(-1px);
+}
+
+.resumeDismiss {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: rgba(210, 240, 225, 0.45);
+  font-size: 1.1rem;
+  line-height: 1;
+  transition: color 0.2s, background 0.2s;
+}
+.resumeDismiss:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
 /* Buttons */
 .btnPrimary {
   padding: 0.85rem 2rem;
@@ -331,24 +473,920 @@
 }
 
 /* ═══════════════════════════════════════════
+   Hero scene: the real product in one frame
+   The TV mirrors Display.tsx; the phone mirrors Sing.tsx. No float/bounce, and
+   no invented features (the app plays YouTube videos, it doesn't render its own
+   synced lyrics) so the demo stays an honest descriptor.
+   ═══════════════════════════════════════════ */
+.heroScene {
+  position: relative;
+  width: 520px;
+  max-width: 100%;
+  padding: 2.25rem 0 2rem;
+}
+
+/* ── Big screen (TV) ── */
+.heroTv {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* "Plays on the big screen" pill above the TV. */
+.heroTvTag {
+  position: absolute;
+  top: -1.55rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.3rem 0.85rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: rgba(220, 200, 255, 0.95);
+  background: rgba(20, 16, 40, 0.85);
+  border: 1px solid rgba(180, 140, 255, 0.35);
+  border-radius: 50px;
+  backdrop-filter: blur(4px);
+}
+
+.heroTvScreen {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 14px;
+  border: 3px solid rgba(180, 140, 255, 0.22);
+  background: #0a0a1a;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.5),
+    0 0 40px rgba(139, 92, 246, 0.12);
+}
+
+.heroTvStand {
+  width: 90px;
+  height: 16px;
+  background: linear-gradient(to bottom, rgba(180, 140, 255, 0.15), rgba(180, 140, 255, 0.05));
+  border-radius: 0 0 10px 10px;
+}
+
+/* Display header: KaraoQ brand + an add bar (add a song right from the screen). */
+.hdHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px 6px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(10, 10, 25, 0.6);
+}
+.hdBrand {
+  font-family: var(--font-display);
+  font-size: 14px;
+  letter-spacing: 2px;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #ff2d78, #00f0ff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+/* "Search to add a song +" — the on-screen add path. */
+.hdAddBar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 200px;
+  flex: 1;
+  padding: 3px 3px 3px 8px;
+  border-radius: 50px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(180, 140, 255, 0.22);
+}
+.hdAddIcon {
+  width: 9px;
+  height: 9px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 1.5px solid rgba(200, 180, 255, 0.6);
+  position: relative;
+}
+.hdAddIcon::after {
+  content: '';
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 4px;
+  height: 1.5px;
+  border-radius: 2px;
+  background: rgba(200, 180, 255, 0.6);
+  transform: rotate(45deg);
+}
+.hdAddText {
+  flex: 1;
+  min-width: 0;
+  font-size: 8px;
+  color: rgba(200, 180, 255, 0.6);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hdAddBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, #ec4899, #f97316);
+}
+
+.hdBody {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+/* Main video column */
+.hdMain {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* The currently-playing YouTube karaoke video. */
+.hdVideo {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(ellipse at 30% 30%, rgba(139, 92, 246, 0.28) 0%, transparent 55%),
+    radial-gradient(ellipse at 72% 68%, rgba(236, 72, 153, 0.2) 0%, transparent 55%),
+    linear-gradient(135deg, #1a0633 0%, #0a0118 55%, #12022a 100%);
+}
+
+/* Subtle YouTube cue — the source of every karaoke track. */
+.hdYtBadge {
+  position: absolute;
+  top: 8px;
+  left: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 8px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.85);
+}
+.hdYtPlay {
+  display: inline-block;
+  width: 16px;
+  height: 11px;
+  border-radius: 3px;
+  background: #ff0000;
+  position: relative;
+}
+.hdYtPlay::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-40%, -50%);
+  border-left: 5px solid #fff;
+  border-top: 3px solid transparent;
+  border-bottom: 3px solid transparent;
+}
+
+/* Karaoke lyrics — light up line-by-line as the song plays (the karaoke cue).
+   This mirrors what people see: YouTube karaoke videos carry highlighted lyrics.
+   The block fades out once every line is sung and fades back in unsung — a
+   verse change — so lines never visibly wipe backwards in unison. */
+.hdLyrics {
+  position: absolute;
+  top: 43%;
+  left: 50%;
+  transform: translate(-50%, -54%);
+  width: 82%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  text-align: center;
+  pointer-events: none;
+  animation: hdVerse 8s ease infinite;
+}
+@keyframes hdVerse {
+  0%, 2% { opacity: 0; }
+  8% { opacity: 1; }
+  88% { opacity: 1; }
+  95%, 100% { opacity: 0; }
+}
+.hdLyricLine {
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.25;
+  letter-spacing: 0.3px;
+  /* Filled (sung) text is solid white; unsung text is dim — the gradient
+     position animates left→right to "sweep" the highlight across the line. */
+  background: linear-gradient(90deg, #ffffff 50%, rgba(255, 255, 255, 0.28) 50%);
+  background-size: 200% 100%;
+  background-position: 100% 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.35);
+}
+.hdSweepA { animation: hdSweepA 8s linear infinite; }
+.hdSweepB { animation: hdSweepB 8s linear infinite; }
+.hdSweepC { animation: hdSweepC 8s linear infinite; }
+/* Each line sweeps once and HOLDS lit; the reset to unsung happens while the
+   whole block is faded out (hdVerse), never on screen. */
+@keyframes hdSweepA {
+  0%, 8% { background-position: 100% 0; }
+  26%, 100% { background-position: 0% 0; }
+}
+@keyframes hdSweepB {
+  0%, 30% { background-position: 100% 0; }
+  48%, 100% { background-position: 0% 0; }
+}
+@keyframes hdSweepC {
+  0%, 52% { background-position: 100% 0; }
+  70%, 100% { background-position: 0% 0; }
+}
+
+/* Floating reactions (real app behavior). Confined to a lane along the right
+   edge so they never drift through the lyrics, and sparse on purpose —
+   roughly one on screen at a time, so they read as the crowd cheering rather
+   than confetti. The ❤️ launches right after the cheer phone taps ❤️. */
+.hdReactions {
+  position: absolute;
+  right: 8px;
+  bottom: 30px;
+  width: 25%;
+  height: 70%;
+  pointer-events: none;
+  overflow: hidden;
+}
+.hdReaction {
+  position: absolute;
+  bottom: 0;
+  font-size: 14px;
+  opacity: 0;
+  animation: hdFloat 10s ease-out infinite;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.5));
+}
+@keyframes hdFloat {
+  0% { opacity: 0; transform: translateY(0) scale(0.6); }
+  3% { opacity: 1; transform: translateY(-10px) scale(1); }
+  20% { opacity: 0.85; }
+  26%, 100% { opacity: 0; transform: translateY(-112px) scale(0.7); }
+}
+.hdR1 { left: 12%; animation-delay: 0.4s; }
+.hdR2 { left: 55%; animation-delay: 2.9s; }
+.hdR3 { left: 30%; animation-delay: 5.3s; }
+.hdR4 { left: 62%; animation-delay: 7.8s; }
+
+/* YouTube-style control bar. */
+.hdVideoBar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.6), transparent);
+}
+.hdVideoTime {
+  font-size: 7px;
+  color: rgba(255, 255, 255, 0.8);
+  font-variant-numeric: tabular-nums;
+}
+.hdVideoProgress {
+  flex: 1;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.25);
+  overflow: hidden;
+}
+.hdVideoProgressFill {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: #ff0000;
+  animation: hdProgress 16s linear infinite;
+}
+@keyframes hdProgress {
+  0% { width: 22%; }
+  100% { width: 78%; }
+}
+
+/* Now-playing bar — who's on stage right now. */
+.hdNowBar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: rgba(236, 72, 153, 0.12);
+  border-top: 1px solid rgba(236, 72, 153, 0.2);
+}
+.hdNowDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ec4899;
+  flex-shrink: 0;
+  /* Push the whole on-stage cluster right so it clears the overlapping phone. */
+  margin-left: auto;
+  animation: liveDot 1.5s ease-in-out infinite;
+}
+/* Shared "live" pulse — mirrors the real ON STAGE indicator. */
+@keyframes liveDot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+.hdNowLabel {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: rgba(236, 72, 153, 0.95);
+  flex-shrink: 0;
+}
+.hdNowSinger {
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+.hdNowSong {
+  font-size: 9px;
+  color: rgba(220, 200, 255, 0.7);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 76px;
+}
+
+/* Sidebar: scan-to-join QR + live queue. */
+.hdSidebar {
+  width: 126px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid rgba(180, 120, 255, 0.12);
+  background: rgba(15, 15, 35, 0.6);
+}
+.hdQr {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 8px 6px;
+  border-bottom: 1px solid rgba(180, 120, 255, 0.1);
+}
+.hdQrCode {
+  width: 50px;
+  height: 50px;
+  border-radius: 4px;
+  /* Dark modules on white — reads as a QR rather than a transparency grid. */
+  background:
+    repeating-conic-gradient(#0d0d1f 0% 25%, #ffffff 0% 50%) 0 0 / 8px 8px;
+  box-shadow: 0 0 0 3px #fff;
+}
+.hdQrLabel {
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: rgba(200, 180, 255, 0.6);
+}
+.hdQrText {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: #ffd700;
+  text-shadow: 0 0 8px rgba(255, 215, 0, 0.3);
+}
+.hdQueue {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 7px 6px;
+  overflow: hidden;
+}
+.hdQueueTitle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: rgba(200, 180, 255, 0.6);
+}
+.hdQueueCount {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 13px;
+  height: 13px;
+  padding: 0 3px;
+  border-radius: 7px;
+  background: rgba(139, 92, 246, 0.3);
+  color: #fff;
+  font-size: 7px;
+}
+/* The count ticks 3 → 4 the moment Sarah's song lands. */
+.hdCountA,
+.hdCountB {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.hdCountA { animation: hdCountA 10s infinite; }
+.hdCountB { opacity: 0; animation: hdCountB 10s infinite; }
+@keyframes hdCountA {
+  0%, 36% { opacity: 1; }
+  39%, 100% { opacity: 0; }
+}
+@keyframes hdCountB {
+  0%, 36% { opacity: 0; }
+  39%, 97% { opacity: 1; }
+  100% { opacity: 0; }
+}
+.hdQueueItem {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 5px;
+  background: rgba(255, 255, 255, 0.035);
+  border-radius: 5px;
+}
+/* Sarah's song arriving from her phone: slides in a beat after the toast on
+   the front phone, flashes as "new", then settles into the list. The slot is
+   reserved (opacity-only) so nothing else jumps. */
+.hdQueueItemNew {
+  opacity: 0;
+  animation: hdQueueLand 10s ease infinite;
+}
+@keyframes hdQueueLand {
+  0%, 34% { opacity: 0; transform: translateY(6px); background: rgba(139, 92, 246, 0.35); }
+  39% { opacity: 1; transform: translateY(0); background: rgba(139, 92, 246, 0.35); }
+  56% { background: rgba(255, 255, 255, 0.035); }
+  97% { opacity: 1; transform: translateY(0); background: rgba(255, 255, 255, 0.035); }
+  100% { opacity: 0; transform: translateY(6px); }
+}
+.hdQueueNum {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: rgba(139, 92, 246, 0.22);
+  color: rgba(200, 180, 255, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 7px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.hdQueueInfo {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.hdQueueSinger {
+  font-size: 7px;
+  color: rgba(0, 240, 255, 0.65);
+}
+.hdQueueSong {
+  font-size: 9px;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Phones (SongSearch view) — fanned, overlapping the screen's lower-left.
+   Multiple phones = anyone joins the session and adds from their own device.
+   Hung low: the tops stay just under the TV lyrics, the bodies fill the empty
+   space below the screen (the hero is 100vh-centered, so the room is there). ── */
+.heroPhones {
+  position: absolute;
+  left: -58px;
+  bottom: -150px;
+  width: 266px;
+  height: 320px;
+  z-index: 5;
+}
+/* Caption sits under the phone pair, so it never covers the TV. */
+.heroPhonesTag {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: -14px;
+  z-index: 8;
+  display: inline-block;
+  padding: 0.25rem 0.7rem;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #fff;
+  background: linear-gradient(135deg, #ec4899, #f97316);
+  border-radius: 50px;
+  box-shadow: 0 4px 14px rgba(236, 72, 153, 0.35);
+  white-space: nowrap;
+}
+.heroPhone {
+  position: absolute;
+  width: 142px;
+}
+.heroPhoneFront {
+  left: 0;
+  bottom: 26px;
+  z-index: 7;
+  transform: rotate(-3deg);
+}
+.heroPhoneBack {
+  left: 124px;
+  bottom: 0;
+  z-index: 6;
+  transform: rotate(4deg) scale(0.95);
+}
+/* Phone silhouette — the aspect ratio does the work. Height comes from the
+   handset proportion (~1:2), NOT from the content, so the body can't collapse
+   into the squat "smartwatch" shape when the demo UI is short. The flex column
+   keeps the app honest on the taller canvas: header/search stay at the top,
+   the drawer/cheer bar pin to the thumb zone, and the space between is screen. */
+.heroPhoneBody {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  aspect-ratio: 9 / 18.5;
+  padding: 18px 8px 13px;
+  border-radius: 26px;
+  background: linear-gradient(160deg, #14102a, #0d0820);
+  border: 2px solid rgba(180, 140, 255, 0.3);
+  box-shadow:
+    0 22px 50px rgba(0, 0, 0, 0.6),
+    0 0 28px rgba(236, 72, 153, 0.15);
+}
+.hpNotch {
+  position: absolute;
+  top: 7px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 44px;
+  height: 8px;
+  border-radius: 5px;
+  background: #050310;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+.hpHomeBar {
+  position: absolute;
+  bottom: 5px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 46px;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.22);
+}
+.hpHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 5px;
+  margin-bottom: 5px;
+  border-bottom: 1px solid rgba(180, 120, 255, 0.12);
+}
+.hpBrand {
+  font-family: var(--font-display);
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  background: linear-gradient(135deg, #ff2d78, #00f0ff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.hpRoom {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: rgba(200, 180, 255, 0.75);
+  background: rgba(139, 92, 246, 0.18);
+  padding: 2px 7px;
+  border-radius: 20px;
+}
+.hpSearchRow {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 5px;
+}
+.hpSearchInput {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 9px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 10px;
+  color: #fff;
+}
+.hpSearchBtn {
+  padding: 6px 10px;
+  border-radius: 7px;
+  background: linear-gradient(135deg, #ec4899, #db2777);
+  font-size: 9px;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+}
+/* Wraps the results so the add-confirmation toast can swap in over them,
+   exactly like results clearing after an add in the real app. */
+.hpStage {
+  position: relative;
+}
+.hpResults {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.hpResultsCycle {
+  animation: hpResultsCycle 10s ease infinite;
+}
+@keyframes hpResultsCycle {
+  0%, 30% { opacity: 1; }
+  34%, 76% { opacity: 0; }
+  80%, 100% { opacity: 1; }
+}
+/* The real post-add toast from SongSearch.tsx, shown while results clear. */
+.hpToast {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: rgba(34, 197, 94, 0.16);
+  border: 1px solid rgba(34, 197, 94, 0.4);
+  color: #86efac;
+  font-size: 8.5px;
+  line-height: 1.4;
+  opacity: 0;
+  animation: hpToast 10s ease infinite;
+}
+@keyframes hpToast {
+  0%, 33% { opacity: 0; transform: translateY(4px); }
+  37% { opacity: 1; transform: translateY(0); }
+  72% { opacity: 1; transform: translateY(0); }
+  76%, 100% { opacity: 0; transform: translateY(4px); }
+}
+.hpResult {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+}
+.hpThumb {
+  width: 34px;
+  height: 26px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.5), rgba(236, 72, 153, 0.35));
+}
+.hpTitle {
+  flex: 1;
+  min-width: 0;
+  font-size: 8.5px;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hpAdd,
+.hpAddDim {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+}
+.hpAdd {
+  color: #fff;
+  background: linear-gradient(135deg, #ec4899, #f97316);
+}
+.hpAddDim {
+  color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.08);
+}
+/* A single tap on the +, right before the toast — a press, not a pulse. */
+.hpAddTap {
+  animation: hpTap 10s ease infinite;
+}
+@keyframes hpTap {
+  0%, 24% { transform: scale(1); filter: none; }
+  26% { transform: scale(0.82); filter: brightness(0.75); }
+  28%, 100% { transform: scale(1); filter: none; }
+}
+
+/* The Sing view's bottom drawer handle: on-stage singer + live queue count.
+   The count ticks 3 → 4 in step with the TV sidebar. margin-top: auto pins it
+   to the bottom of the flex-column body — like the real drawer, with the
+   empty screen between it and the results. */
+.hpDrawer {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 7px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(180, 120, 255, 0.14);
+}
+.hpDrawerDot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #ec4899;
+  flex-shrink: 0;
+  animation: liveDot 1.5s ease-in-out infinite;
+}
+.hpDrawerNow {
+  flex: 1;
+  min-width: 0;
+  font-size: 7.5px;
+  color: rgba(220, 200, 255, 0.75);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hpDrawerBadge {
+  position: relative;
+  flex-shrink: 0;
+  min-width: 38px;
+  height: 13px;
+  border-radius: 7px;
+  background: rgba(139, 92, 246, 0.22);
+  font-size: 6.5px;
+  font-weight: 700;
+  color: rgba(220, 200, 255, 0.9);
+}
+.hpBadgeA,
+.hpBadgeB {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+}
+.hpBadgeA { animation: hdCountA 10s infinite; }
+.hpBadgeB { opacity: 0; animation: hdCountB 10s infinite; }
+
+/* ── Cheer phone — mirrors the Sing view mid-song: Now Playing + CheerBar ── */
+.hpNow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 7px;
+  margin-bottom: 5px;
+  border-radius: 9px;
+  background: rgba(236, 72, 153, 0.1);
+  border: 1px solid rgba(236, 72, 153, 0.25);
+}
+.hpNowDot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #ec4899;
+  flex-shrink: 0;
+  animation: liveDot 1.5s ease-in-out infinite;
+}
+.hpNowInfo {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.hpNowLabel {
+  font-size: 6.5px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: rgba(236, 72, 153, 0.95);
+}
+.hpNowSong {
+  font-size: 8px;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* CheerBar, condensed: gold/pink wash, emoji grid, quick messages.
+   Pinned toward the bottom (thumb zone) of the tall body via margin auto. */
+.hpCheer {
+  margin-top: auto;
+  margin-bottom: 5px;
+  padding: 7px;
+  border-radius: 9px;
+  border: 1px solid rgba(255, 215, 0, 0.18);
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.07), rgba(255, 45, 120, 0.07));
+}
+.hpCheerHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 5px;
+}
+.hpCheerLabel {
+  font-size: 7.5px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  color: #ffd700;
+}
+/* "❤️ Sent!" appears right as the tapped reaction starts up the TV. */
+.hpCheerSent {
+  font-size: 7px;
+  font-weight: 600;
+  color: #22c55e;
+  opacity: 0;
+  animation: hpSent 10s ease infinite;
+}
+@keyframes hpSent {
+  0%, 52% { opacity: 0; transform: translateY(3px); }
+  55% { opacity: 1; transform: translateY(0); }
+  78% { opacity: 1; }
+  82%, 100% { opacity: 0; }
+}
+.hpCheerGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  margin-bottom: 5px;
+}
+.hpCheerBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 22px;
+  font-size: 12px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+/* One tap on ❤️ — the reaction that then floats up the big screen. */
+.hpCheerTap {
+  animation: hpCheerTap 10s ease infinite;
+}
+@keyframes hpCheerTap {
+  0%, 50% { transform: scale(1); background: rgba(255, 255, 255, 0.06); }
+  52% { transform: scale(0.8); background: rgba(255, 215, 0, 0.2); }
+  54%, 100% { transform: scale(1); background: rgba(255, 255, 255, 0.06); }
+}
+.hpCheerMsgs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.hpCheerMsg {
+  padding: 3px 7px;
+  font-size: 7px;
+  font-weight: 600;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(220, 200, 255, 0.75);
+  white-space: nowrap;
+}
+
+/* ═══════════════════════════════════════════
    Device Frames
    ═══════════════════════════════════════════ */
-
-/* Phone */
-.phoneFrame {
-  width: 280px;
-  height: 560px;
-  border-radius: 36px;
-  border: 3px solid rgba(180, 140, 255, 0.25);
-  background: #0f0f23;
-  overflow: hidden;
-  position: relative;
-  box-shadow:
-    0 25px 60px rgba(0, 0, 0, 0.5),
-    0 0 40px rgba(139, 92, 246, 0.15),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.05);
-  animation: deviceFloat 6s ease-in-out infinite;
-}
 
 .phoneFrameSm {
   width: 240px;
@@ -381,9 +1419,58 @@
   overflow: hidden;
 }
 
-@keyframes deviceFloat {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-12px); }
+/* Laptop — the recommended host device (step 1) */
+.laptopFrame {
+  width: 440px;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.laptopScreen {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  border-radius: 14px 14px 0 0;
+  border: 3px solid rgba(180, 140, 255, 0.2);
+  border-bottom: none;
+  background: #0f0f23;
+  overflow: hidden;
+  position: relative;
+  box-shadow:
+    0 20px 50px rgba(0, 0, 0, 0.4),
+    0 0 30px rgba(139, 92, 246, 0.1);
+}
+
+.laptopCamera {
+  position: absolute;
+  top: 5px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+  z-index: 2;
+}
+
+.laptopBase {
+  width: 116%;
+  height: 13px;
+  background: linear-gradient(to bottom, rgba(180, 140, 255, 0.22), rgba(180, 140, 255, 0.08));
+  border-radius: 0 0 14px 14px;
+  position: relative;
+}
+.laptopBase::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 64px;
+  height: 5px;
+  border-radius: 0 0 8px 8px;
+  background: rgba(10, 10, 26, 0.55);
 }
 
 /* TV / Monitor */
@@ -428,39 +1515,24 @@
   opacity: 0;
 }
 
-/* 2-frame cycle: 6s */
-.frame1of2 { animation: cycle2a 6s infinite; }
-.frame2of2 { animation: cycle2b 6s infinite; }
+/* Step 1's three beats: start (4.5s) → stage ready (4s) → resume (4.5s). */
+.srFrame1 { animation: srCycleA 13.5s infinite; }
+.srFrame2 { animation: srCycleB 13.5s infinite; }
+.srFrame3 { animation: srCycleC 13.5s infinite; }
 
-@keyframes cycle2a {
-  0%, 42% { opacity: 1; }
-  50%, 92% { opacity: 0; }
+@keyframes srCycleA {
+  0%, 30% { opacity: 1; }
+  34%, 96% { opacity: 0; }
   100% { opacity: 1; }
 }
-@keyframes cycle2b {
-  0%, 42% { opacity: 0; }
-  50%, 92% { opacity: 1; }
-  100% { opacity: 0; }
-}
-
-/* 3-frame cycle: 9s */
-.frame1of3 { animation: cycle3a 9s infinite; }
-.frame2of3 { animation: cycle3b 9s infinite; }
-.frame3of3 { animation: cycle3c 9s infinite; }
-
-@keyframes cycle3a {
-  0%, 28% { opacity: 1; }
-  33%, 94% { opacity: 0; }
-  100% { opacity: 1; }
-}
-@keyframes cycle3b {
-  0%, 28% { opacity: 0; }
-  33%, 61% { opacity: 1; }
+@keyframes srCycleB {
+  0%, 30% { opacity: 0; }
+  34%, 63% { opacity: 1; }
   67%, 100% { opacity: 0; }
 }
-@keyframes cycle3c {
-  0%, 61% { opacity: 0; }
-  67%, 94% { opacity: 1; }
+@keyframes srCycleC {
+  0%, 63% { opacity: 0; }
+  67%, 96% { opacity: 1; }
   100% { opacity: 0; }
 }
 
@@ -491,57 +1563,197 @@
   margin-bottom: 8px;
 }
 
-/* Create room demo */
-.demoCreateCard {
-  background: linear-gradient(160deg, rgba(80, 20, 140, 0.5), rgba(40, 10, 100, 0.5));
-  border: 1px solid rgba(180, 120, 255, 0.15);
-  border-radius: 14px;
-  padding: 14px 12px;
+/* ── Step 1 demo: start a room now, resume it later ──
+   Beat 1 mirrors the hero host panel; beat 2 the host's "Your stage is
+   ready" empty state (Host.tsx); beat 3 the landing resume banner.
+   Laid out landscape — it plays on the laptop frame. */
+.srScreenBg {
+  height: 100%;
+  padding: 16px 22px 14px;
+  background:
+    radial-gradient(ellipse at 30% 30%, rgba(139, 92, 246, 0.15) 0%, transparent 50%),
+    linear-gradient(to bottom, #0f0f23, #1a0030);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 11px;
+  color: rgba(220, 200, 255, 0.85);
+}
+.srPanel {
+  width: 200px;
+  margin: 8px auto 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.srNameInput {
+  padding: 8px 14px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(168, 85, 247, 0.4);
+  border-radius: 50px;
+  font-size: 11px;
+  color: #fff;
+}
+.srPrimaryBtn {
+  padding: 9px 14px;
   text-align: center;
+  border-radius: 50px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: #fff;
+  background: linear-gradient(135deg, #8b5cf6, #a855f7, #7c3aed);
+  box-shadow: 0 4px 14px rgba(139, 92, 246, 0.35);
+}
+/* One press on "Start a Room" at the end of the beat. */
+.srStartPress { animation: srStartPress 13.5s ease infinite; }
+@keyframes srStartPress {
+  0%, 26% { transform: scale(1); filter: none; }
+  27.5% { transform: scale(0.96); filter: brightness(0.8); }
+  29%, 100% { transform: scale(1); filter: none; }
+}
+.srTextToggle {
+  align-self: center;
+  font-size: 8.5px;
+  color: rgba(200, 180, 255, 0.55);
+}
+
+/* Beat 2: the host's empty-state screen — stage left, invite right. */
+.srCols {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+}
+.srStage {
+  flex: 0 1 200px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
+  text-align: center;
 }
-
-.demoCreateTitle {
-  font-weight: 700;
-  font-size: 12px;
-  letter-spacing: 2px;
+.srStageTitle {
+  font-size: 15px;
+  font-weight: 800;
   color: #fff;
 }
-
-.demoCreateDesc {
+.srStageLede {
   font-size: 9px;
   color: rgba(200, 180, 255, 0.7);
-  line-height: 1.4;
+  line-height: 1.5;
 }
-
-.demoCreateBtn {
-  margin-top: 4px;
-  padding: 6px 24px;
+.srAddBtn {
+  margin-top: 3px;
+  padding: 7px 16px;
   border-radius: 50px;
-  background: linear-gradient(135deg, rgba(80, 30, 130, 0.8), rgba(100, 40, 170, 0.7));
-  border: 1px solid rgba(150, 100, 220, 0.25);
-  color: #fff;
   font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 2px;
-}
-
-.demoRoomCode {
-  font-family: var(--font-mono);
-  font-size: 28px;
   font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, #ec4899, #db2777);
+  box-shadow: 0 4px 14px rgba(236, 72, 153, 0.3);
+}
+.srInvite {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(180, 120, 255, 0.15);
+}
+.srInviteQr {
+  width: 46px;
+  height: 46px;
+  flex-shrink: 0;
+  border-radius: 4px;
+  background:
+    repeating-conic-gradient(#0d0d1f 0% 25%, #ffffff 0% 50%) 0 0 / 8px 8px;
+  box-shadow: 0 0 0 3px #fff;
+}
+.srInviteInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.srInviteKicker {
+  font-size: 8px;
+  color: rgba(200, 180, 255, 0.6);
+}
+.srInviteCode {
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 3px;
   color: #ffd700;
-  letter-spacing: 6px;
-  text-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
-  padding: 8px 0;
+  text-shadow: 0 0 10px rgba(255, 215, 0, 0.35);
 }
 
-.demoShareText {
-  font-size: 10px;
-  color: rgba(200, 180, 255, 0.7);
+/* Beat 3: the resume banner a returning host sees (desktop row layout). */
+.srResumeCard {
+  width: 100%;
+  max-width: 330px;
+  margin: 10px auto 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: linear-gradient(160deg, rgba(16, 185, 129, 0.12), rgba(16, 185, 129, 0.03));
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+.srResumeDot {
+  flex-shrink: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 6px rgba(16, 185, 129, 0.8);
+  animation: resumePulse 2s ease-in-out infinite;
+}
+.srResumeText {
+  flex: 1;
+  min-width: 0;
+  font-size: 9px;
+  color: rgba(210, 240, 225, 0.85);
+  line-height: 1.45;
+  text-align: left;
+}
+.srResumeText strong {
+  color: #fff;
+  font-family: var(--font-mono);
+  letter-spacing: 1px;
+}
+.srResumeBtn {
+  flex-shrink: 0;
+  padding: 6px 11px;
+  text-align: center;
+  white-space: nowrap;
+  border-radius: 50px;
+  border: 1px solid rgba(16, 185, 129, 0.5);
+  background: rgba(16, 185, 129, 0.15);
+  color: #fff;
+  font-size: 9.5px;
+  font-weight: 600;
+}
+/* One press on "Resume hosting" as the beat closes the loop. */
+.srResumePress { animation: srResumePress 13.5s ease infinite; }
+@keyframes srResumePress {
+  0%, 91% { transform: scale(1); filter: none; }
+  93% { transform: scale(0.96); filter: brightness(1.3); }
+  95%, 100% { transform: scale(1); filter: none; }
+}
+/* The rest of the landing page, de-emphasized under the banner. */
+.srPanelDim {
+  width: 200px;
+  margin: 12px auto 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  opacity: 0.35;
 }
 
 /* Search song demo */
@@ -571,25 +1783,6 @@
   letter-spacing: 1px;
 }
 
-.demoNameRow {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.demoLabel {
-  font-size: 9px;
-  color: rgba(200, 180, 255, 0.5);
-}
-
-.demoNameInput {
-  padding: 6px 10px;
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 6px;
-  font-size: 11px;
-  color: #fff;
-}
-
 .demoSearchRow {
   display: flex;
   gap: 4px;
@@ -603,6 +1796,8 @@
   overflow: hidden;
 }
 
+/* Typed on the step-2 loop: the query appears, holds while results/toast
+   play out, then clears when the add completes — like the real app. */
 .demoTyping {
   display: inline-block;
   width: 0;
@@ -611,11 +1806,14 @@
   font-size: 11px;
   color: #fff;
   border-right: 1.5px solid rgba(168, 85, 247, 0.6);
-  animation: typing 1.2s steps(6) 0.5s forwards, blink 0.6s step-end infinite;
+  animation: qbType 12s steps(6, end) infinite, blink 0.6s step-end infinite;
 }
 
-@keyframes typing {
-  to { width: 100%; }
+@keyframes qbType {
+  0%, 3% { width: 0; }
+  13% { width: 6.5ch; }
+  60% { width: 6.5ch; }
+  63%, 100% { width: 0; }
 }
 @keyframes blink {
   50% { border-color: transparent; }
@@ -631,46 +1829,196 @@
   white-space: nowrap;
 }
 
-.demoToggleRow {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 10px;
-  color: rgba(200, 180, 255, 0.6);
+/* One press on Search, right after the query finishes typing. */
+.qbSearchPress { animation: qbSearchPress 12s ease infinite; }
+@keyframes qbSearchPress {
+  0%, 14% { transform: scale(1); filter: none; }
+  15.5% { transform: scale(0.94); filter: brightness(0.8); }
+  17%, 100% { transform: scale(1); filter: none; }
 }
 
-.demoToggle {
-  display: inline-block;
-  width: 28px;
-  height: 16px;
-  background: #8b5cf6;
-  border-radius: 8px;
+/* ── Step 2 stage: discovery ↔ results ↔ toast swap in one fixed area ── */
+.qbStage {
   position: relative;
-}
-.demoToggle::after {
-  content: '';
-  position: absolute;
-  top: 2px;
-  right: 2px;
-  width: 12px;
-  height: 12px;
-  background: #fff;
-  border-radius: 50%;
+  flex: 1;
+  min-height: 0;
 }
 
-.demoEmptyState {
-  flex: 1;
+/* Pre-search rest state — the real discovery grid, condensed. */
+.qbDiscovery {
+  position: absolute;
+  inset: 0;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  gap: 8px;
+  animation: qbDiscovery 12s ease infinite;
+}
+@keyframes qbDiscovery {
+  0%, 16% { opacity: 1; }
+  19%, 63% { opacity: 0; }
+  67%, 100% { opacity: 1; }
+}
+.qbCatGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 6px;
-  color: rgba(200, 180, 255, 0.4);
+}
+.qbCat {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 9px 7px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(180, 120, 255, 0.14);
+  font-size: 8.5px;
+  font-weight: 600;
+  color: rgba(230, 220, 255, 0.85);
+  min-width: 0;
+}
+.qbCatEmoji {
   font-size: 11px;
+  flex-shrink: 0;
+}
+.qbCatName {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.qbSurprise {
+  padding: 7px;
+  text-align: center;
+  border-radius: 50px;
+  border: 1px dashed rgba(180, 140, 255, 0.35);
+  font-size: 8.5px;
+  color: rgba(200, 180, 255, 0.75);
 }
 
-.demoMicIcon {
-  font-size: 28px;
+.qbResults {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  animation: qbResults 12s ease infinite;
+}
+@keyframes qbResults {
+  0%, 17% { opacity: 0; transform: translateY(5px); }
+  20% { opacity: 1; transform: translateY(0); }
+  34% { opacity: 1; transform: translateY(0); }
+  37%, 100% { opacity: 0; transform: translateY(0); }
+}
+
+/* One tap on the + — a press, not a pulse. */
+.qbAddTap { animation: qbTap 12s ease infinite; }
+@keyframes qbTap {
+  0%, 29% { transform: scale(1); filter: none; }
+  31% { transform: scale(0.85); filter: brightness(0.75); }
+  33%, 100% { transform: scale(1); filter: none; }
+}
+
+/* The real post-add toast. */
+.qbToast {
+  position: absolute;
+  top: 6px;
+  left: 0;
+  right: 0;
+  padding: 10px;
+  text-align: center;
+  border-radius: 8px;
+  background: rgba(34, 197, 94, 0.18);
+  border: 1px solid rgba(34, 197, 94, 0.35);
+  color: #86efac;
+  font-size: 10px;
+  opacity: 0;
+  animation: qbToast 12s ease infinite;
+}
+@keyframes qbToast {
+  0%, 38% { opacity: 0; transform: translateY(4px); }
+  41% { opacity: 1; transform: translateY(0); }
+  60% { opacity: 1; transform: translateY(0); }
+  64%, 100% { opacity: 0; transform: translateY(4px); }
+}
+
+/* ── Step 2 queue: pinned to the bottom, always visible ── */
+.qbQueue {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.qbQueueHead {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: rgba(200, 180, 255, 0.6);
+}
+.qbBadge {
+  position: relative;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 8px;
+  background: rgba(139, 92, 246, 0.3);
+}
+.qbCount1,
+.qbCount2,
+.qbCount3 {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.qbCount1 { animation: qbCount1 12s infinite; }
+.qbCount2 { opacity: 0; animation: qbCount2 12s infinite; }
+.qbCount3 { opacity: 0; animation: qbCount3 12s infinite; }
+@keyframes qbCount1 {
+  0%, 37% { opacity: 1; }
+  40%, 100% { opacity: 0; }
+}
+@keyframes qbCount2 {
+  0%, 37% { opacity: 0; }
+  40%, 57% { opacity: 1; }
+  60%, 100% { opacity: 0; }
+}
+@keyframes qbCount3 {
+  0%, 57% { opacity: 0; }
+  60%, 97% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Sarah's song lands with the toast; the highlight fades as it settles. */
+.qbRowYours {
+  opacity: 0;
+  animation: qbRowYours 12s ease infinite;
+}
+@keyframes qbRowYours {
+  0%, 37% { opacity: 0; transform: translateY(6px); background: rgba(139, 92, 246, 0.3); }
+  41% { opacity: 1; transform: translateY(0); background: rgba(139, 92, 246, 0.3); }
+  58% { background: rgba(255, 255, 255, 0.03); }
+  97% { opacity: 1; transform: translateY(0); background: rgba(255, 255, 255, 0.03); }
+  100% { opacity: 0; transform: translateY(6px); }
+}
+/* A beat later Diego's lands — added from HIS phone, not this one. */
+.qbRowFriend {
+  opacity: 0;
+  animation: qbRowFriend 12s ease infinite;
+}
+@keyframes qbRowFriend {
+  0%, 57% { opacity: 0; transform: translateY(6px); background: rgba(139, 92, 246, 0.3); }
+  61% { opacity: 1; transform: translateY(0); background: rgba(139, 92, 246, 0.3); }
+  78% { background: rgba(255, 255, 255, 0.03); }
+  97% { opacity: 1; transform: translateY(0); background: rgba(255, 255, 255, 0.03); }
+  100% { opacity: 0; transform: translateY(6px); }
 }
 
 /* Search results */
@@ -712,7 +2060,6 @@
   font-size: 16px;
   font-weight: 700;
   flex-shrink: 0;
-  animation: pulse 2s ease-in-out infinite;
 }
 
 .demoAddBtnDim {
@@ -729,37 +2076,6 @@
   flex-shrink: 0;
 }
 
-@keyframes pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(236, 72, 153, 0.4); }
-  50% { box-shadow: 0 0 0 6px rgba(236, 72, 153, 0); }
-}
-
-/* Toast & queue preview */
-.demoToast {
-  background: rgba(34, 197, 94, 0.2);
-  border: 1px solid rgba(34, 197, 94, 0.3);
-  border-radius: 8px;
-  padding: 10px 12px;
-  text-align: center;
-  font-size: 10px;
-  color: #86efac;
-  margin: 8px 0;
-}
-
-.demoQueuePreview {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.demoQueueLabel {
-  font-size: 11px;
-  font-weight: 600;
-  color: rgba(200, 180, 255, 0.6);
-  letter-spacing: 1px;
-}
-
 .demoQueueRow {
   display: flex;
   align-items: center;
@@ -767,11 +2083,6 @@
   padding: 8px;
   background: rgba(255, 255, 255, 0.03);
   border-radius: 8px;
-}
-
-.demoQueueHighlight {
-  background: rgba(139, 92, 246, 0.1);
-  border: 1px solid rgba(139, 92, 246, 0.2);
 }
 
 .demoQueueNum {
@@ -799,298 +2110,395 @@
 }
 
 /* ═══════════════════════════════════════════
-   TV Display Demo: Video + Sidebar
+   Step 3 demo: the big-screen payoff (Display view)
+   One 14s loop through the two states the room really sees:
+   0–24%   "UP NEXT — Mike" ready screen (Display.tsx readyState)
+   27–96%  the song playing: lyrics sweep, reactions float, progress grows,
+           and the sidebar queue advances (Mike's row leaves, count 4 → 3)
    ═══════════════════════════════════════════ */
-.demoDisplayBg {
+.dpRoot {
   height: 100%;
   display: flex;
   background: linear-gradient(to bottom, #0a0a1a, #0f0f23);
 }
 
-/* Video area (left) */
-.demoVideoArea {
+.dpMain {
   flex: 1;
-  display: flex;
-  flex-direction: column;
+  position: relative;
   min-width: 0;
 }
 
-.demoVideoPlayer {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-.demoVideoThumb {
-  flex: 1;
-  background:
-    radial-gradient(ellipse at 30% 30%, rgba(139, 92, 246, 0.2) 0%, transparent 50%),
-    radial-gradient(ellipse at 70% 70%, rgba(236, 72, 153, 0.12) 0%, transparent 50%),
-    linear-gradient(to bottom, #08001a 0%, #0f0023 50%, #0a0014 100%);
+/* Between songs: the display calls the next singer to the stage. */
+.dpReady {
+  position: absolute;
+  inset: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  position: relative;
+  gap: 7px;
+  text-align: center;
+  padding: 0 14px;
+  background:
+    radial-gradient(ellipse at 50% 40%, rgba(139, 92, 246, 0.18) 0%, transparent 60%),
+    linear-gradient(to bottom, #08001a, #0f0023);
+  animation: dpReadyCycle 14s ease infinite;
+}
+@keyframes dpReadyCycle {
+  0%, 24% { opacity: 1; }
+  27%, 96% { opacity: 0; }
+  100% { opacity: 1; }
+}
+.dpReadyTag {
+  padding: 2px 9px;
+  border-radius: 50px;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: #ec4899;
+  border: 1px solid rgba(236, 72, 153, 0.45);
+  background: rgba(236, 72, 153, 0.1);
+}
+.dpReadySinger {
+  font-size: 24px;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.1;
+}
+.dpReadySong {
+  font-size: 10px;
+  color: rgba(220, 200, 255, 0.75);
 }
 
-/* Karaoke lyrics in video area */
-.demoKaraokeLyrics {
+/* The song starts: the playing YouTube karaoke video. */
+.dpPlaying {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background:
+    radial-gradient(ellipse at 30% 30%, rgba(139, 92, 246, 0.28) 0%, transparent 55%),
+    radial-gradient(ellipse at 72% 68%, rgba(236, 72, 153, 0.2) 0%, transparent 55%),
+    linear-gradient(135deg, #1a0633 0%, #0a0118 55%, #12022a 100%);
+  animation: dpPlayCycle 14s ease infinite;
+}
+@keyframes dpPlayCycle {
+  0%, 24% { opacity: 0; }
+  27%, 96% { opacity: 1; }
+  100% { opacity: 0; }
+}
+.dpYtBadge {
+  position: absolute;
+  top: 8px;
+  left: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 8px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.85);
+}
+.dpYtPlay {
+  display: inline-block;
+  width: 16px;
+  height: 11px;
+  border-radius: 3px;
+  background: #ff0000;
+  position: relative;
+}
+.dpYtPlay::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-40%, -50%);
+  border-left: 5px solid #fff;
+  border-top: 3px solid transparent;
+  border-bottom: 3px solid transparent;
+}
+
+/* Lyrics light up line-by-line only while the song is playing — the sweep IS
+   the "it's karaoke" signal, not decoration. */
+.dpLyrics {
+  position: absolute;
+  top: 42%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 88%;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 5px;
-  padding: 0 6px;
-}
-
-.karaokeLine {
-  font-size: 8px;
-  font-weight: 700;
+  gap: 8px;
   text-align: center;
-  line-height: 1.3;
+  pointer-events: none;
 }
-
-.karaokeFill {
-  display: inline-block;
-  background: linear-gradient(90deg, #fff 50%, rgba(255, 255, 255, 0.25) 50%);
+.dpLyricLine {
+  font-size: 12.5px;
+  font-weight: 800;
+  line-height: 1.25;
+  letter-spacing: 0.3px;
+  background: linear-gradient(90deg, #ffffff 50%, rgba(255, 255, 255, 0.28) 50%);
   background-size: 200% 100%;
   background-position: 100% 0;
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  text-shadow: none;
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.35);
+}
+.dpSweep1 { animation: dpSweep1 14s linear infinite; }
+.dpSweep2 { animation: dpSweep2 14s linear infinite; }
+.dpSweep3 { animation: dpSweep3 14s linear infinite; }
+@keyframes dpSweep1 {
+  0%, 28% { background-position: 100% 0; }
+  40%, 100% { background-position: 0% 0; }
+}
+@keyframes dpSweep2 {
+  0%, 42% { background-position: 100% 0; }
+  54%, 100% { background-position: 0% 0; }
+}
+@keyframes dpSweep3 {
+  0%, 56% { background-position: 100% 0; }
+  68%, 100% { background-position: 0% 0; }
 }
 
-/* 20s total, each line sweeps for ~3.2s then holds, staggered */
-.sweep1of5 { animation: sweep1 20s linear infinite; }
-.sweep2of5 { animation: sweep2 20s linear infinite; }
-.sweep3of5 { animation: sweep3 20s linear infinite; }
-.sweep4of5 { animation: sweep4 20s linear infinite; }
-.sweep5of5 { animation: sweep5 20s linear infinite; }
-
-@keyframes sweep1 {
-  0% { background-position: 100% 0; }
-  14% { background-position: 0% 0; }
-  14.01%, 100% { background-position: 0% 0; }
-}
-@keyframes sweep2 {
-  0%, 16% { background-position: 100% 0; }
-  30% { background-position: 0% 0; }
-  30.01%, 100% { background-position: 0% 0; }
-}
-@keyframes sweep3 {
-  0%, 32% { background-position: 100% 0; }
-  46% { background-position: 0% 0; }
-  46.01%, 100% { background-position: 0% 0; }
-}
-@keyframes sweep4 {
-  0%, 48% { background-position: 100% 0; }
-  62% { background-position: 0% 0; }
-  62.01%, 100% { background-position: 0% 0; }
-}
-@keyframes sweep5 {
-  0%, 64% { background-position: 100% 0; }
-  78% { background-position: 0% 0; }
-  78.01%, 96% { background-position: 0% 0; }
-  100% { background-position: 100% 0; }
-}
-
-/* Floating reactions simulation */
-.demoReactions {
+/* The crowd cheering from their phones — sparse, left side like the real
+   Display overlay. Only during the playing beat. */
+.dpReactions {
   position: absolute;
-  bottom: 10px;
-  left: 0;
-  width: 40%;
-  height: 80%;
+  left: 6%;
+  bottom: 30px;
+  width: 42%;
+  height: 68%;
   pointer-events: none;
   overflow: hidden;
 }
-
-.demoReaction {
+.dpReaction {
   position: absolute;
   bottom: 0;
-  font-size: 0.85rem;
+  font-size: 14px;
   opacity: 0;
-  animation: demoFloat 4s ease-out infinite;
+  animation: dpFloat 14s ease-out infinite;
   filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.5));
 }
-
-@keyframes demoFloat {
-  0% { opacity: 0; transform: translateY(0) scale(0.5); }
-  8% { opacity: 1; transform: translateY(-5px) scale(1); }
-  65% { opacity: 0.8; }
-  100% { opacity: 0; transform: translateY(-90px) scale(0.6); }
+@keyframes dpFloat {
+  0%, 32% { opacity: 0; transform: translateY(0) scale(0.6); }
+  35% { opacity: 1; transform: translateY(-12px) scale(1); }
+  44% { opacity: 0.85; }
+  49%, 100% { opacity: 0; transform: translateY(-100px) scale(0.7); }
 }
+.dpRe1 { left: 12%; }
+.dpRe2 { left: 48%; animation-delay: 1.6s; }
+.dpRe3 { left: 26%; animation-delay: 3.4s; }
+.dpRe4 { left: 60%; animation-delay: 5.2s; }
 
-.demoR1 { left: 8%; animation-delay: 0s; }
-.demoR2 { left: 22%; animation-delay: 1.2s; }
-.demoR3 { left: 12%; animation-delay: 2.5s; }
-.demoR4 { left: 28%; animation-delay: 0.8s; }
-.demoR5 { left: 5%; animation-delay: 3.2s; }
-.demoR6 { left: 18%; animation-delay: 1.8s; }
-.demoR7 { left: 30%; animation-delay: 2.8s; }
-.demoR8 { left: 15%; animation-delay: 0.4s; }
-
-/* Video progress bar */
-.demoVideoProgress {
+/* YouTube-style progress, creeping while the song plays. */
+.dpProgress {
   position: absolute;
-  bottom: 0;
   left: 0;
   right: 0;
-  height: 2px;
-  background: rgba(255, 255, 255, 0.08);
+  bottom: 26px;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.18);
 }
-
-.demoVideoProgressFill {
+.dpProgressFill {
+  display: block;
   height: 100%;
-  background: linear-gradient(to right, #a855f7, #ec4899);
-  animation: progressSlide 40s linear infinite;
+  background: #ff0000;
+  animation: dpProgress 14s linear infinite;
+}
+@keyframes dpProgress {
+  0%, 27% { width: 12%; }
+  96% { width: 74%; }
+  100% { width: 12%; }
 }
 
-@keyframes progressSlide {
-  0% { width: 30%; }
-  100% { width: 55%; }
-}
-
-.demoNowBar {
+/* Who's on stage right now. */
+.dpNowBar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 8px;
-  background: rgba(236, 72, 153, 0.1);
+  gap: 6px;
+  padding: 6px 10px;
+  background: rgba(10, 5, 25, 0.75);
+  border-top: 1px solid rgba(236, 72, 153, 0.25);
 }
-
-.demoStageLabel {
-  font-size: 6px;
-  font-weight: 700;
-  letter-spacing: 1.5px;
-  color: rgba(236, 72, 153, 0.9);
-}
-
-.demoStageName {
-  font-size: 7px;
-  font-weight: 700;
-  color: #fff;
-  margin-left: auto;
-}
-
-.demoStageDot {
-  width: 5px;
-  height: 5px;
+.dpNowDot {
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   background: #ec4899;
-  animation: dotPulse 1.5s ease-in-out infinite;
+  flex-shrink: 0;
+  animation: liveDot 1.5s ease-in-out infinite;
 }
-
-@keyframes dotPulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.3; }
+.dpNowLabel {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: rgba(236, 72, 153, 0.95);
+  flex-shrink: 0;
 }
-
-.demoVideoTitle {
-  font-size: 6px;
-  color: rgba(200, 180, 255, 0.4);
-  padding: 3px 8px;
+.dpNowSinger {
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+.dpNowSong {
+  font-size: 9px;
+  color: rgba(220, 200, 255, 0.7);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-/* Sidebar (right) */
-.demoDisplaySidebar {
-  width: 90px;
+/* Sidebar: scan-to-join + the live queue. */
+.dpSidebar {
+  width: 112px;
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  border-left: 1px solid rgba(180, 120, 255, 0.1);
+  border-left: 1px solid rgba(180, 120, 255, 0.12);
   background: rgba(15, 15, 35, 0.6);
-  padding: 6px;
-  gap: 6px;
 }
-
-.demoDisplayQr {
+.dpQr {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
-  padding-bottom: 6px;
-  border-bottom: 1px solid rgba(180, 120, 255, 0.08);
+  gap: 2px;
+  padding: 5px 6px;
+  border-bottom: 1px solid rgba(180, 120, 255, 0.1);
 }
-
-.demoQrPlaceholder {
-  width: 40px;
-  height: 40px;
-  border-radius: 3px;
+.dpQrCode {
+  width: 35px;
+  height: 35px;
+  border-radius: 4px;
   background:
-    repeating-conic-gradient(rgba(255,255,255,0.7) 0% 25%, transparent 0% 50%) 0 0 / 6px 6px;
-  opacity: 0.5;
+    repeating-conic-gradient(#0d0d1f 0% 25%, #ffffff 0% 50%) 0 0 / 7px 7px;
+  box-shadow: 0 0 0 3px #fff;
 }
-
-.demoDisplayJoinLabel {
-  font-size: 6px;
-  color: rgba(200, 180, 255, 0.4);
-  letter-spacing: 1px;
-}
-
-.demoDisplayCode {
-  font-family: var(--font-mono);
-  font-size: 8px;
+.dpQrLabel {
+  font-size: 7px;
   font-weight: 700;
-  color: #ffd700;
+  letter-spacing: 1px;
+  color: rgba(200, 180, 255, 0.6);
+}
+.dpQrText {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
   letter-spacing: 2px;
+  color: #ffd700;
   text-shadow: 0 0 8px rgba(255, 215, 0, 0.3);
 }
-
-/* Queue list */
-.demoDisplayQueue {
+.dpQueue {
   flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  padding: 5px 6px;
   overflow: hidden;
 }
-
-.demoDisplayQueueTitle {
-  font-size: 7px;
-  font-weight: 600;
-  color: rgba(200, 180, 255, 0.5);
-  letter-spacing: 1px;
-}
-
-.demoDisplayQueueItem {
+.dpQueueTitle {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 3px 4px;
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: 4px;
-}
-
-.demoDisplayQueueNum {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: rgba(139, 92, 246, 0.2);
+  gap: 5px;
+  margin-bottom: 4px;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
   color: rgba(200, 180, 255, 0.6);
+}
+.dpQueueBadge {
+  position: relative;
+  min-width: 14px;
+  height: 14px;
+  border-radius: 7px;
+  background: rgba(139, 92, 246, 0.3);
+}
+.dpCount4,
+.dpCount3 {
+  position: absolute;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 6px;
+  font-size: 7.5px;
+  color: #fff;
+  letter-spacing: 0;
+}
+.dpCount4 { animation: dpCountA 14s infinite; }
+.dpCount3 { opacity: 0; animation: dpCountB 14s infinite; }
+@keyframes dpCountA {
+  0%, 28% { opacity: 1; }
+  31%, 100% { opacity: 0; }
+}
+@keyframes dpCountB {
+  0%, 28% { opacity: 0; }
+  31%, 97% { opacity: 1; }
+  100% { opacity: 0; }
+}
+.dpQueueItem {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 5px;
+  margin-bottom: 3px;
+  background: rgba(255, 255, 255, 0.035);
+  border-radius: 5px;
+}
+/* Mike's row leaves the queue as his song starts — the sync moment. */
+.dpRowLeaving {
+  overflow: hidden;
+  animation: dpRowOut 14s ease infinite;
+}
+@keyframes dpRowOut {
+  0%, 27% { opacity: 1; max-height: 32px; padding-top: 3px; padding-bottom: 3px; margin-bottom: 3px; }
+  31% { opacity: 0; max-height: 32px; padding-top: 3px; padding-bottom: 3px; margin-bottom: 3px; }
+  34%, 97% { opacity: 0; max-height: 0; padding-top: 0; padding-bottom: 0; margin-bottom: 0; }
+  100% { opacity: 1; max-height: 32px; padding-top: 3px; padding-bottom: 3px; margin-bottom: 3px; }
+}
+.dpQueueNum {
+  position: relative;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: rgba(139, 92, 246, 0.22);
+  color: rgba(200, 180, 255, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 7px;
   font-weight: 700;
   flex-shrink: 0;
 }
-
-.demoDisplayQueueSinger {
-  font-size: 6px;
-  color: rgba(0, 240, 255, 0.6);
+/* Positions renumber as the queue advances. */
+.dpNumA,
+.dpNumB {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
-
-.demoDisplayQueueSong {
-  font-size: 7px;
+.dpNumA { animation: dpCountA 14s infinite; }
+.dpNumB { opacity: 0; animation: dpCountB 14s infinite; }
+.dpQueueInfo {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.dpQueueSinger {
+  font-size: 7.5px;
+  line-height: 1.2;
+  color: rgba(0, 240, 255, 0.65);
+}
+.dpQueueSong {
+  font-size: 9px;
+  line-height: 1.2;
   color: #fff;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 60px;
 }
 
 /* ═══════════════════════════════════════════
@@ -1139,7 +2547,24 @@
 .stepDevice {
   flex-shrink: 0;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+/* Role label above each step's device, so it's obvious whose screen this is. */
+.stepTag {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.3rem 0.85rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: rgba(220, 200, 255, 0.9);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(180, 140, 255, 0.3);
+  border-radius: 50px;
 }
 
 .stepText {
@@ -1175,6 +2600,127 @@
   color: rgba(220, 200, 255, 0.75);
   line-height: 1.7;
   max-width: 400px;
+}
+
+/* ═══════════════════════════════════════════
+   Setup Guide — what you need to host
+   ═══════════════════════════════════════════ */
+.setupSection {
+  padding: 6rem 2rem;
+  /* Flat base keeps continuity with the sections around it (both meet this
+     one at #0d0d1f); the faint cyan wash marks it as the practical section. */
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(6, 182, 212, 0.06) 0%, transparent 55%),
+    #0d0d1f;
+}
+
+.setupGrid {
+  max-width: 1000px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+}
+
+.setupCard {
+  --accent: #06b6d4;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01));
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 2px solid var(--accent);
+  border-radius: 16px;
+  padding: 1.75rem;
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.setupCard:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 12px 40px color-mix(in srgb, var(--accent) 15%, transparent);
+}
+
+.setupTag {
+  align-self: flex-start;
+  padding: 0.28rem 0.75rem;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border-radius: 50px;
+  margin-bottom: 1rem;
+}
+
+.setupTitle {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 0.5rem;
+}
+
+.setupDesc {
+  font-size: 0.88rem;
+  color: rgba(200, 180, 255, 0.65);
+  line-height: 1.65;
+  margin-bottom: 1.25rem;
+}
+
+/* The "shopping list" pinned to the card bottom so all three line up. */
+.setupGearBox {
+  margin-top: auto;
+  padding-top: 1rem;
+  border-top: 1px dashed rgba(255, 255, 255, 0.1);
+}
+
+.setupGearLabel {
+  display: block;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: rgba(200, 180, 255, 0.45);
+  margin-bottom: 0.5rem;
+}
+
+.setupGear {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.setupGear li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: rgba(220, 200, 255, 0.75);
+  line-height: 1.5;
+}
+
+.setupGear li::before {
+  content: '\2713';
+  color: var(--accent);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.setupNote {
+  max-width: 720px;
+  margin: 2.5rem auto 0;
+  text-align: center;
+  font-size: 0.9rem;
+  color: rgba(200, 180, 255, 0.55);
+  line-height: 1.7;
+}
+
+.setupNote strong {
+  color: rgba(230, 220, 255, 0.85);
+  font-weight: 600;
 }
 
 /* ═══════════════════════════════════════════
@@ -1248,47 +2794,6 @@
   color: rgba(200, 180, 255, 0.65);
   line-height: 1.6;
   position: relative;
-}
-
-/* Animated feature icons */
-.iconPulse {
-  animation: iconPulseAnim 3s ease-in-out infinite;
-}
-@keyframes iconPulseAnim {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.1); }
-}
-
-.iconSpin {
-  animation: iconSpinAnim 6s linear infinite;
-}
-@keyframes iconSpinAnim {
-  to { transform: rotate(360deg); }
-}
-
-.iconBounce {
-  animation: iconBounceAnim 2s ease-in-out infinite;
-}
-@keyframes iconBounceAnim {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-3px); }
-}
-
-.iconWiggle {
-  animation: iconWiggleAnim 2.5s ease-in-out infinite;
-}
-@keyframes iconWiggleAnim {
-  0%, 100% { transform: rotate(0deg); }
-  25% { transform: rotate(5deg); }
-  75% { transform: rotate(-5deg); }
-}
-
-.iconTilt {
-  animation: iconTiltAnim 3s ease-in-out infinite;
-}
-@keyframes iconTiltAnim {
-  0%, 100% { transform: rotate(0deg); }
-  50% { transform: rotate(8deg); }
 }
 
 /* ═══════════════════════════════════════════
@@ -1510,7 +3015,11 @@
   .heroSub { max-width: 100%; }
   .heroCtas { margin-left: auto; margin-right: auto; }
   .heroDevice { margin-top: 1rem; }
-  .phoneFrame { width: 240px; height: 480px; }
+  /* Stacked hero has no 100vh slack below the scene, and the hero clips
+     overflow. Margin (not padding!) reserves room for the phones + caption
+     hanging below the TV: the phone cluster anchors to the scene's padding
+     edge, so padding would just push the phones down with it. */
+  .heroScene { margin-left: auto; margin-right: auto; margin-bottom: 7rem; }
 
   .step, .stepReverse {
     flex-direction: column;
@@ -1520,6 +3029,9 @@
 
   .featuresGrid { grid-template-columns: repeat(2, 1fr); }
   .useCasesGrid { grid-template-columns: repeat(2, 1fr); }
+  /* Setup recipes read top-to-bottom on narrow screens — each card is a
+     full thought, so side-by-side pairs would just squeeze the copy. */
+  .setupGrid { grid-template-columns: 1fr; max-width: 480px; }
 }
 
 @media (max-width: 600px) {
@@ -1537,10 +3049,88 @@
   }
   .joinInput { width: 100%; }
   .hostPanel { width: 100%; }
-  .phoneFrame { width: 200px; height: 400px; }
+  /* Resume banner stacks: dot + text up top (dismiss pinned to the corner),
+     full-width resume button below — one row would squeeze the text to
+     three cramped lines. */
+  .resumeCard { position: relative; flex-wrap: wrap; }
+  .resumeText { padding-right: 1.5rem; }
+  .resumeBtn { flex-basis: 100%; }
+  .resumeDismiss { position: absolute; top: 8px; right: 8px; }
   .phoneFrameSm { width: 200px; height: 400px; }
   .tvFrame { width: 280px; }
-  .howSection, .featuresSection, .useCasesSection, .faqSection, .ctaSection {
+  /* Step 1's laptop shrinks — tighten the landscape beats and stack the
+     invite card vertically so the two columns still fit. */
+  .laptopFrame { width: 290px; }
+  .srScreenBg { padding: 12px 14px 10px; }
+  .srCols { gap: 10px; }
+  .srStage { flex: 0 1 150px; }
+  .srStageTitle { font-size: 13px; }
+  .srStageLede { font-size: 8px; }
+  .srAddBtn { font-size: 9px; padding: 6px 12px; }
+  .srInvite { flex-direction: column; padding: 8px; gap: 5px; }
+  .srInviteInfo { align-items: center; text-align: center; }
+  .srInviteQr { width: 36px; height: 36px; box-shadow: 0 0 0 2px #fff; }
+  .srInviteCode { font-size: 13px; }
+  .srResumeText { font-size: 8px; }
+  .srResumeCard { padding: 6px 8px; margin-top: 6px; }
+  .srPanelDim { margin-top: 8px; }
+  /* The laptop logo beats share .demoLogo — shrink it so beat 3 fits. */
+  .demoLogo { font-size: 18px; margin-bottom: 4px; }
+  /* The single mobile phone hangs far less than the desktop pair — drop
+     the 900px breakpoint's clearance margin. */
+  .heroScene { width: 100%; max-width: 380px; padding-top: 2rem; margin-bottom: 0; }
+  /* One phone on mobile — two would bury the lyrics on a narrow screen.
+     Narrower so the handset ratio holds without the top edge rising into the
+     lyrics; the hang below the scene stays inside the hero's bottom padding
+     (the hero clips overflow), which caps the height — hence 100px wide. */
+  .heroPhones { left: -8px; bottom: -56px; width: 108px; height: 208px; }
+  .heroPhoneBack { display: none; }
+  .heroPhone { width: 100px; }
+  .heroPhoneFront { bottom: 0; transform: rotate(-2deg); }
+  .heroPhoneFront .hpResult:nth-child(n+2) { display: none; }
+  .hpDrawer { display: none; }
+  /* Tag rides the phone's top bezel — the slot between lyric line 2 and the
+     phone is too thin to fit it without covering one or the other. */
+  .heroPhonesTag { left: 0; bottom: 160px; transform: none; font-size: 0.5rem; padding: 0.2rem 0.5rem; }
+  .hpTitle { font-size: 8px; }
+  /* No thumbnail at 100px wide — the title would truncate to one letter.
+     min-height keeps room for the add-toast, which wraps at this width. */
+  .hpThumb { display: none; }
+  .hpStage { min-height: 42px; }
+  .hpToast { font-size: 8px; padding: 4px 6px; }
+  .hpSearchInput { padding: 6px; font-size: 8.5px; overflow: hidden; }
+  .hpSearchBtn { padding: 6px 7px; font-size: 7.5px; }
+  /* Two lyric lines, lifted to the top so the corner phone doesn't cover them. */
+  .hdLyrics { top: 31%; gap: 5px; }
+  .hdLyricLine { font-size: 10px; }
+  .hdLyricLine:nth-child(3) { display: none; }
+  /* Step 2's phone shrinks to 200×400 — drop the third result so the list
+     doesn't clip against the always-visible queue below it, and tighten the
+     category cards so their names fit. */
+  .qbResults .demoResultCard:nth-child(3) { display: none; }
+  .qbCat { font-size: 7.5px; padding: 8px 6px; gap: 4px; }
+  /* Step 3's TV shrinks to 280px — two lyric lines read better than three,
+     and the sidebar tightens so the queue rows still fit the 16:9 frame. */
+  .dpLyricLine { font-size: 11px; }
+  .dpSweep3 { display: none; }
+  .dpReadySinger { font-size: 19px; }
+  .dpReadySong { font-size: 9px; }
+  .dpSidebar { width: 96px; }
+  .dpNowSong { display: none; }
+  .dpQr { padding: 4px; gap: 2px; }
+  .dpQrCode { width: 26px; height: 26px; box-shadow: 0 0 0 2px #fff; }
+  .dpQrText { font-size: 9px; }
+  .dpQueueSong { font-size: 8px; }
+  .dpQueueSinger { font-size: 7px; }
+  .dpQueue { padding: 3px 5px; }
+  .dpQueueTitle { margin-bottom: 2px; }
+  .dpQueueItem { padding: 2px 4px; margin-bottom: 2px; }
+  /* No room for the queue-advance beat at this size: keep the sidebar in its
+     steady 3-song state (like the hero drops its back phone on mobile). */
+  .dpRowLeaving { display: none; }
+  .dpNumA, .dpCount4 { display: none; }
+  .dpNumB, .dpCount3 { animation: none; opacity: 1; }
+  .howSection, .setupSection, .featuresSection, .useCasesSection, .faqSection, .ctaSection {
     padding: 4rem 1.25rem;
   }
   .steps { gap: 3.5rem; }
