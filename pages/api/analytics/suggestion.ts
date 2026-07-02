@@ -43,7 +43,7 @@ export default async function handler(
     sectionId: typeof sectionId === "string" ? sectionId : undefined,
     categoryId: typeof categoryId === "string" ? categoryId : undefined,
     songTitle: typeof songTitle === "string" ? songTitle : undefined,
-    userName: typeof songArtist === "string" ? songArtist : undefined,
+    songArtist: typeof songArtist === "string" ? songArtist : undefined,
   });
 
   res.status(200).json({ ok: true });

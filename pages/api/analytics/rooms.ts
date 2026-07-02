@@ -1,5 +1,5 @@
-import { MongoClient } from "mongodb";
 import { NextApiRequest, NextApiResponse } from "next";
+import { getAnalyticsDb } from "../../../lib/mongodb";
 
 const DEFAULT_LIMIT = 25;
 const MAX_LIMIT = 100;
@@ -27,11 +27,8 @@ export default async function handler(
     Math.max(1, parseInt(req.query.limit as string, 10) || DEFAULT_LIMIT)
   );
 
-  const client = new MongoClient(process.env.MONGODB_URI!);
-
   try {
-    await client.connect();
-    const db = client.db(process.env.MONGODB_DB);
+    const db = await getAnalyticsDb();
     const events = db.collection("analytics_events");
 
     // Fetch one extra doc to determine whether more pages exist.
@@ -93,7 +90,5 @@ export default async function handler(
   } catch (e) {
     console.error("Rooms query error:", e);
     res.status(500).json({ code: 500, message: "Internal server error." });
-  } finally {
-    await client.close();
   }
 }

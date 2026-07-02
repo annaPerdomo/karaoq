@@ -1,5 +1,5 @@
-import { MongoClient } from "mongodb";
 import { NextApiRequest, NextApiResponse } from "next";
+import { getAnalyticsDb } from "../../../lib/mongodb";
 
 // Merge the analytics for `source` into `target`, then remove `source`.
 // Use this when a single real event ended up split across multiple room codes
@@ -38,11 +38,8 @@ export default async function handler(
     return;
   }
 
-  const client = new MongoClient(process.env.MONGODB_URI!);
-
   try {
-    await client.connect();
-    const db = client.db(process.env.MONGODB_DB);
+    const db = await getAnalyticsDb();
     const events = db.collection("analytics_events");
     const sessions = db.collection("analytics_sessions");
 
@@ -104,7 +101,5 @@ export default async function handler(
   } catch (e) {
     console.error("Room merge error:", e);
     res.status(500).json({ code: 500, message: "Internal server error." });
-  } finally {
-    await client.close();
   }
 }
