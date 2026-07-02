@@ -777,8 +777,12 @@ const Home = (): React.ReactElement => {
       <main>
         {/* ─── Hero ─── */}
         <section className={styles.hero}>
+          {/* Three grid blocks — copy, demo scene, CTA card. Desktop places
+              copy+CTA in the left column with the scene alongside; when the
+              hero stacks, DOM order puts the scene between the pitch and the
+              form, so newcomers see what KaraoQ is before it asks for a name. */}
           <div className={styles.heroInner}>
-            <div className={styles.heroContent}>
+            <div className={styles.heroCopy}>
               <h1 className={styles.heroTitle}>YouTube Karaoke. Zero Setup.</h1>
               <p className={styles.heroSub}>
                 Everyone adds songs from their own phone &mdash; the queue plays
@@ -814,6 +818,11 @@ const Home = (): React.ReactElement => {
                   </button>
                 </div>
               )}
+            </div>
+
+            <HeroDemo />
+
+            <div className={styles.heroCta}>
               {/* One glass card holds the whole way in: host a room (custom
                   codes tucked behind a small toggle), or join with a code. */}
               <div className={styles.hostCard}>
@@ -920,8 +929,6 @@ const Home = (): React.ReactElement => {
               </div>
               <p className={styles.heroNote}>No account needed. Ready in seconds.</p>
             </div>
-
-            <HeroDemo />
           </div>
         </section>
 
