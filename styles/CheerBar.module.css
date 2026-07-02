@@ -115,6 +115,48 @@
   animation: cooldownShrink 3s linear forwards;
 }
 
+/* ─── Compact (phones only) ───
+   The wrapping emoji + message grids become two swipeable rows so the bar
+   stops eating the screen it shares with the queue. */
+@media (max-width: 768px) {
+  .cheerBarCompact {
+    padding: 0.5rem 0.75rem 0.6rem;
+  }
+
+  .cheerBarCompact .cheerHeader {
+    margin-bottom: 0.35rem;
+  }
+
+  .cheerBarCompact .cheerEmojis,
+  .cheerBarCompact .cheerMessages {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    /* breathing room so buttons aren't clipped mid-scale on tap */
+    padding: 2px;
+    margin: -2px;
+  }
+
+  .cheerBarCompact .cheerEmojis::-webkit-scrollbar,
+  .cheerBarCompact .cheerMessages::-webkit-scrollbar {
+    display: none;
+  }
+
+  .cheerBarCompact .cheerEmojis {
+    margin-bottom: 0.35rem;
+  }
+
+  .cheerBarCompact .cheerBtn {
+    flex-shrink: 0;
+  }
+
+  .cheerBarCompact .cheerMsgBtn {
+    flex-shrink: 0;
+    padding: 0.3rem 0.6rem;
+  }
+}
+
 @keyframes cooldownShrink {
   from { width: 100%; }
   to { width: 0%; }

@@ -1595,6 +1595,7 @@ const Host = ({
                       onReaction={sendReaction}
                       cooldown={reactionCooldown}
                       lastSentEmoji={lastSentEmoji}
+                      compact
                     />
                   </div>
                 )}

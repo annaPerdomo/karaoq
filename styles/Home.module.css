@@ -1456,7 +1456,9 @@
 }
 
 .laptopBase {
-  width: 116%;
+  /* Wider than the screen for the laptop silhouette, but never wider than the
+     viewport — at 320px the overhang was the page's only horizontal overflow. */
+  width: min(116%, calc(100vw - 1.5rem));
   height: 13px;
   background: linear-gradient(to bottom, rgba(180, 140, 255, 0.22), rgba(180, 140, 255, 0.08));
   border-radius: 0 0 14px 14px;
@@ -3050,8 +3052,17 @@
 
 @media (max-width: 600px) {
   .nav { padding: 0.75rem 1rem; }
+  .navLinks { gap: 0.5rem; }
   .navLink { display: none; }
-  .navCtaOutline { display: none; }
+  /* Keep BOTH ways in reachable from the nav — a phone visitor is at least as
+     likely to be joining a room as hosting one. Compact pills fit beside the
+     logo where the section links used to be. */
+  .navCta,
+  .navCtaOutline {
+    padding: 0.45rem 0.85rem;
+    font-size: 0.72rem;
+    letter-spacing: 0.5px;
+  }
   .hero { padding: 6rem 1.25rem 3rem; }
   .heroSub { font-size: 0.95rem; }
   .joinRow {
@@ -3128,7 +3139,9 @@
   }
   .steps { gap: 3.5rem; }
   .featuresGrid { grid-template-columns: 1fr; }
-  .useCasesGrid { grid-template-columns: 1fr 1fr; }
+  /* One card per row: at half-width the copy wrapped nearly one word per
+     line. The cards are short, so a single column stays scannable. */
+  .useCasesGrid { grid-template-columns: 1fr; }
   .footerInner {
     flex-direction: column;
     gap: 0.5rem;

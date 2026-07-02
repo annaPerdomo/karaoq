@@ -1316,8 +1316,8 @@
   }
 }
 
-/* ─── Tablet / iPad: read the whole entry + tappable actions ─── */
-@media (min-width: 769px) and (max-width: 1200px) {
+/* ─── Tablet / iPad / phone: read the whole entry + tappable actions ─── */
+@media (max-width: 1200px) {
   /* Let the singer name and song title wrap fully so the host can read the
      entire queue entry at a glance instead of truncating with an ellipsis. */
   .queueItem {
@@ -1370,6 +1370,10 @@
   }
 }
 
+/* ─── Phone: the queue becomes the main surface ───
+   Stacked layout where the player/status area hugs its content and the
+   sidebar (Add a song + queue) takes every remaining pixel — on a phone the
+   host is managing the lineup, not staring at a status headline. */
 @media (max-width: 768px) {
   .header {
     flex-wrap: wrap;
@@ -1388,16 +1392,20 @@
 
   .sidebar {
     width: 100%;
+    flex: 1;
+    /* Never crushed below the tab row + Add button, even when the player
+       area's content runs long (that content scrolls internally instead). */
+    min-height: 132px;
     border-left: none;
     border-top: 1px solid rgba(255, 255, 255, 0.06);
-    max-height: 45vh;
   }
 
   /* Stacked layout: a thin vertical rail wastes a whole row, so collapse to a
      short full-width bar with a horizontal label instead. */
   .sidebar.sidebarCollapsed {
     width: 100%;
-    max-height: none;
+    flex: 0 0 auto;
+    min-height: 0;
   }
 
   .sidebarReopen {
@@ -1415,25 +1423,96 @@
     transform: rotate(-90deg);
   }
 
-  .playerArea {
-    min-height: 25vh;
-  }
-
+  /* Player/status area sizes to its content instead of soaking up the screen.
+     When the sidebar is collapsed it may stretch again, so the inner states
+     scroll rather than clip. */
+  .playerArea,
   .controlPanel {
-    min-height: 25vh;
+    flex: 0 1 auto;
+    min-height: 0;
   }
 
   .video {
-    min-height: 35vh;
+    flex: none;
+    width: 100%;
+    min-height: 0;
     aspect-ratio: 16 / 9;
+  }
+
+  /* The between-songs status: one glance, not half the screen. Shrinkable
+     (min-height: 0) so on short screens it scrolls instead of painting over
+     the transport bar and queue below. */
+  .songControl {
+    flex: 0 1 auto;
+    min-height: 0;
+    gap: 0.35rem;
+    padding: 1.1rem 1rem;
+    overflow-y: auto;
+  }
+
+  .controlSinger {
+    font-size: clamp(1.4rem, 6.5vw, 2rem);
+  }
+
+  .controlSong {
+    font-size: 0.88rem;
+  }
+
+  .switchModeLink {
+    margin-top: 0.75rem;
+  }
+
+  /* Empty room: keep the whole pitch reachable on short screens. */
+  .emptyState {
+    flex: 0 1 auto;
+    min-height: 0;
+    justify-content: flex-start;
+    padding: 1.25rem 1rem;
+    overflow-y: auto;
+  }
+
+  .emptyTitle {
+    font-size: 1.7rem;
+  }
+
+  .emptyStageLede {
+    font-size: 0.88rem;
+    margin-bottom: 0.4rem;
+  }
+
+  .emptyInvite {
+    margin-top: 1.1rem;
+    padding-top: 1rem;
   }
 
   .queueActions {
     opacity: 1;
   }
 
-  .transport {
+  .transportMain {
     padding: 0 1rem;
+    height: 60px;
+    gap: 0.75rem;
+  }
+
+  .transportFooter {
+    padding: 0.25rem 1rem;
+  }
+
+  /* Song search gets the whole screen — inside the stacked sidebar it was
+     fighting the on-screen keyboard for a sliver of space. */
+  .searchOverlay {
+    position: fixed;
+    z-index: 400;
+  }
+
+  .settingsPopover {
+    right: 8px;
+    max-width: calc(100vw - 16px);
+  }
+
+  .modeMenu {
+    max-width: calc(100vw - 24px);
   }
 }
 

@@ -7,10 +7,14 @@ interface CheerBarProps {
   cooldown: boolean;
   lastSentEmoji: string | null;
   disabled?: boolean;
+  /** On small screens, collapse the wrapping grids into swipeable rows.
+      Used where the bar shares space with a queue (host sidebar); the Sing
+      view keeps the full-size grid. No effect above phone widths. */
+  compact?: boolean;
 }
 
-const CheerBar = ({ onReaction, cooldown, lastSentEmoji, disabled }: CheerBarProps): React.ReactElement => (
-  <div className={styles.cheerBar}>
+const CheerBar = ({ onReaction, cooldown, lastSentEmoji, disabled, compact }: CheerBarProps): React.ReactElement => (
+  <div className={`${styles.cheerBar} ${compact ? styles.cheerBarCompact : ''}`}>
     <div className={styles.cheerHeader}>
       <span className={styles.cheerLabel}>Cheer them on!</span>
       {lastSentEmoji && (
