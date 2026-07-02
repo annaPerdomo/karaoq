@@ -37,7 +37,10 @@ const Sing = (): React.ReactElement => {
   const [lastSentEmoji, setLastSentEmoji] = React.useState<string | null>(null);
   const [mobileQueueOpen, setMobileQueueOpen] = React.useState(false);
   const [showWelcome, setShowWelcome] = React.useState(true);
-  const [showTips, setShowTips] = React.useState(false);
+  // First-run tips are a non-blocking banner above search (see render) rather
+  // than a gate — a new singer can start searching immediately. Returning
+  // singers who've already dismissed it never see it again.
+  const [showTipsBanner, setShowTipsBanner] = React.useState(false);
   const [welcomeName, setWelcomeName] = React.useState('');
 
   // Load saved username
@@ -47,6 +50,7 @@ const Sing = (): React.ReactElement => {
       setUsername(saved);
       setShowWelcome(false);
     }
+    if (!localStorage.getItem('karaoq_seen_tips')) setShowTipsBanner(true);
   }, []);
 
   function handleWelcomeSubmit() {
@@ -55,7 +59,15 @@ const Sing = (): React.ReactElement => {
     setUsername(name);
     localStorage.setItem('karaoq_username', name);
     setShowWelcome(false);
-    setShowTips(true);
+  }
+
+  function dismissTips() {
+    setShowTipsBanner(false);
+    try {
+      localStorage.setItem('karaoq_seen_tips', '1');
+    } catch {
+      /* private mode — fine, banner just shows again next visit */
+    }
   }
 
   // Session analytics tracking
@@ -162,6 +174,26 @@ const Sing = (): React.ReactElement => {
       <div className={styles.content}>
         {/* ─── Left panel: search + results ─── */}
         <div className={styles.searchPanel}>
+          {!showWelcome && showTipsBanner && (
+            <div className={styles.tipsBanner}>
+              <div className={styles.tipsBannerBody}>
+                <span className={styles.tipsBannerTitle}>
+                  Welcome{username ? `, ${username}` : ''}! 🎤
+                </span>
+                <span className={styles.tipsBannerText}>
+                  Search any song to add it to the queue, follow along in Up
+                  Next, and cheer on whoever&apos;s on stage.
+                </span>
+              </div>
+              <button
+                className={styles.tipsBannerClose}
+                onClick={dismissTips}
+                aria-label="Dismiss tips"
+              >
+                ×
+              </button>
+            </div>
+          )}
           {joinCode && (
             <SongSearch
               roomId={joinCode}
@@ -171,6 +203,7 @@ const Sing = (): React.ReactElement => {
               showNameInput={true}
               onNameChange={setUsername}
               requireName={true}
+              role="singer"
             />
           )}
         </div>
@@ -351,77 +384,6 @@ const Sing = (): React.ReactElement => {
         </div>
       )}
 
-      {/* Tips modal */}
-      {showTips && (
-        <div className={styles.overlay} onClick={() => setShowTips(false)}>
-          <div
-            className={styles.tipsModal}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2 className={styles.tipsGreeting}>
-              Welcome, {username}!
-            </h2>
-            <p className={styles.tipsSubtext}>Here&apos;s how it works</p>
-
-            <div className={styles.tipsList}>
-              <div className={styles.tipItem}>
-                <div className={styles.tipIcon} style={{ background: 'rgba(255, 45, 120, 0.12)', color: '#ff2d78' }}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="11" cy="11" r="8" />
-                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                  </svg>
-                </div>
-                <div className={styles.tipText}>
-                  <span className={styles.tipTitle}>Search &amp; add songs</span>
-                  <span className={styles.tipDesc}>
-                    Find karaoke tracks on YouTube and add them to the shared queue
-                  </span>
-                </div>
-              </div>
-
-              <div className={styles.tipItem}>
-                <div className={styles.tipIcon} style={{ background: 'rgba(0, 240, 255, 0.12)', color: '#00f0ff' }}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="8" y1="6" x2="21" y2="6" />
-                    <line x1="8" y1="12" x2="21" y2="12" />
-                    <line x1="8" y1="18" x2="21" y2="18" />
-                    <line x1="3" y1="6" x2="3.01" y2="6" />
-                    <line x1="3" y1="12" x2="3.01" y2="12" />
-                    <line x1="3" y1="18" x2="3.01" y2="18" />
-                  </svg>
-                </div>
-                <div className={styles.tipText}>
-                  <span className={styles.tipTitle}>Watch the queue</span>
-                  <span className={styles.tipDesc}>
-                    See what&apos;s playing now and what&apos;s coming up next
-                  </span>
-                </div>
-              </div>
-
-              <div className={styles.tipItem}>
-                <div className={styles.tipIcon} style={{ background: 'rgba(249, 115, 22, 0.12)', color: '#f97316' }}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z" />
-                  </svg>
-                </div>
-                <div className={styles.tipText}>
-                  <span className={styles.tipTitle}>Cheer them on</span>
-                  <span className={styles.tipDesc}>
-                    Send reactions to hype up the current singer
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <button
-              className={styles.btnPink}
-              onClick={() => setShowTips(false)}
-            >
-              Got it!
-            </button>
-          </div>
-        </div>
-      )}
     </main>
   );
 };
