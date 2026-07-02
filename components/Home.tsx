@@ -517,9 +517,10 @@ function HeroDemo() {
 
   return (
     <div className={styles.heroScene} aria-hidden="true">
+      <span className={styles.heroTvTag}>Plays on any screen</span>
+
       {/* The screen — TV, laptop, or iPad. Faithful to the real Display view. */}
       <div className={styles.heroTv}>
-        <span className={styles.heroTvTag}>Plays on any screen</span>
         <div className={styles.heroTvScreen}>
           <div className={styles.hdHeader}>
             <span className={styles.hdBrand}>KaraoQ</span>
@@ -607,13 +608,11 @@ function HeroDemo() {
         <div className={styles.heroTvStand} />
       </div>
 
-      {/* Two guest phones — the whole loop from the crowd's side. The front
-          phone plays the real add loop (tap + → toast → the song appears in
-          the TV's Up Next); the back phone cheers, and its ❤️ tap is what
-          sends the reaction floating up the big screen. */}
+      {/* Two guest phones in front of the TV stand — the whole loop from the
+          crowd's side. The front phone plays the real add loop (tap + → toast
+          → the song appears in the TV's Up Next); the back phone cheers, and
+          its ❤️ tap is what sends the reaction floating up the big screen. */}
       <div className={styles.heroPhones}>
-        <span className={styles.heroPhonesTag}>Or add songs &amp; cheer from any phone</span>
-        <HeroCheerPhone />
         <HeroPhoneCard
           className={styles.heroPhoneFront}
           search="golden"
@@ -624,7 +623,10 @@ function HeroDemo() {
             { title: 'Golden – Higher Key Karaoke' },
           ]}
         />
+        <HeroCheerPhone />
       </div>
+
+      <span className={styles.heroPhonesTag}>Or add songs &amp; cheer from any phone</span>
     </div>
   );
 }
@@ -777,49 +779,48 @@ const Home = (): React.ReactElement => {
         <section className={styles.hero}>
           <div className={styles.heroInner}>
             <div className={styles.heroContent}>
-              <h1 className={styles.heroTitle}>
-                YouTube Karaoke.{' '}
-                <span className={styles.heroGradient}>Zero Setup.</span>
-              </h1>
+              <h1 className={styles.heroTitle}>YouTube Karaoke. Zero Setup.</h1>
               <p className={styles.heroSub}>
                 Everyone adds songs from their own phone &mdash; the queue plays
                 on any screen you&apos;ve got. Host a room for the party, or hop
                 into one with a code. No app, no karaoke machine, no setup.
               </p>
-              <div className={styles.heroCtas}>
-                {/* A room from earlier tonight outranks starting a new one —
-                    the duplicate-room path this banner exists to close. */}
-                {resumeRoom && (
-                  <div className={styles.resumeCard}>
-                    <span className={styles.resumeDot} aria-hidden="true" />
-                    <span className={styles.resumeText}>
-                      Your room <strong>{resumeRoom.code.toUpperCase()}</strong>{' '}
-                      is still open
-                      {resumeRoom.songCount > 0 &&
-                        ` — ${resumeRoom.songCount} song${
-                          resumeRoom.songCount !== 1 ? 's' : ''
-                        } queued`}
-                    </span>
-                    <button
-                      className={styles.resumeBtn}
-                      onClick={() => router.push(`/host/${resumeRoom.code}`)}
-                    >
-                      Resume hosting
-                    </button>
-                    <button
-                      className={styles.resumeDismiss}
-                      onClick={dismissResume}
-                      aria-label="Dismiss"
-                      title="Dismiss"
-                    >
-                      &times;
-                    </button>
-                  </div>
-                )}
-                {/* Primary path: name + one button starts a room. Custom codes
-                    are a power feature, tucked behind a small toggle. */}
-                <div className={styles.hostPanel}>
-                  <input
+              {/* A room from earlier tonight outranks starting a new one —
+                  the duplicate-room path this banner exists to close. */}
+              {resumeRoom && (
+                <div className={styles.resumeCard}>
+                  <span className={styles.resumeDot} aria-hidden="true" />
+                  <span className={styles.resumeText}>
+                    Your room <strong>{resumeRoom.code.toUpperCase()}</strong>{' '}
+                    is still open
+                    {resumeRoom.songCount > 0 &&
+                      ` — ${resumeRoom.songCount} song${
+                        resumeRoom.songCount !== 1 ? 's' : ''
+                      } queued`}
+                  </span>
+                  <button
+                    className={styles.resumeBtn}
+                    onClick={() => router.push(`/host/${resumeRoom.code}`)}
+                  >
+                    Resume hosting
+                  </button>
+                  <button
+                    className={styles.resumeDismiss}
+                    onClick={dismissResume}
+                    aria-label="Dismiss"
+                    title="Dismiss"
+                  >
+                    &times;
+                  </button>
+                </div>
+              )}
+              {/* One glass card holds the whole way in: host a room (custom
+                  codes tucked behind a small toggle), or join with a code. */}
+              <div className={styles.hostCard}>
+                <span className={styles.hostCardKicker}>
+                  Host tonight&rsquo;s karaoke
+                </span>
+                <input
                     ref={nameInputRef}
                     className={styles.nameInput}
                     placeholder="Your name"
@@ -881,8 +882,7 @@ const Home = (): React.ReactElement => {
                       : 'Use a custom room code'}
                   </button>
 
-                  {hostError && <p className={styles.hostError}>{hostError}</p>}
-                </div>
+                {hostError && <p className={styles.hostError}>{hostError}</p>}
 
                 {/* Secondary path: joining with a code (most guests arrive by
                     scanning a QR, so this stays lightweight). */}
@@ -921,9 +921,7 @@ const Home = (): React.ReactElement => {
               <p className={styles.heroNote}>No account needed. Ready in seconds.</p>
             </div>
 
-            <div className={styles.heroDevice}>
-              <HeroDemo />
-            </div>
+            <HeroDemo />
           </div>
         </section>
 

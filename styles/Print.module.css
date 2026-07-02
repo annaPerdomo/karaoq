@@ -17,13 +17,14 @@
 }
 
 .brand {
-  font-family: var(--font-display);
+  font-family: var(--font-brand);
+  font-weight: 400;
   font-size: 2rem;
   background: linear-gradient(135deg, #ff2d78, #00f0ff);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  letter-spacing: 4px;
+  letter-spacing: 2px;
   margin-bottom: 2rem;
 }
 

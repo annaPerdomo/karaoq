@@ -42,8 +42,10 @@
 }
 
 .brand {
-  font-family: var(--font-display);
+  font-family: var(--font-brand);
+  font-weight: 400;
   font-size: 1.4rem;
+  letter-spacing: 2px;
   background: linear-gradient(135deg, #ff2d78, #00f0ff);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -93,13 +95,14 @@
 }
 
 .waitingTitle {
-  font-family: var(--font-display);
+  font-family: var(--font-brand);
+  font-weight: 400;
   font-size: 3rem;
   background: linear-gradient(135deg, #ff2d78, #00f0ff);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  letter-spacing: 6px;
+  letter-spacing: 2px;
 }
 
 .waitingText {
@@ -135,12 +138,12 @@
 }
 
 .readySinger {
-  font-family: var(--font-display);
+  font-family: var(--font-headline);
   font-size: clamp(2.5rem, 6vw, 4.5rem);
   font-weight: 700;
   color: #00f0ff;
   text-align: center;
-  letter-spacing: 2px;
+  letter-spacing: -0.02em;
   line-height: 1.2;
   margin: 0;
 }
@@ -170,8 +173,10 @@
 }
 
 .footerLogo {
-  font-family: var(--font-display);
+  font-family: var(--font-brand);
+  font-weight: 400;
   font-size: 0.65rem;
+  letter-spacing: 2px;
   color: rgba(200, 180, 255, 0.25);
 }
 
@@ -262,11 +267,11 @@
 }
 
 .nowSinger {
-  font-family: var(--font-display);
+  font-family: var(--font-headline);
   font-size: clamp(1.6rem, 3vw, 2.4rem);
   font-weight: 700;
   color: #00f0ff;
-  letter-spacing: 1px;
+  letter-spacing: -0.02em;
 }
 
 .nowSong {

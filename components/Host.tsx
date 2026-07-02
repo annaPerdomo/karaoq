@@ -1265,7 +1265,9 @@ const Host = ({
           ) : remote ? (
             /* ── Co-host, empty queue ── */
             <div className={styles.emptyState}>
-              <h2 className={styles.emptyTitle}>KaraoQ</h2>
+              <h2 className={`${styles.emptyTitle} ${styles.emptyTitleBrand}`}>
+                KaraoQ
+              </h2>
               <p>
                 No songs in the queue yet. Add songs from the panel — playback
                 is controlled on the host screen.

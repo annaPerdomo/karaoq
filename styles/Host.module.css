@@ -34,8 +34,10 @@
 }
 
 .brand {
-  font-family: var(--font-display);
+  font-family: var(--font-brand);
+  font-weight: 400;
   font-size: 1.4rem;
+  letter-spacing: 2px;
   background: linear-gradient(135deg, #ff2d78, #00f0ff);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -274,12 +276,12 @@
 }
 
 .controlSinger {
-  font-family: var(--font-display);
+  font-family: var(--font-headline);
   font-size: clamp(2.5rem, 6vw, 4.5rem);
   font-weight: 700;
   color: #00f0ff;
   text-align: center;
-  letter-spacing: 2px;
+  letter-spacing: -0.02em;
   line-height: 1.2;
   margin: 0;
 }
@@ -786,8 +788,10 @@
 }
 
 .transportLogo {
-  font-family: var(--font-display);
+  font-family: var(--font-brand);
+  font-weight: 400;
   font-size: 0.65rem;
+  letter-spacing: 2px;
   color: rgba(200, 180, 255, 0.25);
 }
 
@@ -1132,13 +1136,21 @@
 }
 
 .emptyTitle {
-  font-family: var(--font-display);
+  font-family: var(--font-headline);
+  font-weight: 700;
   font-size: 2.4rem;
   background: linear-gradient(135deg, #ff2d78, #00f0ff);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  letter-spacing: 4px;
+  letter-spacing: -0.02em;
+}
+
+/* The co-host empty state shows the literal wordmark, not a headline. */
+.emptyTitleBrand {
+  font-family: var(--font-brand);
+  font-weight: 400;
+  letter-spacing: 2px;
 }
 
 .emptyState p {
@@ -1214,8 +1226,10 @@
 }
 
 .welcomeLogo {
-  font-family: var(--font-display);
+  font-family: var(--font-brand);
+  font-weight: 400;
   font-size: 2.2rem;
+  letter-spacing: 2px;
   background: linear-gradient(135deg, #ff2d78, #00f0ff);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
