@@ -29,13 +29,17 @@ export default async function handler(
     return;
   }
 
-  await trackEvent(req, "search_performed", {
-    roomId,
-    role:
-      role === "host" || role === "singer" || role === "display"
-        ? role
-        : undefined,
-  });
+  try {
+    await trackEvent(req, "search_performed", {
+      roomId,
+      role:
+        role === "host" || role === "singer" || role === "display"
+          ? role
+          : undefined,
+    });
+  } catch (err) {
+    // Analytics failure should not break the product flow
+  }
 
   res.status(200).json({ ok: true });
 }

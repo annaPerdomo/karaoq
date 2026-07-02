@@ -534,19 +534,23 @@ const Host = ({
   // A name from a previous session (or set on the landing page when starting
   // the queue) means we can skip the welcome prompt entirely on reload.
   React.useEffect(() => {
-    const saved = localStorage.getItem("karaoq_host_name");
-    if (saved) {
-      setHostName(saved);
-      setWelcomeName(saved);
-      setShowWelcome(false);
-    }
+    try {
+      const saved = localStorage.getItem("karaoq_host_name");
+      if (saved) {
+        setHostName(saved);
+        setWelcomeName(saved);
+        setShowWelcome(false);
+      }
+    } catch {}
   }, []);
 
   function handleWelcomeSubmit() {
     const name = welcomeName.trim();
     if (!name) return;
     setHostName(name);
-    localStorage.setItem("karaoq_host_name", name);
+    try {
+      localStorage.setItem("karaoq_host_name", name);
+    } catch {}
     setShowWelcome(false);
   }
 
@@ -594,11 +598,15 @@ const Host = ({
       return;
     }
     if (!joinCode) return;
-    const saved = localStorage.getItem(playModeStorageKey(joinCode));
-    // Default new hosts to "here" — the zero-setup option — so the room is
-    // immediately usable instead of blocking on a first-run chooser. They can
-    // switch to a separate TV anytime from the mode pill up top.
-    setPlayMode(saved === "tv" ? "tv" : "here");
+    try {
+      const saved = localStorage.getItem(playModeStorageKey(joinCode));
+      // Default new hosts to "here" — the zero-setup option — so the room is
+      // immediately usable instead of blocking on a first-run chooser. They can
+      // switch to a separate TV anytime from the mode pill up top.
+      setPlayMode(saved === "tv" ? "tv" : "here");
+    } catch {
+      setPlayMode("here");
+    }
     setPlayModeRestored(true);
   }, [joinCode, remote]);
 
@@ -606,15 +614,21 @@ const Host = ({
   // open on wide screens, tucked away on narrow ones.
   React.useEffect(() => {
     if (!joinCode) return;
-    const saved = localStorage.getItem(qrHiddenStorageKey(joinCode));
-    setQrShelfOpen(saved === null ? window.innerWidth > 1024 : saved !== "1");
+    try {
+      const saved = localStorage.getItem(qrHiddenStorageKey(joinCode));
+      setQrShelfOpen(saved === null ? window.innerWidth > 1024 : saved !== "1");
+    } catch {
+      setQrShelfOpen(window.innerWidth > 1024);
+    }
   }, [joinCode]);
 
   function toggleQrShelf() {
     const next = !qrShelfOpen;
     setQrShelfOpen(next);
     if (joinCode) {
-      localStorage.setItem(qrHiddenStorageKey(joinCode), next ? "0" : "1");
+      try {
+        localStorage.setItem(qrHiddenStorageKey(joinCode), next ? "0" : "1");
+      } catch {}
     }
   }
 
@@ -628,7 +642,11 @@ const Host = ({
   }
 
   function rememberMode(mode: PlayMode) {
-    if (joinCode) localStorage.setItem(playModeStorageKey(joinCode), mode);
+    if (joinCode) {
+      try {
+        localStorage.setItem(playModeStorageKey(joinCode), mode);
+      } catch {}
+    }
   }
 
   // Choose "this screen" — the simplest setup, nothing else to open.

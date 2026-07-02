@@ -650,8 +650,10 @@ const Home = (): React.ReactElement => {
   // Pre-fill the host's name from a previous session so returning hosts can
   // start a queue without retyping it.
   React.useEffect(() => {
-    const saved = localStorage.getItem('karaoq_host_name');
-    if (saved) setHostName(saved);
+    try {
+      const saved = localStorage.getItem('karaoq_host_name');
+      if (saved) setHostName(saved);
+    } catch {}
   }, []);
 
   // A host coming back to the landing page mid-night tends to create a second
@@ -697,7 +699,9 @@ const Home = (): React.ReactElement => {
     }
     setHostError('');
     // Carry the name into the host view so the queue starts already set up.
-    localStorage.setItem('karaoq_host_name', name);
+    try {
+      localStorage.setItem('karaoq_host_name', name);
+    } catch {}
     setCreating(true);
     try {
       const headers: Record<string, string> = {};
