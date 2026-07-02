@@ -28,7 +28,7 @@ const HomePage: NextPage = () => {
         <meta property="og:image" content="https://www.karaoq.live/og-image.png" />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
-        <meta property="og:image:alt" content="KaraoQ — YouTube karaoke from your phone, no downloads or sign-up" />
+        <meta property="og:image:alt" content="KaraoQ — YouTube karaoke, zero setup. A TV showing the karaoke queue and lyrics, with phones adding songs and cheering." />
 
         {/* Twitter Card */}
         <meta name="twitter:card" content="summary_large_image" />
@@ -38,7 +38,7 @@ const HomePage: NextPage = () => {
           content="Turn any gathering into karaoke night. Search YouTube, build a queue from your phone, cheer on your friends, and sing."
         />
         <meta name="twitter:image" content="https://www.karaoq.live/og-image.png" />
-        <meta name="twitter:image:alt" content="KaraoQ — YouTube karaoke from your phone, no downloads or sign-up" />
+        <meta name="twitter:image:alt" content="KaraoQ — YouTube karaoke, zero setup. A TV showing the karaoke queue and lyrics, with phones adding songs and cheering." />
 
         {/* JSON-LD Structured Data */}
         <script
