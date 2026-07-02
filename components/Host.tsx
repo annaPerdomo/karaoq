@@ -20,6 +20,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { QRCodeSVG } from "qrcode.react";
 import styles from "../styles/Host.module.css";
 import CheerBar from "./CheerBar";
+import { rememberLastHostedRoom } from "../lib/lastRoom";
 import { normalizeRoomId } from "../lib/roomCode";
 import SongSearch from "./SongSearch";
 import getRoom from "../app/queue/getRoom";
@@ -699,6 +700,9 @@ const Host = ({
       const room = await getRoom(joinCode!);
       if (cancelled) return;
       if (room) {
+        // Mark this as the device's current room so the landing page offers
+        // "resume" instead of a duplicate. Co-hosts don't own the room.
+        if (!remote) rememberLastHostedRoom(joinCode!);
         setQueue(room.queue);
         setActiveIndex(room.activeVideoIndex);
         setIsPlaying(room.isPlaying ?? false);

@@ -8,7 +8,11 @@
   .frame1of2, .frame2of2,
   .frame1of3, .frame2of3, .frame3of3 { display: none !important; }
   .demoTyping { width: auto !important; animation: none !important; }
-  .phoneFrame, .phoneFrameSm { animation: none !important; }
+  .phoneFrameSm { animation: none !important; }
+  .heroFlyChip { animation: none !important; opacity: 0 !important; }
+  .hdNowDot, .hdVideoProgressFill, .hpAdd { animation: none !important; }
+  .hdLyricLine { animation: none !important; background-position: 0% 0 !important; }
+  .hdReaction { animation: none !important; display: none !important; }
   .demoStageDot { animation: none !important; }
   .eqBar { animation: none !important; height: 12px !important; }
   .iconSpin, .iconPulse, .iconBounce, .iconWiggle, .iconTilt { animation: none !important; }
@@ -180,6 +184,87 @@
   letter-spacing: 0.5px;
 }
 
+/* Resume banner — a returning host's room from earlier tonight. Green reads
+   as "live/ongoing", distinct from the purple create/join paths below it. */
+.resumeCard {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.7rem 0.9rem;
+  border-radius: 14px;
+  background: linear-gradient(160deg, rgba(16, 185, 129, 0.12), rgba(16, 185, 129, 0.03));
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  animation: fadeSlideIn 0.3s ease;
+}
+
+.resumeDot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.8);
+  animation: resumePulse 2s ease-in-out infinite;
+}
+
+@keyframes resumePulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+.resumeText {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.82rem;
+  color: rgba(210, 240, 225, 0.85);
+  line-height: 1.45;
+  text-align: left;
+}
+
+.resumeText strong {
+  color: #fff;
+  font-family: var(--font-mono);
+  letter-spacing: 1.5px;
+}
+
+.resumeBtn {
+  flex-shrink: 0;
+  padding: 0.5rem 1rem;
+  border: 1px solid rgba(16, 185, 129, 0.5);
+  border-radius: 50px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #fff;
+  background: rgba(16, 185, 129, 0.15);
+  white-space: nowrap;
+  transition: background 0.2s, border-color 0.2s, transform 0.15s;
+}
+.resumeBtn:hover {
+  background: rgba(16, 185, 129, 0.3);
+  border-color: rgba(16, 185, 129, 0.8);
+  transform: translateY(-1px);
+}
+
+.resumeDismiss {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: rgba(210, 240, 225, 0.45);
+  font-size: 1.1rem;
+  line-height: 1;
+  transition: color 0.2s, background 0.2s;
+}
+.resumeDismiss:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
 /* Buttons */
 .btnPrimary {
   padding: 0.85rem 2rem;
@@ -331,24 +416,661 @@
 }
 
 /* ═══════════════════════════════════════════
+   Hero scene: the real product in one frame
+   The TV mirrors Display.tsx; the phone mirrors Sing.tsx. No float/bounce, and
+   no invented features (the app plays YouTube videos, it doesn't render its own
+   synced lyrics) so the demo stays an honest descriptor.
+   ═══════════════════════════════════════════ */
+.heroScene {
+  position: relative;
+  width: 520px;
+  max-width: 100%;
+  padding: 2.25rem 0 2rem;
+}
+
+/* ── Big screen (TV) ── */
+.heroTv {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* "Plays on the big screen" pill above the TV. */
+.heroTvTag {
+  position: absolute;
+  top: -1.55rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.3rem 0.85rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: rgba(220, 200, 255, 0.95);
+  background: rgba(20, 16, 40, 0.85);
+  border: 1px solid rgba(180, 140, 255, 0.35);
+  border-radius: 50px;
+  backdrop-filter: blur(4px);
+}
+
+.heroTvScreen {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 14px;
+  border: 3px solid rgba(180, 140, 255, 0.22);
+  background: #0a0a1a;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.5),
+    0 0 40px rgba(139, 92, 246, 0.12);
+}
+
+.heroTvStand {
+  width: 90px;
+  height: 16px;
+  background: linear-gradient(to bottom, rgba(180, 140, 255, 0.15), rgba(180, 140, 255, 0.05));
+  border-radius: 0 0 10px 10px;
+}
+
+/* Display header: KaraoQ brand + an add bar (add a song right from the screen). */
+.hdHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px 6px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(10, 10, 25, 0.6);
+}
+.hdBrand {
+  font-family: var(--font-display);
+  font-size: 14px;
+  letter-spacing: 2px;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #ff2d78, #00f0ff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+/* "Search to add a song +" — the on-screen add path. */
+.hdAddBar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 200px;
+  flex: 1;
+  padding: 3px 3px 3px 8px;
+  border-radius: 50px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(180, 140, 255, 0.22);
+}
+.hdAddIcon {
+  width: 9px;
+  height: 9px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 1.5px solid rgba(200, 180, 255, 0.6);
+  position: relative;
+}
+.hdAddIcon::after {
+  content: '';
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 4px;
+  height: 1.5px;
+  border-radius: 2px;
+  background: rgba(200, 180, 255, 0.6);
+  transform: rotate(45deg);
+}
+.hdAddText {
+  flex: 1;
+  min-width: 0;
+  font-size: 8px;
+  color: rgba(200, 180, 255, 0.6);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hdAddBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, #ec4899, #f97316);
+}
+
+.hdBody {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+/* Main video column */
+.hdMain {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* The currently-playing YouTube karaoke video. */
+.hdVideo {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(ellipse at 30% 30%, rgba(139, 92, 246, 0.28) 0%, transparent 55%),
+    radial-gradient(ellipse at 72% 68%, rgba(236, 72, 153, 0.2) 0%, transparent 55%),
+    linear-gradient(135deg, #1a0633 0%, #0a0118 55%, #12022a 100%);
+}
+
+/* Subtle YouTube cue — the source of every karaoke track. */
+.hdYtBadge {
+  position: absolute;
+  top: 8px;
+  left: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 8px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.85);
+}
+.hdYtPlay {
+  display: inline-block;
+  width: 16px;
+  height: 11px;
+  border-radius: 3px;
+  background: #ff0000;
+  position: relative;
+}
+.hdYtPlay::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-40%, -50%);
+  border-left: 5px solid #fff;
+  border-top: 3px solid transparent;
+  border-bottom: 3px solid transparent;
+}
+
+/* Karaoke lyrics — light up line-by-line as the song plays (the karaoke cue).
+   This mirrors what people see: YouTube karaoke videos carry highlighted lyrics. */
+.hdLyrics {
+  position: absolute;
+  top: 46%;
+  left: 50%;
+  transform: translate(-50%, -54%);
+  width: 82%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  text-align: center;
+  pointer-events: none;
+}
+.hdLyricLine {
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.25;
+  letter-spacing: 0.3px;
+  /* Filled (sung) text is solid white; unsung text is dim — the gradient
+     position animates left→right to "sweep" the highlight across the line. */
+  background: linear-gradient(90deg, #ffffff 50%, rgba(255, 255, 255, 0.28) 50%);
+  background-size: 200% 100%;
+  background-position: 100% 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.35);
+}
+.hdSweepA { animation: hdSweepA 8s linear infinite; }
+.hdSweepB { animation: hdSweepB 8s linear infinite; }
+.hdSweepC { animation: hdSweepC 8s linear infinite; }
+@keyframes hdSweepA {
+  0% { background-position: 100% 0; }
+  20% { background-position: 0% 0; }
+  84% { background-position: 0% 0; }
+  100% { background-position: 100% 0; }
+}
+@keyframes hdSweepB {
+  0%, 24% { background-position: 100% 0; }
+  44% { background-position: 0% 0; }
+  84% { background-position: 0% 0; }
+  100% { background-position: 100% 0; }
+}
+@keyframes hdSweepC {
+  0%, 48% { background-position: 100% 0; }
+  68% { background-position: 0% 0; }
+  84% { background-position: 0% 0; }
+  100% { background-position: 100% 0; }
+}
+
+/* Floating reactions (real app behavior). Kept on the right half so the phone
+   overlapping the lower-left doesn't hide them. */
+.hdReactions {
+  position: absolute;
+  right: 6px;
+  bottom: 30px;
+  width: 48%;
+  height: 70%;
+  pointer-events: none;
+  overflow: hidden;
+}
+.hdReaction {
+  position: absolute;
+  bottom: 0;
+  font-size: 14px;
+  opacity: 0;
+  animation: hdFloat 4.5s ease-out infinite;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.5));
+}
+@keyframes hdFloat {
+  0% { opacity: 0; transform: translateY(0) scale(0.5); }
+  10% { opacity: 1; transform: translateY(-8px) scale(1); }
+  70% { opacity: 0.85; }
+  100% { opacity: 0; transform: translateY(-115px) scale(0.6); }
+}
+.hdR1 { left: 8%; animation-delay: 0s; }
+.hdR2 { left: 24%; animation-delay: 1.3s; }
+.hdR3 { left: 14%; animation-delay: 2.6s; }
+.hdR4 { left: 32%; animation-delay: 0.9s; }
+.hdR5 { left: 4%; animation-delay: 3.4s; }
+
+/* YouTube-style control bar. */
+.hdVideoBar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.6), transparent);
+}
+.hdVideoTime {
+  font-size: 7px;
+  color: rgba(255, 255, 255, 0.8);
+  font-variant-numeric: tabular-nums;
+}
+.hdVideoProgress {
+  flex: 1;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.25);
+  overflow: hidden;
+}
+.hdVideoProgressFill {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: #ff0000;
+  animation: hdProgress 16s linear infinite;
+}
+@keyframes hdProgress {
+  0% { width: 22%; }
+  100% { width: 78%; }
+}
+
+/* Now-playing bar — who's on stage right now. */
+.hdNowBar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: rgba(236, 72, 153, 0.12);
+  border-top: 1px solid rgba(236, 72, 153, 0.2);
+}
+.hdNowDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ec4899;
+  flex-shrink: 0;
+  /* Push the whole on-stage cluster right so it clears the overlapping phone. */
+  margin-left: auto;
+  animation: hdDot 1.5s ease-in-out infinite;
+}
+@keyframes hdDot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+.hdNowLabel {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: rgba(236, 72, 153, 0.95);
+  flex-shrink: 0;
+}
+.hdNowSinger {
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+.hdNowSong {
+  font-size: 9px;
+  color: rgba(220, 200, 255, 0.7);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 130px;
+}
+
+/* Sidebar: scan-to-join QR + live queue. */
+.hdSidebar {
+  width: 126px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid rgba(180, 120, 255, 0.12);
+  background: rgba(15, 15, 35, 0.6);
+}
+.hdQr {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 8px 6px;
+  border-bottom: 1px solid rgba(180, 120, 255, 0.1);
+}
+.hdQrCode {
+  width: 50px;
+  height: 50px;
+  border-radius: 4px;
+  /* Dark modules on white — reads as a QR rather than a transparency grid. */
+  background:
+    repeating-conic-gradient(#0d0d1f 0% 25%, #ffffff 0% 50%) 0 0 / 8px 8px;
+  box-shadow: 0 0 0 3px #fff;
+}
+.hdQrLabel {
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: rgba(200, 180, 255, 0.6);
+}
+.hdQrText {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: #ffd700;
+  text-shadow: 0 0 8px rgba(255, 215, 0, 0.3);
+}
+.hdQueue {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 7px 6px;
+  overflow: hidden;
+}
+.hdQueueTitle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: rgba(200, 180, 255, 0.6);
+}
+.hdQueueCount {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 13px;
+  height: 13px;
+  padding: 0 3px;
+  border-radius: 7px;
+  background: rgba(139, 92, 246, 0.3);
+  color: #fff;
+  font-size: 7px;
+}
+.hdQueueItem {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 5px;
+  background: rgba(255, 255, 255, 0.035);
+  border-radius: 5px;
+}
+.hdQueueNum {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: rgba(139, 92, 246, 0.22);
+  color: rgba(200, 180, 255, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 7px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.hdQueueInfo {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.hdQueueSinger {
+  font-size: 7px;
+  color: rgba(0, 240, 255, 0.65);
+}
+.hdQueueSong {
+  font-size: 9px;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Phones (SongSearch view) — fanned, overlapping the screen's lower-left.
+   Multiple phones = anyone joins the session and adds from their own device. ── */
+.heroPhones {
+  position: absolute;
+  left: -34px;
+  bottom: -6px;
+  width: 252px;
+  height: 208px;
+  z-index: 5;
+}
+.heroPhonesTag {
+  position: absolute;
+  left: 4px;
+  bottom: 150px;
+  z-index: 8;
+  display: inline-block;
+  padding: 0.25rem 0.7rem;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #fff;
+  background: linear-gradient(135deg, #ec4899, #f97316);
+  border-radius: 50px;
+  box-shadow: 0 4px 14px rgba(236, 72, 153, 0.35);
+  white-space: nowrap;
+}
+.heroPhone {
+  position: absolute;
+  width: 172px;
+}
+.heroPhoneFront {
+  left: 0;
+  bottom: 0;
+  z-index: 7;
+  transform: rotate(-3deg);
+}
+.heroPhoneBack {
+  left: 74px;
+  bottom: 34px;
+  z-index: 6;
+  transform: rotate(6deg) scale(0.93);
+}
+.heroPhoneBack .heroPhoneBody {
+  opacity: 0.9;
+}
+.heroPhoneBody {
+  padding: 8px;
+  border-radius: 18px;
+  background: linear-gradient(160deg, #14102a, #0d0820);
+  border: 1px solid rgba(180, 140, 255, 0.25);
+  box-shadow:
+    0 22px 50px rgba(0, 0, 0, 0.6),
+    0 0 28px rgba(236, 72, 153, 0.15);
+}
+.hpHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 7px;
+  margin-bottom: 7px;
+  border-bottom: 1px solid rgba(180, 120, 255, 0.12);
+}
+.hpBrand {
+  font-family: var(--font-display);
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  background: linear-gradient(135deg, #ff2d78, #00f0ff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.hpRoom {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: rgba(200, 180, 255, 0.75);
+  background: rgba(139, 92, 246, 0.18);
+  padding: 2px 7px;
+  border-radius: 20px;
+}
+.hpSearchRow {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 7px;
+}
+.hpSearchInput {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 9px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 10px;
+  color: #fff;
+}
+.hpSearchBtn {
+  padding: 6px 10px;
+  border-radius: 7px;
+  background: linear-gradient(135deg, #ec4899, #db2777);
+  font-size: 9px;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+}
+.hpResults {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.hpResult {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+}
+.hpThumb {
+  width: 34px;
+  height: 26px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.5), rgba(236, 72, 153, 0.35));
+}
+.hpTitle {
+  flex: 1;
+  min-width: 0;
+  font-size: 8.5px;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hpAdd,
+.hpAddDim {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+}
+.hpAdd {
+  color: #fff;
+  background: linear-gradient(135deg, #ec4899, #f97316);
+  animation: hpAddPulse 2.6s ease-in-out infinite;
+}
+.hpAddDim {
+  color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.08);
+}
+@keyframes hpAddPulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(236, 72, 153, 0.5); }
+  50% { transform: scale(1.1); box-shadow: 0 0 0 8px rgba(236, 72, 153, 0); }
+}
+
+/* The picked song flying from the phone up into the shared queue. */
+.heroFlyChip {
+  position: absolute;
+  left: 84px;
+  bottom: 118px;
+  z-index: 6;
+  padding: 0.3rem 0.65rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, #ec4899, #f97316);
+  border-radius: 50px;
+  box-shadow: 0 6px 18px rgba(236, 72, 153, 0.45);
+  white-space: nowrap;
+  opacity: 0;
+  animation: heroFly 4s ease-in-out infinite;
+}
+@keyframes heroFly {
+  0%, 12% { opacity: 0; transform: translate(0, 28px) scale(0.8); }
+  26% { opacity: 1; transform: translate(0, 0) scale(1); }
+  62% { opacity: 1; transform: translate(160px, -64px) scale(0.92); }
+  80%, 100% { opacity: 0; transform: translate(232px, -104px) scale(0.7); }
+}
+
+/* ═══════════════════════════════════════════
    Device Frames
    ═══════════════════════════════════════════ */
-
-/* Phone */
-.phoneFrame {
-  width: 280px;
-  height: 560px;
-  border-radius: 36px;
-  border: 3px solid rgba(180, 140, 255, 0.25);
-  background: #0f0f23;
-  overflow: hidden;
-  position: relative;
-  box-shadow:
-    0 25px 60px rgba(0, 0, 0, 0.5),
-    0 0 40px rgba(139, 92, 246, 0.15),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.05);
-  animation: deviceFloat 6s ease-in-out infinite;
-}
 
 .phoneFrameSm {
   width: 240px;
@@ -379,11 +1101,6 @@
   position: absolute;
   inset: 0;
   overflow: hidden;
-}
-
-@keyframes deviceFloat {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-12px); }
 }
 
 /* TV / Monitor */
@@ -1139,7 +1856,24 @@
 .stepDevice {
   flex-shrink: 0;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+/* Role label above each step's device, so it's obvious whose screen this is. */
+.stepTag {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.3rem 0.85rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: rgba(220, 200, 255, 0.9);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(180, 140, 255, 0.3);
+  border-radius: 50px;
 }
 
 .stepText {
@@ -1175,6 +1909,127 @@
   color: rgba(220, 200, 255, 0.75);
   line-height: 1.7;
   max-width: 400px;
+}
+
+/* ═══════════════════════════════════════════
+   Setup Guide — what you need to host
+   ═══════════════════════════════════════════ */
+.setupSection {
+  padding: 6rem 2rem;
+  /* Flat base keeps continuity with the sections around it (both meet this
+     one at #0d0d1f); the faint cyan wash marks it as the practical section. */
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(6, 182, 212, 0.06) 0%, transparent 55%),
+    #0d0d1f;
+}
+
+.setupGrid {
+  max-width: 1000px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+}
+
+.setupCard {
+  --accent: #06b6d4;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01));
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 2px solid var(--accent);
+  border-radius: 16px;
+  padding: 1.75rem;
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.setupCard:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 12px 40px color-mix(in srgb, var(--accent) 15%, transparent);
+}
+
+.setupTag {
+  align-self: flex-start;
+  padding: 0.28rem 0.75rem;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border-radius: 50px;
+  margin-bottom: 1rem;
+}
+
+.setupTitle {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 0.5rem;
+}
+
+.setupDesc {
+  font-size: 0.88rem;
+  color: rgba(200, 180, 255, 0.65);
+  line-height: 1.65;
+  margin-bottom: 1.25rem;
+}
+
+/* The "shopping list" pinned to the card bottom so all three line up. */
+.setupGearBox {
+  margin-top: auto;
+  padding-top: 1rem;
+  border-top: 1px dashed rgba(255, 255, 255, 0.1);
+}
+
+.setupGearLabel {
+  display: block;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: rgba(200, 180, 255, 0.45);
+  margin-bottom: 0.5rem;
+}
+
+.setupGear {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.setupGear li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: rgba(220, 200, 255, 0.75);
+  line-height: 1.5;
+}
+
+.setupGear li::before {
+  content: '\2713';
+  color: var(--accent);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.setupNote {
+  max-width: 720px;
+  margin: 2.5rem auto 0;
+  text-align: center;
+  font-size: 0.9rem;
+  color: rgba(200, 180, 255, 0.55);
+  line-height: 1.7;
+}
+
+.setupNote strong {
+  color: rgba(230, 220, 255, 0.85);
+  font-weight: 600;
 }
 
 /* ═══════════════════════════════════════════
@@ -1510,7 +2365,7 @@
   .heroSub { max-width: 100%; }
   .heroCtas { margin-left: auto; margin-right: auto; }
   .heroDevice { margin-top: 1rem; }
-  .phoneFrame { width: 240px; height: 480px; }
+  .heroScene { margin-left: auto; margin-right: auto; }
 
   .step, .stepReverse {
     flex-direction: column;
@@ -1520,6 +2375,9 @@
 
   .featuresGrid { grid-template-columns: repeat(2, 1fr); }
   .useCasesGrid { grid-template-columns: repeat(2, 1fr); }
+  /* Setup recipes read top-to-bottom on narrow screens — each card is a
+     full thought, so side-by-side pairs would just squeeze the copy. */
+  .setupGrid { grid-template-columns: 1fr; max-width: 480px; }
 }
 
 @media (max-width: 600px) {
@@ -1537,10 +2395,29 @@
   }
   .joinInput { width: 100%; }
   .hostPanel { width: 100%; }
-  .phoneFrame { width: 200px; height: 400px; }
+  /* Resume banner stacks: dot + text up top (dismiss pinned to the corner),
+     full-width resume button below — one row would squeeze the text to
+     three cramped lines. */
+  .resumeCard { position: relative; flex-wrap: wrap; }
+  .resumeText { padding-right: 1.5rem; }
+  .resumeBtn { flex-basis: 100%; }
+  .resumeDismiss { position: absolute; top: 8px; right: 8px; }
   .phoneFrameSm { width: 200px; height: 400px; }
   .tvFrame { width: 280px; }
-  .howSection, .featuresSection, .useCasesSection, .faqSection, .ctaSection {
+  .heroScene { width: 100%; max-width: 380px; padding-top: 2rem; }
+  /* One phone on mobile — two would bury the lyrics on a narrow screen. */
+  .heroPhones { left: -8px; bottom: -2px; width: 140px; height: 150px; }
+  .heroPhoneBack { display: none; }
+  .heroPhone { width: 134px; }
+  .heroPhoneFront { transform: rotate(-2deg); }
+  .heroPhonesTag { left: 0; bottom: 116px; font-size: 0.5rem; padding: 0.2rem 0.5rem; }
+  .hpTitle { font-size: 8px; }
+  /* Two lyric lines, lifted to the top so the corner phone doesn't cover them. */
+  .hdLyrics { top: 34%; gap: 5px; }
+  .hdLyricLine { font-size: 10px; }
+  .hdLyricLine:nth-child(3) { display: none; }
+  .heroFlyChip { display: none; }
+  .howSection, .setupSection, .featuresSection, .useCasesSection, .faqSection, .ctaSection {
     padding: 4rem 1.25rem;
   }
   .steps { gap: 3.5rem; }
