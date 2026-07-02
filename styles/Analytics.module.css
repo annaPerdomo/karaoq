@@ -134,6 +134,21 @@
   color: var(--text-primary);
 }
 
+/* ─── Error Banner ─── */
+.errorBanner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.6rem 0.85rem;
+  margin-bottom: 1rem;
+  background: rgba(248, 113, 113, 0.1);
+  border: 1px solid rgba(248, 113, 113, 0.5);
+  border-radius: 6px;
+  font-size: 0.85rem;
+  color: #f87171;
+}
+
 /* ─── Tabs ─── */
 .tabs {
   display: flex;
@@ -277,6 +292,70 @@
   min-width: 30px;
   text-align: right;
   flex-shrink: 0;
+}
+
+/* ─── Funnel ─── */
+.funnel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.funnelRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.funnelLabel {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  min-width: 100px;
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 0;
+}
+
+.funnelTrack {
+  flex: 1;
+  height: 26px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.funnelFill {
+  height: 100%;
+  border-radius: 4px;
+  min-width: 2px;
+  background: linear-gradient(135deg, #a78bfa, #7c3aed);
+  transition: width 0.3s ease;
+}
+
+.funnelValue {
+  font-size: 0.8rem;
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+  min-width: 80px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+
+.funnelPct {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  min-width: 34px;
+}
+
+.funnelNote {
+  margin-top: 0.75rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
 }
 
 /* ─── Device Bar ─── */
@@ -546,6 +625,15 @@ a.roomCode:hover {
   .barLabel {
     min-width: 45px;
     font-size: 0.65rem;
+  }
+
+  .funnelLabel {
+    min-width: 78px;
+    font-size: 0.65rem;
+  }
+
+  .funnelValue {
+    min-width: 60px;
   }
 
   .roomHeader,
