@@ -1,5 +1,14 @@
-import { MongoClient } from "mongodb";
 import { NextApiRequest, NextApiResponse } from "next";
+import { getAnalyticsDb } from "../../../lib/mongodb";
+import {
+  buildSongsHistogram,
+  median,
+  resolveTimezone,
+  summarizeFunnel,
+  type FunnelRoom,
+} from "../../../lib/analyticsStats";
+
+const FUNNEL_WINDOW_DAYS = 30;
 
 export default async function handler(
   req: NextApiRequest,
@@ -18,23 +27,23 @@ export default async function handler(
 
   res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
 
-  const client = new MongoClient(process.env.MONGODB_URI!);
+  // Group days/hours in the viewer's timezone so "today" and "peak hours"
+  // match their clock instead of UTC.
+  const tz = resolveTimezone(req.query.tz);
 
   try {
-    await client.connect();
-    const db = client.db(process.env.MONGODB_DB);
+    const db = await getAnalyticsDb();
     const events = db.collection("analytics_events");
     const sessions = db.collection("analytics_sessions");
 
     const now = new Date();
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const dayKey = { format: "%Y-%m-%d", date: "$timestamp", timezone: tz };
 
     // Run all aggregations in parallel
     const [
       totalRooms,
-      roomsToday,
       roomsThisWeek,
       totalSongs,
       totalReactions,
@@ -44,6 +53,7 @@ export default async function handler(
       countryCounts,
       cityCounts,
       hourlyActivity,
+      dayOfWeekSongs,
       topSongs,
       topUsers,
       sessionData,
@@ -57,14 +67,14 @@ export default async function handler(
       suggestionByCategory,
       suggestionTopSongs,
       suggestionsByDay,
+      funnelRooms,
+      reactionsByEmoji,
+      hostRetention,
     ] = await Promise.all([
       // Total rooms created
       events.countDocuments({ type: "room_created" }),
 
-      // Rooms created today
-      events.countDocuments({ type: "room_created", timestamp: { $gte: todayStart } }),
-
-      // Rooms created this week
+      // Rooms created this week (rolling 7 days)
       events.countDocuments({ type: "room_created", timestamp: { $gte: weekAgo } }),
 
       // Total songs added
@@ -80,14 +90,7 @@ export default async function handler(
       events
         .aggregate([
           { $match: { type: "room_created", timestamp: { $gte: thirtyDaysAgo } } },
-          {
-            $group: {
-              _id: {
-                $dateToString: { format: "%Y-%m-%d", date: "$timestamp" },
-              },
-              count: { $sum: 1 },
-            },
-          },
+          { $group: { _id: { $dateToString: dayKey }, count: { $sum: 1 } } },
           { $sort: { _id: 1 } },
         ])
         .toArray(),
@@ -96,11 +99,46 @@ export default async function handler(
       events
         .aggregate([
           { $match: { type: "song_added", timestamp: { $gte: thirtyDaysAgo } } },
+          { $group: { _id: { $dateToString: dayKey }, count: { $sum: 1 } } },
+          { $sort: { _id: 1 } },
+        ])
+        .toArray(),
+
+      // Top countries by unique rooms (event counts would let one busy room
+      // dominate the ranking)
+      events
+        .aggregate([
+          { $match: { country: { $exists: true, $ne: null } } },
+          { $group: { _id: "$country", rooms: { $addToSet: "$roomId" } } },
+          { $project: { count: { $size: "$rooms" } } },
+          { $sort: { count: -1 } },
+          { $limit: 20 },
+        ])
+        .toArray(),
+
+      // Top cities by unique rooms
+      events
+        .aggregate([
+          { $match: { city: { $exists: true, $ne: null } } },
           {
             $group: {
-              _id: {
-                $dateToString: { format: "%Y-%m-%d", date: "$timestamp" },
-              },
+              _id: { city: "$city", country: "$country", region: "$region" },
+              rooms: { $addToSet: "$roomId" },
+            },
+          },
+          { $project: { count: { $size: "$rooms" } } },
+          { $sort: { count: -1 } },
+          { $limit: 20 },
+        ])
+        .toArray(),
+
+      // Activity by hour of day (last 30 days, viewer timezone)
+      events
+        .aggregate([
+          { $match: { timestamp: { $gte: thirtyDaysAgo } } },
+          {
+            $group: {
+              _id: { $hour: { date: "$timestamp", timezone: tz } },
               count: { $sum: 1 },
             },
           },
@@ -108,38 +146,13 @@ export default async function handler(
         ])
         .toArray(),
 
-      // Top countries
+      // Songs added by day of week (1=Sun … 7=Sat, viewer timezone)
       events
         .aggregate([
-          { $match: { country: { $exists: true, $ne: null } } },
-          { $group: { _id: "$country", count: { $sum: 1 } } },
-          { $sort: { count: -1 } },
-          { $limit: 20 },
-        ])
-        .toArray(),
-
-      // Top cities
-      events
-        .aggregate([
-          { $match: { city: { $exists: true, $ne: null } } },
+          { $match: { type: "song_added" } },
           {
             $group: {
-              _id: { city: "$city", country: "$country", region: "$region" },
-              count: { $sum: 1 },
-            },
-          },
-          { $sort: { count: -1 } },
-          { $limit: 20 },
-        ])
-        .toArray(),
-
-      // Activity by hour of day (UTC)
-      events
-        .aggregate([
-          { $match: { timestamp: { $gte: thirtyDaysAgo } } },
-          {
-            $group: {
-              _id: { $hour: "$timestamp" },
+              _id: { $dayOfWeek: { date: "$timestamp", timezone: tz } },
               count: { $sum: 1 },
             },
           },
@@ -172,20 +185,18 @@ export default async function handler(
         ])
         .toArray(),
 
-      // Session duration data
+      // Session counts plus duration stats. Durations exclude display (TV)
+      // sessions, which stay open all night and would inflate every number.
       sessions
         .aggregate([
           {
             $project: {
-              roomId: 1,
-              userName: 1,
               role: 1,
-              country: 1,
-              city: 1,
               durationMin: {
-                $divide: [
-                  { $subtract: ["$lastSeen", "$firstSeen"] },
-                  60000,
+                $cond: [
+                  { $ne: ["$role", "display"] },
+                  { $divide: [{ $subtract: ["$lastSeen", "$firstSeen"] }, 60000] },
+                  null,
                 ],
               },
             },
@@ -195,6 +206,7 @@ export default async function handler(
               _id: null,
               avgDuration: { $avg: "$durationMin" },
               maxDuration: { $max: "$durationMin" },
+              durations: { $push: "$durationMin" },
               totalSessions: { $sum: 1 },
               hostSessions: {
                 $sum: { $cond: [{ $eq: ["$role", "host"] }, 1, 0] },
@@ -254,14 +266,7 @@ export default async function handler(
       events
         .aggregate([
           { $match: { type: "qr_printed", timestamp: { $gte: thirtyDaysAgo } } },
-          {
-            $group: {
-              _id: {
-                $dateToString: { format: "%Y-%m-%d", date: "$timestamp" },
-              },
-              count: { $sum: 1 },
-            },
-          },
+          { $group: { _id: { $dateToString: dayKey }, count: { $sum: 1 } } },
           { $sort: { _id: 1 } },
         ])
         .toArray(),
@@ -297,13 +302,17 @@ export default async function handler(
         ])
         .toArray(),
 
-      // Top suggested songs clicked
+      // Top suggested songs clicked. Older events stored the artist in
+      // userName before songArtist existed, hence the $ifNull.
       events
         .aggregate([
           { $match: { type: "suggestion_used", suggestionSource: "song_pick", songTitle: { $exists: true } } },
           {
             $group: {
-              _id: { title: "$songTitle", artist: "$userName" },
+              _id: {
+                title: "$songTitle",
+                artist: { $ifNull: ["$songArtist", "$userName"] },
+              },
               count: { $sum: 1 },
             },
           },
@@ -316,15 +325,81 @@ export default async function handler(
       events
         .aggregate([
           { $match: { type: "suggestion_used", timestamp: { $gte: thirtyDaysAgo } } },
+          { $group: { _id: { $dateToString: dayKey }, count: { $sum: 1 } } },
+          { $sort: { _id: 1 } },
+        ])
+        .toArray(),
+
+      // Activation funnel: for each room created in the window, did anyone
+      // search, add a song, keep going — and how fast was the first song?
+      events
+        .aggregate([
+          { $match: { type: { $in: ["room_created", "search_performed", "song_added"] } } },
           {
             $group: {
-              _id: {
-                $dateToString: { format: "%Y-%m-%d", date: "$timestamp" },
+              _id: "$roomId",
+              createdAt: {
+                $min: { $cond: [{ $eq: ["$type", "room_created"] }, "$timestamp", null] },
               },
-              count: { $sum: 1 },
+              searches: {
+                $sum: { $cond: [{ $eq: ["$type", "search_performed"] }, 1, 0] },
+              },
+              songs: {
+                $sum: { $cond: [{ $eq: ["$type", "song_added"] }, 1, 0] },
+              },
+              firstSongAt: {
+                $min: { $cond: [{ $eq: ["$type", "song_added"] }, "$timestamp", null] },
+              },
             },
           },
-          { $sort: { _id: 1 } },
+          { $match: { createdAt: { $gte: thirtyDaysAgo } } },
+          {
+            $project: {
+              _id: 0,
+              searches: 1,
+              songs: 1,
+              minutesToFirstSong: {
+                $cond: [
+                  {
+                    $and: [
+                      { $ne: ["$firstSongAt", null] },
+                      { $gte: ["$firstSongAt", "$createdAt"] },
+                    ],
+                  },
+                  { $divide: [{ $subtract: ["$firstSongAt", "$createdAt"] }, 60000] },
+                  null,
+                ],
+              },
+            },
+          },
+        ])
+        .toArray(),
+
+      // Reactions by emoji
+      events
+        .aggregate([
+          { $match: { type: "reaction_sent", emoji: { $exists: true, $ne: null } } },
+          { $group: { _id: "$emoji", count: { $sum: 1 } } },
+          { $sort: { count: -1 } },
+          { $limit: 10 },
+        ])
+        .toArray(),
+
+      // Returning hosts: distinct host clientIds and how many hosted 2+ rooms
+      sessions
+        .aggregate([
+          { $match: { role: "host", clientId: { $type: "string" } } },
+          { $group: { _id: "$clientId", rooms: { $addToSet: "$roomId" } } },
+          { $project: { roomCount: { $size: "$rooms" } } },
+          {
+            $group: {
+              _id: null,
+              hosts: { $sum: 1 },
+              repeatHosts: {
+                $sum: { $cond: [{ $gte: ["$roomCount", 2] }, 1, 0] },
+              },
+            },
+          },
         ])
         .toArray(),
     ]);
@@ -332,15 +407,30 @@ export default async function handler(
     const sessionStats = sessionData[0] || {
       avgDuration: 0,
       maxDuration: 0,
+      durations: [],
       totalSessions: 0,
       hostSessions: 0,
       singerSessions: 0,
     };
+    // Display sessions come through as nulls in the pushed array.
+    const sessionDurations = ((sessionStats.durations || []) as (number | null)[])
+      .filter((d): d is number => typeof d === "number" && d >= 0);
 
     const songStats = songsPerRoom[0] || {
       avgSongsPerRoom: 0,
       maxSongsPerRoom: 0,
+      distribution: [],
     };
+
+    const retention = hostRetention[0] || { hosts: 0, repeatHosts: 0 };
+
+    // "Today" in the viewer's timezone; en-CA formats as YYYY-MM-DD, matching
+    // the $dateToString keys above.
+    const todayKey = new Intl.DateTimeFormat("en-CA", { timeZone: tz }).format(now);
+    const roomsToday =
+      roomsByDay.find((d) => d._id === todayKey)?.count ?? 0;
+
+    const funnel = summarizeFunnel(funnelRooms as FunnelRoom[]);
 
     res.status(200).json({
       overview: {
@@ -352,11 +442,12 @@ export default async function handler(
         uniqueUsers,
         avgSessionMinutes: Math.round((sessionStats.avgDuration || 0) * 10) / 10,
         maxSessionMinutes: Math.round((sessionStats.maxDuration || 0) * 10) / 10,
+        medianSessionMinutes: median(sessionDurations) ?? 0,
         totalSessions: sessionStats.totalSessions,
         hostSessions: sessionStats.hostSessions,
         singerSessions: sessionStats.singerSessions,
         avgSongsPerRoom: Math.round((songStats.avgSongsPerRoom || 0) * 10) / 10,
-        maxSongsPerRoom: songStats.maxSongsPerRoom,
+        maxSongsPerRoom: songStats.maxSongsPerRoom || 0,
         totalQrPrints,
       },
       charts: {
@@ -364,6 +455,7 @@ export default async function handler(
         songsByDay,
         hourlyActivity,
         qrPrintsByDay,
+        dayOfWeekSongs,
       },
       geo: {
         countries: countryCounts,
@@ -382,11 +474,26 @@ export default async function handler(
         topSongs: suggestionTopSongs,
         byDay: suggestionsByDay,
       },
+      funnel: {
+        windowDays: FUNNEL_WINDOW_DAYS,
+        ...funnel,
+      },
+      engagement: {
+        songsPerRoomHistogram: buildSongsHistogram(
+          (songStats.distribution || []) as number[],
+          totalRooms
+        ),
+        reactionsByEmoji,
+        hosts: retention.hosts,
+        repeatHosts: retention.repeatHosts,
+      },
+      meta: {
+        timezone: tz,
+        generatedAt: now.toISOString(),
+      },
     });
   } catch (e) {
     console.error("Analytics query error:", e);
     res.status(500).json({ code: 500, message: "Internal server error." });
-  } finally {
-    await client.close();
   }
 }

@@ -1,5 +1,5 @@
-import { MongoClient, type Db } from "mongodb";
 import type { NextApiRequest } from "next";
+import { getAnalyticsDb } from "./mongodb";
 
 export type EventType =
   | "room_created"
@@ -19,6 +19,7 @@ export interface AnalyticsEvent {
   city?: string;
   userName?: string;
   songTitle?: string;
+  songArtist?: string;
   videoId?: string;
   emoji?: string;
   role?: "host" | "singer" | "display";
@@ -41,21 +42,13 @@ function extractGeo(req: NextApiRequest) {
   };
 }
 
-async function getDb(): Promise<{ client: MongoClient; db: Db }> {
-  const client = new MongoClient(process.env.MONGODB_URI!);
-  await client.connect();
-  return { client, db: client.db(process.env.MONGODB_DB) };
-}
-
 export async function trackEvent(
   req: NextApiRequest,
   type: EventType,
   data: Omit<AnalyticsEvent, "type" | "timestamp" | "country" | "region" | "city" | "userAgent">
 ): Promise<void> {
-  let client: MongoClient | undefined;
   try {
-    ({ client } = await getDb());
-    const db = client.db(process.env.MONGODB_DB);
+    const db = await getAnalyticsDb();
     const geo = extractGeo(req);
     const event: AnalyticsEvent = {
       type,
@@ -68,8 +61,6 @@ export async function trackEvent(
   } catch (e) {
     // Analytics should never break the main app flow
     console.error("Analytics tracking error:", e);
-  } finally {
-    if (client) await client.close();
   }
 }
 
@@ -80,10 +71,8 @@ export async function trackSessionHeartbeat(
   role: "host" | "singer" | "display",
   clientId?: string
 ): Promise<void> {
-  let client: MongoClient | undefined;
   try {
-    ({ client } = await getDb());
-    const db = client.db(process.env.MONGODB_DB);
+    const db = await getAnalyticsDb();
     const geo = extractGeo(req);
     const now = new Date();
     // Key on the stable per-browser clientId so name edits update the same
@@ -111,7 +100,5 @@ export async function trackSessionHeartbeat(
     );
   } catch (e) {
     console.error("Session tracking error:", e);
-  } finally {
-    if (client) await client.close();
   }
 }

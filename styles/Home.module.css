@@ -109,14 +109,15 @@
 }
 
 .navLogo {
-  font-family: var(--font-display);
+  font-family: var(--font-brand);
+  font-weight: 400;
   font-size: 1.4rem;
   color: #fff;
   background: linear-gradient(135deg, #ff2d78, #00f0ff);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  letter-spacing: 3px;
+  letter-spacing: 2px;
   text-transform: uppercase;
   cursor: default;
 }
@@ -128,7 +129,7 @@
 }
 
 .navLink {
-  color: rgba(220, 200, 255, 0.8);
+  color: rgba(192, 192, 208, 0.85);
   font-size: 0.85rem;
   letter-spacing: 0.5px;
   transition: color 0.2s;
@@ -143,30 +144,30 @@
   font-weight: 600;
   color: #fff;
   letter-spacing: 1px;
-  background: linear-gradient(135deg, #8b5cf6, #a855f7, #7c3aed);
+  background: linear-gradient(135deg, #ff2d78, #e01b50);
   transition: transform 0.15s, box-shadow 0.15s;
 }
 .navCta:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 4px 20px rgba(139, 92, 246, 0.4);
+  box-shadow: 0 4px 20px rgba(255, 45, 120, 0.4);
 }
 .navCta:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .navCtaOutline {
   padding: 0.5rem 1.2rem;
-  border: 1px solid rgba(168, 85, 247, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 50px;
   font-size: 0.8rem;
   font-weight: 600;
-  color: rgba(220, 200, 255, 0.9);
+  color: #c0c0d0;
   letter-spacing: 1px;
   background: transparent;
   transition: border-color 0.2s, color 0.2s, background 0.2s;
 }
 .navCtaOutline:hover {
-  border-color: #a855f7;
+  border-color: rgba(255, 255, 255, 0.32);
   color: #fff;
-  background: rgba(168, 85, 247, 0.1);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 /* ═══════════════════════════════════════════
@@ -177,73 +178,96 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 7rem 2rem 4rem;
+  padding: 6.5rem 2rem 3.5rem;
   position: relative;
   overflow: hidden;
   background:
-    radial-gradient(ellipse at 20% 50%, rgba(139, 92, 246, 0.25) 0%, transparent 50%),
-    radial-gradient(ellipse at 80% 50%, rgba(236, 72, 153, 0.2) 0%, transparent 50%),
-    radial-gradient(ellipse at 50% 80%, rgba(100, 0, 200, 0.3) 0%, transparent 40%),
-    radial-gradient(ellipse at 30% 20%, rgba(59, 130, 246, 0.15) 0%, transparent 40%),
-    linear-gradient(to bottom, #0f0f23 0%, #1a0030 40%, #2d1050 70%, #0f0f23 100%);
+    radial-gradient(ellipse at 18% 45%, rgba(255, 45, 120, 0.13) 0%, transparent 50%),
+    radial-gradient(ellipse at 82% 40%, rgba(0, 240, 255, 0.09) 0%, transparent 50%),
+    radial-gradient(ellipse at 55% 88%, rgba(255, 45, 120, 0.08) 0%, transparent 45%),
+    linear-gradient(to bottom, #0f0f23 0%, #1a1a2e 55%, #0f0f23 100%);
 }
 
+/* Grid with both columns truly centered against each other; the scene is in
+   normal document flow (no negative-offset overflow), so the optical center
+   is the real center. */
 .heroInner {
-  max-width: 1200px;
+  max-width: 1240px;
   width: 100%;
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 4rem;
+  gap: 5rem;
   position: relative;
   z-index: 1;
 }
 
 .heroContent {
-  flex: 1;
   min-width: 0;
 }
 
 .heroTitle {
-  font-family: var(--font-display);
-  font-size: clamp(2.2rem, 5vw, 3.8rem);
-  line-height: 1.15;
-  color: #fff;
+  font-family: var(--font-headline);
+  font-weight: 700;
+  font-size: clamp(2.4rem, 4.9vw, 3.9rem);
+  letter-spacing: -0.02em;
+  line-height: 1.04;
   margin-bottom: 1.25rem;
-  letter-spacing: 1px;
-}
-
-.heroGradient {
-  background: linear-gradient(135deg, #a855f7, #ec4899, #f97316);
+  /* Gradient across the whole headline — both lines carry the brand. */
+  background: linear-gradient(135deg, #ff2d78 20%, #00f0ff 95%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
 .heroSub {
-  font-size: 1.1rem;
-  color: rgba(220, 200, 255, 0.85);
+  font-size: 1.08rem;
+  color: #c0c0d0;
   line-height: 1.7;
   margin-bottom: 2rem;
-  max-width: 500px;
+  max-width: 480px;
 }
 
-.heroCtas {
+/* The host form, code toggle, and join link grouped into one glass card, so
+   the left column reads as exactly two things: the pitch, and the way in. */
+.hostCard {
+  width: 100%;
+  max-width: 400px;
   display: flex;
   flex-direction: column;
-  gap: 0.85rem;
-  max-width: 380px;
-  margin-bottom: 1rem;
+  gap: 0.75rem;
+  padding: 1.4rem 1.4rem 1.15rem;
+  border-radius: 20px;
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.045), rgba(26, 26, 46, 0.55));
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+}
+
+.hostCardKicker {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+  color: #707080;
 }
 
 .heroNote {
+  margin-top: 0.85rem;
+  max-width: 400px;
+  text-align: center;
   font-size: 0.8rem;
-  color: rgba(200, 180, 255, 0.5);
+  color: #707080;
   letter-spacing: 0.5px;
 }
 
 /* Resume banner — a returning host's room from earlier tonight. Green reads
    as "live/ongoing", distinct from the purple create/join paths below it. */
 .resumeCard {
+  width: 100%;
+  max-width: 400px;
+  margin-bottom: 0.85rem;
   display: flex;
   align-items: center;
   gap: 0.65rem;
@@ -331,30 +355,30 @@
   font-weight: 600;
   color: #fff;
   letter-spacing: 0.5px;
-  background: linear-gradient(135deg, #8b5cf6, #a855f7, #7c3aed);
-  box-shadow: 0 4px 20px rgba(139, 92, 246, 0.35);
+  background: linear-gradient(135deg, #ff2d78, #e01b50);
+  box-shadow: 0 4px 20px rgba(255, 45, 120, 0.3);
   transition: transform 0.15s, box-shadow 0.15s;
 }
 .btnPrimary:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 8px 30px rgba(139, 92, 246, 0.5);
+  box-shadow: 0 8px 30px rgba(255, 45, 120, 0.45);
 }
 .btnPrimary:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .btnOutline {
   padding: 0.85rem 2rem;
-  border: 1px solid rgba(168, 85, 247, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 50px;
   font-size: 0.95rem;
   font-weight: 600;
   color: #fff;
   letter-spacing: 0.5px;
-  background: transparent;
+  background: rgba(255, 255, 255, 0.06);
   transition: border-color 0.2s, background 0.2s, transform 0.15s;
 }
 .btnOutline:hover:not(:disabled) {
-  border-color: rgba(168, 85, 247, 0.7);
-  background: rgba(139, 92, 246, 0.1);
+  border-color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.1);
   transform: translateY(-2px);
 }
 .btnOutline:disabled { opacity: 0.4; cursor: not-allowed; }
@@ -369,8 +393,8 @@
   flex: 1;
   min-width: 0;
   padding: 0.85rem 1rem;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(168, 85, 247, 0.4);
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 50px;
   color: #fff;
   font-family: var(--font-mono);
@@ -382,27 +406,21 @@
   transition: border-color 0.2s;
 }
 .joinInput::placeholder {
-  color: rgba(200, 180, 255, 0.4);
+  color: #707080;
   font-weight: 400;
   letter-spacing: 1px;
   font-size: 0.75rem;
 }
 .joinInput:focus {
-  border-color: rgba(168, 85, 247, 0.7);
-  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15);
+  border-color: rgba(0, 240, 255, 0.45);
+  box-shadow: 0 0 0 3px rgba(0, 240, 255, 0.1);
 }
 
-.hostPanel {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  animation: fadeSlideIn 0.3s ease;
-}
 .nameInput {
   width: 100%;
   padding: 0.85rem 1.25rem;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(168, 85, 247, 0.4);
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 50px;
   color: #fff;
   font-size: 0.95rem;
@@ -411,44 +429,45 @@
   transition: border-color 0.2s;
 }
 .nameInput::placeholder {
-  color: rgba(200, 180, 255, 0.45);
+  color: #707080;
 }
 .nameInput:focus {
-  border-color: rgba(168, 85, 247, 0.7);
-  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15);
+  border-color: rgba(0, 240, 255, 0.45);
+  box-shadow: 0 0 0 3px rgba(0, 240, 255, 0.1);
 }
 /* Small, de-emphasized toggle for the custom-code power feature. */
 .textToggle {
-  align-self: flex-start;
+  align-self: center;
   background: none;
   border: none;
   padding: 0.1rem 0.25rem;
-  color: rgba(200, 180, 255, 0.55);
+  color: #707080;
   font-size: 0.8rem;
   cursor: pointer;
   transition: color 0.15s;
 }
 .textToggle:hover {
-  color: rgba(200, 180, 255, 0.9);
+  color: #c0c0d0;
 }
 
 /* Secondary "join with a code" prompt, separated from the host block. */
 .joinPrompt {
   margin-top: 0.15rem;
   padding-top: 0.95rem;
-  border-top: 1px solid rgba(168, 85, 247, 0.18);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  text-align: center;
 }
 .joinLink {
   background: none;
   border: none;
   padding: 0;
-  color: rgba(200, 180, 255, 0.7);
+  color: rgba(192, 192, 208, 0.75);
   font-size: 0.9rem;
   cursor: pointer;
   transition: color 0.15s;
 }
 .joinLink span {
-  color: #c4b5fd;
+  color: #00f0ff;
   font-weight: 600;
 }
 .joinLink:hover span {
@@ -467,52 +486,56 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* Hero device */
-.heroDevice {
-  flex-shrink: 0;
-}
-
 /* ═══════════════════════════════════════════
    Hero scene: the real product in one frame
    The TV mirrors Display.tsx; the phone mirrors Sing.tsx. No float/bounce, and
    no invented features (the app plays YouTube videos, it doesn't render its own
    synced lyrics) so the demo stays an honest descriptor.
+   One tidy column — caption, TV, phones, caption: the phones sit in front of
+   the TV stand and the two caption pills bookend the scene.
    ═══════════════════════════════════════════ */
 .heroScene {
-  position: relative;
-  width: 520px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 560px;
   max-width: 100%;
-  padding: 2.25rem 0 2rem;
+}
+
+/* Caption pills bookending the scene. */
+.heroTvTag,
+.heroPhonesTag {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.3rem 0.85rem;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  border-radius: 50px;
+}
+.heroTvTag {
+  margin-bottom: 0.7rem;
+  color: rgba(220, 200, 255, 0.95);
+  background: rgba(20, 16, 40, 0.85);
+  border: 1px solid rgba(180, 140, 255, 0.35);
+}
+.heroPhonesTag {
+  margin-top: 0.8rem;
+  color: #fff;
+  background: linear-gradient(135deg, #ec4899, #f97316);
+  box-shadow: 0 4px 14px rgba(236, 72, 153, 0.35);
 }
 
 /* ── Big screen (TV) ── */
 .heroTv {
   position: relative;
+  z-index: 1;
+  width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
-}
-
-/* "Plays on the big screen" pill above the TV. */
-.heroTvTag {
-  position: absolute;
-  top: -1.55rem;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 3;
-  display: inline-flex;
-  align-items: center;
-  padding: 0.3rem 0.85rem;
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  white-space: nowrap;
-  color: rgba(220, 200, 255, 0.95);
-  background: rgba(20, 16, 40, 0.85);
-  border: 1px solid rgba(180, 140, 255, 0.35);
-  border-radius: 50px;
-  backdrop-filter: blur(4px);
 }
 
 .heroTvScreen {
@@ -547,7 +570,8 @@
   background: rgba(10, 10, 25, 0.6);
 }
 .hdBrand {
-  font-family: var(--font-display);
+  font-family: var(--font-brand);
+  font-weight: 400;
   font-size: 14px;
   letter-spacing: 2px;
   flex-shrink: 0;
@@ -809,8 +833,6 @@
   border-radius: 50%;
   background: #ec4899;
   flex-shrink: 0;
-  /* Push the whole on-stage cluster right so it clears the overlapping phone. */
-  margin-left: auto;
   animation: liveDot 1.5s ease-in-out infinite;
 }
 /* Shared "live" pulse — mirrors the real ON STAGE indicator. */
@@ -837,7 +859,7 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 76px;
+  max-width: 120px;
 }
 
 /* Sidebar: scan-to-join QR + live queue. */
@@ -983,36 +1005,14 @@
   text-overflow: ellipsis;
 }
 
-/* ── Phones (SongSearch view) — fanned, overlapping the screen's lower-left.
-   Multiple phones = anyone joins the session and adds from their own device.
-   Hung low: the tops stay just under the TV lyrics, the bodies fill the empty
-   space below the screen (the hero is 100vh-centered, so the room is there). ── */
+/* ── Phones (SongSearch view) — a centered pair in front of the TV stand.
+   Multiple phones = anyone joins the session and adds from their own device. ── */
 .heroPhones {
-  position: absolute;
-  left: -58px;
-  bottom: -150px;
-  width: 266px;
-  height: 320px;
+  position: relative;
   z-index: 5;
-}
-/* Caption sits under the phone pair, so it never covers the TV. */
-.heroPhonesTag {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  bottom: -14px;
-  z-index: 8;
-  display: inline-block;
-  padding: 0.25rem 0.7rem;
-  font-size: 0.6rem;
-  font-weight: 700;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  color: #fff;
-  background: linear-gradient(135deg, #ec4899, #f97316);
-  border-radius: 50px;
-  box-shadow: 0 4px 14px rgba(236, 72, 153, 0.35);
-  white-space: nowrap;
+  width: 308px;
+  height: 306px;
+  margin-top: -30px;
 }
 .heroPhone {
   position: absolute;
@@ -1020,15 +1020,15 @@
 }
 .heroPhoneFront {
   left: 0;
-  bottom: 26px;
+  top: 0;
   z-index: 7;
   transform: rotate(-3deg);
 }
 .heroPhoneBack {
-  left: 124px;
-  bottom: 0;
+  right: 0;
+  top: 14px;
   z-index: 6;
-  transform: rotate(4deg) scale(0.95);
+  transform: rotate(4deg) scale(0.97);
 }
 /* Phone silhouette — the aspect ratio does the work. Height comes from the
    handset proportion (~1:2), NOT from the content, so the body can't collapse
@@ -1078,7 +1078,8 @@
   border-bottom: 1px solid rgba(180, 120, 255, 0.12);
 }
 .hpBrand {
-  font-family: var(--font-display);
+  font-family: var(--font-brand);
+  font-weight: 400;
   font-size: 11px;
   letter-spacing: 1.5px;
   background: linear-gradient(135deg, #ff2d78, #00f0ff);
@@ -1554,11 +1555,12 @@
 }
 
 .demoLogo {
-  font-family: var(--font-display);
+  font-family: var(--font-brand);
+  font-weight: 400;
   font-size: 22px;
   color: #fff;
   text-align: center;
-  letter-spacing: 4px;
+  letter-spacing: 2px;
   text-shadow: 0 0 20px rgba(139, 92, 246, 0.4);
   margin-bottom: 8px;
 }
@@ -1767,7 +1769,8 @@
 }
 
 .demoHeaderLogo {
-  font-family: var(--font-display);
+  font-family: var(--font-brand);
+  font-weight: 400;
   font-size: 13px;
   color: #fff;
   letter-spacing: 2px;
@@ -2511,11 +2514,13 @@
 }
 
 .sectionTitle {
-  font-family: var(--font-display);
+  font-family: var(--font-headline);
+  font-weight: 700;
   font-size: clamp(1.6rem, 4vw, 2.5rem);
   color: #fff;
   text-align: center;
-  letter-spacing: 2px;
+  letter-spacing: -0.02em;
+  line-height: 1.04;
   margin-bottom: 0.5rem;
 }
 
@@ -2939,10 +2944,12 @@
 }
 
 .ctaTitle {
-  font-family: var(--font-display);
+  font-family: var(--font-headline);
+  font-weight: 700;
   font-size: clamp(1.8rem, 4vw, 2.8rem);
   color: #fff;
-  letter-spacing: 2px;
+  letter-spacing: -0.02em;
+  line-height: 1.04;
   margin-bottom: 0.75rem;
 }
 
@@ -3007,20 +3014,27 @@
 /* ═══════════════════════════════════════════
    Responsive
    ═══════════════════════════════════════════ */
-@media (max-width: 900px) {
+/* Hero stacks before the rest of the page: the two grid columns need
+   ~1140px side by side. The scene is in normal flow, so no clearance
+   margins — the column just centers. */
+@media (max-width: 1120px) {
   .heroInner {
-    flex-direction: column;
-    text-align: center;
+    /* minmax(0, …): a plain 1fr's auto minimum would let the 560px scene
+       widen the track past small viewports instead of shrinking. */
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+    gap: 3.5rem;
   }
-  .heroSub { max-width: 100%; }
-  .heroCtas { margin-left: auto; margin-right: auto; }
-  .heroDevice { margin-top: 1rem; }
-  /* Stacked hero has no 100vh slack below the scene, and the hero clips
-     overflow. Margin (not padding!) reserves room for the phones + caption
-     hanging below the TV: the phone cluster anchors to the scene's padding
-     edge, so padding would just push the phones down with it. */
-  .heroScene { margin-left: auto; margin-right: auto; margin-bottom: 7rem; }
+  .heroContent {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .heroSub { margin-left: auto; margin-right: auto; }
+}
 
+@media (max-width: 900px) {
   .step, .stepReverse {
     flex-direction: column;
     text-align: center;
@@ -3039,16 +3053,13 @@
   .navLink { display: none; }
   .navCtaOutline { display: none; }
   .hero { padding: 6rem 1.25rem 3rem; }
-  .heroTitle { font-size: 1.8rem; }
   .heroSub { font-size: 0.95rem; }
-  .heroCtas { max-width: 100%; }
   .joinRow {
     flex-direction: column;
     align-items: stretch;
     width: 100%;
   }
   .joinInput { width: 100%; }
-  .hostPanel { width: 100%; }
   /* Resume banner stacks: dot + text up top (dismiss pinned to the corner),
      full-width resume button below — one row would squeeze the text to
      three cramped lines. */
@@ -3076,34 +3087,16 @@
   .srPanelDim { margin-top: 8px; }
   /* The laptop logo beats share .demoLogo — shrink it so beat 3 fits. */
   .demoLogo { font-size: 18px; margin-bottom: 4px; }
-  /* The single mobile phone hangs far less than the desktop pair — drop
-     the 900px breakpoint's clearance margin. */
-  .heroScene { width: 100%; max-width: 380px; padding-top: 2rem; margin-bottom: 0; }
-  /* One phone on mobile — two would bury the lyrics on a narrow screen.
-     Narrower so the handset ratio holds without the top edge rising into the
-     lyrics; the hang below the scene stays inside the hero's bottom padding
-     (the hero clips overflow), which caps the height — hence 100px wide. */
-  .heroPhones { left: -8px; bottom: -56px; width: 108px; height: 208px; }
-  .heroPhoneBack { display: none; }
-  .heroPhone { width: 100px; }
-  .heroPhoneFront { bottom: 0; transform: rotate(-2deg); }
-  .heroPhoneFront .hpResult:nth-child(n+2) { display: none; }
-  .hpDrawer { display: none; }
-  /* Tag rides the phone's top bezel — the slot between lyric line 2 and the
-     phone is too thin to fit it without covering one or the other. */
-  .heroPhonesTag { left: 0; bottom: 160px; transform: none; font-size: 0.5rem; padding: 0.2rem 0.5rem; }
-  .hpTitle { font-size: 8px; }
-  /* No thumbnail at 100px wide — the title would truncate to one letter.
-     min-height keeps room for the add-toast, which wraps at this width. */
-  .hpThumb { display: none; }
-  .hpStage { min-height: 42px; }
-  .hpToast { font-size: 8px; padding: 4px 6px; }
-  .hpSearchInput { padding: 6px; font-size: 8.5px; overflow: hidden; }
-  .hpSearchBtn { padding: 6px 7px; font-size: 7.5px; }
-  /* Two lyric lines, lifted to the top so the corner phone doesn't cover them. */
-  .hdLyrics { top: 31%; gap: 5px; }
-  .hdLyricLine { font-size: 10px; }
-  .hdLyricLine:nth-child(3) { display: none; }
+  /* The phones sit below the TV in normal flow, so the whole pair just
+     scales down — no hiding, no repositioning. */
+  .heroScene { width: 100%; }
+  .heroPhones {
+    transform: scale(0.85);
+    transform-origin: top center;
+    margin-bottom: -40px;
+  }
+  /* The TV shrinks to ~350px — slightly smaller lyrics keep each line whole. */
+  .hdLyricLine { font-size: 11px; }
   /* Step 2's phone shrinks to 200×400 — drop the third result so the list
      doesn't clip against the always-visible queue below it, and tighten the
      category cards so their names fit. */

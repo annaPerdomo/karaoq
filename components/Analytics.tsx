@@ -1,6 +1,11 @@
 import * as React from 'react';
 import styles from '../styles/Analytics.module.css';
 
+interface DayCount {
+  _id: string;
+  count: number;
+}
+
 interface AnalyticsData {
   overview: {
     totalRooms: number;
@@ -11,6 +16,7 @@ interface AnalyticsData {
     uniqueUsers: number;
     avgSessionMinutes: number;
     maxSessionMinutes: number;
+    medianSessionMinutes?: number;
     totalSessions: number;
     hostSessions: number;
     singerSessions: number;
@@ -19,10 +25,11 @@ interface AnalyticsData {
     totalQrPrints: number;
   };
   charts: {
-    roomsByDay: { _id: string; count: number }[];
-    songsByDay: { _id: string; count: number }[];
+    roomsByDay: DayCount[];
+    songsByDay: DayCount[];
     hourlyActivity: { _id: number; count: number }[];
-    qrPrintsByDay: { _id: string; count: number }[];
+    qrPrintsByDay: DayCount[];
+    dayOfWeekSongs?: { _id: number; count: number }[];
   };
   geo: {
     countries: { _id: string; count: number }[];
@@ -35,11 +42,30 @@ interface AnalyticsData {
   devices: { _id: string; count: number }[];
   suggestions: {
     total: number;
-    bySource: { _id: string; count: number }[];
+    bySource: { _id: string | null; count: number }[];
     bySection: { _id: string; count: number }[];
     byCategory: { _id: string; count: number }[];
     topSongs: { _id: { title: string; artist: string }; count: number }[];
-    byDay: { _id: string; count: number }[];
+    byDay: DayCount[];
+  };
+  funnel?: {
+    windowDays: number;
+    roomsCreated: number;
+    roomsSearched: number;
+    roomsWithSong: number;
+    roomsEngaged: number;
+    medianMinutesToFirstSong: number | null;
+    p90MinutesToFirstSong: number | null;
+  };
+  engagement?: {
+    songsPerRoomHistogram: { label: string; count: number }[];
+    reactionsByEmoji: { _id: string; count: number }[];
+    hosts: number;
+    repeatHosts: number;
+  };
+  meta?: {
+    timezone: string;
+    generatedAt: string;
   };
 }
 
@@ -53,6 +79,102 @@ interface RoomRow {
 }
 
 const ROOMS_PAGE_SIZE = 25;
+
+const SOURCE_LABELS: Record<string, string> = {
+  random: 'Random Button',
+  song_pick: 'Song Picks',
+  genre_chip: 'Genre Chips',
+};
+
+const SECTION_LABELS: Record<string, string> = {
+  genre: 'Genre',
+  'voice-type': 'Voice Type',
+  spanish: 'Spanish',
+  kpop: 'K-Pop',
+  japanese: 'Japanese',
+};
+
+// Mongo's $dayOfWeek: 1 = Sunday … 7 = Saturday
+const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+// Vercel geo headers are URL-encoded, but stray '%' sequences in raw values
+// would make decodeURIComponent throw and take down the whole dashboard.
+function safeDecode(value: string): string {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
+function viewerTimezone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+  } catch {
+    return 'UTC';
+  }
+}
+
+// Parse a YYYY-MM-DD key as a local date. new Date('YYYY-MM-DD') would parse
+// it as UTC midnight, shifting every chart label back a day for viewers west
+// of Greenwich.
+function formatDate(day: string): string {
+  const [y, m, d] = day.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function localDayKey(d: Date): string {
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${m}-${day}`;
+}
+
+// The server omits days with no events; fill them in so a sparse month
+// doesn't render as a dense-looking chart.
+function fillDays(rows: DayCount[], days: number): { label: string; value: number }[] {
+  if (rows.length === 0) return [];
+  const byKey = new Map(rows.map((r) => [r._id, r.count]));
+  const now = new Date();
+  const filled: { label: string; value: number }[] = [];
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+    const key = localDayKey(d);
+    filled.push({ label: formatDate(key), value: byKey.get(key) ?? 0 });
+  }
+  return filled;
+}
+
+function fillHours(rows: { _id: number; count: number }[]): { label: string; value: number }[] {
+  if (rows.length === 0) return [];
+  const byHour = new Map(rows.map((r) => [r._id, r.count]));
+  return Array.from({ length: 24 }, (_, h) => ({
+    label: formatHour(h),
+    value: byHour.get(h) ?? 0,
+  }));
+}
+
+function fillWeekdays(rows: { _id: number; count: number }[]): { label: string; value: number }[] {
+  if (rows.length === 0) return [];
+  const byDay = new Map(rows.map((r) => [r._id, r.count]));
+  return WEEKDAY_LABELS.map((label, i) => ({
+    label,
+    value: byDay.get(i + 1) ?? 0,
+  }));
+}
+
+function formatTimestamp(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-US', {
+    month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
+  });
+}
+
+function formatHour(h: number): string {
+  if (h === 0) return '12am';
+  if (h < 12) return `${h}am`;
+  if (h === 12) return '12pm';
+  return `${h - 12}pm`;
+}
 
 function BarChart({ data, color = '#a78bfa' }: {
   data: { label: string; value: number }[];
@@ -78,6 +200,35 @@ function BarChart({ data, color = '#a78bfa' }: {
   );
 }
 
+function FunnelChart({ steps }: { steps: { label: string; value: number }[] }) {
+  const max = Math.max(steps[0]?.value ?? 0, 1);
+  return (
+    <div className={styles.funnel}>
+      {steps.map((s, i) => {
+        const prev = i > 0 ? steps[i - 1].value : 0;
+        const pct = i > 0 && prev > 0 ? Math.round((s.value / prev) * 100) : null;
+        return (
+          <div key={s.label} className={styles.funnelRow}>
+            <span className={styles.funnelLabel}>{s.label}</span>
+            <div className={styles.funnelTrack}>
+              <div
+                className={styles.funnelFill}
+                style={{ width: `${(s.value / max) * 100}%` }}
+              />
+            </div>
+            <span className={styles.funnelValue}>
+              {s.value}
+              <span className={styles.funnelPct}>
+                {pct !== null ? `${pct}%` : ' '}
+              </span>
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function StatCard({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
   return (
     <div className={styles.statCard}>
@@ -86,25 +237,6 @@ function StatCard({ label, value, sub }: { label: string; value: string | number
       {sub && <div className={styles.statSub}>{sub}</div>}
     </div>
   );
-}
-
-function formatDate(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-}
-
-function formatTimestamp(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleDateString('en-US', {
-    month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
-  });
-}
-
-function formatHour(h: number): string {
-  if (h === 0) return '12am';
-  if (h < 12) return `${h}am`;
-  if (h === 12) return '12pm';
-  return `${h - 12}pm`;
 }
 
 const Analytics = (): React.ReactElement => {
@@ -126,12 +258,14 @@ const Analytics = (): React.ReactElement => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/analytics/data', {
-        headers: { 'x-analytics-secret': s },
-      });
+      const res = await fetch(
+        `/api/analytics/data?tz=${encodeURIComponent(viewerTimezone())}`,
+        { headers: { 'x-analytics-secret': s } }
+      );
       if (res.status === 401) {
         setError('Invalid secret');
         setAuthenticated(false);
+        setData(null);
         localStorage.removeItem('karaoq_analytics_secret');
         setLoading(false);
         return;
@@ -228,6 +362,8 @@ const Analytics = (): React.ReactElement => {
       if (!res.ok) throw new Error('Delete failed');
       if (mergeSource === roomId) setMergeSource(null);
       loadRooms(0, true);
+      // Totals and charts include the deleted room; refresh them too.
+      fetchData(secret);
     } catch {
       alert('Failed to delete room');
     }
@@ -262,6 +398,7 @@ const Analytics = (): React.ReactElement => {
       if (!res.ok) throw new Error('Merge failed');
       setMergeSource(null);
       loadRooms(0, true);
+      fetchData(secret);
     } catch {
       alert('Failed to merge rooms');
     }
@@ -291,7 +428,9 @@ const Analytics = (): React.ReactElement => {
     );
   }
 
-  if (loading || !data) {
+  // Only blank the page before the first load; refreshes keep the current
+  // data on screen.
+  if (!data) {
     return (
       <main className={styles.main}>
         <div className={styles.loading}><div className={styles.spinner} /></div>
@@ -299,21 +438,38 @@ const Analytics = (): React.ReactElement => {
     );
   }
 
-  const { overview, charts, geo, rankings, devices, suggestions } = data;
+  const { overview, charts, geo, rankings, devices, suggestions, funnel, engagement } = data;
 
   const mobileCount = devices.find((d) => d._id === 'Mobile')?.count || 0;
   const desktopCount = devices.find((d) => d._id === 'Desktop')?.count || 0;
   const totalDevices = mobileCount + desktopCount;
+
+  const timezone = data.meta?.timezone ?? 'UTC';
+  const songAddRate =
+    funnel && funnel.roomsCreated > 0
+      ? Math.round((funnel.roomsWithSong / funnel.roomsCreated) * 100)
+      : null;
 
   return (
     <main className={styles.main}>
       <header className={styles.header}>
         <h1 className={styles.title}>KaraoQ Analytics</h1>
         <div className={styles.headerActions}>
-          <button onClick={() => fetchData(secret)} className={styles.refreshBtn}>Refresh</button>
+          <button onClick={() => fetchData(secret)} className={styles.refreshBtn} disabled={loading}>
+            {loading ? 'Refreshing…' : 'Refresh'}
+          </button>
           <button onClick={handleLogout} className={styles.logoutBtn}>Logout</button>
         </div>
       </header>
+
+      {error && (
+        <div className={styles.errorBanner}>
+          <span>{error}</span>
+          <button className={styles.retryBtn} onClick={() => fetchData(secret)}>
+            Retry
+          </button>
+        </div>
+      )}
 
       <nav className={styles.tabs}>
         {(['overview', 'geo', 'songs', 'suggestions', 'rooms'] as const).map((tab) => (
@@ -338,21 +494,70 @@ const Analytics = (): React.ReactElement => {
             <StatCard label="QR Prints" value={overview.totalQrPrints} />
             <StatCard label="Unique Singers" value={overview.uniqueUsers} />
             <StatCard
-              label="Avg Session"
-              value={`${overview.avgSessionMinutes}m`}
-              sub={`Max: ${overview.maxSessionMinutes}m`}
+              label="Median Session"
+              value={`${overview.medianSessionMinutes ?? overview.avgSessionMinutes}m`}
+              sub={`Avg: ${overview.avgSessionMinutes}m · Max: ${overview.maxSessionMinutes}m`}
             />
             <StatCard
               label="Avg Songs/Room"
               value={overview.avgSongsPerRoom}
               sub={`Max: ${overview.maxSongsPerRoom}`}
             />
+            {funnel && songAddRate !== null && (
+              <StatCard
+                label="Song-Add Rate"
+                value={`${songAddRate}%`}
+                sub={`Rooms with ≥1 song, last ${funnel.windowDays} days`}
+              />
+            )}
           </div>
+
+          {funnel && (
+            <section className={styles.section}>
+              <h2 className={styles.sectionTitle}>
+                Activation Funnel (Last {funnel.windowDays} Days)
+              </h2>
+              {funnel.roomsCreated === 0 ? (
+                <p className={styles.empty}>No rooms created in this window</p>
+              ) : (
+                <>
+                  <FunnelChart
+                    steps={[
+                      { label: 'Room created', value: funnel.roomsCreated },
+                      { label: 'Searched', value: funnel.roomsSearched },
+                      { label: 'Added a song', value: funnel.roomsWithSong },
+                      { label: '3+ songs', value: funnel.roomsEngaged },
+                    ]}
+                  />
+                  {funnel.medianMinutesToFirstSong !== null && (
+                    <p className={styles.funnelNote}>
+                      Median time to first song: {funnel.medianMinutesToFirstSong}m
+                      {funnel.p90MinutesToFirstSong !== null &&
+                        ` · p90: ${funnel.p90MinutesToFirstSong}m`}
+                    </p>
+                  )}
+                </>
+              )}
+            </section>
+          )}
+
+          {engagement && (
+            <section className={styles.section}>
+              <h2 className={styles.sectionTitle}>Songs per Room (All Time)</h2>
+              <BarChart
+                data={engagement.songsPerRoomHistogram.map((b) => ({
+                  label: b.label,
+                  value: b.count,
+                }))}
+                color="#f472b6"
+              />
+            </section>
+          )}
 
           <section className={styles.section}>
             <h2 className={styles.sectionTitle}>Rooms Created (Last 30 Days)</h2>
             <BarChart
-              data={charts.roomsByDay.map((d) => ({ label: formatDate(d._id), value: d.count }))}
+              data={fillDays(charts.roomsByDay, 30)}
               color="#a78bfa"
             />
           </section>
@@ -360,7 +565,7 @@ const Analytics = (): React.ReactElement => {
           <section className={styles.section}>
             <h2 className={styles.sectionTitle}>Songs Added (Last 30 Days)</h2>
             <BarChart
-              data={charts.songsByDay.map((d) => ({ label: formatDate(d._id), value: d.count }))}
+              data={fillDays(charts.songsByDay, 30)}
               color="#f472b6"
             />
           </section>
@@ -368,18 +573,28 @@ const Analytics = (): React.ReactElement => {
           <section className={styles.section}>
             <h2 className={styles.sectionTitle}>QR Prints (Last 30 Days)</h2>
             <BarChart
-              data={charts.qrPrintsByDay.map((d) => ({ label: formatDate(d._id), value: d.count }))}
+              data={fillDays(charts.qrPrintsByDay, 30)}
               color="#fbbf24"
             />
           </section>
 
           <section className={styles.section}>
-            <h2 className={styles.sectionTitle}>Peak Hours (UTC)</h2>
+            <h2 className={styles.sectionTitle}>Peak Hours ({timezone})</h2>
             <BarChart
-              data={charts.hourlyActivity.map((d) => ({ label: formatHour(d._id), value: d.count }))}
+              data={fillHours(charts.hourlyActivity)}
               color="#34d399"
             />
           </section>
+
+          {charts.dayOfWeekSongs && (
+            <section className={styles.section}>
+              <h2 className={styles.sectionTitle}>Songs by Day of Week</h2>
+              <BarChart
+                data={fillWeekdays(charts.dayOfWeekSongs)}
+                color="#60a5fa"
+              />
+            </section>
+          )}
 
           {totalDevices > 0 && (
             <section className={styles.section}>
@@ -407,6 +622,11 @@ const Analytics = (): React.ReactElement => {
               <span>Total: {overview.totalSessions}</span>
               <span>Hosts: {overview.hostSessions}</span>
               <span>Singers: {overview.singerSessions}</span>
+              {engagement && engagement.hosts > 0 && (
+                <span>
+                  Returning hosts: {engagement.repeatHosts} of {engagement.hosts}
+                </span>
+              )}
             </div>
           </section>
         </div>
@@ -415,7 +635,7 @@ const Analytics = (): React.ReactElement => {
       {activeTab === 'geo' && (
         <div className={styles.tabContent}>
           <section className={styles.section}>
-            <h2 className={styles.sectionTitle}>Top Countries</h2>
+            <h2 className={styles.sectionTitle}>Top Countries (by rooms)</h2>
             <BarChart
               data={geo.countries.map((d) => ({ label: d._id, value: d.count }))}
               color="#60a5fa"
@@ -423,10 +643,10 @@ const Analytics = (): React.ReactElement => {
           </section>
 
           <section className={styles.section}>
-            <h2 className={styles.sectionTitle}>Top Cities</h2>
+            <h2 className={styles.sectionTitle}>Top Cities (by rooms)</h2>
             <BarChart
               data={geo.cities.map((d) => ({
-                label: `${decodeURIComponent(d._id.city)}, ${decodeURIComponent(d._id.region || d._id.country)}`,
+                label: `${safeDecode(d._id.city)}, ${safeDecode(d._id.region || d._id.country)}`,
                 value: d.count,
               }))}
               color="#f59e0b"
@@ -471,6 +691,16 @@ const Analytics = (): React.ReactElement => {
               color="#c084fc"
             />
           </section>
+
+          {engagement && (
+            <section className={styles.section}>
+              <h2 className={styles.sectionTitle}>Reactions by Emoji</h2>
+              <BarChart
+                data={engagement.reactionsByEmoji.map((r) => ({ label: r._id, value: r.count }))}
+                color="#fbbf24"
+              />
+            </section>
+          )}
         </div>
       )}
 
@@ -480,12 +710,8 @@ const Analytics = (): React.ReactElement => {
             <StatCard label="Total Suggestion Uses" value={suggestions.total} />
             {suggestions.bySource.map((s) => (
               <StatCard
-                key={s._id}
-                label={
-                  s._id === 'random' ? 'Random Button' :
-                  s._id === 'song_pick' ? 'Song Picks' :
-                  'Genre Chips'
-                }
+                key={s._id ?? 'unknown'}
+                label={(s._id && SOURCE_LABELS[s._id]) || s._id || 'Unknown'}
                 value={s.count}
                 sub={suggestions.total > 0 ? `${Math.round((s.count / suggestions.total) * 100)}% of total` : undefined}
               />
@@ -495,7 +721,7 @@ const Analytics = (): React.ReactElement => {
           <section className={styles.section}>
             <h2 className={styles.sectionTitle}>Suggestion Uses (Last 30 Days)</h2>
             <BarChart
-              data={suggestions.byDay.map((d) => ({ label: formatDate(d._id), value: d.count }))}
+              data={fillDays(suggestions.byDay, 30)}
               color="#34d399"
             />
           </section>
@@ -504,12 +730,7 @@ const Analytics = (): React.ReactElement => {
             <h2 className={styles.sectionTitle}>By Section</h2>
             <BarChart
               data={suggestions.bySection.map((d) => ({
-                label: d._id === 'genre' ? 'Genre' :
-                       d._id === 'voice-type' ? 'Voice Type' :
-                       d._id === 'spanish' ? 'Spanish' :
-                       d._id === 'kpop' ? 'K-Pop' :
-                       d._id === 'japanese' ? 'Japanese' :
-                       d._id,
+                label: SECTION_LABELS[d._id] ?? d._id,
                 value: d.count,
               }))}
               color="#60a5fa"
@@ -599,7 +820,7 @@ const Analytics = (): React.ReactElement => {
                         {r.roomId}
                       </a>
                       <span>{formatTimestamp(r.timestamp)}</span>
-                      <span>{r.city ? `${decodeURIComponent(r.city)}, ${r.country}` : r.country || '—'}</span>
+                      <span>{r.city ? `${safeDecode(r.city)}, ${r.country}` : r.country || '—'}</span>
                       <span>{r.songs}</span>
                       <span>{r.participants}</span>
                       <div className={styles.roomActions}>
