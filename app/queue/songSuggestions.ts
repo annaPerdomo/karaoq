@@ -451,7 +451,7 @@ export const SONG_SECTIONS: SongSection[] = [
   // ───────────────────────────────────────────
   {
     id: 'spanish',
-    label: '🇲🇽 En Espanol',
+    label: '🇲🇽 Espanol',
     categories: [
       {
         id: 'es-reggaeton',
