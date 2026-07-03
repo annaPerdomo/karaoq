@@ -8,9 +8,9 @@ import SongSearch from './SongSearch';
 import getRoom from '../app/queue/getRoom';
 import { normalizeRoomId } from '../lib/roomCode';
 import postReaction from '../app/queue/postReaction';
-import { REACTION_COOLDOWN_MS } from '../app/queue/cheerConstants';
+import { CHEER_EMOJIS, REACTION_COOLDOWN_MS, isTextReaction } from '../app/queue/cheerConstants';
 import { startSessionTracking } from '../app/queue/trackSession';
-import { QueueEntry } from '../pages/api/types';
+import { QueueEntry, Reaction } from '../pages/api/types';
 
 
 const POLL_INTERVAL = 3000;
@@ -42,6 +42,9 @@ const Sing = (): React.ReactElement => {
   // singers who've already dismissed it never see it again.
   const [showTipsBanner, setShowTipsBanner] = React.useState(false);
   const [welcomeName, setWelcomeName] = React.useState('');
+  const [visibleReactions, setVisibleReactions] = React.useState<(Reaction & { key: string; left: number })[]>([]);
+  const seenReactionIds = React.useRef(new Set<string>());
+  const reactionTimers = React.useRef<ReturnType<typeof setTimeout>[]>([]);
 
   // Load saved username
   React.useEffect(() => {
@@ -76,6 +79,47 @@ const Sing = (): React.ReactElement => {
     return startSessionTracking(joinCode, username, 'singer');
   }, [joinCode, username, showWelcome]);
 
+  // Clean up reaction-pop timers on unmount
+  React.useEffect(() => {
+    const timers = reactionTimers.current;
+    return () => {
+      timers.forEach(clearTimeout);
+    };
+  }, []);
+
+  const spawnReactionPops = React.useCallback((fresh: Reaction[]) => {
+    const withKeys = fresh.map((r) => ({
+      ...r,
+      key: r.id,
+      left: 5 + Math.random() * 60,
+    }));
+    setVisibleReactions((prev) => [...prev, ...withKeys]);
+    const timer = setTimeout(() => {
+      const ids = new Set(fresh.map((r) => r.id));
+      setVisibleReactions((prev) => prev.filter((r) => !ids.has(r.key)));
+    }, 3500);
+    reactionTimers.current.push(timer);
+  }, []);
+
+  // Mark polled reactions as seen; animate the new ones so the whole room
+  // sees each cheer, not just the display screen. On the initial load we only
+  // seed the seen-set — replaying the last 30s of cheers at once would spam
+  // whoever just joined.
+  const processReactions = React.useCallback(
+    (reactions: Reaction[] | undefined, animate = true) => {
+      if (!reactions || reactions.length === 0) return;
+      const fresh = reactions.filter((r) => !seenReactionIds.current.has(r.id));
+      if (fresh.length === 0) return;
+      fresh.forEach((r) => seenReactionIds.current.add(r.id));
+      if (seenReactionIds.current.size > 200) {
+        const entries = Array.from(seenReactionIds.current);
+        seenReactionIds.current = new Set(entries.slice(-100));
+      }
+      if (animate) spawnReactionPops(fresh);
+    },
+    [spawnReactionPops]
+  );
+
   // Initial room load
   React.useEffect(() => {
     if (!joinCode) return;
@@ -89,6 +133,7 @@ const Sing = (): React.ReactElement => {
         setActiveIndex(room.activeVideoIndex);
         setIsPlaying(room.isPlaying ?? false);
         setReactionsOn(room.reactionsEnabled ?? true);
+        processReactions(room.reactions, false);
         setLoading(false);
       } else {
         setError('Room not found. Check your code and try again.');
@@ -97,7 +142,7 @@ const Sing = (): React.ReactElement => {
     }
     init();
     return () => { cancelled = true; };
-  }, [joinCode]);
+  }, [joinCode, processReactions]);
 
   // Poll for updates
   React.useEffect(() => {
@@ -110,11 +155,12 @@ const Sing = (): React.ReactElement => {
         setActiveIndex(room.activeVideoIndex);
         setIsPlaying(room.isPlaying ?? false);
         setReactionsOn(room.reactionsEnabled ?? true);
+        processReactions(room.reactions);
       }
     }, POLL_INTERVAL);
 
     return () => clearInterval(interval);
-  }, [joinCode, error]);
+  }, [joinCode, error, processReactions]);
 
   function handleSongAdded(entry: QueueEntry) {
     setQueue([...queue, entry]);
@@ -128,6 +174,10 @@ const Sing = (): React.ReactElement => {
     setTimeout(() => setLastSentEmoji(null), 1500);
     setTimeout(() => setReactionCooldown(false), REACTION_COOLDOWN_MS);
     const id = uuidv4();
+    // Pop your own cheer locally right away; the seen-set keeps the next poll
+    // from replaying it.
+    seenReactionIds.current.add(id);
+    spawnReactionPops([{ id, emoji, userName: username.trim(), timestamp: Date.now() }]);
     await postReaction(joinCode, id, emoji, username.trim());
   }
 
@@ -156,6 +206,9 @@ const Sing = (): React.ReactElement => {
   const showingNowPlaying = !!(currentSong && isPlaying);
   const queueItems = showingNowPlaying ? upcomingSongs.slice(1) : upcomingSongs;
   const queueCount = queueItems.length;
+  // One-tap cheer row on the collapsed drawer; the expanded drawer shows the
+  // full CheerBar instead, so the row hides while open.
+  const quickCheerVisible = showingNowPlaying && reactionsOn && !mobileQueueOpen;
 
   return (
     <main className={styles.main}>
@@ -173,7 +226,9 @@ const Sing = (): React.ReactElement => {
 
       <div className={styles.content}>
         {/* ─── Left panel: search + results ─── */}
-        <div className={styles.searchPanel}>
+        <div
+          className={`${styles.searchPanel} ${showingNowPlaying && reactionsOn ? styles.searchPanelCheer : ''}`}
+        >
           {!showWelcome && showTipsBanner && (
             <div className={styles.tipsBanner}>
               <div className={styles.tipsBannerBody}>
@@ -223,6 +278,21 @@ const Sing = (): React.ReactElement => {
             </div>
           )}
 
+          {/* Cheer bar — with Now Playing, above the queue: cheering is the
+              primary action while someone's on stage */}
+          {currentSong && isPlaying && reactionsOn ? (
+            <CheerBar
+              onReaction={sendReaction}
+              cooldown={reactionCooldown}
+              lastSentEmoji={lastSentEmoji}
+              disabled={!username.trim()}
+            />
+          ) : reactionsOn && queueItems.length > 0 && (
+            <div className={styles.cheerHint}>
+              Send reactions like 🔥👏❤️ and words of encouragement to cheer on the performer!
+            </div>
+          )}
+
           <div className={styles.queueSection}>
             <div className={styles.queueHeader}>
               <h3 className={styles.queueTitle}>Up Next</h3>
@@ -257,25 +327,11 @@ const Sing = (): React.ReactElement => {
               </div>
             )}
           </div>
-
-          {/* Cheer bar — below the queue */}
-          {currentSong && isPlaying && reactionsOn ? (
-            <CheerBar
-              onReaction={sendReaction}
-              cooldown={reactionCooldown}
-              lastSentEmoji={lastSentEmoji}
-              disabled={!username.trim()}
-            />
-          ) : reactionsOn && queueItems.length > 0 && (
-            <div className={styles.cheerHint}>
-              Send reactions like 🔥👏❤️ and words of encouragement to cheer on the performer!
-            </div>
-          )}
         </aside>
 
         {/* ─── Mobile bottom drawer ─── */}
         <div
-          className={`${styles.mobileDrawer} ${mobileQueueOpen ? styles.mobileDrawerOpen : ''}`}
+          className={`${styles.mobileDrawer} ${quickCheerVisible ? styles.mobileDrawerCheer : ''} ${mobileQueueOpen ? styles.mobileDrawerOpen : ''}`}
         >
           <button
             className={styles.drawerHandle}
@@ -303,7 +359,49 @@ const Sing = (): React.ReactElement => {
             </span>
           </button>
 
+          {/* One-tap cheers without opening the drawer */}
+          {quickCheerVisible && (
+            <div className={styles.quickCheerRow}>
+              {CHEER_EMOJIS.slice(0, 5).map((emoji) => (
+                <button
+                  key={emoji}
+                  className={`${styles.quickCheerBtn} ${reactionCooldown ? styles.quickCheerBtnCooldown : ''}`}
+                  onClick={() => sendReaction(emoji)}
+                  disabled={reactionCooldown || !username.trim()}
+                  aria-label={`Send ${emoji} cheer`}
+                >
+                  {emoji}
+                </button>
+              ))}
+              {lastSentEmoji ? (
+                <span className={styles.quickCheerSent}>{lastSentEmoji} Sent!</span>
+              ) : (
+                <button
+                  className={styles.quickCheerMore}
+                  onClick={() => setMobileQueueOpen(true)}
+                >
+                  More…
+                </button>
+              )}
+            </div>
+          )}
+
           <div className={styles.drawerBody}>
+            {/* Cheer bar — first thing you see when the drawer opens */}
+            {currentSong && isPlaying && reactionsOn ? (
+              <CheerBar
+                onReaction={sendReaction}
+                cooldown={reactionCooldown}
+                lastSentEmoji={lastSentEmoji}
+                disabled={!username.trim()}
+                compact
+              />
+            ) : reactionsOn && queueItems.length > 0 && (
+              <div className={styles.cheerHint}>
+                Send reactions like 🔥👏❤️ and words of encouragement to cheer on the performer!
+              </div>
+            )}
+
             <div className={styles.drawerQueueHeader}>
               <h3 className={styles.queueTitle}>Up Next</h3>
               {queueCount > 0 && (
@@ -337,23 +435,28 @@ const Sing = (): React.ReactElement => {
                 <span>Search to add songs, or cheer when someone&apos;s on stage!</span>
               </div>
             )}
-
-            {/* Cheer bar — below the queue (mobile) */}
-            {currentSong && isPlaying && reactionsOn ? (
-              <CheerBar
-                onReaction={sendReaction}
-                cooldown={reactionCooldown}
-                lastSentEmoji={lastSentEmoji}
-                disabled={!username.trim()}
-              />
-            ) : reactionsOn && queueItems.length > 0 && (
-              <div className={styles.cheerHint}>
-                Send reactions like 🔥👏❤️ and words of encouragement to cheer on the performer!
-              </div>
-            )}
           </div>
         </div>
       </div>
+
+      {/* Cheers from everyone in the room float up from the drawer */}
+      {reactionsOn && visibleReactions.length > 0 && (
+        <div className={styles.reactionOverlay} aria-hidden="true">
+          {visibleReactions.map((r) => (
+            <div
+              key={r.key}
+              className={styles.reactionBubble}
+              style={{ left: `${r.left}%` }}
+            >
+              {isTextReaction(r.emoji) ? (
+                <span className={styles.reactionTextPop}>{r.emoji}</span>
+              ) : (
+                <span className={styles.reactionEmojiPop}>{r.emoji}</span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Welcome name gate */}
       {showWelcome && !loading && !error && (

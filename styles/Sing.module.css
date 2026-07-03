@@ -750,10 +750,6 @@
     border-top: 1px solid rgba(255, 255, 255, 0.06);
     max-height: 45vh;
   }
-
-  .results {
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  }
 }
 
 /* Mobile */
@@ -767,71 +763,9 @@
     padding-bottom: 4rem; /* space for the fixed drawer handle */
   }
 
-  .nameSection {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0.35rem;
-  }
-
-  .nameInput {
-    max-width: none;
-  }
-
-  .searchInput {
-    font-size: 1rem;
-    padding: 0.75rem 0.75rem;
-    min-width: 0;
-  }
-
-  .searchBtn {
-    padding: 0.75rem 1rem;
-  }
-
-  .searchOptions {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0.5rem;
-  }
-
-  .toggleRow {
-    justify-content: flex-end;
-  }
-
-  .filterSection {
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .filterGroup {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.3rem;
-  }
-
-  .results {
-    grid-template-columns: 1fr;
-  }
-
-  .resultCard {
-    gap: 0.6rem;
-    padding: 0.5rem;
-  }
-
-  .resultThumb {
-    width: 72px;
-    height: 54px;
-    border-radius: 6px;
-  }
-
-  .resultTitle {
-    font-size: 0.82rem;
-  }
-
-  .addBtn {
-    width: 44px;
-    height: 44px;
-    min-width: 44px;
-    font-size: 1.2rem;
+  /* While someone's performing the drawer grows a quick-cheer row */
+  .searchPanelCheer {
+    padding-bottom: 7.25rem;
   }
 
   /* Hide desktop sidebar on mobile */
@@ -858,9 +792,72 @@
     box-shadow: 0 -2px 20px rgba(0, 0, 0, 0.3);
   }
 
+  /* Collapsed with the quick-cheer row showing */
+  .mobileDrawerCheer {
+    max-height: 6.5rem;
+  }
+
   .mobileDrawerOpen {
     max-height: 75vh;
     box-shadow: 0 -4px 40px rgba(0, 0, 0, 0.5);
+  }
+
+  /* One-tap cheer row on the collapsed drawer */
+  .quickCheerRow {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0 1rem 0.7rem;
+    animation: quickCheerIn 0.35s ease;
+  }
+
+  @keyframes quickCheerIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .quickCheerBtn {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: transform 0.15s ease, background 0.15s ease;
+  }
+
+  .quickCheerBtn:active:not(:disabled) {
+    transform: scale(0.9);
+    background: rgba(255, 215, 0, 0.12);
+  }
+
+  .quickCheerBtnCooldown {
+    opacity: 0.35;
+  }
+
+  .quickCheerSent {
+    margin-left: auto;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #22c55e;
+    white-space: nowrap;
+    animation: quickCheerIn 0.3s ease;
+  }
+
+  .quickCheerMore {
+    margin-left: auto;
+    padding: 0.35rem 0.6rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    background: none;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    white-space: nowrap;
   }
 
   /* Drawer handle / collapsed bar */
@@ -970,24 +967,6 @@
     overflow-y: auto;
   }
 
-  .modal {
-    margin: 0 0.5rem;
-    padding: 1.25rem;
-  }
-
-  .modalThumb {
-    max-width: 100%;
-  }
-
-  .searchEmpty {
-    min-height: 120px;
-    padding: 2rem 1rem;
-  }
-
-  .searchEmptyIcon {
-    font-size: 2.5rem;
-  }
-
   .welcomeCard {
     padding: 2rem 1.5rem;
   }
@@ -1005,6 +984,66 @@
   text-align: center;
   border-top: 1px solid rgba(255, 215, 0, 0.1);
   background: linear-gradient(135deg, rgba(255, 215, 0, 0.04), rgba(255, 45, 120, 0.04));
+}
+
+/* ─── Floating reaction pops (everyone's cheers, risen from the cheer UI) ─── */
+.reactionOverlay {
+  position: fixed;
+  right: 0.5rem;
+  bottom: 4.5rem;
+  width: min(45vw, 240px);
+  height: min(50vh, 400px);
+  pointer-events: none;
+  z-index: 60;
+  overflow: hidden;
+}
+
+@media (max-width: 640px) {
+  .reactionOverlay {
+    bottom: 7rem; /* clear the drawer + quick-cheer row */
+  }
+}
+
+.reactionBubble {
+  position: absolute;
+  bottom: 0;
+  opacity: 0;
+  animation: reactionRise 3.5s ease-out forwards;
+}
+
+@keyframes reactionRise {
+  0% {
+    opacity: 0;
+    transform: translateY(0) scale(0.5);
+  }
+  10% {
+    opacity: 1;
+    transform: translateY(-14px) scale(1);
+  }
+  65% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-240px) scale(0.7);
+  }
+}
+
+.reactionEmojiPop {
+  font-size: 1.8rem;
+  line-height: 1;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+}
+
+.reactionTextPop {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, rgba(255, 45, 120, 0.85), rgba(255, 107, 53, 0.85));
+  padding: 0.3rem 0.65rem;
+  border-radius: 10px;
+  white-space: nowrap;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
 }
 
 /* ─── Welcome overlay ─── */

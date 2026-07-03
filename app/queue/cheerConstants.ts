@@ -9,3 +9,8 @@ export const CHEER_MESSAGES = [
 ];
 
 export const REACTION_COOLDOWN_MS = 3000;
+
+/** Distinguishes message reactions ("Encore!") from emoji ones for styling. */
+export function isTextReaction(emoji: string): boolean {
+  return emoji.length > 2 && /[a-zA-Z]/.test(emoji);
+}

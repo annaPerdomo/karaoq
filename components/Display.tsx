@@ -6,13 +6,10 @@ import getRoom from '../app/queue/getRoom';
 import { normalizeRoomId } from '../lib/roomCode';
 import { onRoomState, broadcastVideoEnded } from '../app/queue/roomChannel';
 import { startSessionTracking } from '../app/queue/trackSession';
+import { isTextReaction } from '../app/queue/cheerConstants';
 import { QueueEntry, Reaction } from '../pages/api/types';
 
 const POLL_INTERVAL = 1500;
-
-function isTextReaction(emoji: string): boolean {
-  return emoji.length > 2 && /[a-zA-Z]/.test(emoji);
-}
 
 function decodeHtml(html: string): string {
   if (typeof document === 'undefined') return html;

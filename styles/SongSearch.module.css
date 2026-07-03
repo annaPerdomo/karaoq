@@ -47,6 +47,9 @@
 
 .searchInput {
   flex: 1;
+  /* shrink below the input's intrinsic width so the Search button
+     stays on-screen at narrow viewports (320px) */
+  min-width: 0;
   padding: 0.6rem 0.8rem;
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.1);
