@@ -59,7 +59,7 @@ export default async function handler(
           $set: { lastActivity: new Date() },
         }
       );
-      trackEvent(req, "song_added", { roomId: roomId as string, userName, songTitle, videoId });
+      trackEvent(req, "song_added", { roomId: roomId as string, userName, songTitle, videoId, via: "search" });
       res.status(200).json({ code: 200, message: "Song added." });
     }
   } catch (e) {

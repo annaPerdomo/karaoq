@@ -23,6 +23,7 @@ import CheerBar from "./CheerBar";
 import { rememberLastHostedRoom } from "../lib/lastRoom";
 import { normalizeRoomId } from "../lib/roomCode";
 import SongSearch from "./SongSearch";
+import SocialBoards from "./SocialBoards";
 import getRoom from "../app/queue/getRoom";
 import createRoom from "../app/queue/createRoom";
 import updatePosition from "../app/queue/updatePosition";
@@ -35,7 +36,7 @@ import postReaction from "../app/queue/postReaction";
 import { REACTION_COOLDOWN_MS } from "../app/queue/cheerConstants";
 import { startSessionTracking } from "../app/queue/trackSession";
 import { startVisiblePolling } from "../app/queue/pollWhileVisible";
-import { QueueEntry, Reaction } from "../pages/api/types";
+import { QueueEntry, Reaction, SingWithMePost, SuggestedSong } from "../pages/api/types";
 import { v4 as uuidv4 } from "uuid";
 
 const POLL_INTERVAL = 3000;
@@ -504,6 +505,9 @@ const Host = ({
   const joinCode = normalizeRoomId(router.query.joinCode) as string | undefined;
 
   const [queue, setQueue] = React.useState<QueueEntry[]>([]);
+  const [singWithMe, setSingWithMe] = React.useState<SingWithMePost[]>([]);
+  const [suggestions, setSuggestions] = React.useState<SuggestedSong[]>([]);
+  const [boardsOpen, setBoardsOpen] = React.useState(false);
   const [activeIndex, setActiveIndex] = React.useState(0);
   const [isPlaying, setIsPlaying] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
@@ -755,6 +759,8 @@ const Host = ({
         // "resume" instead of a duplicate. Co-hosts don't own the room.
         if (!remote) rememberLastHostedRoom(joinCode!);
         setQueue(room.queue);
+        setSingWithMe(room.singWithMe ?? []);
+        setSuggestions(room.suggestions ?? []);
         setActiveIndex(room.activeVideoIndex);
         setIsPlaying(room.isPlaying ?? false);
         setReactionsOn(room.reactionsEnabled ?? true);
@@ -785,6 +791,8 @@ const Host = ({
       const room = await getRoom(joinCode);
       if (room && !isPausedRef.current) {
         setQueue(room.queue);
+        setSingWithMe(room.singWithMe ?? []);
+        setSuggestions(room.suggestions ?? []);
         setActiveIndex(room.activeVideoIndex);
         setIsPlaying(room.isPlaying ?? false);
         setReactionsOn(room.reactionsEnabled ?? true);
@@ -792,6 +800,16 @@ const Host = ({
       }
     }, POLL_INTERVAL);
   }, [joinCode, error, isPaused]);
+
+  // Immediately re-pull after a host moderation action on the boards.
+  const refreshBoards = React.useCallback(async () => {
+    if (!joinCode) return;
+    const room = await getRoom(joinCode);
+    if (room) {
+      setSingWithMe(room.singWithMe ?? []);
+      setSuggestions(room.suggestions ?? []);
+    }
+  }, [joinCode]);
 
   function pausePolling() {
     setIsPaused(true);
@@ -1655,6 +1673,41 @@ const Host = ({
                           cooldown={reactionCooldown}
                           lastSentEmoji={lastSentEmoji}
                           compact
+                        />
+                      </div>
+                    )}
+                  </>
+                )}
+                {joinCode && (singWithMe.length > 0 || suggestions.length > 0) && (
+                  <>
+                    <button
+                      className={`${styles.drawerToggle} ${boardsOpen ? styles.drawerToggleOpen : ""}`}
+                      onClick={() => setBoardsOpen((o) => !o)}
+                      aria-expanded={boardsOpen}
+                    >
+                      <svg
+                        className={styles.drawerCaret}
+                        width="10"
+                        height="6"
+                        viewBox="0 0 10 6"
+                        fill="currentColor"
+                      >
+                        <path d="M0 0l5 6 5-6z" />
+                      </svg>
+                      Singer boards
+                      <span className={styles.boardsCount}>
+                        {singWithMe.length + suggestions.length}
+                      </span>
+                    </button>
+                    {boardsOpen && (
+                      <div className={styles.boardsShelf}>
+                        <SocialBoards
+                          roomId={joinCode}
+                          userName={hostName || "Host"}
+                          singWithMe={singWithMe}
+                          suggestions={suggestions}
+                          mode="host"
+                          onChange={refreshBoards}
                         />
                       </div>
                     )}

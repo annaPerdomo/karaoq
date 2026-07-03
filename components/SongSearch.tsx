@@ -54,6 +54,18 @@ interface SongSearchProps {
   requireName?: boolean;
   /** Who is searching — recorded with the search_performed funnel event. */
   role?: "host" | "singer" | "display";
+  /**
+   * When provided, the component acts as a song *picker* instead of adding to
+   * the queue: the "+" button returns the chosen result to the caller (used by
+   * the "Sing with me" and Suggestions boards) and no name is required.
+   */
+  onPick?: (song: YoutubeResult) => void;
+  /**
+   * Rendered at the top of the scrollable browse area (above the "Song ideas"
+   * tabs) while the user isn't looking at search results — home of the
+   * "Sing with me" and Suggestions boards on the singer page.
+   */
+  belowSearch?: React.ReactNode;
 }
 
 const SongSearch: React.FC<SongSearchProps> = ({
@@ -65,6 +77,8 @@ const SongSearch: React.FC<SongSearchProps> = ({
   onNameChange,
   requireName = true,
   role,
+  onPick,
+  belowSearch,
 }) => {
   const [query, setQuery] = React.useState('');
   const [results, setResults] = React.useState<YoutubeResult[]>([]);
@@ -358,7 +372,15 @@ const SongSearch: React.FC<SongSearchProps> = ({
     }
   }
 
-  const canAdd = !requireName || userName.trim().length > 0;
+  // In picker mode, hand the chosen song back to the caller and reset search.
+  function handlePick(song: YoutubeResult) {
+    onPick?.(song);
+    setResults([]);
+    setQuery('');
+    setHasSearched(false);
+  }
+
+  const canAdd = !!onPick || !requireName || userName.trim().length > 0;
 
   return (
     <div className={styles.container}>
@@ -471,9 +493,15 @@ const SongSearch: React.FC<SongSearchProps> = ({
               </div>
               <button
                 className={styles.addBtn}
-                onClick={() => setConfirmSong(song)}
+                onClick={() => (onPick ? handlePick(song) : setConfirmSong(song))}
                 disabled={!canAdd}
-                title={!canAdd ? 'Enter your name first' : 'Add to queue'}
+                title={
+                  !canAdd
+                    ? 'Enter your name first'
+                    : onPick
+                    ? 'Choose this song'
+                    : 'Add to queue'
+                }
               >
                 +
               </button>
@@ -527,6 +555,18 @@ const SongSearch: React.FC<SongSearchProps> = ({
 
         return (
           <div className={styles.discovery}>
+            {/* Rendered inside the scroll container so the room board and the
+                idea tabs scroll together instead of the board pinning itself
+                above a separately-scrolling ideas list. */}
+            {!expandedData && belowSearch}
+            {!expandedData && (
+              <div className={styles.discoveryHeading}>
+                <span className={styles.discoveryTitle}>Song ideas</span>
+                <span className={styles.discoverySub}>
+                  Not sure what to sing? Tap any song to look it up.
+                </span>
+              </div>
+            )}
             {expandedData ? (
               <>
                 <div className={styles.songPanelHead}>

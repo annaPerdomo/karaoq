@@ -5,13 +5,14 @@ import { v4 as uuidv4 } from 'uuid';
 import styles from '../styles/Sing.module.css';
 import CheerBar from './CheerBar';
 import SongSearch from './SongSearch';
+import SocialBoards from './SocialBoards';
 import getRoom from '../app/queue/getRoom';
 import { normalizeRoomId } from '../lib/roomCode';
 import postReaction from '../app/queue/postReaction';
 import { CHEER_EMOJIS, REACTION_COOLDOWN_MS, isTextReaction } from '../app/queue/cheerConstants';
 import { startSessionTracking } from '../app/queue/trackSession';
 import { startVisiblePolling } from '../app/queue/pollWhileVisible';
-import { QueueEntry, Reaction } from '../pages/api/types';
+import { QueueEntry, Reaction, SingWithMePost, SuggestedSong } from '../pages/api/types';
 
 
 const POLL_INTERVAL = 5000;
@@ -28,6 +29,8 @@ const Sing = (): React.ReactElement => {
   const joinCode = normalizeRoomId(router.query.joinCode) as string | undefined;
 
   const [queue, setQueue] = React.useState<QueueEntry[]>([]);
+  const [singWithMe, setSingWithMe] = React.useState<SingWithMePost[]>([]);
+  const [suggestions, setSuggestions] = React.useState<SuggestedSong[]>([]);
   const [activeIndex, setActiveIndex] = React.useState(0);
   const [username, setUsername] = React.useState('');
   const [isPlaying, setIsPlaying] = React.useState(false);
@@ -37,6 +40,7 @@ const Sing = (): React.ReactElement => {
   const [reactionCooldown, setReactionCooldown] = React.useState(false);
   const [lastSentEmoji, setLastSentEmoji] = React.useState<string | null>(null);
   const [mobileQueueOpen, setMobileQueueOpen] = React.useState(false);
+  const [boardsOpen, setBoardsOpen] = React.useState(true);
   const [showWelcome, setShowWelcome] = React.useState(true);
   // First-run tips are a non-blocking banner above search (see render) rather
   // than a gate — a new singer can start searching immediately. Returning
@@ -71,6 +75,27 @@ const Sing = (): React.ReactElement => {
       localStorage.setItem('karaoq_seen_tips', '1');
     } catch {
       /* private mode — fine, banner just shows again next visit */
+    }
+  }
+
+  // The "In this room" board starts open (discoverability) but a singer's
+  // collapse choice sticks per room, like the host's cheers/QR shelves.
+  React.useEffect(() => {
+    if (!joinCode) return;
+    try {
+      setBoardsOpen(localStorage.getItem(`karaoq_boards_hidden_${joinCode}`) !== '1');
+    } catch {
+      /* private mode — default stays open */
+    }
+  }, [joinCode]);
+
+  function toggleBoards() {
+    const next = !boardsOpen;
+    setBoardsOpen(next);
+    try {
+      localStorage.setItem(`karaoq_boards_hidden_${joinCode}`, next ? '0' : '1');
+    } catch {
+      /* private mode — just won't be remembered */
     }
   }
 
@@ -132,6 +157,8 @@ const Sing = (): React.ReactElement => {
       if (cancelled) return;
       if (room) {
         setQueue(room.queue);
+        setSingWithMe(room.singWithMe ?? []);
+        setSuggestions(room.suggestions ?? []);
         setActiveIndex(room.activeVideoIndex);
         setIsPlaying(room.isPlaying ?? false);
         setReactionsOn(room.reactionsEnabled ?? true);
@@ -154,6 +181,8 @@ const Sing = (): React.ReactElement => {
       const room = await getRoom(joinCode);
       if (room) {
         setQueue(room.queue);
+        setSingWithMe(room.singWithMe ?? []);
+        setSuggestions(room.suggestions ?? []);
         setActiveIndex(room.activeVideoIndex);
         setIsPlaying(room.isPlaying ?? false);
         setReactionsOn(room.reactionsEnabled ?? true);
@@ -161,6 +190,18 @@ const Sing = (): React.ReactElement => {
       }
     }, POLL_INTERVAL);
   }, [joinCode, error, processReactions]);
+
+  // Pull the latest room immediately after a board action so the singer sees
+  // their post / join land without waiting for the next poll tick.
+  const refreshBoards = React.useCallback(async () => {
+    if (!joinCode) return;
+    const room = await getRoom(joinCode);
+    if (room) {
+      setQueue(room.queue);
+      setSingWithMe(room.singWithMe ?? []);
+      setSuggestions(room.suggestions ?? []);
+    }
+  }, [joinCode]);
 
   function handleSongAdded(entry: QueueEntry) {
     setQueue([...queue, entry]);
@@ -259,6 +300,46 @@ const Sing = (): React.ReactElement => {
               onNameChange={setUsername}
               requireName={true}
               role="singer"
+              belowSearch={
+                <div className={styles.boardsSection}>
+                  <button
+                    className={styles.boardsToggle}
+                    onClick={toggleBoards}
+                    aria-expanded={boardsOpen}
+                  >
+                    <span className={styles.boardsTitle}>
+                      <span className={styles.boardsLiveDot} />
+                      Live room suggestions
+                      {singWithMe.length + suggestions.length > 0 && (
+                        <span className={styles.boardsCountBadge}>
+                          {singWithMe.length + suggestions.length}
+                        </span>
+                      )}
+                    </span>
+                    <span
+                      className={`${styles.boardsCaret} ${boardsOpen ? styles.boardsCaretOpen : ''}`}
+                    >
+                      &#x25BE;
+                    </span>
+                  </button>
+                  {boardsOpen && (
+                    <div className={styles.boardsBody}>
+                      <span className={styles.boardsSub}>
+                        Posted by people in room {joinCode?.toUpperCase()} —
+                        join someone&apos;s song, or post one for others here
+                        to pick up.
+                      </span>
+                      <SocialBoards
+                        roomId={joinCode}
+                        userName={username}
+                        singWithMe={singWithMe}
+                        suggestions={suggestions}
+                        onChange={refreshBoards}
+                      />
+                    </div>
+                  )}
+                </div>
+              }
             />
           )}
         </div>

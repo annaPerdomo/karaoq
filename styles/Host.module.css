@@ -1734,6 +1734,25 @@
   flex-shrink: 0;
 }
 
+/* ─── Singer boards moderation shelf ─── */
+.boardsShelf {
+  flex-shrink: 0;
+  padding: 0.75rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(163, 75, 255, 0.03);
+}
+
+.boardsCount {
+  margin-left: 0.4rem;
+  min-width: 1.2rem;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  font-size: 0.7rem;
+  line-height: 1.2rem;
+  text-align: center;
+}
+
 /* ─── Contextual cheers (only while a song is on stage) ─── */
 .cheersLive {
   flex-shrink: 0;

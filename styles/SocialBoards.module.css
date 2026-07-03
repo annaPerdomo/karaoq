@@ -1,0 +1,401 @@
+.boards {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* ── Tabs ── */
+.tabs {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.tab {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.55rem 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tab:hover {
+  color: var(--text-primary);
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.tabActive {
+  color: #fff;
+  border-color: transparent;
+  background: linear-gradient(135deg, #ff2d78, #a34bff);
+}
+
+.tabCount {
+  min-width: 1.2rem;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.25);
+  font-size: 0.7rem;
+  line-height: 1.2rem;
+  text-align: center;
+}
+
+/* ── List + cards ── */
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.postBtn {
+  width: 100%;
+  padding: 0.6rem;
+  border: 1px dashed rgba(255, 45, 120, 0.5);
+  border-radius: 10px;
+  background: rgba(255, 45, 120, 0.06);
+  color: #ff6aa0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.postBtn:hover {
+  background: rgba(255, 45, 120, 0.12);
+  border-color: rgba(255, 45, 120, 0.8);
+}
+
+.card {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 10px;
+  background: var(--bg-secondary);
+}
+
+.cardMain {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.cardSong {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  /* Two lines then clamp — song titles are long and a hard single-line cut
+     hides the part people recognize. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.cardMeta {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.progressRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.1rem;
+}
+
+.progressText {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #00f0ff;
+}
+
+.queuedBadge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #34c759;
+}
+
+.joinedNames {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.joinBtn {
+  flex-shrink: 0;
+  padding: 0.45rem 0.85rem;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #ff2d78, #ff8a3d);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.1s ease, opacity 0.15s ease;
+}
+
+.joinBtn:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.joinBtn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* "Already joined" reads as a calm confirmation, not a washed-out button. */
+.joinBtnDone,
+.joinBtnDone:disabled {
+  background: rgba(52, 199, 89, 0.12);
+  color: #34c759;
+  opacity: 1;
+}
+
+.removeBtn {
+  flex-shrink: 0;
+  width: 1.8rem;
+  height: 1.8rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.removeBtn:hover:not(:disabled) {
+  color: #ff5a5a;
+  border-color: rgba(255, 90, 90, 0.5);
+}
+
+.empty {
+  padding: 1.2rem 0.8rem;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.empty p {
+  margin: 0 0 0.25rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.empty span {
+  font-size: 0.78rem;
+}
+
+/* ── Post modal ── */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(3px);
+}
+
+.modal {
+  width: 100%;
+  max-width: 460px;
+  max-height: 88vh;
+  overflow-y: auto;
+  padding: 1.1rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  background: var(--bg-primary);
+}
+
+.modalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.modalTitle {
+  margin: 0;
+  font-family: var(--font-headline);
+  font-size: 1.15rem;
+  color: var(--text-primary);
+}
+
+.modalClose {
+  width: 2rem;
+  height: 2rem;
+  border: none;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-secondary);
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.draft {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.75rem;
+}
+
+.draftThumb {
+  width: 100%;
+  max-height: 180px;
+  object-fit: cover;
+  border-radius: 10px;
+}
+
+.draftSong {
+  margin: 0;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-align: center;
+}
+
+.changeBtn {
+  align-self: center;
+  padding: 0.3rem 0.6rem;
+  border: none;
+  background: transparent;
+  color: #00f0ff;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.stepperRow {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.stepper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.stepperLabel {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.stepperControls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.25rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+
+.stepperBtn {
+  width: 2rem;
+  height: 2rem;
+  border: none;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-primary);
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.stepperBtn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.stepperValue {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.anonRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.submitBtn {
+  padding: 0.7rem;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #ff2d78, #a34bff);
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.submitBtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* ── Mobile: the post modal becomes a bottom sheet, matching the app's
+      drawer pattern, and controls get comfier touch targets. ── */
+@media (max-width: 768px) {
+  .overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .modal {
+    max-width: 100%;
+    max-height: 92vh;
+    border-radius: 18px 18px 0 0;
+    border-bottom: none;
+    padding-bottom: calc(1.1rem + env(safe-area-inset-bottom));
+    animation: sheetUp 0.22s ease-out;
+  }
+
+  .tab {
+    padding: 0.65rem 0.5rem;
+  }
+
+  .joinBtn {
+    padding: 0.55rem 0.9rem;
+  }
+
+  .postBtn {
+    padding: 0.7rem;
+  }
+
+  .submitBtn {
+    padding: 0.85rem;
+  }
+}
+
+@keyframes sheetUp {
+  from {
+    transform: translateY(24px);
+    opacity: 0.5;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}

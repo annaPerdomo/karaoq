@@ -332,6 +332,30 @@
   scrollbar-color: rgba(167, 139, 250, 0.35) transparent;
 }
 
+/* Labels the browse tabs as inspiration, in contrast to the live room board
+   above them (see .boardsSection heading on the Sing page). Top margin
+   matches the gap above that board so the two sections read as evenly
+   spaced, not squeezed together. */
+.discoveryHeading {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  margin: 0.75rem 0;
+}
+
+.discoveryTitle {
+  font-size: 0.65rem;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.discoverySub {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
 .discovery::-webkit-scrollbar {
   width: 4px;
 }

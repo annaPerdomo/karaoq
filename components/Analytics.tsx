@@ -63,6 +63,20 @@ interface AnalyticsData {
     hosts: number;
     repeatHosts: number;
   };
+  social?: {
+    addsByVia: { _id: string; count: number }[];
+    singWithMe: {
+      posted: number;
+      joined: number;
+      queued: number;
+      byDay: DayCount[];
+    };
+    board: {
+      suggested: number;
+      claimed: number;
+      byDay: DayCount[];
+    };
+  };
   meta?: {
     timezone: string;
     generatedAt: string;
@@ -92,6 +106,12 @@ const SECTION_LABELS: Record<string, string> = {
   spanish: 'Spanish',
   kpop: 'K-Pop',
   japanese: 'Japanese',
+};
+
+const VIA_LABELS: Record<string, string> = {
+  search: 'Search',
+  board_claim: 'Suggestion Board',
+  singwithme: 'Sing With Me',
 };
 
 // Mongo's $dayOfWeek: 1 = Sunday … 7 = Saturday
@@ -245,7 +265,7 @@ const Analytics = (): React.ReactElement => {
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [data, setData] = React.useState<AnalyticsData | null>(null);
-  const [activeTab, setActiveTab] = React.useState<'overview' | 'geo' | 'songs' | 'suggestions' | 'rooms'>('overview');
+  const [activeTab, setActiveTab] = React.useState<'overview' | 'geo' | 'songs' | 'suggestions' | 'social' | 'rooms'>('overview');
   const [rooms, setRooms] = React.useState<RoomRow[]>([]);
   const [roomsHasMore, setRoomsHasMore] = React.useState(false);
   const [roomsLoading, setRoomsLoading] = React.useState(false);
@@ -438,7 +458,7 @@ const Analytics = (): React.ReactElement => {
     );
   }
 
-  const { overview, charts, geo, rankings, devices, suggestions, funnel, engagement } = data;
+  const { overview, charts, geo, rankings, devices, suggestions, funnel, engagement, social } = data;
 
   const mobileCount = devices.find((d) => d._id === 'Mobile')?.count || 0;
   const desktopCount = devices.find((d) => d._id === 'Desktop')?.count || 0;
@@ -472,7 +492,7 @@ const Analytics = (): React.ReactElement => {
       )}
 
       <nav className={styles.tabs}>
-        {(['overview', 'geo', 'songs', 'suggestions', 'rooms'] as const).map((tab) => (
+        {(['overview', 'geo', 'songs', 'suggestions', 'social', 'rooms'] as const).map((tab) => (
           <button
             key={tab}
             className={`${styles.tab} ${activeTab === tab ? styles.tabActive : ''}`}
@@ -763,6 +783,58 @@ const Analytics = (): React.ReactElement => {
                 ))}
               </div>
             )}
+          </section>
+        </div>
+      )}
+
+      {activeTab === 'social' && social && (
+        <div className={styles.tabContent}>
+          <section className={styles.section}>
+            <h2 className={styles.sectionTitle}>Songs Added by Source</h2>
+            <BarChart
+              data={social.addsByVia.map((d) => ({
+                label: VIA_LABELS[d._id] ?? d._id,
+                value: d.count,
+              }))}
+              color="#34d399"
+            />
+          </section>
+
+          <section className={styles.section}>
+            <h2 className={styles.sectionTitle}>Sing With Me</h2>
+            <div className={styles.statGrid}>
+              <StatCard label="Posts Created" value={social.singWithMe.posted} />
+              <StatCard label="Joins" value={social.singWithMe.joined} />
+              <StatCard
+                label="Auto-Queued"
+                value={social.singWithMe.queued}
+                sub={
+                  social.singWithMe.posted > 0
+                    ? `${Math.round((social.singWithMe.queued / social.singWithMe.posted) * 100)}% of posts reached min singers`
+                    : undefined
+                }
+              />
+            </div>
+            <h3 className={styles.sectionTitle}>Posts Created (Last 30 Days)</h3>
+            <BarChart data={fillDays(social.singWithMe.byDay, 30)} color="#f472b6" />
+          </section>
+
+          <section className={styles.section}>
+            <h2 className={styles.sectionTitle}>Suggestion Board</h2>
+            <div className={styles.statGrid}>
+              <StatCard label="Songs Suggested" value={social.board.suggested} />
+              <StatCard
+                label="Claimed"
+                value={social.board.claimed}
+                sub={
+                  social.board.suggested > 0
+                    ? `${Math.round((social.board.claimed / social.board.suggested) * 100)}% claim rate`
+                    : undefined
+                }
+              />
+            </div>
+            <h3 className={styles.sectionTitle}>Songs Suggested (Last 30 Days)</h3>
+            <BarChart data={fillDays(social.board.byDay, 30)} color="#a78bfa" />
           </section>
         </div>
       )}

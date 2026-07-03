@@ -8,7 +8,12 @@ export type EventType =
   | "reaction_sent"
   | "session_heartbeat"
   | "qr_printed"
-  | "suggestion_used";
+  | "suggestion_used"
+  | "singwithme_posted"
+  | "singwithme_joined"
+  | "singwithme_queued"
+  | "song_suggested"
+  | "suggestion_claimed";
 
 export interface AnalyticsEvent {
   type: EventType;
@@ -27,6 +32,9 @@ export interface AnalyticsEvent {
   suggestionSource?: "random" | "song_pick" | "genre_chip" | "trending";
   sectionId?: string;
   categoryId?: string;
+  // How a song_added event reached the queue. Absent on events from before
+  // this field existed, which were all search adds.
+  via?: "search" | "board_claim" | "singwithme";
 }
 
 function headerString(value: string | string[] | undefined): string | undefined {

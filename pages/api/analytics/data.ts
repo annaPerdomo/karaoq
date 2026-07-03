@@ -70,6 +70,14 @@ export default async function handler(
       funnelRooms,
       reactionsByEmoji,
       hostRetention,
+      singWithMePosted,
+      singWithMeJoined,
+      singWithMeQueued,
+      singWithMeByDay,
+      boardSuggested,
+      boardClaimed,
+      boardSuggestedByDay,
+      addsByVia,
     ] = await Promise.all([
       // Total rooms created
       events.countDocuments({ type: "room_created" }),
@@ -402,6 +410,38 @@ export default async function handler(
           },
         ])
         .toArray(),
+
+      // Sing With Me: posts created, joins, and auto-queued songs
+      events.countDocuments({ type: "singwithme_posted" }),
+      events.countDocuments({ type: "singwithme_joined" }),
+      events.countDocuments({ type: "singwithme_queued" }),
+      events
+        .aggregate([
+          { $match: { type: "singwithme_posted", timestamp: { $gte: thirtyDaysAgo } } },
+          { $group: { _id: { $dateToString: dayKey }, count: { $sum: 1 } } },
+          { $sort: { _id: 1 } },
+        ])
+        .toArray(),
+
+      // Suggestion board: songs suggested and claimed
+      events.countDocuments({ type: "song_suggested" }),
+      events.countDocuments({ type: "suggestion_claimed" }),
+      events
+        .aggregate([
+          { $match: { type: "song_suggested", timestamp: { $gte: thirtyDaysAgo } } },
+          { $group: { _id: { $dateToString: dayKey }, count: { $sum: 1 } } },
+          { $sort: { _id: 1 } },
+        ])
+        .toArray(),
+
+      // Song adds by source. Events from before the via field are search adds.
+      events
+        .aggregate([
+          { $match: { type: "song_added" } },
+          { $group: { _id: { $ifNull: ["$via", "search"] }, count: { $sum: 1 } } },
+          { $sort: { count: -1 } },
+        ])
+        .toArray(),
     ]);
 
     const sessionStats = sessionData[0] || {
@@ -477,6 +517,20 @@ export default async function handler(
       funnel: {
         windowDays: FUNNEL_WINDOW_DAYS,
         ...funnel,
+      },
+      social: {
+        addsByVia,
+        singWithMe: {
+          posted: singWithMePosted,
+          joined: singWithMeJoined,
+          queued: singWithMeQueued,
+          byDay: singWithMeByDay,
+        },
+        board: {
+          suggested: boardSuggested,
+          claimed: boardClaimed,
+          byDay: boardSuggestedByDay,
+        },
       },
       engagement: {
         songsPerRoomHistogram: buildSongsHistogram(
