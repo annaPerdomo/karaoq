@@ -1,4 +1,5 @@
-import { MongoClient, type Db } from "mongodb";
+import { MongoClient, type Collection, type Db } from "mongodb";
+import type { Room } from "../pages/api/types";
 
 // Reuse one connected client per serverless instance instead of opening and
 // closing a fresh TCP+TLS connection on every request/tracked event. Stored on
@@ -22,6 +23,11 @@ export function getMongoClient(): Promise<MongoClient> {
     });
   }
   return globalForMongo._karaoqMongoClient;
+}
+
+export async function getRoomsCollection(): Promise<Collection<Room>> {
+  const client = await getMongoClient();
+  return client.db(process.env.MONGODB_DB).collection<Room>("rooms");
 }
 
 let indexesEnsured = false;

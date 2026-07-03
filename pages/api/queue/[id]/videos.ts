@@ -1,7 +1,6 @@
-import { MongoClient } from "mongodb";
 import { NextApiRequest, NextApiResponse } from "next";
-import { Room } from "../../types";
 import { trackEvent } from "../../../../lib/analytics";
+import { getRoomsCollection } from "../../../../lib/mongodb";
 import { normalizeRoomId } from "../../../../lib/roomCode";
 
 export default async function handler(
@@ -13,7 +12,6 @@ export default async function handler(
     return;
   }
 
-  const client = new MongoClient(process.env.MONGODB_URI!);
   const roomId = normalizeRoomId(req.query.id);
 
   if (typeof roomId !== "string") {
@@ -44,9 +42,7 @@ export default async function handler(
   }
 
   try {
-    await client.connect();
-    const db = client.db(process.env.MONGODB_DB);
-    const collection = db.collection<Room>("rooms");
+    const collection = await getRoomsCollection();
     const room = await collection.findOne({ id: roomId });
 
     if (!room) {
@@ -66,7 +62,5 @@ export default async function handler(
   } catch (e) {
     console.error(e);
     res.status(500).json({ code: 500, message: "Internal server error." });
-  } finally {
-    await client.close();
   }
 }

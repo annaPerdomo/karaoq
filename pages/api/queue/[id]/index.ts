@@ -1,7 +1,7 @@
-import { MongoClient } from "mongodb";
 import { NextApiRequest, NextApiResponse } from "next";
 import { ApiError, Room } from "../../types";
 import { trackEvent } from "../../../../lib/analytics";
+import { getRoomsCollection } from "../../../../lib/mongodb";
 import { normalizeRoomId } from "../../../../lib/roomCode";
 
 const REACTION_TTL_MS = 30000;
@@ -10,7 +10,6 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<Room | ApiError>
 ) {
-  const client = new MongoClient(process.env.MONGODB_URI!);
   const roomId = normalizeRoomId(req.query.id);
 
   if (typeof roomId !== "string") {
@@ -19,9 +18,7 @@ export default async function handler(
   }
 
   try {
-    await client.connect();
-    const db = client.db(process.env.MONGODB_DB);
-    const collection = db.collection<Room>("rooms");
+    const collection = await getRoomsCollection();
 
     if (req.method === "POST") {
       const isCustom = req.headers["x-custom-code"] === "1";
@@ -43,14 +40,13 @@ export default async function handler(
       res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
       const room = await collection.findOne({ id: roomId });
       if (room) {
-        // Prune stale reactions and persist the cleanup
+        // Filter stale reactions in-memory only — persisting the cleanup here
+        // would turn every poll into a write. The reactions POST route prunes
+        // the stored array whenever a new reaction comes in.
         const now = Date.now();
         const reactions = (room.reactions ?? []).filter(
           (r) => now - r.timestamp < REACTION_TTL_MS
         );
-        if (reactions.length !== (room.reactions ?? []).length) {
-          await collection.updateOne({ id: roomId }, { $set: { reactions } });
-        }
         res.status(200).json({
           ...room,
           isPlaying: room.isPlaying ?? false,
@@ -66,7 +62,5 @@ export default async function handler(
   } catch (e) {
     console.error(e);
     res.status(500).json({ code: 500, message: "Internal server error." });
-  } finally {
-    await client.close();
   }
 }
