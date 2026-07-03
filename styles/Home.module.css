@@ -230,7 +230,7 @@
   line-height: 1.04;
   margin-bottom: 1.25rem;
   /* Gradient across the whole headline — both lines carry the brand. */
-  background: linear-gradient(135deg, #ff2d78 20%, #00f0ff 95%);
+  background: linear-gradient(100deg, #da2eff 8%, #9d4edd 42%, #00d9ff 94%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
