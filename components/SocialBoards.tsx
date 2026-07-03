@@ -20,6 +20,10 @@ function decodeHtml(html: string): string {
 
 type BoardTab = 'singwithme' | 'suggestions';
 
+type PreviewTarget =
+  | { kind: 'singwithme'; post: SingWithMePost }
+  | { kind: 'suggestion'; post: SuggestedSong };
+
 interface SocialBoardsProps {
   roomId: string;
   userName: string;
@@ -49,6 +53,13 @@ const SocialBoards: React.FC<SocialBoardsProps> = ({
   const [anonymous, setAnonymous] = React.useState(false);
   const [minSingers, setMinSingers] = React.useState(2);
   const [maxSingers, setMaxSingers] = React.useState(4);
+  // Whether the draft's video preview is playing (in the post modal).
+  const [draftPlaying, setDraftPlaying] = React.useState(false);
+
+  // Preview state, shared between both boards — lets people confirm which
+  // cover/version was posted before joining or claiming it.
+  const [preview, setPreview] = React.useState<PreviewTarget | null>(null);
+  const [previewPlaying, setPreviewPlaying] = React.useState(false);
 
   const name = userName.trim();
 
@@ -58,6 +69,12 @@ const SocialBoards: React.FC<SocialBoardsProps> = ({
     setAnonymous(false);
     setMinSingers(2);
     setMaxSingers(4);
+    setDraftPlaying(false);
+  }
+
+  function pickSong(song: YoutubeResult | null) {
+    setPicked(song);
+    setDraftPlaying(false);
   }
 
   async function submitSingWithMe() {
@@ -110,18 +127,45 @@ const SocialBoards: React.FC<SocialBoardsProps> = ({
     if (ok) onChange?.();
   }
 
+  function openPreview(target: PreviewTarget) {
+    setPreviewPlaying(false);
+    setPreview(target);
+  }
+
+  async function handleClaimFromPreview() {
+    if (!preview || preview.kind !== 'suggestion') return;
+    await handleClaim(preview.post);
+    setPreview(null);
+  }
+
+  async function handleJoinFromPreview() {
+    if (!preview || preview.kind !== 'singwithme') return;
+    await handleJoin(preview.post);
+    setPreview(null);
+  }
+
   async function handleRemoveSwm(post: SingWithMePost) {
     setBusy(true);
-    const ok = await removeSingWithMe(roomId, post.id);
+    // Host moderation removes with no name; a singer must prove they're the poster.
+    const ok = await removeSingWithMe(roomId, post.id, isHost ? undefined : name);
     setBusy(false);
     if (ok) onChange?.();
   }
 
   async function handleRemoveSuggestion(s: SuggestedSong) {
     setBusy(true);
-    const ok = await removeSuggestion(roomId, s.id);
+    const ok = await removeSuggestion(roomId, s.id, isHost ? undefined : name);
     setBusy(false);
     if (ok) onChange?.();
+  }
+
+  // A singer can back out of their own *named* posts. Anonymous posts have no
+  // recorded owner to match against, so those stay host-only to remove.
+  function ownsSwm(post: SingWithMePost) {
+    return !isHost && !post.anonymous && !!name && post.createdBy === name;
+  }
+  function ownsSuggestion(s: SuggestedSong) {
+    return !isHost && !s.anonymous && !!name && s.suggestedBy === name;
   }
 
   return (
@@ -131,7 +175,7 @@ const SocialBoards: React.FC<SocialBoardsProps> = ({
           className={`${styles.tab} ${tab === 'singwithme' ? styles.tabActive : ''}`}
           onClick={() => setTab('singwithme')}
         >
-          Sing with me
+          Sing together
           {singWithMe.length > 0 && <span className={styles.tabCount}>{singWithMe.length}</span>}
         </button>
         <button
@@ -156,7 +200,7 @@ const SocialBoards: React.FC<SocialBoardsProps> = ({
               <span>
                 {isHost
                   ? 'Singers can post a song and gather people to sing it together.'
-                  : 'Post a duet or group number and gather people to sing it with you!'}
+                  : 'Post a duet or group number and gather people to sing it together!'}
               </span>
             </div>
           ) : (
@@ -189,12 +233,30 @@ const SocialBoards: React.FC<SocialBoardsProps> = ({
                       </span>
                     )}
                   </div>
+                  <button
+                    className={styles.previewBtn}
+                    onClick={() => openPreview({ kind: 'singwithme', post })}
+                    aria-label="Preview this song"
+                    title="Preview this song"
+                  >
+                    <span className={styles.previewBtnIcon}>▶</span> Preview
+                  </button>
                   {isHost ? (
                     <button
                       className={styles.removeBtn}
                       onClick={() => handleRemoveSwm(post)}
                       disabled={busy}
                       aria-label="Remove post"
+                    >
+                      ×
+                    </button>
+                  ) : ownsSwm(post) ? (
+                    <button
+                      className={styles.removeBtn}
+                      onClick={() => handleRemoveSwm(post)}
+                      disabled={busy}
+                      aria-label="Remove your post"
+                      title="Remove your post"
                     >
                       ×
                     </button>
@@ -238,12 +300,30 @@ const SocialBoards: React.FC<SocialBoardsProps> = ({
                     from {s.anonymous || !s.suggestedBy ? 'Anonymous' : s.suggestedBy}
                   </span>
                 </div>
+                <button
+                  className={styles.previewBtn}
+                  onClick={() => openPreview({ kind: 'suggestion', post: s })}
+                  aria-label="Preview this song"
+                  title="Preview this song"
+                >
+                  <span className={styles.previewBtnIcon}>▶</span> Preview
+                </button>
                 {isHost ? (
                   <button
                     className={styles.removeBtn}
                     onClick={() => handleRemoveSuggestion(s)}
                     disabled={busy}
                     aria-label="Remove suggestion"
+                  >
+                    ×
+                  </button>
+                ) : ownsSuggestion(s) ? (
+                  <button
+                    className={styles.removeBtn}
+                    onClick={() => handleRemoveSuggestion(s)}
+                    disabled={busy}
+                    aria-label="Remove your suggestion"
+                    title="Remove your suggestion"
                   >
                     ×
                   </button>
@@ -269,7 +349,7 @@ const SocialBoards: React.FC<SocialBoardsProps> = ({
           <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
             <div className={styles.modalHeader}>
               <h3 className={styles.modalTitle}>
-                {posting === 'singwithme' ? 'Sing with me' : 'Suggest a song'}
+                {posting === 'singwithme' ? 'Sing together' : 'Suggest a song'}
               </h3>
               <button className={styles.modalClose} onClick={closeModal} aria-label="Close">
                 ×
@@ -282,14 +362,33 @@ const SocialBoards: React.FC<SocialBoardsProps> = ({
                 userName={name}
                 onSongAdded={() => {}}
                 showFilters={false}
-                onPick={setPicked}
+                onPick={pickSong}
               />
             ) : (
               <div className={styles.draft}>
-                {/* eslint-disable-next-line @next/next/no-img-element -- external YouTube thumbnail */}
-                <img src={picked.thumbnailUrl} alt="" className={styles.draftThumb} />
+                <div className={styles.previewWrap}>
+                  {draftPlaying ? (
+                    <iframe
+                      className={styles.previewFrame}
+                      src={`https://www.youtube.com/embed/${picked.videoId}?autoplay=1&rel=0`}
+                      allow="autoplay; encrypted-media"
+                      allowFullScreen
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      className={styles.previewPlayBtn}
+                      onClick={() => setDraftPlaying(true)}
+                      title="Play preview"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element -- external YouTube thumbnail */}
+                      <img src={picked.thumbnailUrl} alt="" className={styles.previewThumb} />
+                      <span className={styles.previewPlayIcon}>▶</span>
+                    </button>
+                  )}
+                </div>
                 <p className={styles.draftSong}>{picked.title}</p>
-                <button className={styles.changeBtn} onClick={() => setPicked(null)}>
+                <button className={styles.changeBtn} onClick={() => pickSong(null)}>
                   Choose a different song
                 </button>
 
@@ -336,6 +435,82 @@ const SocialBoards: React.FC<SocialBoardsProps> = ({
           </div>
         </div>
       )}
+
+      {/* Preview modal */}
+      {preview && (() => {
+        const previewJoined = preview.kind === 'singwithme' ? preview.post.joinedSingers.length : 0;
+        const previewAlreadyIn =
+          preview.kind === 'singwithme' && !!name && preview.post.joinedSingers.includes(name);
+        const previewFull = preview.kind === 'singwithme' && previewJoined >= preview.post.maxSingers;
+
+        return (
+          <div className={styles.overlay} onClick={() => setPreview(null)}>
+            <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+              <div className={styles.modalHeader}>
+                <h3 className={styles.modalTitle}>Preview</h3>
+                <button
+                  className={styles.modalClose}
+                  onClick={() => setPreview(null)}
+                  aria-label="Close"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className={styles.draft}>
+                <div className={styles.previewWrap}>
+                  {previewPlaying ? (
+                    <iframe
+                      className={styles.previewFrame}
+                      src={`https://www.youtube.com/embed/${preview.post.videoId}?autoplay=1&rel=0`}
+                      allow="autoplay; encrypted-media"
+                      allowFullScreen
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      className={styles.previewPlayBtn}
+                      onClick={() => setPreviewPlaying(true)}
+                      title="Play preview"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element -- external YouTube thumbnail; Next optimization adds cost/latency without benefit */}
+                      <img
+                        src={`https://i.ytimg.com/vi/${preview.post.videoId}/hqdefault.jpg`}
+                        alt=""
+                        className={styles.previewThumb}
+                      />
+                      <span className={styles.previewPlayIcon}>▶</span>
+                    </button>
+                  )}
+                </div>
+                <p className={styles.draftSong}>{decodeHtml(preview.post.songTitle)}</p>
+
+                {!isHost && preview.kind === 'suggestion' && (
+                  <button
+                    className={styles.submitBtn}
+                    onClick={handleClaimFromPreview}
+                    disabled={busy || !name}
+                    title={!name ? 'Enter your name first' : undefined}
+                  >
+                    I&apos;ll sing this
+                  </button>
+                )}
+
+                {!isHost && preview.kind === 'singwithme' && (
+                  <button
+                    className={styles.submitBtn}
+                    onClick={handleJoinFromPreview}
+                    disabled={busy || previewAlreadyIn || previewFull || !name}
+                    title={!name ? 'Enter your name first' : undefined}
+                  >
+                    {previewAlreadyIn ? '✓ Joined' : previewFull ? 'Full' : 'Join'}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 };

@@ -82,8 +82,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       };
     }
 
+    // The song is queued the moment we hit the minimum (above) so pile-ons never
+    // delay it. The post stays on the board while there's still room for more
+    // singers, and only drops off once it's full — at that point there's
+    // nothing left to do with it.
+    const isFull = post.joinedSingers.length >= post.maxSingers;
+    const nextPosts = post.queued && isFull ? posts.filter((p) => p.id !== postId) : posts;
+
     const update: Record<string, unknown> = {
-      singWithMe: posts,
+      singWithMe: nextPosts,
       lastActivity: new Date(),
     };
     if (queuedEntry) {

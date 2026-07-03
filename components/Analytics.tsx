@@ -801,7 +801,7 @@ const Analytics = (): React.ReactElement => {
           </section>
 
           <section className={styles.section}>
-            <h2 className={styles.sectionTitle}>Sing With Me</h2>
+            <h2 className={styles.sectionTitle}>Sing Together</h2>
             <div className={styles.statGrid}>
               <StatCard label="Posts Created" value={social.singWithMe.posted} />
               <StatCard label="Joins" value={social.singWithMe.joined} />

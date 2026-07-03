@@ -184,6 +184,32 @@
   border-color: rgba(255, 90, 90, 0.5);
 }
 
+.previewBtn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid rgba(0, 240, 255, 0.35);
+  border-radius: 8px;
+  background: rgba(0, 240, 255, 0.08);
+  color: #00f0ff;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.previewBtn:hover {
+  background: rgba(0, 240, 255, 0.16);
+  border-color: rgba(0, 240, 255, 0.6);
+}
+
+.previewBtnIcon {
+  font-size: 0.6rem;
+  line-height: 1;
+}
+
 .empty {
   padding: 1.2rem 0.8rem;
   text-align: center;
@@ -269,6 +295,64 @@
   font-weight: 600;
   color: var(--text-primary);
   text-align: center;
+}
+
+.previewWrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #000;
+}
+
+.previewFrame {
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+}
+
+.previewPlayBtn {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: none;
+  cursor: pointer;
+  background: none;
+  display: block;
+}
+
+.previewThumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.previewPlayIcon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-left: 3px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  color: #fff;
+  font-size: 1.1rem;
+  transition: transform 0.12s ease, background 0.12s ease;
+}
+
+.previewPlayBtn:hover .previewPlayIcon {
+  transform: translate(-50%, -50%) scale(1.1);
+  background: rgba(255, 45, 120, 0.7);
 }
 
 .changeBtn {

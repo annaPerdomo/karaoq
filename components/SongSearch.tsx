@@ -242,6 +242,16 @@ const SongSearch: React.FC<SongSearchProps> = ({
     if (!controller.signal.aborted) setSearching(false);
   }
 
+  // Return from search results to the browse view (song ideas + room boards).
+  function clearSearch() {
+    abortRef.current?.abort();
+    clearTimeout(debounceRef.current);
+    setResults([]);
+    setQuery('');
+    setHasSearched(false);
+    setSearching(false);
+  }
+
   function updateFilter<K extends keyof SearchFilters>(
     key: K,
     value: SearchFilters[K]
@@ -373,12 +383,21 @@ const SongSearch: React.FC<SongSearchProps> = ({
     }
   }
 
+  // Open the preview/confirm modal for a search result. `autoplay` starts the
+  // video straight away (when the user tapped the thumbnail to preview) vs.
+  // showing the thumbnail first (when they tapped "+").
+  function openConfirm(song: YoutubeResult, autoplay: boolean) {
+    setPreviewPlaying(autoplay);
+    setConfirmSong(song);
+  }
+
   // In picker mode, hand the chosen song back to the caller and reset search.
   function handlePick(song: YoutubeResult) {
     onPick?.(song);
     setResults([]);
     setQuery('');
     setHasSearched(false);
+    setConfirmSong(null);
   }
 
   const canAdd = !!onPick || !requireName || userName.trim().length > 0;
@@ -413,6 +432,10 @@ const SongSearch: React.FC<SongSearchProps> = ({
         >
           Search
         </button>
+        {/* Slim branded progress bar — absolutely positioned so it signals an
+            in-flight search (including filter-change refreshes that keep the
+            current results on screen) without nudging the layout. */}
+        {searching && <span className={styles.searchProgress} aria-hidden="true" />}
       </div>
 
       <div className={styles.options}>
@@ -479,29 +502,72 @@ const SongSearch: React.FC<SongSearchProps> = ({
         </div>
       )}
 
+      {hasSearched && (
+        <button className={styles.backToBrowse} onClick={clearSearch}>
+          <span className={styles.backToBrowseArrow} aria-hidden="true">←</span>
+          Back to song ideas
+        </button>
+      )}
+
+      {hasSearched && !searching && results.length === 0 && (
+        <div className={styles.noResults}>
+          No songs found. Try a different search.
+        </div>
+      )}
+
+      {/* Branded loading state for a fresh search: an animated equalizer plus
+          skeleton cards shaped exactly like real result rows, so the results
+          area holds its height and doesn't jump when songs arrive. */}
+      {searching && results.length === 0 && (
+        <div className={styles.results} aria-live="polite" aria-busy="true">
+          <div className={styles.loadingHeader}>
+            <span className={styles.eq} aria-hidden="true">
+              <span />
+              <span />
+              <span />
+              <span />
+              <span />
+            </span>
+            <span className={styles.loadingText}>Finding songs&hellip;</span>
+          </div>
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className={styles.skeletonCard} aria-hidden="true">
+              <div className={styles.skeletonThumb} />
+              <div className={styles.skeletonLines}>
+                <div className={styles.skeletonLine} />
+                <div className={`${styles.skeletonLine} ${styles.skeletonLineShort}`} />
+              </div>
+              <div className={styles.skeletonAdd} />
+            </div>
+          ))}
+        </div>
+      )}
+
       {results.length > 0 && (
         <div className={styles.results}>
           {results.map((song) => (
             <div key={song.videoId} className={styles.resultCard}>
-              {/* eslint-disable-next-line @next/next/no-img-element -- external YouTube thumbnails; Next optimization adds cost/latency without benefit */}
-              <img
-                src={song.thumbnailUrl}
-                alt=""
-                className={styles.resultThumb}
-              />
+              <button
+                type="button"
+                className={styles.resultPreviewBtn}
+                onClick={() => openConfirm(song, true)}
+                aria-label="Preview this song"
+                title="Preview this song"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element -- external YouTube thumbnails; Next optimization adds cost/latency without benefit */}
+                <img
+                  src={song.thumbnailUrl}
+                  alt=""
+                  className={styles.resultThumb}
+                />
+                <span className={styles.resultPlayIcon}>▶</span>
+              </button>
               <div className={styles.resultInfo}>
                 <span className={styles.resultTitle}>{song.title}</span>
               </div>
               <button
                 className={styles.addBtn}
-                onClick={() => {
-                  if (onPick) {
-                    handlePick(song);
-                  } else {
-                    setPreviewPlaying(false);
-                    setConfirmSong(song);
-                  }
-                }}
+                onClick={() => (onPick ? handlePick(song) : openConfirm(song, false))}
                 disabled={!canAdd}
                 title={
                   !canAdd
@@ -716,7 +782,7 @@ const SongSearch: React.FC<SongSearchProps> = ({
       {confirmSong && (
         <div className={styles.overlay} onClick={() => setConfirmSong(null)}>
           <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <h3 className={styles.modalTitle}>Add to queue?</h3>
+            <h3 className={styles.modalTitle}>{onPick ? 'Preview' : 'Add to queue?'}</h3>
             <div className={styles.previewWrap}>
               {previewPlaying ? (
                 <iframe
@@ -743,12 +809,17 @@ const SongSearch: React.FC<SongSearchProps> = ({
               )}
             </div>
             <p className={styles.modalSong}>{confirmSong.title}</p>
-            <p className={styles.modalAs}>
-              Adding as <strong>{userName}</strong>
-            </p>
+            {!onPick && (
+              <p className={styles.modalAs}>
+                Adding as <strong>{userName}</strong>
+              </p>
+            )}
             <div className={styles.modalActions}>
-              <button className={styles.btnPrimary} onClick={() => addSong(confirmSong)}>
-                Add Song
+              <button
+                className={styles.btnPrimary}
+                onClick={() => (onPick ? handlePick(confirmSong) : addSong(confirmSong))}
+              >
+                {onPick ? 'Choose this song' : 'Add Song'}
               </button>
               <button
                 className={styles.btnGhost}

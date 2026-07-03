@@ -11,6 +11,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const roomId = normalizeRoomId(req.query.id);
   const postId = req.query.postId;
+  // When a requester name is supplied, this is a singer removing their own post
+  // and must match the poster. Host moderation calls omit it and pass through.
+  const requester = typeof req.query.userName === "string" ? req.query.userName : undefined;
   if (typeof roomId !== "string" || typeof postId !== "string") {
     res.status(400).json({ code: 400, message: "Invalid request." });
     return;
@@ -25,11 +28,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const posts = room.singWithMe ?? [];
-    const next = posts.filter((p) => p.id !== postId);
-    if (next.length === posts.length) {
+    const target = posts.find((p) => p.id === postId);
+    if (!target) {
       res.status(404).json({ code: 404, message: "Post not found." });
       return;
     }
+    if (requester !== undefined && target.createdBy !== requester) {
+      res.status(403).json({ code: 403, message: "Only the person who posted this can remove it." });
+      return;
+    }
+
+    const next = posts.filter((p) => p.id !== postId);
 
     await collection.updateOne(
       { id: roomId },

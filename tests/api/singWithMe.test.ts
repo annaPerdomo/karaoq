@@ -24,6 +24,7 @@ process.env.MONGODB_DB = "test-db";
 
 import postHandler from "../../pages/api/queue/[id]/sing-with-me";
 import joinHandler from "../../pages/api/queue/[id]/sing-with-me-join";
+import removeHandler from "../../pages/api/queue/[id]/sing-with-me-remove";
 
 function createRes() {
   let statusCode = 200;
@@ -134,7 +135,7 @@ describe("POST /api/queue/[id]/sing-with-me - create", () => {
 describe("POST /api/queue/[id]/sing-with-me-join", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("auto-adds to the queue when the minimum is reached", async () => {
+  it("auto-adds to the queue when the minimum is reached, keeping the post open for more", async () => {
     mockCollection.findOne.mockResolvedValue(baseRoom({ singWithMe: [post()] }));
     mockCollection.updateOne.mockResolvedValue({ modifiedCount: 1 });
 
@@ -151,6 +152,7 @@ describe("POST /api/queue/[id]/sing-with-me-join", () => {
     expect(setArg.queue).toHaveLength(1);
     expect(setArg.queue[0].userName).toBe("Anna & Bob");
     expect(setArg.queue[0].videoId).toBe("dQw4w9WgXcQ");
+    // Queued, but there's still room (max 6) so it stays on the board.
     expect(setArg.singWithMe[0].queued).toBe(true);
   });
 
@@ -172,6 +174,28 @@ describe("POST /api/queue/[id]/sing-with-me-join", () => {
     const setArg = mockCollection.updateOne.mock.calls[0][1].$set;
     expect(setArg.queue).toBeUndefined();
     expect(setArg.singWithMe[0].joinedSingers).toEqual(["Anna", "Bob", "Cara"]);
+  });
+
+  it("drops the post from the board once it fills up", async () => {
+    // min 2 / max 2: the join that hits the minimum also fills it, so the song
+    // queues and the (now spent) post leaves the board in one step.
+    mockCollection.findOne.mockResolvedValue(
+      baseRoom({ singWithMe: [post({ maxSingers: 2 })] })
+    );
+    mockCollection.updateOne.mockResolvedValue({ modifiedCount: 1 });
+
+    const req = createMockReq({
+      method: "POST",
+      query: { id: "ROOM1" },
+      body: { postId: "swm-1", userName: "Bob" },
+    });
+    const res = createRes();
+    await joinHandler(req, res);
+
+    expect(res.getStatus()).toBe(200);
+    const setArg = mockCollection.updateOne.mock.calls[0][1].$set;
+    expect(setArg.queue).toHaveLength(1);
+    expect(setArg.singWithMe).toEqual([]);
   });
 
   it("rejects joining when full", async () => {
@@ -198,5 +222,52 @@ describe("POST /api/queue/[id]/sing-with-me-join", () => {
     const res = createRes();
     await joinHandler(req, res);
     expect(res.getStatus()).toBe(409);
+  });
+});
+
+describe("POST /api/queue/[id]/sing-with-me-remove", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("lets the poster remove their own post", async () => {
+    mockCollection.findOne.mockResolvedValue(baseRoom({ singWithMe: [post()] }));
+    mockCollection.updateOne.mockResolvedValue({ modifiedCount: 1 });
+
+    const req = createMockReq({
+      method: "POST",
+      query: { id: "ROOM1", postId: "swm-1", userName: "Anna" },
+    });
+    const res = createRes();
+    await removeHandler(req, res);
+
+    expect(res.getStatus()).toBe(200);
+    expect(mockCollection.updateOne.mock.calls[0][1].$set.singWithMe).toEqual([]);
+  });
+
+  it("blocks someone else from removing a post", async () => {
+    mockCollection.findOne.mockResolvedValue(baseRoom({ singWithMe: [post()] }));
+    const req = createMockReq({
+      method: "POST",
+      query: { id: "ROOM1", postId: "swm-1", userName: "Mallory" },
+    });
+    const res = createRes();
+    await removeHandler(req, res);
+
+    expect(res.getStatus()).toBe(403);
+    expect(mockCollection.updateOne).not.toHaveBeenCalled();
+  });
+
+  it("lets host moderation remove without a name", async () => {
+    mockCollection.findOne.mockResolvedValue(baseRoom({ singWithMe: [post()] }));
+    mockCollection.updateOne.mockResolvedValue({ modifiedCount: 1 });
+
+    const req = createMockReq({
+      method: "POST",
+      query: { id: "ROOM1", postId: "swm-1" },
+    });
+    const res = createRes();
+    await removeHandler(req, res);
+
+    expect(res.getStatus()).toBe(200);
+    expect(mockCollection.updateOne.mock.calls[0][1].$set.singWithMe).toEqual([]);
   });
 });

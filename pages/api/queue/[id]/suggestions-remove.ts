@@ -11,6 +11,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const roomId = normalizeRoomId(req.query.id);
   const suggestionId = req.query.suggestionId;
+  // When a requester name is supplied, this is a singer withdrawing their own
+  // suggestion and must match the suggester. Host moderation calls omit it.
+  const requester = typeof req.query.userName === "string" ? req.query.userName : undefined;
   if (typeof roomId !== "string" || typeof suggestionId !== "string") {
     res.status(400).json({ code: 400, message: "Invalid request." });
     return;
@@ -25,11 +28,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const suggestions = room.suggestions ?? [];
-    const next = suggestions.filter((s) => s.id !== suggestionId);
-    if (next.length === suggestions.length) {
+    const target = suggestions.find((s) => s.id === suggestionId);
+    if (!target) {
       res.status(404).json({ code: 404, message: "Suggestion not found." });
       return;
     }
+    if (requester !== undefined && target.suggestedBy !== requester) {
+      res.status(403).json({ code: 403, message: "Only the person who suggested this can remove it." });
+      return;
+    }
+
+    const next = suggestions.filter((s) => s.id !== suggestionId);
 
     await collection.updateOne(
       { id: roomId },

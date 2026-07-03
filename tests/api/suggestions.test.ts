@@ -24,6 +24,7 @@ process.env.MONGODB_DB = "test-db";
 
 import postHandler from "../../pages/api/queue/[id]/suggestions";
 import claimHandler from "../../pages/api/queue/[id]/suggestions-claim";
+import removeHandler from "../../pages/api/queue/[id]/suggestions-remove";
 
 function createRes() {
   let statusCode = 200;
@@ -111,5 +112,54 @@ describe("POST /api/queue/[id]/suggestions-claim", () => {
     const res = createRes();
     await claimHandler(req, res);
     expect(res.getStatus()).toBe(404);
+  });
+});
+
+describe("POST /api/queue/[id]/suggestions-remove", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  const named: SuggestedSong = { ...suggestion, id: "sug-2", suggestedBy: "Anna", anonymous: false };
+
+  it("lets the suggester withdraw their own suggestion", async () => {
+    mockCollection.findOne.mockResolvedValue(baseRoom({ suggestions: [named] }));
+    mockCollection.updateOne.mockResolvedValue({ modifiedCount: 1 });
+
+    const req = createMockReq({
+      method: "POST",
+      query: { id: "ROOM1", suggestionId: "sug-2", userName: "Anna" },
+    });
+    const res = createRes();
+    await removeHandler(req, res);
+
+    expect(res.getStatus()).toBe(200);
+    expect(mockCollection.updateOne.mock.calls[0][1].$set.suggestions).toEqual([]);
+  });
+
+  it("blocks someone else from removing a suggestion", async () => {
+    mockCollection.findOne.mockResolvedValue(baseRoom({ suggestions: [named] }));
+    const req = createMockReq({
+      method: "POST",
+      query: { id: "ROOM1", suggestionId: "sug-2", userName: "Mallory" },
+    });
+    const res = createRes();
+    await removeHandler(req, res);
+
+    expect(res.getStatus()).toBe(403);
+    expect(mockCollection.updateOne).not.toHaveBeenCalled();
+  });
+
+  it("lets host moderation remove without a name", async () => {
+    mockCollection.findOne.mockResolvedValue(baseRoom({ suggestions: [named] }));
+    mockCollection.updateOne.mockResolvedValue({ modifiedCount: 1 });
+
+    const req = createMockReq({
+      method: "POST",
+      query: { id: "ROOM1", suggestionId: "sug-2" },
+    });
+    const res = createRes();
+    await removeHandler(req, res);
+
+    expect(res.getStatus()).toBe(200);
+    expect(mockCollection.updateOne.mock.calls[0][1].$set.suggestions).toEqual([]);
   });
 });

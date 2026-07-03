@@ -271,12 +271,51 @@
   background: rgba(255, 255, 255, 0.04);
 }
 
-.resultThumb {
+/* The thumbnail doubles as a preview trigger, so it carries a persistent play
+   badge to signal it's tappable (tap → preview the video before adding). */
+.resultPreviewBtn {
+  position: relative;
   width: 56px;
   height: 42px;
-  object-fit: cover;
-  border-radius: 6px;
   flex-shrink: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  border-radius: 6px;
+  overflow: hidden;
+  cursor: pointer;
+  line-height: 0;
+}
+
+.resultThumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.resultPlayIcon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-left: 2px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  color: #fff;
+  font-size: 0.5rem;
+  transition: background 0.12s ease, transform 0.12s ease;
+}
+
+.resultPreviewBtn:hover .resultPlayIcon {
+  transform: translate(-50%, -50%) scale(1.12);
+  background: rgba(255, 45, 120, 0.75);
 }
 
 .resultInfo {
@@ -292,6 +331,213 @@
   -webkit-box-orient: vertical;
   overflow: hidden;
   line-height: 1.3;
+}
+
+/* Returns from search results to the browse view (song ideas + room boards).
+   Aligned with the search bar / result rows (1rem inset); the pink arrow chip
+   ties it to the brand and nudges left on hover to signal "go back". */
+.backToBrowse {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 1rem 0.6rem;
+  padding: 0.35rem 0.9rem 0.35rem 0.35rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.backToBrowse:hover {
+  background: rgba(255, 45, 120, 0.06);
+  border-color: rgba(255, 45, 120, 0.25);
+  color: var(--text-primary);
+}
+
+.backToBrowseArrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: rgba(255, 45, 120, 0.15);
+  color: #ff2d78;
+  font-size: 0.82rem;
+  line-height: 1;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.backToBrowse:hover .backToBrowseArrow {
+  transform: translateX(-2px);
+  background: rgba(255, 45, 120, 0.28);
+}
+
+.noResults {
+  padding: 1.25rem 1rem;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+/* ─── Search loading state ─── */
+
+/* Slim indeterminate bar tucked under the search bar. Absolutely positioned
+   inside .searchBar (position: relative) so it never adds height. */
+.searchProgress {
+  position: absolute;
+  left: 1rem;
+  right: 1rem;
+  bottom: -2px;
+  height: 2px;
+  border-radius: 2px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.searchProgress::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 40%;
+  border-radius: 2px;
+  background: linear-gradient(90deg, transparent, #ff2d78, #9b1dff, transparent);
+  animation: searchSlide 1.1s ease-in-out infinite;
+}
+
+@keyframes searchSlide {
+  0% { transform: translateX(-120%); }
+  100% { transform: translateX(320%); }
+}
+
+/* Karaoke-flavoured "finding songs" header: five bouncing equalizer bars in
+   the brand gradient. */
+.loadingHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.4rem 1rem 0.75rem;
+}
+
+.eq {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 20px;
+}
+
+.eq span {
+  width: 4px;
+  height: 14px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #ff2d78, #9b1dff);
+  animation: eqBounce 1s ease-in-out infinite;
+}
+
+.eq span:nth-child(1) { animation-delay: 0s; }
+.eq span:nth-child(2) { animation-delay: 0.15s; }
+.eq span:nth-child(3) { animation-delay: 0.3s; }
+.eq span:nth-child(4) { animation-delay: 0.45s; }
+.eq span:nth-child(5) { animation-delay: 0.6s; }
+
+@keyframes eqBounce {
+  0%, 100% { height: 6px; opacity: 0.65; }
+  50% { height: 20px; opacity: 1; }
+}
+
+.loadingText {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: 0.3px;
+}
+
+/* Skeleton rows mirror .resultCard dimensions exactly (56×42 thumb, two text
+   lines, 44px add button) so swapping skeletons for real results is seamless. */
+.skeletonCard {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 1rem;
+}
+
+.skeletonThumb {
+  width: 56px;
+  height: 42px;
+  flex-shrink: 0;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  position: relative;
+  overflow: hidden;
+}
+
+.skeletonLines {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.skeletonLine {
+  height: 0.62rem;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  position: relative;
+  overflow: hidden;
+}
+
+.skeletonLineShort {
+  width: 55%;
+}
+
+.skeletonAdd {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Brand-pink shimmer sweeping across every skeleton block. */
+.skeletonThumb::after,
+.skeletonLine::after,
+.skeletonAdd::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 45, 120, 0.14),
+    transparent
+  );
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  100% { transform: translateX(100%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .eq span,
+  .searchProgress::before,
+  .skeletonThumb::after,
+  .skeletonLine::after,
+  .skeletonAdd::after {
+    animation: none;
+  }
 }
 
 .addBtn {
@@ -826,12 +1072,13 @@
 .modalAs {
   font-size: 0.8rem;
   color: var(--text-muted);
-  margin-bottom: 1.25rem;
+  margin-bottom: 0.25rem;
 }
 
 .modalActions {
   display: flex;
   gap: 0.5rem;
+  margin-top: 1rem;
 }
 
 .btnPrimary {
