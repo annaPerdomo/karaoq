@@ -88,6 +88,7 @@ const SongSearch: React.FC<SongSearchProps> = ({
   const [justAdded, setJustAdded] = React.useState<string | null>(null);
   const [addError, setAddError] = React.useState<string | null>(null);
   const [confirmSong, setConfirmSong] = React.useState<YoutubeResult | null>(null);
+  const [previewPlaying, setPreviewPlaying] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState(SONG_SECTIONS[0].id);
   const [activeCategory, setActiveCategory] = React.useState<string | null>(null);
   const [expandedCategory, setExpandedCategory] = React.useState(false);
@@ -493,7 +494,14 @@ const SongSearch: React.FC<SongSearchProps> = ({
               </div>
               <button
                 className={styles.addBtn}
-                onClick={() => (onPick ? handlePick(song) : setConfirmSong(song))}
+                onClick={() => {
+                  if (onPick) {
+                    handlePick(song);
+                  } else {
+                    setPreviewPlaying(false);
+                    setConfirmSong(song);
+                  }
+                }}
                 disabled={!canAdd}
                 title={
                   !canAdd
@@ -709,12 +717,31 @@ const SongSearch: React.FC<SongSearchProps> = ({
         <div className={styles.overlay} onClick={() => setConfirmSong(null)}>
           <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
             <h3 className={styles.modalTitle}>Add to queue?</h3>
-            {/* eslint-disable-next-line @next/next/no-img-element -- external YouTube thumbnail; Next optimization adds cost/latency without benefit */}
-            <img
-              src={confirmSong.thumbnailUrl}
-              alt=""
-              className={styles.modalThumb}
-            />
+            <div className={styles.previewWrap}>
+              {previewPlaying ? (
+                <iframe
+                  className={styles.previewFrame}
+                  src={`https://www.youtube.com/embed/${confirmSong.videoId}?autoplay=1&rel=0`}
+                  allow="autoplay; encrypted-media"
+                  allowFullScreen
+                />
+              ) : (
+                <button
+                  type="button"
+                  className={styles.previewPlayBtn}
+                  onClick={() => setPreviewPlaying(true)}
+                  title="Preview this video"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element -- external YouTube thumbnail; Next optimization adds cost/latency without benefit */}
+                  <img
+                    src={confirmSong.thumbnailUrl}
+                    alt=""
+                    className={styles.modalThumb}
+                  />
+                  <span className={styles.previewPlayIcon}>▶</span>
+                </button>
+              )}
+            </div>
             <p className={styles.modalSong}>{confirmSong.title}</p>
             <p className={styles.modalAs}>
               Adding as <strong>{userName}</strong>
