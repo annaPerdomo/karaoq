@@ -76,36 +76,6 @@
   cursor: not-allowed;
 }
 
-.cheerMessages {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.3rem;
-}
-
-.cheerMsgBtn {
-  padding: 0.25rem 0.55rem;
-  font-size: 0.7rem;
-  font-weight: 600;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: transform 0.15s ease, background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
-  white-space: nowrap;
-}
-
-.cheerMsgBtn:hover:not(:disabled) {
-  transform: scale(1.05);
-  background: rgba(255, 45, 120, 0.1);
-  border-color: rgba(255, 45, 120, 0.25);
-  color: #ff2d78;
-}
-
-.cheerMsgBtn:active:not(:disabled) {
-  transform: scale(0.95);
-}
-
 .cheerCooldownBar {
   position: absolute;
   bottom: 0;
@@ -116,8 +86,8 @@
 }
 
 /* ─── Compact (phones only) ───
-   The wrapping emoji + message grids become two swipeable rows so the bar
-   stops eating the screen it shares with the queue. */
+   The wrapping emoji grid becomes a swipeable row so the bar stops eating
+   the screen it shares with the queue. */
 @media (max-width: 768px) {
   .cheerBarCompact {
     padding: 0.5rem 0.75rem 0.6rem;
@@ -127,8 +97,7 @@
     margin-bottom: 0.35rem;
   }
 
-  .cheerBarCompact .cheerEmojis,
-  .cheerBarCompact .cheerMessages {
+  .cheerBarCompact .cheerEmojis {
     flex-wrap: nowrap;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
@@ -138,22 +107,12 @@
     margin: -2px;
   }
 
-  .cheerBarCompact .cheerEmojis::-webkit-scrollbar,
-  .cheerBarCompact .cheerMessages::-webkit-scrollbar {
+  .cheerBarCompact .cheerEmojis::-webkit-scrollbar {
     display: none;
-  }
-
-  .cheerBarCompact .cheerEmojis {
-    margin-bottom: 0.35rem;
   }
 
   .cheerBarCompact .cheerBtn {
     flex-shrink: 0;
-  }
-
-  .cheerBarCompact .cheerMsgBtn {
-    flex-shrink: 0;
-    padding: 0.3rem 0.6rem;
   }
 }
 

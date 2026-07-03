@@ -4,13 +4,10 @@ export const CHEER_EMOJIS = [
   '\u{1F3B5}', '\u{1F3B6}',
 ];
 
-export const CHEER_MESSAGES = [
-  'Amazing!', 'You rock!', 'Encore!', 'Wooo!', 'Nailed it!',
-];
-
 export const REACTION_COOLDOWN_MS = 3000;
 
-/** Distinguishes message reactions ("Encore!") from emoji ones for styling. */
+/** Distinguishes message reactions from emoji ones for styling. Text cheers
+    can no longer be sent, but ones already stored server-side still render. */
 export function isTextReaction(emoji: string): boolean {
   return emoji.length > 2 && /[a-zA-Z]/.test(emoji);
 }

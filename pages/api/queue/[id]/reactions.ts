@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { ApiError, Reaction } from "../../types";
-import { CHEER_EMOJIS, CHEER_MESSAGES, REACTION_COOLDOWN_MS } from "../../../../app/queue/cheerConstants";
+import { CHEER_EMOJIS, REACTION_COOLDOWN_MS } from "../../../../app/queue/cheerConstants";
 import { trackEvent } from "../../../../lib/analytics";
 import { getRoomsCollection } from "../../../../lib/mongodb";
 import { normalizeRoomId } from "../../../../lib/roomCode";
@@ -9,7 +9,7 @@ const RATE_LIMIT_MS = REACTION_COOLDOWN_MS;
 const MAX_REACTIONS = 50;
 const REACTION_TTL_MS = 30000;
 
-const ALLOWED_REACTIONS = new Set([...CHEER_EMOJIS, ...CHEER_MESSAGES]);
+const ALLOWED_REACTIONS = new Set(CHEER_EMOJIS);
 
 export default async function handler(
   req: NextApiRequest,

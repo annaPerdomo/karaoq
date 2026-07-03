@@ -1387,22 +1387,6 @@
   52% { transform: scale(0.8); background: rgba(255, 215, 0, 0.2); }
   54%, 100% { transform: scale(1); background: rgba(255, 255, 255, 0.06); }
 }
-.hpCheerMsgs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-.hpCheerMsg {
-  padding: 3px 7px;
-  font-size: 7px;
-  font-weight: 600;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: rgba(220, 200, 255, 0.75);
-  white-space: nowrap;
-}
-
 /* ═══════════════════════════════════════════
    Device Frames
    ═══════════════════════════════════════════ */

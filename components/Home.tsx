@@ -474,11 +474,6 @@ function HeroCheerPhone() {
             <span className={styles.hpCheerBtn}>{'\u{1F929}'}</span>
             <span className={styles.hpCheerBtn}>{'\u{1F483}'}</span>
           </div>
-          <div className={styles.hpCheerMsgs}>
-            <span className={styles.hpCheerMsg}>Amazing!</span>
-            <span className={styles.hpCheerMsg}>You rock!</span>
-            <span className={styles.hpCheerMsg}>Encore!</span>
-          </div>
         </div>
         {/* Same drawer as the search phone — the queue is shared, so its
             3 → 4 tick lands on both phones in the same beat. */}
