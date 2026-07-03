@@ -34,6 +34,7 @@ import setReactionsEnabled from "../app/queue/setReactionsEnabled";
 import postReaction from "../app/queue/postReaction";
 import { REACTION_COOLDOWN_MS } from "../app/queue/cheerConstants";
 import { startSessionTracking } from "../app/queue/trackSession";
+import { startVisiblePolling } from "../app/queue/pollWhileVisible";
 import { QueueEntry, Reaction } from "../pages/api/types";
 import { v4 as uuidv4 } from "uuid";
 
@@ -748,7 +749,7 @@ const Host = ({
   React.useEffect(() => {
     if (!joinCode || error || isPaused) return;
 
-    const interval = setInterval(async () => {
+    return startVisiblePolling(async () => {
       const room = await getRoom(joinCode);
       if (room && !isPausedRef.current) {
         setQueue(room.queue);
@@ -758,8 +759,6 @@ const Host = ({
         processReactions(room.reactions);
       }
     }, POLL_INTERVAL);
-
-    return () => clearInterval(interval);
   }, [joinCode, error, isPaused]);
 
   function pausePolling() {

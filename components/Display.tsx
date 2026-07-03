@@ -6,6 +6,7 @@ import getRoom from '../app/queue/getRoom';
 import { normalizeRoomId } from '../lib/roomCode';
 import { onRoomState, broadcastVideoEnded } from '../app/queue/roomChannel';
 import { startSessionTracking } from '../app/queue/trackSession';
+import { startVisiblePolling } from '../app/queue/pollWhileVisible';
 import { isTextReaction } from '../app/queue/cheerConstants';
 import { QueueEntry, Reaction } from '../pages/api/types';
 
@@ -118,7 +119,7 @@ const Display = (): React.ReactElement => {
   React.useEffect(() => {
     if (!joinCode || error) return;
 
-    const interval = setInterval(async () => {
+    return startVisiblePolling(async () => {
       const room = await getRoom(joinCode);
       if (room) {
         setQueue(room.queue);
@@ -128,8 +129,6 @@ const Display = (): React.ReactElement => {
         processReactions(room.reactions);
       }
     }, POLL_INTERVAL);
-
-    return () => clearInterval(interval);
   }, [joinCode, error]);
 
   // Notify Host when a YouTube video ends (for TV mode)

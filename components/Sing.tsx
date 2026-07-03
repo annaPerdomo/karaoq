@@ -10,10 +10,11 @@ import { normalizeRoomId } from '../lib/roomCode';
 import postReaction from '../app/queue/postReaction';
 import { CHEER_EMOJIS, REACTION_COOLDOWN_MS, isTextReaction } from '../app/queue/cheerConstants';
 import { startSessionTracking } from '../app/queue/trackSession';
+import { startVisiblePolling } from '../app/queue/pollWhileVisible';
 import { QueueEntry, Reaction } from '../pages/api/types';
 
 
-const POLL_INTERVAL = 3000;
+const POLL_INTERVAL = 5000;
 
 function decodeHtml(html: string): string {
   if (typeof document === 'undefined') return html;
@@ -148,7 +149,7 @@ const Sing = (): React.ReactElement => {
   React.useEffect(() => {
     if (!joinCode || error) return;
 
-    const interval = setInterval(async () => {
+    return startVisiblePolling(async () => {
       const room = await getRoom(joinCode);
       if (room) {
         setQueue(room.queue);
@@ -158,8 +159,6 @@ const Sing = (): React.ReactElement => {
         processReactions(room.reactions);
       }
     }, POLL_INTERVAL);
-
-    return () => clearInterval(interval);
   }, [joinCode, error, processReactions]);
 
   function handleSongAdded(entry: QueueEntry) {
