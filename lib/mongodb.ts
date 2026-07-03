@@ -79,6 +79,38 @@ export async function getSearchCacheCollection(): Promise<Collection<SearchCache
   return db.collection<SearchCacheDoc>("search_cache");
 }
 
+// Cached "trending on karaoq" aggregates, refreshed lazily (first request
+// after the doc goes stale recomputes it). TTL is a safety net well past the
+// 24h refresh window so unused country keys eventually disappear.
+const SUGGESTION_CACHE_TTL_SECONDS = 7 * 24 * 60 * 60;
+
+export interface SuggestionCacheDoc {
+  key: string;
+  items: { title: string; artist: string; count: number }[];
+  computedAt: Date;
+}
+
+let suggestionIndexesEnsured = false;
+
+export async function getSuggestionCacheCollection(): Promise<Collection<SuggestionCacheDoc>> {
+  const client = await getMongoClient();
+  const db = client.db(process.env.MONGODB_DB);
+  if (!suggestionIndexesEnsured) {
+    suggestionIndexesEnsured = true;
+    Promise.all([
+      db.collection("suggestion_cache").createIndex({ key: 1 }, { unique: true }),
+      db.collection("suggestion_cache").createIndex(
+        { computedAt: 1 },
+        { expireAfterSeconds: SUGGESTION_CACHE_TTL_SECONDS }
+      ),
+    ]).catch((e) => {
+      console.error("Suggestion cache index creation failed:", e);
+      suggestionIndexesEnsured = false;
+    });
+  }
+  return db.collection<SuggestionCacheDoc>("suggestion_cache");
+}
+
 // Heartbeats are high-volume noise once a session is over; every other event
 // type stays forever because long-term funnel metrics read from them.
 // Sessions expire on the same clock via lastSeen.

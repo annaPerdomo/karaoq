@@ -1,0 +1,89 @@
+{
+  "id": "opm",
+  "label": "🇵🇭 OPM",
+  "categories": [
+    {
+      "id": "ph-classics",
+      "name": "OPM Classics",
+      "emoji": "🌟",
+      "songs": [
+        { "title": "Anak", "artist": "Freddie Aguilar" },
+        { "title": "Handog", "artist": "Florante" },
+        { "title": "Kahit Maputi Na ang Buhok Ko", "artist": "Rey Valera" },
+        { "title": "Maging Sino Ka Man", "artist": "Rey Valera" },
+        { "title": "Ikaw", "artist": "Sharon Cuneta" },
+        { "title": "Bituing Walang Ningning", "artist": "Sharon Cuneta" },
+        { "title": "Sana'y Wala Nang Wakas", "artist": "Sharon Cuneta" },
+        { "title": "Kastilyong Buhangin", "artist": "Basil Valdez" },
+        { "title": "Ngayon at Kailanman", "artist": "Basil Valdez" },
+        { "title": "You", "artist": "Basil Valdez" },
+        { "title": "Himala", "artist": "Rivermaya" },
+        { "title": "214", "artist": "Rivermaya" },
+        { "title": "Kisapmata", "artist": "Rivermaya" },
+        { "title": "Ang Huling El Bimbo", "artist": "Eraserheads" },
+        { "title": "Pare Ko", "artist": "Eraserheads" },
+        { "title": "With a Smile", "artist": "Eraserheads" },
+        { "title": "Magasin", "artist": "Eraserheads" },
+        { "title": "Harana", "artist": "Parokya ni Edgar" },
+        { "title": "Buloy", "artist": "Parokya ni Edgar" },
+        { "title": "Your Song (My One and Only You)", "artist": "Parokya ni Edgar" },
+        { "title": "Narda", "artist": "Kamikazee" },
+        { "title": "Tadhana", "artist": "Up Dharma Down" }
+      ]
+    },
+    {
+      "id": "ph-ballads",
+      "name": "Power Ballads & Divas",
+      "emoji": "🎤",
+      "songs": [
+        { "title": "Bakit Ngayon Ka Lang", "artist": "Ogie Alcasid" },
+        { "title": "Nandito Ako", "artist": "Ogie Alcasid" },
+        { "title": "To Love You More", "artist": "Regine Velasquez" },
+        { "title": "Dadalhin", "artist": "Regine Velasquez" },
+        { "title": "Araw Gabi", "artist": "Regine Velasquez" },
+        { "title": "Ikaw Lamang", "artist": "Zsa Zsa Padilla" },
+        { "title": "Sana Maulit Muli", "artist": "Gary Valenciano" },
+        { "title": "Di Bale Na Lang", "artist": "Gary Valenciano" },
+        { "title": "Take Me Out of the Dark", "artist": "Gary Valenciano" },
+        { "title": "Kailangan Kita", "artist": "Piolo Pascual" },
+        { "title": "Ikaw ang Aking Mahal", "artist": "VST & Company" },
+        { "title": "Awitin Mo at Isasayaw Ko", "artist": "VST & Company" },
+        { "title": "Please Be Careful with My Heart", "artist": "Jose Mari Chan" },
+        { "title": "Beautiful Girl", "artist": "Jose Mari Chan" },
+        { "title": "The Gift", "artist": "Jim Brickman" },
+        { "title": "Ikaw", "artist": "Yeng Constantino" },
+        { "title": "Hawak Kamay", "artist": "Yeng Constantino" },
+        { "title": "Pangako sa 'Yo", "artist": "Kyla" },
+        { "title": "Hanggang", "artist": "Wency Cornejo" },
+        { "title": "Next in Line", "artist": "After Image" }
+      ]
+    },
+    {
+      "id": "ph-hits",
+      "name": "Modern OPM Hits",
+      "emoji": "🔥",
+      "songs": [
+        { "title": "Mundo", "artist": "IV of Spades" },
+        { "title": "Come Inside of My Heart", "artist": "IV of Spades" },
+        { "title": "Kathang Isip", "artist": "Ben&Ben" },
+        { "title": "Leaves", "artist": "Ben&Ben" },
+        { "title": "Maybe the Night", "artist": "Ben&Ben" },
+        { "title": "Pagtingin", "artist": "Ben&Ben" },
+        { "title": "Buwan", "artist": "Juan Karlos" },
+        { "title": "Ere", "artist": "Juan Karlos" },
+        { "title": "Sa Ngalan ng Pag-ibig", "artist": "December Avenue" },
+        { "title": "Kung 'Di Rin Lang Ikaw", "artist": "December Avenue" },
+        { "title": "Sana", "artist": "I Belong to the Zoo" },
+        { "title": "Balang Araw", "artist": "I Belong to the Zoo" },
+        { "title": "Mahika", "artist": "Adie & Janine Berdin" },
+        { "title": "Paraluman", "artist": "Adie" },
+        { "title": "Tahanan", "artist": "Adie" },
+        { "title": "Binibini", "artist": "Zack Tabudlo" },
+        { "title": "Pano", "artist": "Zack Tabudlo" },
+        { "title": "Habang Buhay", "artist": "Zack Tabudlo" },
+        { "title": "Marikit", "artist": "Juan Caoile" },
+        { "title": "Uhaw", "artist": "Dilaw" }
+      ]
+    }
+  ]
+}

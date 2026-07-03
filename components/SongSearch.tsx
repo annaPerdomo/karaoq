@@ -13,11 +13,19 @@ import { QueueEntry } from '../pages/api/types';
 import {
   SONG_SECTIONS,
   ALL_CATEGORIES,
+  COUNTRY_CONFIG,
+  LANGUAGE_PACKS,
+  orderSections,
   getRandomSuggestion,
   buildSongQuery,
+  displaySongTitle,
+  displaySongArtist,
   SongSuggestion,
   SongCategory,
+  SongSection,
 } from '../app/queue/songSuggestions';
+import useCountry from '../app/queue/useCountry';
+import fetchRegionalPack from '../app/queue/regionalPack';
 
 const DURATION_OPTIONS: { value: VideoDuration; label: string }[] = [
   { value: 'any', label: 'Any length' },
@@ -69,6 +77,85 @@ const SongSearch: React.FC<SongSearchProps> = ({
   const [activeTab, setActiveTab] = React.useState(SONG_SECTIONS[0].id);
   const [activeCategory, setActiveCategory] = React.useState<string | null>(null);
   const [expandedCategory, setExpandedCategory] = React.useState(false);
+  const [regionalSection, setRegionalSection] = React.useState<SongSection | null>(null);
+  const [langPacks, setLangPacks] = React.useState<SongSection[]>([]);
+  const [selectedLang, setSelectedLang] = React.useState<string | null>(null);
+  const [trendingSongs, setTrendingSongs] = React.useState<SongSuggestion[]>([]);
+  const userPickedTabRef = React.useRef(false);
+  const country = useCountry();
+
+  // Localize the discovery sections: reorder by country and, where a curated
+  // regional pack exists, splice it in as the first tab.
+  const orderedSections = React.useMemo(() => {
+    const ordered = orderSections(SONG_SECTIONS, country);
+    return regionalSection ? [regionalSection, ...ordered] : ordered;
+  }, [country, regionalSection]);
+
+  React.useEffect(() => {
+    const packId = country ? COUNTRY_CONFIG[country]?.regionalPack : undefined;
+    if (!packId) return;
+    let cancelled = false;
+    fetchRegionalPack(packId).then((section) => {
+      if (!cancelled && section) setRegionalSection(section);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [country]);
+
+  // Follow the country's preferred first tab until the user picks one.
+  React.useEffect(() => {
+    if (userPickedTabRef.current) return;
+    const first = orderedSections[0];
+    if (!first) return;
+    const LANG_IDS = ['spanish', 'kpop', 'japanese'];
+    setActiveTab(LANG_IDS.includes(first.id) ? 'language' : first.id);
+  }, [orderedSections]);
+
+  // Every language pack is available to everyone under the Language tab —
+  // geo only decides which one gets promoted to its own first tab. Packs are
+  // lazy-loaded (CDN-cached JSON) the first time the tab opens.
+  React.useEffect(() => {
+    if (activeTab !== 'language' || langPacks.length > 0) return;
+    let cancelled = false;
+    Promise.all(LANGUAGE_PACKS.map((p) => fetchRegionalPack(p.packId))).then(
+      (sections) => {
+        if (cancelled) return;
+        const loaded = sections.filter((s): s is SongSection => Boolean(s));
+        if (loaded.length > 0) setLangPacks(loaded);
+      }
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, langPacks.length]);
+
+  // "Trending on karaoq" — most-added songs from our own analytics.
+  React.useEffect(() => {
+    const controller = new AbortController();
+    const qs = country ? `?c=${country}` : '';
+    fetch(`/api/suggestions/trending${qs}`, { signal: controller.signal })
+      .then((res) => res.json())
+      .then((data: { items?: { title: string; artist: string }[] }) => {
+        if (Array.isArray(data.items)) {
+          setTrendingSongs(
+            data.items.map((s) => ({ title: s.title, artist: s.artist ?? '' }))
+          );
+        }
+      })
+      .catch(() => {});
+    return () => controller.abort();
+  }, [country]);
+
+  const trendingCategory: SongCategory | null =
+    trendingSongs.length > 0
+      ? {
+          id: 'trending',
+          name: 'Trending on KaraoQ',
+          emoji: '📈',
+          songs: trendingSongs,
+        }
+      : null;
   const [filters, setFilters] = React.useState<SearchFilters>({
     duration: 'any',
     sortBy: 'relevance',
@@ -184,7 +271,7 @@ const SongSearch: React.FC<SongSearchProps> = ({
   }
 
   function trackSuggestion(
-    source: 'random' | 'song_pick' | 'genre_chip',
+    source: 'random' | 'song_pick' | 'genre_chip' | 'trending',
     extra?: { sectionId?: string; categoryId?: string; songTitle?: string; songArtist?: string }
   ) {
     fetch('/api/analytics/suggestion', {
@@ -194,13 +281,18 @@ const SongSearch: React.FC<SongSearchProps> = ({
     }).catch(() => {});
   }
 
-  function searchSuggestion(song: SongSuggestion, sectionId?: string, categoryId?: string) {
+  function searchSuggestion(
+    song: SongSuggestion,
+    sectionId?: string,
+    categoryId?: string,
+    source: 'song_pick' | 'trending' = 'song_pick'
+  ) {
     trackFirstSearch();
     const q = buildSongQuery(song);
     setQuery(q);
     setActiveCategory(null);
 
-    trackSuggestion('song_pick', {
+    trackSuggestion(source, {
       sectionId,
       categoryId,
       songTitle: song.title,
@@ -226,7 +318,9 @@ const SongSearch: React.FC<SongSearchProps> = ({
   }
 
   function handleSurpriseMe() {
-    const suggestion = getRandomSuggestion();
+    const suggestion = getRandomSuggestion(
+      orderedSections.flatMap((s) => s.categories)
+    );
     trackSuggestion('random', { songTitle: suggestion.title, songArtist: suggestion.artist });
     searchSuggestion(suggestion);
   }
@@ -390,23 +484,40 @@ const SongSearch: React.FC<SongSearchProps> = ({
 
       {!hasSearched && results.length === 0 && !justAdded && (() => {
         const LANG_IDS = ['spanish', 'kpop', 'japanese'];
+        const nonLangSections = orderedSections.filter((s) => !LANG_IDS.includes(s.id));
         const TAB_DEFS = [
-          ...SONG_SECTIONS.filter((s) => !LANG_IDS.includes(s.id)),
+          ...nonLangSections,
           { id: 'language', label: 'Language', categories: [] as SongCategory[] },
         ];
-        const langSections = SONG_SECTIONS.filter((s) => LANG_IDS.includes(s.id));
+        const langSections = [
+          ...orderedSections.filter((s) => LANG_IDS.includes(s.id)),
+          // Skip the pack already promoted to its own tab for this country.
+          ...langPacks.filter((p) => p.id !== regionalSection?.id),
+        ];
         const isLangTab = activeTab === 'language';
 
         const currentSection = isLangTab
           ? null
-          : SONG_SECTIONS.find((s) => s.id === activeTab) ?? SONG_SECTIONS[0];
+          : nonLangSections.find((s) => s.id === activeTab) ?? nonLangSections[0];
 
-        const allVisibleCats = isLangTab
+        const firstTabId = nonLangSections[0]?.id;
+        const baseCats = isLangTab
           ? langSections.flatMap((s) => s.categories)
           : currentSection?.categories ?? [];
+        // Trending sits at the end of the first tab's grid.
+        const allVisibleCats =
+          trendingCategory && !isLangTab && currentSection?.id === firstTabId
+            ? [...baseCats, trendingCategory]
+            : baseCats;
 
-        const expandedData = ALL_CATEGORIES.find((c) => c.id === activeCategory);
-        const parentSection = SONG_SECTIONS.find((s) =>
+        const allCategories = [
+          ...(trendingCategory ? [trendingCategory] : []),
+          ...(regionalSection?.categories ?? []),
+          ...langPacks.flatMap((p) => p.categories),
+          ...ALL_CATEGORIES,
+        ];
+        const expandedData = allCategories.find((c) => c.id === activeCategory);
+        const parentSection = [...orderedSections, ...langPacks].find((s) =>
           s.categories.some((c) => c.id === activeCategory)
         );
         const songs = expandedData?.songs ?? [];
@@ -434,11 +545,18 @@ const SongSearch: React.FC<SongSearchProps> = ({
                     <button
                       key={`${song.artist}-${song.title}`}
                       className={`${styles.songRow} ${i % 2 === 1 ? styles.songRowAlt : ''}`}
-                      onClick={() => searchSuggestion(song, parentSection?.id ?? activeTab, activeCategory!)}
+                      onClick={() =>
+                        searchSuggestion(
+                          song,
+                          parentSection?.id ?? activeTab,
+                          activeCategory!,
+                          activeCategory === 'trending' ? 'trending' : 'song_pick'
+                        )
+                      }
                     >
                       <span className={styles.songNum}>{i + 1}</span>
-                      <span className={styles.songRowTitle}>{song.title}</span>
-                      <span className={styles.songRowArtist}>{song.artist}</span>
+                      <span className={styles.songRowTitle}>{displaySongTitle(song)}</span>
+                      <span className={styles.songRowArtist}>{displaySongArtist(song)}</span>
                     </button>
                   ))}
                   {hasMore && !expandedCategory && (
@@ -458,38 +576,55 @@ const SongSearch: React.FC<SongSearchProps> = ({
                     <button
                       key={s.id}
                       className={`${styles.tabBtn} ${activeTab === s.id ? styles.tabBtnActive : ''}`}
-                      onClick={() => { setActiveTab(s.id); setActiveCategory(null); setExpandedCategory(false); }}
+                      onClick={() => { userPickedTabRef.current = true; setActiveTab(s.id); setActiveCategory(null); setExpandedCategory(false); }}
                     >
                       {s.label}
                     </button>
                   ))}
                 </div>
 
-                {isLangTab ? (
-                  <div className={styles.cardGrid}>
-                    {langSections.map((lang) => (
-                      <React.Fragment key={lang.id}>
-                        <div className={styles.langGroupHeader}>
-                          <span>{lang.label}</span>
-                        </div>
-                        {lang.categories.map((cat) => (
+                {isLangTab ? (() => {
+                  const currentLang =
+                    langSections.find((s) => s.id === selectedLang) ?? langSections[0];
+                  return (
+                    <>
+                      <div className={styles.langPickerRow}>
+                        <span className={styles.langPickerLabel}>Language</span>
+                        <select
+                          className={styles.langPicker}
+                          value={currentLang?.id ?? ''}
+                          onChange={(e) => {
+                            setSelectedLang(e.target.value);
+                            setActiveCategory(null);
+                            setExpandedCategory(false);
+                          }}
+                        >
+                          {langSections.map((lang) => (
+                            <option key={lang.id} value={lang.id}>
+                              {lang.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className={styles.cardGrid}>
+                        {(currentLang?.categories ?? []).map((cat) => (
                           <button
                             key={cat.id}
                             className={styles.categoryCard}
                             onClick={() => {
                               setActiveCategory(cat.id);
                               setExpandedCategory(false);
-                              trackSuggestion('genre_chip', { sectionId: lang.id, categoryId: cat.id });
+                              trackSuggestion('genre_chip', { sectionId: currentLang!.id, categoryId: cat.id });
                             }}
                           >
                             <span className={styles.categoryEmoji}>{cat.emoji}</span>
                             <span className={styles.categoryName}>{cat.name}</span>
                           </button>
                         ))}
-                      </React.Fragment>
-                    ))}
-                  </div>
-                ) : (
+                      </div>
+                    </>
+                  );
+                })() : (
                   <div className={styles.cardGrid}>
                     {allVisibleCats.map((cat) => (
                       <button

@@ -1,0 +1,87 @@
+{
+  "id": "indonesia",
+  "label": "🇮🇩 Indonesia",
+  "categories": [
+    {
+      "id": "id-pop",
+      "name": "Pop Indonesia",
+      "emoji": "🇮🇩",
+      "songs": [
+        { "title": "Kangen", "artist": "Dewa 19" },
+        { "title": "Risalah Hati", "artist": "Dewa 19" },
+        { "title": "Separuh Aku", "artist": "Noah" },
+        { "title": "Mungkin Nanti", "artist": "Peterpan" },
+        { "title": "Semua Tentang Kita", "artist": "Peterpan" },
+        { "title": "Dan", "artist": "Sheila on 7" },
+        { "title": "Sephia", "artist": "Sheila on 7" },
+        { "title": "Melompat Lebih Tinggi", "artist": "Sheila on 7" },
+        { "title": "Demi Waktu", "artist": "Ungu" },
+        { "title": "Karena Wanita (Ingin Dimengerti)", "artist": "Ada Band" },
+        { "title": "Hampa", "artist": "Ari Lasso" },
+        { "title": "Aku Yang Tersakiti", "artist": "Judika" },
+        { "title": "Asal Kau Bahagia", "artist": "Armada" },
+        { "title": "Januari", "artist": "Glenn Fredly" },
+        { "title": "Akhir Cerita Cinta", "artist": "Glenn Fredly" },
+        { "title": "Mantan Terindah", "artist": "Kahitna" },
+        { "title": "Cantik", "artist": "Kahitna" },
+        { "title": "Janji Suci", "artist": "Yovie & Nuno" },
+        { "title": "Matahariku", "artist": "Agnes Monica" },
+        { "title": "Tetap Dalam Jiwa", "artist": "Isyana Sarasvati" }
+      ]
+    },
+    {
+      "id": "id-hits",
+      "name": "Hits Terbaru",
+      "emoji": "✨",
+      "songs": [
+        { "title": "Hati-Hati di Jalan", "artist": "Tulus" },
+        { "title": "Monokrom", "artist": "Tulus" },
+        { "title": "Teman Hidup", "artist": "Tulus" },
+        { "title": "Sisa Rasa", "artist": "Mahalini" },
+        { "title": "Melawan Restu", "artist": "Mahalini" },
+        { "title": "Pesan Terakhir", "artist": "Lyodra" },
+        { "title": "Sang Dewi", "artist": "Lyodra" },
+        { "title": "Tak Ingin Usai", "artist": "Keisya Levronka" },
+        { "title": "Hal Hebat", "artist": "Govinda" },
+        { "title": "Runtuh", "artist": "Feby Putri & Fiersa Besari" },
+        { "title": "Sial", "artist": "Mahalini" },
+        { "title": "Komang", "artist": "Raim Laode" },
+        { "title": "Ojo Dibandingke", "artist": "Farel Prayoga" },
+        { "title": "Rungkad", "artist": "Happy Asmara" },
+        { "title": "Cundamani", "artist": "Denny Caknan" },
+        { "title": "Kartonyono Medot Janji", "artist": "Denny Caknan" },
+        { "title": "Lathi", "artist": "Weird Genius & Sara Fajira" },
+        { "title": "To the Bone", "artist": "Pamungkas" },
+        { "title": "Cinta Luar Biasa", "artist": "Andmesh" },
+        { "title": "Hanya Rindu", "artist": "Andmesh" }
+      ]
+    },
+    {
+      "id": "id-klasik",
+      "name": "Dangdut & Klasik",
+      "emoji": "🎶",
+      "songs": [
+        { "title": "Begadang", "artist": "Rhoma Irama" },
+        { "title": "Darah Muda", "artist": "Rhoma Irama" },
+        { "title": "Sayang", "artist": "Via Vallen" },
+        { "title": "Jaran Goyang", "artist": "Nella Kharisma" },
+        { "title": "Pamer Bojo", "artist": "Didi Kempot" },
+        { "title": "Cidro", "artist": "Didi Kempot" },
+        { "title": "Banyu Langit", "artist": "Didi Kempot" },
+        { "title": "Kisah Cintaku", "artist": "Chrisye" },
+        { "title": "Untukku", "artist": "Chrisye" },
+        { "title": "Seperti Yang Kau Minta", "artist": "Chrisye" },
+        { "title": "Bento", "artist": "Iwan Fals" },
+        { "title": "Yang Terlupakan", "artist": "Iwan Fals" },
+        { "title": "Kemesraan", "artist": "Iwan Fals" },
+        { "title": "Berita Kepada Kawan", "artist": "Ebiet G. Ade" },
+        { "title": "Widuri", "artist": "Broery Marantika" },
+        { "title": "Gereja Tua", "artist": "Panbers" },
+        { "title": "Kolam Susu", "artist": "Koes Plus" },
+        { "title": "Bujangan", "artist": "Koes Plus" },
+        { "title": "Madu dan Racun", "artist": "Arie Wibowo" },
+        { "title": "Hati Yang Luka", "artist": "Betharia Sonata" }
+      ]
+    }
+  ]
+}

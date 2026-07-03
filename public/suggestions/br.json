@@ -1,0 +1,89 @@
+{
+  "id": "brasil",
+  "label": "🇧🇷 Brasil",
+  "categories": [
+    {
+      "id": "br-sertanejo",
+      "name": "Sertanejo",
+      "emoji": "🤠",
+      "songs": [
+        { "title": "Evidências", "artist": "Chitãozinho & Xororó" },
+        { "title": "Fio de Cabelo", "artist": "Chitãozinho & Xororó" },
+        { "title": "É o Amor", "artist": "Zezé Di Camargo & Luciano" },
+        { "title": "No Dia em Que Eu Saí de Casa", "artist": "Zezé Di Camargo & Luciano" },
+        { "title": "Ai Se Eu Te Pego", "artist": "Michel Teló" },
+        { "title": "Fugidinha", "artist": "Michel Teló" },
+        { "title": "Cuida Bem Dela", "artist": "Henrique & Juliano" },
+        { "title": "Vidinha de Balada", "artist": "Henrique & Juliano" },
+        { "title": "Amor da Sua Cama", "artist": "Felipe Araújo" },
+        { "title": "Medo Bobo", "artist": "Maiara & Maraisa" },
+        { "title": "10%", "artist": "Maiara & Maraisa" },
+        { "title": "Infiel", "artist": "Marília Mendonça" },
+        { "title": "Eu Sei de Cor", "artist": "Marília Mendonça" },
+        { "title": "Todo Mundo Vai Sofrer", "artist": "Marília Mendonça" },
+        { "title": "Propaganda", "artist": "Jorge & Mateus" },
+        { "title": "Sosseguei", "artist": "Jorge & Mateus" },
+        { "title": "Amo Noite e Dia", "artist": "Jorge & Mateus" },
+        { "title": "Batom de Cereja", "artist": "Israel & Rodolffo" },
+        { "title": "Meu Eu em Você", "artist": "Gusttavo Lima" },
+        { "title": "Balada", "artist": "Gusttavo Lima" }
+      ]
+    },
+    {
+      "id": "br-mpb",
+      "name": "MPB & Clássicos",
+      "emoji": "🎸",
+      "songs": [
+        { "title": "Garota de Ipanema", "artist": "Tom Jobim" },
+        { "title": "Águas de Março", "artist": "Elis Regina" },
+        { "title": "Como Nossos Pais", "artist": "Elis Regina" },
+        { "title": "O Que É, O Que É?", "artist": "Gonzaguinha" },
+        { "title": "Trem das Onze", "artist": "Adoniran Barbosa" },
+        { "title": "Aquarela", "artist": "Toquinho" },
+        { "title": "Andança", "artist": "Beth Carvalho" },
+        { "title": "Detalhes", "artist": "Roberto Carlos" },
+        { "title": "Emoções", "artist": "Roberto Carlos" },
+        { "title": "Como É Grande o Meu Amor por Você", "artist": "Roberto Carlos" },
+        { "title": "Exagerado", "artist": "Cazuza" },
+        { "title": "Ideologia", "artist": "Cazuza" },
+        { "title": "Tempo Perdido", "artist": "Legião Urbana" },
+        { "title": "Eduardo e Mônica", "artist": "Legião Urbana" },
+        { "title": "Pais e Filhos", "artist": "Legião Urbana" },
+        { "title": "Anna Júlia", "artist": "Los Hermanos" },
+        { "title": "Primeiros Erros", "artist": "Capital Inicial" },
+        { "title": "Lanterna dos Afogados", "artist": "Os Paralamas do Sucesso" },
+        { "title": "Sozinho", "artist": "Caetano Veloso" },
+        { "title": "Flor de Lis", "artist": "Djavan" },
+        { "title": "Oceano", "artist": "Djavan" },
+        { "title": "Whisky a Go Go", "artist": "Roupa Nova" }
+      ]
+    },
+    {
+      "id": "br-pagode-funk",
+      "name": "Pagode, Axé & Funk",
+      "emoji": "🥁",
+      "songs": [
+        { "title": "Deixa Acontecer", "artist": "Grupo Revelação" },
+        { "title": "Temporal", "artist": "Art Popular" },
+        { "title": "Cheia de Manias", "artist": "Raça Negra" },
+        { "title": "É Tarde Demais", "artist": "Raça Negra" },
+        { "title": "Coração Radiante", "artist": "Turma do Pagode" },
+        { "title": "Camisa 10", "artist": "Turma do Pagode" },
+        { "title": "Depois do Prazer", "artist": "Só Pra Contrariar" },
+        { "title": "Essa Tal Liberdade", "artist": "Zezé Di Camargo & Luciano" },
+        { "title": "Ta Escrito", "artist": "Grupo Revelação" },
+        { "title": "Lepo Lepo", "artist": "Psirico" },
+        { "title": "Eva", "artist": "Banda Eva" },
+        { "title": "Chame Gente", "artist": "Banda Eva" },
+        { "title": "Sorte Grande (Poeira)", "artist": "Ivete Sangalo" },
+        { "title": "Festa", "artist": "Ivete Sangalo" },
+        { "title": "Vai Malandra", "artist": "Anitta" },
+        { "title": "Envolver", "artist": "Anitta" },
+        { "title": "Show das Poderosas", "artist": "Anitta" },
+        { "title": "Bum Bum Tam Tam", "artist": "MC Fioti" },
+        { "title": "Baile de Favela", "artist": "MC João" },
+        { "title": "Ela Só Quer Paz", "artist": "Projota" }
+      ]
+    }
+  ]
+}

@@ -4,6 +4,8 @@ import {
   ALL_CATEGORIES,
   getRandomSuggestion,
   buildSongQuery,
+  displaySongTitle,
+  displaySongArtist,
 } from "../../app/queue/songSuggestions";
 
 describe("songSuggestions", () => {
@@ -45,6 +47,28 @@ describe("songSuggestions", () => {
         }
       }
     });
+
+    it("native fields, when present, are non-empty strings", () => {
+      for (const cat of ALL_CATEGORIES) {
+        for (const song of cat.songs) {
+          if (song.nativeTitle !== undefined) {
+            expect(song.nativeTitle).toBeTruthy();
+          }
+          if (song.nativeArtist !== undefined) {
+            expect(song.nativeArtist).toBeTruthy();
+          }
+        }
+      }
+    });
+
+    it("K-Pop and Japanese sections carry native-script fields", () => {
+      for (const sectionId of ["kpop", "japanese"]) {
+        const section = SONG_SECTIONS.find((s) => s.id === sectionId)!;
+        const songs = section.categories.flatMap((c) => c.songs);
+        const withNative = songs.filter((s) => s.nativeTitle || s.nativeArtist);
+        expect(withNative.length).toBeGreaterThan(0);
+      }
+    });
   });
 
   describe("ALL_CATEGORIES", () => {
@@ -74,6 +98,42 @@ describe("songSuggestions", () => {
     it("combines artist and title", () => {
       expect(buildSongQuery({ title: "Bohemian Rhapsody", artist: "Queen" }))
         .toBe("Queen Bohemian Rhapsody");
+    });
+
+    it("prefers native-script fields when present", () => {
+      expect(
+        buildSongQuery({
+          title: "Mayonaka no Door",
+          artist: "Miki Matsubara",
+          nativeTitle: "真夜中のドア",
+          nativeArtist: "松原みき",
+        })
+      ).toBe("松原みき 真夜中のドア");
+    });
+
+    it("falls back per-field when only one native field exists", () => {
+      expect(
+        buildSongQuery({ title: "Dynamite", artist: "BTS", nativeArtist: "방탄소년단" })
+      ).toBe("방탄소년단 Dynamite");
+    });
+  });
+
+  describe("display helpers", () => {
+    it("shows native script first with romanization in parentheses", () => {
+      const song = {
+        title: "Mayonaka no Door",
+        artist: "Miki Matsubara",
+        nativeTitle: "真夜中のドア",
+        nativeArtist: "松原みき",
+      };
+      expect(displaySongTitle(song)).toBe("真夜中のドア (Mayonaka no Door)");
+      expect(displaySongArtist(song)).toBe("松原みき (Miki Matsubara)");
+    });
+
+    it("falls back to romanized-only when no native fields", () => {
+      const song = { title: "Bohemian Rhapsody", artist: "Queen" };
+      expect(displaySongTitle(song)).toBe("Bohemian Rhapsody");
+      expect(displaySongArtist(song)).toBe("Queen");
     });
   });
 });

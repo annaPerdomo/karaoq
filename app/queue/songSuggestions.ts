@@ -1,6 +1,12 @@
 export interface SongSuggestion {
+  /** Romanized title — kept for analytics and Latin-script contexts. */
   title: string;
+  /** Romanized artist — kept for analytics and Latin-script contexts. */
   artist: string;
+  /** Native-script title (한글 / kanji-kana / देवनागरी) when the song isn't Latin-script natively. */
+  nativeTitle?: string;
+  /** Native-script artist name. */
+  nativeArtist?: string;
 }
 
 export interface SongCategory {
@@ -597,26 +603,26 @@ export const SONG_SECTIONS: SongSection[] = [
         name: 'Boy Groups',
         emoji: '🕺',
         songs: [
-          { title: 'Dynamite', artist: 'BTS' },
-          { title: 'Butter', artist: 'BTS' },
-          { title: 'Boy With Luv', artist: 'BTS' },
-          { title: 'Spring Day', artist: 'BTS' },
-          { title: 'Fake Love', artist: 'BTS' },
-          { title: 'DNA', artist: 'BTS' },
-          { title: 'IDOL', artist: 'BTS' },
-          { title: 'Fire', artist: 'BTS' },
-          { title: 'God\'s Menu', artist: 'Stray Kids' },
-          { title: 'LALALALA', artist: 'Stray Kids' },
-          { title: 'Love Dive', artist: 'IVE' },
-          { title: 'Growl', artist: 'EXO' },
-          { title: 'Love Shot', artist: 'EXO' },
-          { title: 'Ring Ding Dong', artist: 'SHINee' },
-          { title: 'Replay', artist: 'SHINee' },
-          { title: 'Sorry Sorry', artist: 'Super Junior' },
-          { title: 'Fantastic Baby', artist: 'BIGBANG' },
-          { title: 'Bang Bang Bang', artist: 'BIGBANG' },
-          { title: 'FEVER', artist: 'ENHYPEN' },
-          { title: 'Bite Me', artist: 'ENHYPEN' },
+          { title: 'Dynamite', artist: 'BTS', nativeArtist: '방탄소년단' },
+          { title: 'Butter', artist: 'BTS', nativeArtist: '방탄소년단' },
+          { title: 'Boy With Luv', artist: 'BTS', nativeTitle: '작은 것들을 위한 시', nativeArtist: '방탄소년단' },
+          { title: 'Spring Day', artist: 'BTS', nativeTitle: '봄날', nativeArtist: '방탄소년단' },
+          { title: 'Fake Love', artist: 'BTS', nativeArtist: '방탄소년단' },
+          { title: 'DNA', artist: 'BTS', nativeArtist: '방탄소년단' },
+          { title: 'IDOL', artist: 'BTS', nativeArtist: '방탄소년단' },
+          { title: 'Fire', artist: 'BTS', nativeTitle: '불타오르네', nativeArtist: '방탄소년단' },
+          { title: 'God\'s Menu', artist: 'Stray Kids', nativeTitle: '神메뉴', nativeArtist: '스트레이 키즈' },
+          { title: 'LALALALA', artist: 'Stray Kids', nativeTitle: '락 (樂)', nativeArtist: '스트레이 키즈' },
+          { title: 'Love Dive', artist: 'IVE', nativeArtist: '아이브' },
+          { title: 'Growl', artist: 'EXO', nativeTitle: '으르렁', nativeArtist: '엑소' },
+          { title: 'Love Shot', artist: 'EXO', nativeArtist: '엑소' },
+          { title: 'Ring Ding Dong', artist: 'SHINee', nativeTitle: '링딩동', nativeArtist: '샤이니' },
+          { title: 'Replay', artist: 'SHINee', nativeTitle: '누난 너무 예뻐 (Replay)', nativeArtist: '샤이니' },
+          { title: 'Sorry Sorry', artist: 'Super Junior', nativeTitle: '쏘리 쏘리', nativeArtist: '슈퍼주니어' },
+          { title: 'Fantastic Baby', artist: 'BIGBANG', nativeArtist: '빅뱅' },
+          { title: 'Bang Bang Bang', artist: 'BIGBANG', nativeTitle: '뱅뱅뱅', nativeArtist: '빅뱅' },
+          { title: 'FEVER', artist: 'ENHYPEN', nativeArtist: '엔하이픈' },
+          { title: 'Bite Me', artist: 'ENHYPEN', nativeArtist: '엔하이픈' },
         ],
       },
       {
@@ -624,26 +630,26 @@ export const SONG_SECTIONS: SongSection[] = [
         name: 'Girl Groups',
         emoji: '💅',
         songs: [
-          { title: 'How You Like That', artist: 'BLACKPINK' },
-          { title: 'DDU-DU DDU-DU', artist: 'BLACKPINK' },
-          { title: 'Kill This Love', artist: 'BLACKPINK' },
-          { title: 'Pink Venom', artist: 'BLACKPINK' },
-          { title: 'Lovesick Girls', artist: 'BLACKPINK' },
-          { title: 'Super Shy', artist: 'NewJeans' },
-          { title: 'Hype Boy', artist: 'NewJeans' },
-          { title: 'Attention', artist: 'NewJeans' },
-          { title: 'TT', artist: 'TWICE' },
-          { title: 'Cheer Up', artist: 'TWICE' },
-          { title: 'What Is Love?', artist: 'TWICE' },
-          { title: 'Feel My Rhythm', artist: 'Red Velvet' },
-          { title: 'Psycho', artist: 'Red Velvet' },
-          { title: 'Next Level', artist: 'aespa' },
-          { title: 'Savage', artist: 'aespa' },
-          { title: 'Queencard', artist: '(G)I-DLE' },
-          { title: 'TOMBOY', artist: '(G)I-DLE' },
-          { title: 'Gee', artist: "Girls' Generation" },
-          { title: 'I AM', artist: 'IVE' },
-          { title: 'EASY', artist: 'LE SSERAFIM' },
+          { title: 'How You Like That', artist: 'BLACKPINK', nativeArtist: '블랙핑크' },
+          { title: 'DDU-DU DDU-DU', artist: 'BLACKPINK', nativeTitle: '뚜두뚜두', nativeArtist: '블랙핑크' },
+          { title: 'Kill This Love', artist: 'BLACKPINK', nativeArtist: '블랙핑크' },
+          { title: 'Pink Venom', artist: 'BLACKPINK', nativeArtist: '블랙핑크' },
+          { title: 'Lovesick Girls', artist: 'BLACKPINK', nativeArtist: '블랙핑크' },
+          { title: 'Super Shy', artist: 'NewJeans', nativeArtist: '뉴진스' },
+          { title: 'Hype Boy', artist: 'NewJeans', nativeArtist: '뉴진스' },
+          { title: 'Attention', artist: 'NewJeans', nativeArtist: '뉴진스' },
+          { title: 'TT', artist: 'TWICE', nativeArtist: '트와이스' },
+          { title: 'Cheer Up', artist: 'TWICE', nativeArtist: '트와이스' },
+          { title: 'What Is Love?', artist: 'TWICE', nativeArtist: '트와이스' },
+          { title: 'Feel My Rhythm', artist: 'Red Velvet', nativeArtist: '레드벨벳' },
+          { title: 'Psycho', artist: 'Red Velvet', nativeArtist: '레드벨벳' },
+          { title: 'Next Level', artist: 'aespa', nativeArtist: '에스파' },
+          { title: 'Savage', artist: 'aespa', nativeArtist: '에스파' },
+          { title: 'Queencard', artist: '(G)I-DLE', nativeTitle: '퀸카 (Queencard)', nativeArtist: '(여자)아이들' },
+          { title: 'TOMBOY', artist: '(G)I-DLE', nativeArtist: '(여자)아이들' },
+          { title: 'Gee', artist: "Girls' Generation", nativeArtist: '소녀시대' },
+          { title: 'I AM', artist: 'IVE', nativeArtist: '아이브' },
+          { title: 'EASY', artist: 'LE SSERAFIM', nativeArtist: '르세라핌' },
         ],
       },
       {
@@ -651,26 +657,26 @@ export const SONG_SECTIONS: SongSection[] = [
         name: 'Solo Artists',
         emoji: '🌟',
         songs: [
-          { title: 'Gangnam Style', artist: 'PSY' },
-          { title: 'ZOOM', artist: 'Jungkook' },
-          { title: 'Seven', artist: 'Jungkook' },
-          { title: 'Standing Next to You', artist: 'Jungkook' },
-          { title: 'LALISA', artist: 'Lisa' },
-          { title: 'Solo', artist: 'Jennie' },
-          { title: 'On the Ground', artist: 'Rose' },
-          { title: 'APT.', artist: 'Rose & Bruno Mars' },
-          { title: 'Lilac', artist: 'IU' },
-          { title: 'Celebrity', artist: 'IU' },
-          { title: 'Good Day', artist: 'IU' },
-          { title: 'Eyes, Nose, Lips', artist: 'Taeyang' },
-          { title: 'Crooked', artist: 'G-Dragon' },
-          { title: 'Love Lee', artist: 'AKMU' },
-          { title: 'Way Back Home', artist: 'SHAUN' },
-          { title: 'Gentleman', artist: 'PSY' },
-          { title: 'Maria', artist: 'Hwasa' },
-          { title: 'Eight', artist: 'IU & Suga' },
-          { title: 'Permission to Dance', artist: 'BTS' },
-          { title: 'Yet To Come', artist: 'BTS' },
+          { title: 'Gangnam Style', artist: 'PSY', nativeTitle: '강남스타일', nativeArtist: '싸이' },
+          { title: 'ZOOM', artist: 'Jungkook', nativeArtist: '정국' },
+          { title: 'Seven', artist: 'Jungkook', nativeArtist: '정국' },
+          { title: 'Standing Next to You', artist: 'Jungkook', nativeArtist: '정국' },
+          { title: 'LALISA', artist: 'Lisa', nativeArtist: '리사' },
+          { title: 'Solo', artist: 'Jennie', nativeArtist: '제니' },
+          { title: 'On the Ground', artist: 'Rose', nativeArtist: '로제' },
+          { title: 'APT.', artist: 'Rose & Bruno Mars', nativeArtist: '로제 & Bruno Mars' },
+          { title: 'Lilac', artist: 'IU', nativeTitle: '라일락', nativeArtist: '아이유' },
+          { title: 'Celebrity', artist: 'IU', nativeArtist: '아이유' },
+          { title: 'Good Day', artist: 'IU', nativeTitle: '좋은 날', nativeArtist: '아이유' },
+          { title: 'Eyes, Nose, Lips', artist: 'Taeyang', nativeTitle: '눈, 코, 입', nativeArtist: '태양' },
+          { title: 'Crooked', artist: 'G-Dragon', nativeTitle: '삐딱하게', nativeArtist: '지드래곤' },
+          { title: 'Love Lee', artist: 'AKMU', nativeArtist: '악뮤' },
+          { title: 'Way Back Home', artist: 'SHAUN', nativeArtist: '숀' },
+          { title: 'Gentleman', artist: 'PSY', nativeArtist: '싸이' },
+          { title: 'Maria', artist: 'Hwasa', nativeTitle: '마리아', nativeArtist: '화사' },
+          { title: 'Eight', artist: 'IU & Suga', nativeTitle: '에잇', nativeArtist: '아이유 & 슈가' },
+          { title: 'Permission to Dance', artist: 'BTS', nativeArtist: '방탄소년단' },
+          { title: 'Yet To Come', artist: 'BTS', nativeArtist: '방탄소년단' },
         ],
       },
     ],
@@ -688,26 +694,26 @@ export const SONG_SECTIONS: SongSection[] = [
         name: 'Anime Openings',
         emoji: '⚔️',
         songs: [
-          { title: 'Cruel Angel\'s Thesis', artist: 'Neon Genesis Evangelion' },
-          { title: 'Gurenge', artist: 'LiSA' },
-          { title: 'Unravel', artist: 'TK from Ling Tosite Sigure' },
-          { title: 'Shinzou wo Sasageyo!', artist: 'Attack on Titan' },
-          { title: 'Renai Circulation', artist: 'Kana Hanazawa' },
-          { title: 'IDOL', artist: 'YOASOBI' },
-          { title: 'Guren no Yumiya', artist: 'Attack on Titan' },
-          { title: 'Blue Bird', artist: 'Naruto Shippuden' },
-          { title: 'Silhouette', artist: 'Naruto Shippuden' },
-          { title: 'GO!!!', artist: 'Naruto' },
-          { title: 'Again', artist: 'Fullmetal Alchemist' },
-          { title: 'Colors', artist: 'Code Geass' },
-          { title: 'The WORLD', artist: 'Death Note' },
-          { title: 'Tank!', artist: 'Cowboy Bebop' },
-          { title: 'We Are!', artist: 'One Piece' },
-          { title: 'Cha-La Head-Cha-La', artist: 'Dragon Ball Z' },
-          { title: 'A Cruel Angel\'s Thesis', artist: 'Evangelion' },
-          { title: 'My War', artist: 'Attack on Titan' },
-          { title: 'Kaikai Kitan', artist: 'Jujutsu Kaisen' },
-          { title: 'Specialz', artist: 'Jujutsu Kaisen' },
+          { title: 'Cruel Angel\'s Thesis', artist: 'Neon Genesis Evangelion', nativeTitle: '残酷な天使のテーゼ', nativeArtist: '新世紀エヴァンゲリオン' },
+          { title: 'Gurenge', artist: 'LiSA', nativeTitle: '紅蓮華' },
+          { title: 'Unravel', artist: 'TK from Ling Tosite Sigure', nativeArtist: 'TK from 凛として時雨' },
+          { title: 'Shinzou wo Sasageyo!', artist: 'Attack on Titan', nativeTitle: '心臓を捧げよ！', nativeArtist: '進撃の巨人' },
+          { title: 'Renai Circulation', artist: 'Kana Hanazawa', nativeTitle: '恋愛サーキュレーション', nativeArtist: '花澤香菜' },
+          { title: 'IDOL', artist: 'YOASOBI', nativeTitle: 'アイドル' },
+          { title: 'Guren no Yumiya', artist: 'Attack on Titan', nativeTitle: '紅蓮の弓矢', nativeArtist: '進撃の巨人' },
+          { title: 'Blue Bird', artist: 'Naruto Shippuden', nativeTitle: 'ブルーバード', nativeArtist: 'NARUTO -ナルト- 疾風伝' },
+          { title: 'Silhouette', artist: 'Naruto Shippuden', nativeTitle: 'シルエット', nativeArtist: 'NARUTO -ナルト- 疾風伝' },
+          { title: 'GO!!!', artist: 'Naruto', nativeArtist: 'NARUTO -ナルト-' },
+          { title: 'Again', artist: 'Fullmetal Alchemist', nativeArtist: '鋼の錬金術師' },
+          { title: 'Colors', artist: 'Code Geass', nativeArtist: 'コードギアス' },
+          { title: 'The WORLD', artist: 'Death Note', nativeArtist: 'デスノート' },
+          { title: 'Tank!', artist: 'Cowboy Bebop', nativeArtist: 'カウボーイビバップ' },
+          { title: 'We Are!', artist: 'One Piece', nativeTitle: 'ウィーアー！' },
+          { title: 'Cha-La Head-Cha-La', artist: 'Dragon Ball Z', nativeArtist: 'ドラゴンボールZ' },
+          { title: 'A Cruel Angel\'s Thesis', artist: 'Evangelion', nativeTitle: '残酷な天使のテーゼ', nativeArtist: 'エヴァンゲリオン' },
+          { title: 'My War', artist: 'Attack on Titan', nativeTitle: '僕の戦争', nativeArtist: '進撃の巨人' },
+          { title: 'Kaikai Kitan', artist: 'Jujutsu Kaisen', nativeTitle: '廻廻奇譚', nativeArtist: '呪術廻戦' },
+          { title: 'Specialz', artist: 'Jujutsu Kaisen', nativeArtist: '呪術廻戦' },
         ],
       },
       {
@@ -715,26 +721,26 @@ export const SONG_SECTIONS: SongSection[] = [
         name: 'J-Pop',
         emoji: '🌸',
         songs: [
-          { title: 'Sukiyaki (Ue o Muite Arukou)', artist: 'Kyu Sakamoto' },
-          { title: 'First Love', artist: 'Hikaru Utada' },
-          { title: 'Lemon', artist: 'Kenshi Yonezu' },
-          { title: 'Pretender', artist: 'Official HIGE DANdism' },
-          { title: 'I Love You', artist: 'Ozaki Yutaka' },
-          { title: 'Marigold', artist: 'Aimyon' },
-          { title: 'Harunohi', artist: 'Aimyon' },
-          { title: 'Dry Flower', artist: 'Yuuri' },
-          { title: 'Hana', artist: 'Mr. Children' },
+          { title: 'Sukiyaki (Ue o Muite Arukou)', artist: 'Kyu Sakamoto', nativeTitle: '上を向いて歩こう', nativeArtist: '坂本九' },
+          { title: 'First Love', artist: 'Hikaru Utada', nativeArtist: '宇多田ヒカル' },
+          { title: 'Lemon', artist: 'Kenshi Yonezu', nativeArtist: '米津玄師' },
+          { title: 'Pretender', artist: 'Official HIGE DANdism', nativeArtist: 'Official髭男dism' },
+          { title: 'I Love You', artist: 'Ozaki Yutaka', nativeArtist: '尾崎豊' },
+          { title: 'Marigold', artist: 'Aimyon', nativeTitle: 'マリーゴールド', nativeArtist: 'あいみょん' },
+          { title: 'Harunohi', artist: 'Aimyon', nativeTitle: 'ハルノヒ', nativeArtist: 'あいみょん' },
+          { title: 'Dry Flower', artist: 'Yuuri', nativeTitle: 'ドライフラワー', nativeArtist: '優里' },
+          { title: 'Hana', artist: 'Mr. Children', nativeTitle: '花 -Mémento-Mori-' },
           { title: 'Tomorrow Never Knows', artist: 'Mr. Children' },
-          { title: 'Hikari', artist: 'Hikaru Utada' },
-          { title: 'Automatic', artist: 'Hikaru Utada' },
-          { title: 'Shunkan Sentimental', artist: 'SCANDAL' },
+          { title: 'Hikari', artist: 'Hikaru Utada', nativeTitle: '光', nativeArtist: '宇多田ヒカル' },
+          { title: 'Automatic', artist: 'Hikaru Utada', nativeArtist: '宇多田ヒカル' },
+          { title: 'Shunkan Sentimental', artist: 'SCANDAL', nativeTitle: '瞬間センチメンタル' },
           { title: 'Love Story', artist: 'Matt Cab' },
           { title: 'Red', artist: 'Kalafina' },
-          { title: 'Orion', artist: 'Kenshi Yonezu' },
-          { title: 'Peace Sign', artist: 'Kenshi Yonezu' },
-          { title: 'Butter-Fly', artist: 'Koji Wada' },
-          { title: 'Koi', artist: 'Gen Hoshino' },
-          { title: 'SUN', artist: 'Gen Hoshino' },
+          { title: 'Orion', artist: 'Kenshi Yonezu', nativeArtist: '米津玄師' },
+          { title: 'Peace Sign', artist: 'Kenshi Yonezu', nativeTitle: 'ピースサイン', nativeArtist: '米津玄師' },
+          { title: 'Butter-Fly', artist: 'Koji Wada', nativeArtist: '和田光司' },
+          { title: 'Koi', artist: 'Gen Hoshino', nativeTitle: '恋', nativeArtist: '星野源' },
+          { title: 'SUN', artist: 'Gen Hoshino', nativeArtist: '星野源' },
         ],
       },
       {
@@ -742,26 +748,26 @@ export const SONG_SECTIONS: SongSection[] = [
         name: 'City Pop & Classics',
         emoji: '🌃',
         songs: [
-          { title: 'Plastic Love', artist: 'Mariya Takeuchi' },
-          { title: 'Stay with Me', artist: 'Miki Matsubara' },
-          { title: 'Magic Ways', artist: 'Tatsuro Yamashita' },
-          { title: 'Ride on Time', artist: 'Tatsuro Yamashita' },
-          { title: 'September', artist: 'Taeko Ohnuki' },
-          { title: 'Fantasy', artist: 'Meiko Nakahara' },
-          { title: 'Christmas Eve', artist: 'Tatsuro Yamashita' },
-          { title: 'Dress Down', artist: 'Kaoru Akimoto' },
-          { title: 'Remember Summer Days', artist: 'Anri' },
-          { title: 'Midnight Pretenders', artist: 'Tomoko Aran' },
-          { title: 'Bay City', artist: 'Junko Yagami' },
-          { title: 'Sparkle', artist: 'Tatsuro Yamashita' },
-          { title: 'Futari no Natsu Monogatari', artist: 'Sugiyama Kiyotaka' },
-          { title: 'Mayonaka no Door', artist: 'Miki Matsubara' },
-          { title: 'Telephone Number', artist: 'Junko Ohashi' },
-          { title: '4:00 AM', artist: 'Taeko Ohnuki' },
-          { title: 'Windy Summer', artist: 'Anri' },
-          { title: 'Cat\'s Eye', artist: 'Anri' },
-          { title: 'Last Summer Whisper', artist: 'Anri' },
-          { title: 'Loveland, Island', artist: 'Tatsuro Yamashita' },
+          { title: 'Plastic Love', artist: 'Mariya Takeuchi', nativeTitle: 'プラスティック・ラブ', nativeArtist: '竹内まりや' },
+          { title: 'Stay with Me', artist: 'Miki Matsubara', nativeTitle: '真夜中のドア〜Stay With Me〜', nativeArtist: '松原みき' },
+          { title: 'Magic Ways', artist: 'Tatsuro Yamashita', nativeArtist: '山下達郎' },
+          { title: 'Ride on Time', artist: 'Tatsuro Yamashita', nativeArtist: '山下達郎' },
+          { title: 'September', artist: 'Taeko Ohnuki', nativeArtist: '大貫妙子' },
+          { title: 'Fantasy', artist: 'Meiko Nakahara', nativeTitle: 'ファンタジー', nativeArtist: '中原めいこ' },
+          { title: 'Christmas Eve', artist: 'Tatsuro Yamashita', nativeTitle: 'クリスマス・イブ', nativeArtist: '山下達郎' },
+          { title: 'Dress Down', artist: 'Kaoru Akimoto', nativeArtist: '秋元薫' },
+          { title: 'Remember Summer Days', artist: 'Anri', nativeArtist: '杏里' },
+          { title: 'Midnight Pretenders', artist: 'Tomoko Aran', nativeArtist: '亜蘭知子' },
+          { title: 'Bay City', artist: 'Junko Yagami', nativeArtist: '八神純子' },
+          { title: 'Sparkle', artist: 'Tatsuro Yamashita', nativeArtist: '山下達郎' },
+          { title: 'Futari no Natsu Monogatari', artist: 'Sugiyama Kiyotaka', nativeTitle: 'ふたりの夏物語', nativeArtist: '杉山清貴' },
+          { title: 'Mayonaka no Door', artist: 'Miki Matsubara', nativeTitle: '真夜中のドア', nativeArtist: '松原みき' },
+          { title: 'Telephone Number', artist: 'Junko Ohashi', nativeTitle: 'テレフォン・ナンバー', nativeArtist: '大橋純子' },
+          { title: '4:00 AM', artist: 'Taeko Ohnuki', nativeArtist: '大貫妙子' },
+          { title: 'Windy Summer', artist: 'Anri', nativeArtist: '杏里' },
+          { title: 'Cat\'s Eye', artist: 'Anri', nativeArtist: '杏里' },
+          { title: 'Last Summer Whisper', artist: 'Anri', nativeArtist: '杏里' },
+          { title: 'Loveland, Island', artist: 'Tatsuro Yamashita', nativeArtist: '山下達郎' },
         ],
       },
     ],
@@ -773,15 +779,113 @@ export const ALL_CATEGORIES: SongCategory[] = SONG_SECTIONS.flatMap(
   (s) => s.categories
 );
 
-/** Return a random song from across all categories. */
-export function getRandomSuggestion(): SongSuggestion & { category: string } {
-  const all = ALL_CATEGORIES.flatMap((cat) =>
+/** Return a random song from across the given categories (default: all). */
+export function getRandomSuggestion(
+  categories: SongCategory[] = ALL_CATEGORIES
+): SongSuggestion & { category: string } {
+  const all = categories.flatMap((cat) =>
     cat.songs.map((song) => ({ ...song, category: cat.name }))
   );
   return all[Math.floor(Math.random() * all.length)];
 }
 
-/** Build a YouTube-ready search query for a song suggestion. */
+/**
+ * Build a YouTube-ready search query for a song suggestion. Prefers the
+ * native-script fields — karaoke videos in JP/KR/HI are mostly indexed under
+ * the native title, so they surface far better results than romanizations.
+ */
 export function buildSongQuery(song: SongSuggestion): string {
-  return `${song.artist} ${song.title}`;
+  const title = song.nativeTitle ?? song.title;
+  const artist = song.nativeArtist ?? song.artist;
+  return `${artist} ${title}`.trim();
+}
+
+/** Display title: native script first, romanization in parentheses. */
+export function displaySongTitle(song: SongSuggestion): string {
+  return song.nativeTitle ? `${song.nativeTitle} (${song.title})` : song.title;
+}
+
+/** Display artist: native script first, romanization in parentheses. */
+export function displaySongArtist(song: SongSuggestion): string {
+  return song.nativeArtist ? `${song.nativeArtist} (${song.artist})` : song.artist;
+}
+
+// ───────────────────────────────────────────
+// COUNTRY-AWARE ORDERING
+// ───────────────────────────────────────────
+
+export interface CountryConfig {
+  /**
+   * Section ids in display order; the first becomes the default tab. Ids not
+   * listed keep their original relative order after the listed ones.
+   */
+  sectionOrder: string[];
+  /**
+   * Id of a regional pack served from /public/suggestions/{id}.json. The pack
+   * is a full SongSection, spliced in as the first tab when it loads.
+   */
+  regionalPack?: string;
+}
+
+const DEFAULT_ORDER = ['genre', 'voice-type', 'spanish', 'kpop', 'japanese'];
+
+const SPANISH_FIRST: CountryConfig = {
+  sectionOrder: ['spanish', 'genre', 'voice-type', 'kpop', 'japanese'],
+};
+
+export const COUNTRY_CONFIG: Record<string, CountryConfig> = {
+  // Spanish-speaking Americas + Spain
+  MX: SPANISH_FIRST, ES: SPANISH_FIRST, AR: SPANISH_FIRST, CO: SPANISH_FIRST,
+  CL: SPANISH_FIRST, PE: SPANISH_FIRST, VE: SPANISH_FIRST, EC: SPANISH_FIRST,
+  GT: SPANISH_FIRST, CU: SPANISH_FIRST, BO: SPANISH_FIRST, DO: SPANISH_FIRST,
+  HN: SPANISH_FIRST, PY: SPANISH_FIRST, SV: SPANISH_FIRST, NI: SPANISH_FIRST,
+  CR: SPANISH_FIRST, PA: SPANISH_FIRST, UY: SPANISH_FIRST, PR: SPANISH_FIRST,
+  KR: { sectionOrder: ['kpop', 'genre', 'voice-type', 'spanish', 'japanese'] },
+  JP: { sectionOrder: ['japanese', 'genre', 'voice-type', 'spanish', 'kpop'] },
+  BR: { sectionOrder: DEFAULT_ORDER, regionalPack: 'br' },
+  PT: { sectionOrder: DEFAULT_ORDER, regionalPack: 'br' },
+  PH: { sectionOrder: DEFAULT_ORDER, regionalPack: 'ph' },
+  DE: { sectionOrder: DEFAULT_ORDER, regionalPack: 'de' },
+  AT: { sectionOrder: DEFAULT_ORDER, regionalPack: 'de' },
+  CH: { sectionOrder: DEFAULT_ORDER, regionalPack: 'de' },
+  IN: { sectionOrder: DEFAULT_ORDER, regionalPack: 'in' },
+  ID: { sectionOrder: DEFAULT_ORDER, regionalPack: 'id' },
+  MY: { sectionOrder: DEFAULT_ORDER, regionalPack: 'id' },
+  CZ: { sectionOrder: DEFAULT_ORDER, regionalPack: 'cz' },
+  SK: { sectionOrder: DEFAULT_ORDER, regionalPack: 'cz' },
+  FR: { sectionOrder: DEFAULT_ORDER, regionalPack: 'fr' },
+  BE: { sectionOrder: DEFAULT_ORDER, regionalPack: 'fr' },
+};
+
+/**
+ * All regional/language packs, shown to every visitor under the Language tab
+ * (lazy-loaded when the tab opens). Geo only decides which one, if any, is
+ * promoted to its own first tab.
+ */
+export const LANGUAGE_PACKS: { packId: string; label: string }[] = [
+  { packId: 'br', label: '🇧🇷 Brasil' },
+  { packId: 'ph', label: '🇵🇭 OPM' },
+  { packId: 'de', label: '🇩🇪 Deutsch' },
+  { packId: 'in', label: '🇮🇳 Bollywood' },
+  { packId: 'id', label: '🇮🇩 Indonesia' },
+  { packId: 'cz', label: '🇨🇿 Česky' },
+  { packId: 'fr', label: '🇫🇷 Français' },
+];
+
+/**
+ * Order sections for a country: listed ids first (in config order), then any
+ * unlisted sections in their original order. Unknown country → unchanged.
+ */
+export function orderSections(
+  sections: SongSection[],
+  country: string | null
+): SongSection[] {
+  const config = country ? COUNTRY_CONFIG[country] : undefined;
+  if (!config) return sections;
+  const rank = new Map(config.sectionOrder.map((id, i) => [id, i]));
+  return [...sections].sort((a, b) => {
+    const ra = rank.get(a.id) ?? config.sectionOrder.length + sections.indexOf(a);
+    const rb = rank.get(b.id) ?? config.sectionOrder.length + sections.indexOf(b);
+    return ra - rb;
+  });
 }

@@ -31,7 +31,7 @@ export default async function handler(
   if (
     typeof roomId !== "string" ||
     typeof suggestionSource !== "string" ||
-    !["random", "song_pick", "genre_chip"].includes(suggestionSource)
+    !["random", "song_pick", "genre_chip", "trending"].includes(suggestionSource)
   ) {
     res.status(400).json({ code: 400, message: "Invalid request." });
     return;
@@ -39,7 +39,7 @@ export default async function handler(
 
   await trackEvent(req, "suggestion_used", {
     roomId,
-    suggestionSource: suggestionSource as "random" | "song_pick" | "genre_chip",
+    suggestionSource: suggestionSource as "random" | "song_pick" | "genre_chip" | "trending",
     sectionId: typeof sectionId === "string" ? sectionId : undefined,
     categoryId: typeof categoryId === "string" ? categoryId : undefined,
     songTitle: typeof songTitle === "string" ? songTitle : undefined,

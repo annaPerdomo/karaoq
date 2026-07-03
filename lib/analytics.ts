@@ -24,7 +24,7 @@ export interface AnalyticsEvent {
   emoji?: string;
   role?: "host" | "singer" | "display";
   userAgent?: string;
-  suggestionSource?: "random" | "song_pick" | "genre_chip";
+  suggestionSource?: "random" | "song_pick" | "genre_chip" | "trending";
   sectionId?: string;
   categoryId?: string;
 }

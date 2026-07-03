@@ -1,0 +1,89 @@
+{
+  "id": "deutsch",
+  "label": "🇩🇪 Deutsch",
+  "categories": [
+    {
+      "id": "de-schlager",
+      "name": "Schlager & Party",
+      "emoji": "🍻",
+      "songs": [
+        { "title": "Atemlos durch die Nacht", "artist": "Helene Fischer" },
+        { "title": "Herzbeben", "artist": "Helene Fischer" },
+        { "title": "Ein Stern (der deinen Namen trägt)", "artist": "DJ Ötzi & Nik P." },
+        { "title": "Anton aus Tirol", "artist": "DJ Ötzi" },
+        { "title": "Cordula Grün", "artist": "Die Draufgänger" },
+        { "title": "Layla", "artist": "DJ Robin & Schürze" },
+        { "title": "Johnny Däpp", "artist": "Lorenz Büffel" },
+        { "title": "Schatzi schenk mir ein Foto", "artist": "Mickie Krause" },
+        { "title": "Zehn nackte Friseusen", "artist": "Mickie Krause" },
+        { "title": "Griechischer Wein", "artist": "Udo Jürgens" },
+        { "title": "Ich war noch niemals in New York", "artist": "Udo Jürgens" },
+        { "title": "Aber bitte mit Sahne", "artist": "Udo Jürgens" },
+        { "title": "Über den Wolken", "artist": "Reinhard Mey" },
+        { "title": "Marmor, Stein und Eisen bricht", "artist": "Drafi Deutscher" },
+        { "title": "Du hast mich tausendmal belogen", "artist": "Andrea Berg" },
+        { "title": "Die immer lacht", "artist": "Stereoact & Kerstin Ott" },
+        { "title": "Regenbogenfarben", "artist": "Kerstin Ott" },
+        { "title": "Wahnsinn", "artist": "Wolfgang Petry" },
+        { "title": "Hölle Hölle Hölle", "artist": "Wolfgang Petry" },
+        { "title": "Verdammt ich lieb dich", "artist": "Matthias Reim" }
+      ]
+    },
+    {
+      "id": "de-rock-pop",
+      "name": "Deutschrock & Pop",
+      "emoji": "🎸",
+      "songs": [
+        { "title": "Männer", "artist": "Herbert Grönemeyer" },
+        { "title": "Bochum", "artist": "Herbert Grönemeyer" },
+        { "title": "Westerland", "artist": "Die Ärzte" },
+        { "title": "Schrei nach Liebe", "artist": "Die Ärzte" },
+        { "title": "Tage wie diese", "artist": "Die Toten Hosen" },
+        { "title": "Hier kommt Alex", "artist": "Die Toten Hosen" },
+        { "title": "An Tagen wie diesen", "artist": "Fettes Brot" },
+        { "title": "Emanuela", "artist": "Fettes Brot" },
+        { "title": "Durch den Monsun", "artist": "Tokio Hotel" },
+        { "title": "Lieblingsmensch", "artist": "Namika" },
+        { "title": "Je ne parle pas français", "artist": "Namika" },
+        { "title": "Auf uns", "artist": "Andreas Bourani" },
+        { "title": "Ein Hoch auf uns", "artist": "Andreas Bourani" },
+        { "title": "80 Millionen", "artist": "Max Giesinger" },
+        { "title": "Lila Wolken", "artist": "Marteria, Yasha & Miss Platnum" },
+        { "title": "Chöre", "artist": "Mark Forster" },
+        { "title": "Cello", "artist": "Udo Lindenberg & Clueso" },
+        { "title": "Mein Ding", "artist": "Udo Lindenberg" },
+        { "title": "Applaus, Applaus", "artist": "Sportfreunde Stiller" },
+        { "title": "'54, '74, '90, 2006", "artist": "Sportfreunde Stiller" },
+        { "title": "MfG", "artist": "Die Fantastischen Vier" },
+        { "title": "Tag am Meer", "artist": "Die Fantastischen Vier" }
+      ]
+    },
+    {
+      "id": "de-ndw-klassiker",
+      "name": "NDW & Klassiker",
+      "emoji": "📻",
+      "songs": [
+        { "title": "99 Luftballons", "artist": "Nena" },
+        { "title": "Irgendwie, irgendwo, irgendwann", "artist": "Nena" },
+        { "title": "Nur geträumt", "artist": "Nena" },
+        { "title": "Major Tom (völlig losgelöst)", "artist": "Peter Schilling" },
+        { "title": "Da Da Da", "artist": "Trio" },
+        { "title": "Skandal im Sperrbezirk", "artist": "Spider Murphy Gang" },
+        { "title": "Hurra, hurra, die Schule brennt", "artist": "Extrabreit" },
+        { "title": "Ich will Spaß", "artist": "Markus" },
+        { "title": "Sternenhimmel", "artist": "Hubert Kah" },
+        { "title": "Bruttosozialprodukt", "artist": "Geier Sturzflug" },
+        { "title": "Eiszeit", "artist": "Ideal" },
+        { "title": "Blaue Augen", "artist": "Ideal" },
+        { "title": "Der Goldene Reiter", "artist": "Joachim Witt" },
+        { "title": "Rock Me Amadeus", "artist": "Falco" },
+        { "title": "Der Kommissar", "artist": "Falco" },
+        { "title": "Jeanny", "artist": "Falco" },
+        { "title": "Ohne dich (schlaf ich heut Nacht nicht ein)", "artist": "Münchener Freiheit" },
+        { "title": "Tausendmal du", "artist": "Münchener Freiheit" },
+        { "title": "Verdamp lang her", "artist": "BAP" },
+        { "title": "Viva Colonia", "artist": "Höhner" }
+      ]
+    }
+  ]
+}

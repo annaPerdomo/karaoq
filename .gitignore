@@ -39,6 +39,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-#local documentation
+# local documentation
 PRODUCT_ANALYSIS.md
 NEXT_STEPS.md
+
+# promotional
+/promo 

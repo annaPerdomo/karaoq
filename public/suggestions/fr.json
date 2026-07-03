@@ -1,0 +1,60 @@
+{
+  "id": "francais",
+  "label": "🇫🇷 Français",
+  "categories": [
+    {
+      "id": "fr-chansons",
+      "name": "Chansons & Classiques",
+      "emoji": "🇫🇷",
+      "songs": [
+        { "title": "La Vie en rose", "artist": "Édith Piaf" },
+        { "title": "Non, je ne regrette rien", "artist": "Édith Piaf" },
+        { "title": "La Bohème", "artist": "Charles Aznavour" },
+        { "title": "Emmenez-moi", "artist": "Charles Aznavour" },
+        { "title": "Ne me quitte pas", "artist": "Jacques Brel" },
+        { "title": "Les Champs-Élysées", "artist": "Joe Dassin" },
+        { "title": "Et si tu n'existais pas", "artist": "Joe Dassin" },
+        { "title": "L'été indien", "artist": "Joe Dassin" },
+        { "title": "Les Lacs du Connemara", "artist": "Michel Sardou" },
+        { "title": "Comme d'habitude", "artist": "Claude François" },
+        { "title": "Alexandrie Alexandra", "artist": "Claude François" },
+        { "title": "Ella, elle l'a", "artist": "France Gall" },
+        { "title": "Résiste", "artist": "France Gall" },
+        { "title": "Pour que tu m'aimes encore", "artist": "Céline Dion" },
+        { "title": "Je te donne", "artist": "Jean-Jacques Goldman" },
+        { "title": "Je l'aime à mourir", "artist": "Francis Cabrel" },
+        { "title": "Mistral gagnant", "artist": "Renaud" },
+        { "title": "L'Aventurier", "artist": "Indochine" },
+        { "title": "J'ai demandé à la lune", "artist": "Indochine" },
+        { "title": "Ça (c'est vraiment toi)", "artist": "Téléphone" }
+      ]
+    },
+    {
+      "id": "fr-pop",
+      "name": "Pop & Hits",
+      "emoji": "🎤",
+      "songs": [
+        { "title": "Alors on danse", "artist": "Stromae" },
+        { "title": "Papaoutai", "artist": "Stromae" },
+        { "title": "Formidable", "artist": "Stromae" },
+        { "title": "Tout oublier", "artist": "Angèle" },
+        { "title": "Balance ton quoi", "artist": "Angèle" },
+        { "title": "Djadja", "artist": "Aya Nakamura" },
+        { "title": "Copines", "artist": "Aya Nakamura" },
+        { "title": "Je veux", "artist": "Zaz" },
+        { "title": "On ira", "artist": "Zaz" },
+        { "title": "Jour 1", "artist": "Louane" },
+        { "title": "Avenir", "artist": "Louane" },
+        { "title": "Andalouse", "artist": "Kendji Girac" },
+        { "title": "Color Gitano", "artist": "Kendji Girac" },
+        { "title": "Je m'en vais", "artist": "Vianney" },
+        { "title": "Pas là", "artist": "Vianney" },
+        { "title": "Dernière danse", "artist": "Indila" },
+        { "title": "Tourner dans le vide", "artist": "Indila" },
+        { "title": "Christine", "artist": "Christine and the Queens" },
+        { "title": "Basique", "artist": "Orelsan" },
+        { "title": "La Grenade", "artist": "Clara Luciani" }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,60 @@
+{
+  "id": "cesko",
+  "label": "🇨🇿 Česky",
+  "categories": [
+    {
+      "id": "cz-hity",
+      "name": "Hity & Klasika",
+      "emoji": "🇨🇿",
+      "songs": [
+        { "title": "Lady Carneval", "artist": "Karel Gott" },
+        { "title": "Trezor", "artist": "Karel Gott" },
+        { "title": "Kávu si osladím", "artist": "Karel Gott" },
+        { "title": "Být stále mlád", "artist": "Karel Gott" },
+        { "title": "Dlouhá noc", "artist": "Helena Vondráčková" },
+        { "title": "Malovaný džbánku", "artist": "Helena Vondráčková" },
+        { "title": "Růže z Texasu", "artist": "Waldemar Matuška" },
+        { "title": "Holubí dům", "artist": "Jiří Schelinger" },
+        { "title": "Pár přátel", "artist": "Michal David" },
+        { "title": "Nonstop", "artist": "Michal David" },
+        { "title": "Poupata", "artist": "Michal David" },
+        { "title": "Discopříběh", "artist": "Michal David" },
+        { "title": "Stín katedrál", "artist": "Petr Muk" },
+        { "title": "Jednou mi fotr povídá", "artist": "Michal Tučný" },
+        { "title": "Báječná ženská", "artist": "Michal Tučný" },
+        { "title": "Sladké mámení", "artist": "Hana Zagorová" },
+        { "title": "Biograf láska", "artist": "Hana Zagorová" },
+        { "title": "Vokurky", "artist": "Ivan Mládek" },
+        { "title": "Jožin z bažin", "artist": "Ivan Mládek" },
+        { "title": "Severní vítr", "artist": "Jaroslav Uhlíř & Zdeněk Svěrák" }
+      ]
+    },
+    {
+      "id": "cz-rock",
+      "name": "Rock & Hospoda",
+      "emoji": "🍺",
+      "songs": [
+        { "title": "Kometa", "artist": "Jaromír Nohavica" },
+        { "title": "Ladovská zima", "artist": "Jaromír Nohavica" },
+        { "title": "Mám jizvu na rtu", "artist": "Jaromír Nohavica" },
+        { "title": "Sarajevo", "artist": "Jaromír Nohavica" },
+        { "title": "Amerika", "artist": "Lucie" },
+        { "title": "Černí andělé", "artist": "Lucie" },
+        { "title": "Šrouby a matice", "artist": "Lucie" },
+        { "title": "Pohoda", "artist": "Kabát" },
+        { "title": "Malá dáma", "artist": "Kabát" },
+        { "title": "Burlaci", "artist": "Kabát" },
+        { "title": "Kdoví jestli", "artist": "Kabát" },
+        { "title": "Želva", "artist": "Olympic" },
+        { "title": "Jasná zpráva", "artist": "Olympic" },
+        { "title": "Osmý den", "artist": "Olympic" },
+        { "title": "Čmelák", "artist": "Divokej Bill" },
+        { "title": "Malování", "artist": "Divokej Bill" },
+        { "title": "Vedoucí", "artist": "Chinaski" },
+        { "title": "1970", "artist": "Chinaski" },
+        { "title": "Anděl", "artist": "Karel Kryl" },
+        { "title": "Bratříčku, zavírej vrátka", "artist": "Karel Kryl" }
+      ]
+    }
+  ]
+}
