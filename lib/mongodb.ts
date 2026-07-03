@@ -79,6 +79,11 @@ export async function getSearchCacheCollection(): Promise<Collection<SearchCache
   return db.collection<SearchCacheDoc>("search_cache");
 }
 
+// Heartbeats are high-volume noise once a session is over; every other event
+// type stays forever because long-term funnel metrics read from them.
+// Sessions expire on the same clock via lastSeen.
+const ANALYTICS_TTL_SECONDS = 90 * 24 * 60 * 60;
+
 let indexesEnsured = false;
 
 // Best-effort, once per instance. createIndex is a no-op when the index
@@ -92,6 +97,17 @@ function ensureAnalyticsIndexes(db: Db): void {
       db.collection("analytics_events").createIndex({ roomId: 1, type: 1 }),
       db.collection("analytics_sessions").createIndex({ sessionKey: 1 }),
       db.collection("analytics_sessions").createIndex({ roomId: 1, role: 1 }),
+      db.collection("analytics_events").createIndex(
+        { timestamp: 1 },
+        {
+          expireAfterSeconds: ANALYTICS_TTL_SECONDS,
+          partialFilterExpression: { type: "session_heartbeat" },
+        }
+      ),
+      db.collection("analytics_sessions").createIndex(
+        { lastSeen: 1 },
+        { expireAfterSeconds: ANALYTICS_TTL_SECONDS }
+      ),
     ]).catch((e) => {
       console.error("Analytics index creation failed:", e);
       indexesEnsured = false;

@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { getSearchCacheCollection } from "../../lib/mongodb";
+import { rateLimit } from "../../lib/limits";
 
 const INVIDIOUS_INSTANCES = [
   "https://invidious.materialio.us",
@@ -158,6 +159,13 @@ export default async function handler(
   const cached = await readCache(cacheKey);
   if (cached) {
     res.status(200).json(cached);
+    return;
+  }
+
+  // Only uncached searches hit the rate limit: cache reads are cheap, but
+  // each miss burns 100 YouTube quota units.
+  if (!rateLimit(req, "search", 10, 60_000)) {
+    res.status(429).json({ code: 429, message: "Too many searches, slow down." });
     return;
   }
 
