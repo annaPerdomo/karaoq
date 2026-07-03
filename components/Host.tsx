@@ -50,6 +50,10 @@ function qrHiddenStorageKey(joinCode: string): string {
   return `karaoq_qr_hidden_${joinCode}`;
 }
 
+function cheersHiddenStorageKey(joinCode: string): string {
+  return `karaoq_cheers_hidden_${joinCode}`;
+}
+
 function isTextReaction(emoji: string): boolean {
   return emoji.length > 2 && /[a-zA-Z]/.test(emoji);
 }
@@ -565,6 +569,10 @@ const Host = ({
   // popout.
   const [qrShelfOpen, setQrShelfOpen] = React.useState(false);
   const [qrModalOpen, setQrModalOpen] = React.useState(false);
+  // The cheer bar can be tucked away too — same reasoning as the QR drawer:
+  // when this screen is cast, the host may not want tappable emoji on the
+  // shared display. Defaults open; remembered per-room.
+  const [cheersOpen, setCheersOpen] = React.useState(true);
   const [searchOpen, setSearchOpen] = React.useState(false);
   const [sidebarTab, setSidebarTab] = React.useState<"queue" | "history">(
     "queue",
@@ -622,6 +630,26 @@ const Host = ({
       setQrShelfOpen(window.innerWidth > 1024);
     }
   }, [joinCode]);
+
+  // Restore whether this host had the cheer bar tucked away for this room.
+  React.useEffect(() => {
+    if (!joinCode) return;
+    try {
+      setCheersOpen(localStorage.getItem(cheersHiddenStorageKey(joinCode)) !== "1");
+    } catch {
+      setCheersOpen(true);
+    }
+  }, [joinCode]);
+
+  function toggleCheers() {
+    const next = !cheersOpen;
+    setCheersOpen(next);
+    if (joinCode) {
+      try {
+        localStorage.setItem(cheersHiddenStorageKey(joinCode), next ? "0" : "1");
+      } catch {}
+    }
+  }
 
   function toggleQrShelf() {
     const next = !qrShelfOpen;
@@ -1597,14 +1625,34 @@ const Host = ({
                     button. */}
               <div className={styles.sidebarBottom}>
                 {!remote && reactionsOn && isPlaying && currentSong && (
-                  <div className={styles.cheersLive}>
-                    <CheerBar
-                      onReaction={sendReaction}
-                      cooldown={reactionCooldown}
-                      lastSentEmoji={lastSentEmoji}
-                      compact
-                    />
-                  </div>
+                  <>
+                    <button
+                      className={`${styles.drawerToggle} ${cheersOpen ? styles.drawerToggleOpen : ""}`}
+                      onClick={toggleCheers}
+                      aria-expanded={cheersOpen}
+                    >
+                      <svg
+                        className={styles.drawerCaret}
+                        width="10"
+                        height="6"
+                        viewBox="0 0 10 6"
+                        fill="currentColor"
+                      >
+                        <path d="M0 0l5 6 5-6z" />
+                      </svg>
+                      Cheers
+                    </button>
+                    {cheersOpen && (
+                      <div className={styles.cheersLive}>
+                        <CheerBar
+                          onReaction={sendReaction}
+                          cooldown={reactionCooldown}
+                          lastSentEmoji={lastSentEmoji}
+                          compact
+                        />
+                      </div>
+                    )}
+                  </>
                 )}
                 {!remote && joinUrl && (
                   <>
