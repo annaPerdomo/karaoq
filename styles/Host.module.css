@@ -2101,3 +2101,45 @@
     display: none;
   }
 }
+
+/* ─── Mobile-only footer ───
+   Rendered on every host screen but hidden outside the phone breakpoint. */
+.mobileFooter {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  /* The transport footer would sit mid-page in the stacked layout (above the
+     queue), so it moves to the dedicated page footer below instead. */
+  .transportFooter {
+    display: none;
+  }
+
+  .mobileFooter {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.3rem 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.04);
+    flex-shrink: 0;
+  }
+
+  /* Empty room on a phone: the stage pitch already carries the add button and
+     join QR, so the transport bar (nothing to control yet) and the sidebar (a
+     second add button + a second QR) hide until the first song exists. */
+  .transport.transportEmptyMobile {
+    display: none;
+  }
+
+  .sidebar.sidebarEmptyMobile {
+    flex: 0 0 auto;
+    min-height: 0;
+    border-top: none;
+  }
+
+  /* Hide the sidebar's own chrome but keep the search overlay reachable —
+     "Add the first song" opens it, and it's position: fixed on phones. */
+  .sidebar.sidebarEmptyMobile > *:not(.searchOverlay) {
+    display: none;
+  }
+}

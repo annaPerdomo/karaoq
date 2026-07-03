@@ -1041,6 +1041,12 @@ const Host = ({
     : queue.slice(activeIndex + 1);
   const historyItems = queue.slice(0, activeIndex);
 
+  // On phones an empty room hides the transport bar and sidebar entirely —
+  // the empty-state pitch already carries the add button and join QR, so the
+  // extra chrome is all duplicates (second add button, second QR, controls
+  // with nothing to control). Desktop keeps everything.
+  const roomEmpty = queue.length === 0;
+
   const uniqueSingers = new Set(upNext.map((s) => s.userName)).size;
 
   const joinUrl = origin ? `${origin}/sing/${joinCode}` : "";
@@ -1326,7 +1332,9 @@ const Host = ({
 
           {/* ─── Transport bar (host only — co-hosts don't control playback) ─── */}
           {!remote && (
-            <div className={styles.transport}>
+            <div
+              className={`${styles.transport} ${roomEmpty ? styles.transportEmptyMobile : ""}`}
+            >
               <div className={styles.transportMain}>
                 <div className={styles.transportInfo}>
                   {currentSong ? (
@@ -1432,7 +1440,7 @@ const Host = ({
 
         {/* ─── Sidebar ─── */}
         <div
-          className={`${styles.sidebar} ${sidebarCollapsed ? styles.sidebarCollapsed : ""}`}
+          className={`${styles.sidebar} ${sidebarCollapsed ? styles.sidebarCollapsed : ""} ${!remote && roomEmpty ? styles.sidebarEmptyMobile : ""}`}
         >
           {sidebarCollapsed ? (
             <button
@@ -1676,6 +1684,25 @@ const Host = ({
           )}
         </div>
       </div>
+
+      {/* ─── Mobile page footer ───
+          On phones the transport footer hides (it would land mid-page, above
+          the stacked queue) and this one pins the attribution to the true
+          bottom of the screen. Hidden on desktop. */}
+      {!remote && (
+        <footer className={styles.mobileFooter}>
+          <span className={styles.transportLogo}>KaraoQ</span>
+          <a
+            href="https://variationsonastring.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className={styles.transportLink}
+          >
+            made with <span className={styles.transportHeart}>&#9829;</span> by
+            variations on a string
+          </a>
+        </footer>
+      )}
 
       {/* ─── Co-host invite modal ─── */}
       {cohostOpen && (
