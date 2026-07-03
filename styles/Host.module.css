@@ -313,10 +313,8 @@
 /* ─── Reaction overlay ─── */
 .reactionOverlay {
   position: absolute;
-  bottom: 60px;
-  left: 0;
-  width: 40%;
-  height: 70%;
+  inset: 0;
+  bottom: 110px; /* clear the transport bar at the bottom of the player area */
   pointer-events: none;
   z-index: 5;
   overflow: hidden;
@@ -330,35 +328,37 @@
   align-items: center;
   gap: 0.15rem;
   opacity: 0;
-  animation: reactionFloat 4s ease-out forwards;
+  /* Twitch-style: fade in, drift steadily up with a slight lean (--sway,
+     set inline per cheer), fade out near the top. */
+  animation: reactionFloat 4.2s ease-out forwards;
 }
 
 @keyframes reactionFloat {
   0% {
     opacity: 0;
-    transform: translateY(0) scale(0.5);
+    transform: translate(0, 0) scale(0.6);
   }
   8% {
     opacity: 1;
-    transform: translateY(-10px) scale(1);
+    transform: translate(calc(var(--sway, 0px) * 0.1), -4vh) scale(1);
   }
-  65% {
-    opacity: 0.8;
+  70% {
+    opacity: 0.9;
   }
   100% {
     opacity: 0;
-    transform: translateY(-200px) scale(0.6);
+    transform: translate(var(--sway, 0px), -52vh) scale(0.85);
   }
 }
 
 .reactionEmoji {
-  font-size: 1.8rem;
+  font-size: 2.25rem;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
   line-height: 1;
 }
 
 .reactionText {
-  font-size: 0.9rem;
+  font-size: 1rem;
   font-weight: 700;
   color: #fff;
   background: linear-gradient(135deg, rgba(255, 45, 120, 0.85), rgba(255, 107, 53, 0.85));

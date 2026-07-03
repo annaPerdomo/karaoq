@@ -30,7 +30,7 @@ const Display = (): React.ReactElement => {
   const [error, setError] = React.useState<string | null>(null);
   const [origin, setOrigin] = React.useState('');
   const [reactionsOn, setReactionsOn] = React.useState(true);
-  const [visibleReactions, setVisibleReactions] = React.useState<(Reaction & { key: string; left: number })[]>([]);
+  const [visibleReactions, setVisibleReactions] = React.useState<(Reaction & { key: string; left: number; sway: number })[]>([]);
   const seenReactionIds = React.useRef(new Set<string>());
   const reactionTimers = React.useRef<ReturnType<typeof setTimeout>[]>([]);
   const videoRef = React.useRef<HTMLIFrameElement>(null);
@@ -53,7 +53,9 @@ const Display = (): React.ReactElement => {
     };
   }, []);
 
-  function processReactions(reactions: Reaction[] | undefined) {
+  // On the initial load we only seed the seen-set (animate=false) — otherwise
+  // a refresh replays the last 30s of cheers all at once.
+  function processReactions(reactions: Reaction[] | undefined, animate = true) {
     if (!reactions || reactions.length === 0) return;
     const fresh = reactions.filter((r) => !seenReactionIds.current.has(r.id));
     if (fresh.length === 0) return;
@@ -63,17 +65,19 @@ const Display = (): React.ReactElement => {
       const entries = Array.from(seenReactionIds.current);
       seenReactionIds.current = new Set(entries.slice(-100));
     }
+    if (!animate) return;
     const withKeys = fresh.map((r) => ({
       ...r,
       key: r.id,
-      left: 10 + Math.random() * 25,
+      left: 5 + Math.random() * 85,
+      sway: Math.random() * 80 - 40,
     }));
     setVisibleReactions((prev) => [...prev, ...withKeys]);
     // Auto-remove after animation
     const timer = setTimeout(() => {
       const ids = new Set(fresh.map((r) => r.id));
       setVisibleReactions((prev) => prev.filter((r) => !ids.has(r.key)));
-    }, 4000);
+    }, 4700);
     reactionTimers.current.push(timer);
   }
 
@@ -91,7 +95,7 @@ const Display = (): React.ReactElement => {
         setActiveIndex(room.activeVideoIndex);
         setIsPlaying(room.isPlaying ?? false);
         setReactionsOn(room.reactionsEnabled ?? true);
-        processReactions(room.reactions);
+        processReactions(room.reactions, false);
         setLoading(false);
       } else {
         setError('Room not found');
@@ -243,7 +247,7 @@ const Display = (): React.ReactElement => {
               <div
                 key={r.key}
                 className={styles.reactionBubble}
-                style={{ left: `${r.left}%` }}
+                style={{ left: `${r.left}%`, '--sway': `${r.sway}px` } as React.CSSProperties}
               >
                 {isTextReaction(r.emoji) ? (
                   <span className={styles.reactionText}>{r.emoji}</span>

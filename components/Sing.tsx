@@ -43,7 +43,7 @@ const Sing = (): React.ReactElement => {
   // singers who've already dismissed it never see it again.
   const [showTipsBanner, setShowTipsBanner] = React.useState(false);
   const [welcomeName, setWelcomeName] = React.useState('');
-  const [visibleReactions, setVisibleReactions] = React.useState<(Reaction & { key: string; left: number })[]>([]);
+  const [visibleReactions, setVisibleReactions] = React.useState<(Reaction & { key: string; left: number; sway: number })[]>([]);
   const seenReactionIds = React.useRef(new Set<string>());
   const reactionTimers = React.useRef<ReturnType<typeof setTimeout>[]>([]);
 
@@ -93,12 +93,13 @@ const Sing = (): React.ReactElement => {
       ...r,
       key: r.id,
       left: 5 + Math.random() * 60,
+      sway: Math.random() * 60 - 30,
     }));
     setVisibleReactions((prev) => [...prev, ...withKeys]);
     const timer = setTimeout(() => {
       const ids = new Set(fresh.map((r) => r.id));
       setVisibleReactions((prev) => prev.filter((r) => !ids.has(r.key)));
-    }, 3500);
+    }, 4200);
     reactionTimers.current.push(timer);
   }, []);
 
@@ -445,7 +446,7 @@ const Sing = (): React.ReactElement => {
             <div
               key={r.key}
               className={styles.reactionBubble}
-              style={{ left: `${r.left}%` }}
+              style={{ left: `${r.left}%`, '--sway': `${r.sway}px` } as React.CSSProperties}
             >
               {isTextReaction(r.emoji) ? (
                 <span className={styles.reactionTextPop}>{r.emoji}</span>

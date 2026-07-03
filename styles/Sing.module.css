@@ -991,8 +991,8 @@
   position: fixed;
   right: 0.5rem;
   bottom: 4.5rem;
-  width: min(45vw, 240px);
-  height: min(50vh, 400px);
+  width: min(60vw, 300px);
+  height: min(65vh, 540px);
   pointer-events: none;
   z-index: 60;
   overflow: hidden;
@@ -1008,29 +1008,31 @@
   position: absolute;
   bottom: 0;
   opacity: 0;
-  animation: reactionRise 3.5s ease-out forwards;
+  /* Twitch-style: fade in, drift steadily up with a slight lean (--sway,
+     set inline per cheer), fade out near the top. */
+  animation: reactionRise 4s ease-out forwards;
 }
 
 @keyframes reactionRise {
   0% {
     opacity: 0;
-    transform: translateY(0) scale(0.5);
+    transform: translate(0, 0) scale(0.6);
   }
-  10% {
+  8% {
     opacity: 1;
-    transform: translateY(-14px) scale(1);
+    transform: translate(calc(var(--sway, 0px) * 0.1), -20px) scale(1);
   }
-  65% {
-    opacity: 0.8;
+  70% {
+    opacity: 0.9;
   }
   100% {
     opacity: 0;
-    transform: translateY(-240px) scale(0.7);
+    transform: translate(var(--sway, 0px), max(-45vh, -380px)) scale(0.85);
   }
 }
 
 .reactionEmojiPop {
-  font-size: 1.8rem;
+  font-size: 2rem;
   line-height: 1;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
 }

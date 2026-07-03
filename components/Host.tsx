@@ -514,7 +514,7 @@ const Host = ({
   const [reactionCooldown, setReactionCooldown] = React.useState(false);
   const [lastSentEmoji, setLastSentEmoji] = React.useState<string | null>(null);
   const [visibleReactions, setVisibleReactions] = React.useState<
-    (Reaction & { key: string; left: number })[]
+    (Reaction & { key: string; left: number; sway: number })[]
   >([]);
   const seenReactionIds = React.useRef(new Set<string>());
   const reactionTimers = React.useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -713,7 +713,9 @@ const Host = ({
     };
   }, []);
 
-  function processReactions(reactions: Reaction[] | undefined) {
+  // On the initial load we only seed the seen-set (animate=false) — otherwise
+  // a refresh replays the last 30s of cheers all at once.
+  function processReactions(reactions: Reaction[] | undefined, animate = true) {
     if (!reactions || reactions.length === 0) return;
     const fresh = reactions.filter((r) => !seenReactionIds.current.has(r.id));
     if (fresh.length === 0) return;
@@ -722,16 +724,18 @@ const Host = ({
       const entries = Array.from(seenReactionIds.current);
       seenReactionIds.current = new Set(entries.slice(-100));
     }
+    if (!animate) return;
     const withKeys = fresh.map((r) => ({
       ...r,
       key: r.id,
-      left: 10 + Math.random() * 30,
+      left: 5 + Math.random() * 85,
+      sway: Math.random() * 70 - 35,
     }));
     setVisibleReactions((prev) => [...prev, ...withKeys]);
     const timer = setTimeout(() => {
       const ids = new Set(fresh.map((r) => r.id));
       setVisibleReactions((prev) => prev.filter((r) => !ids.has(r.key)));
-    }, 4000);
+    }, 4400);
     reactionTimers.current.push(timer);
   }
 
@@ -754,7 +758,7 @@ const Host = ({
         setActiveIndex(room.activeVideoIndex);
         setIsPlaying(room.isPlaying ?? false);
         setReactionsOn(room.reactionsEnabled ?? true);
-        processReactions(room.reactions);
+        processReactions(room.reactions, false);
         setLoading(false);
       } else {
         setError("Room not found");
@@ -1357,6 +1361,26 @@ const Host = ({
             </div>
           )}
 
+          {/* Reaction overlay — inside the player area so cheers float over
+              the current song, never the queue or panels */}
+          {!remote && reactionsOn && visibleReactions.length > 0 && (
+            <div className={styles.reactionOverlay}>
+              {visibleReactions.map((r) => (
+                <div
+                  key={r.key}
+                  className={styles.reactionBubble}
+                  style={{ left: `${r.left}%`, '--sway': `${r.sway}px` } as React.CSSProperties}
+                >
+                  {isTextReaction(r.emoji) ? (
+                    <span className={styles.reactionText}>{r.emoji}</span>
+                  ) : (
+                    <span className={styles.reactionEmoji}>{r.emoji}</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
           {/* ─── Transport bar (host only — co-hosts don't control playback) ─── */}
           {!remote && (
             <div
@@ -1446,24 +1470,6 @@ const Host = ({
           )}
         </div>
 
-        {/* Reaction overlay */}
-        {!remote && reactionsOn && visibleReactions.length > 0 && (
-          <div className={styles.reactionOverlay}>
-            {visibleReactions.map((r) => (
-              <div
-                key={r.key}
-                className={styles.reactionBubble}
-                style={{ left: `${r.left}%` }}
-              >
-                {isTextReaction(r.emoji) ? (
-                  <span className={styles.reactionText}>{r.emoji}</span>
-                ) : (
-                  <span className={styles.reactionEmoji}>{r.emoji}</span>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
 
         {/* ─── Sidebar ─── */}
         <div

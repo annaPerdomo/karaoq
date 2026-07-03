@@ -285,10 +285,9 @@
 /* ─── Reaction overlay ─── */
 .reactionOverlay {
   position: absolute;
-  bottom: 80px;
-  left: 0;
-  width: 40%;
-  height: 80%;
+  inset: 0;
+  top: 56px; /* below the fixed header */
+  bottom: 130px; /* clear the fixed now-playing bar + footer */
   pointer-events: none;
   z-index: 8;
   overflow: hidden;
@@ -302,35 +301,38 @@
   align-items: center;
   gap: 0.2rem;
   opacity: 0;
-  animation: reactionFloat 4s ease-out forwards;
+  /* Twitch-style: fade in, drift steadily up with a slight lean (--sway,
+     set inline per cheer), fade out near the top. No bounce — cheers should
+     read as ambient warmth, not steal focus from the lyrics. */
+  animation: reactionFloat 4.5s ease-out forwards;
 }
 
 @keyframes reactionFloat {
   0% {
     opacity: 0;
-    transform: translateY(0) scale(0.5);
+    transform: translate(0, 0) scale(0.6);
   }
   8% {
     opacity: 1;
-    transform: translateY(-15px) scale(1);
+    transform: translate(calc(var(--sway, 0px) * 0.1), -5vh) scale(1);
   }
-  65% {
-    opacity: 0.8;
+  70% {
+    opacity: 0.9;
   }
   100% {
     opacity: 0;
-    transform: translateY(-300px) scale(0.6);
+    transform: translate(var(--sway, 0px), -60vh) scale(0.85);
   }
 }
 
 .reactionEmoji {
-  font-size: 2.5rem;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+  font-size: 3.25rem;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.5));
   line-height: 1;
 }
 
 .reactionText {
-  font-size: 1.1rem;
+  font-size: 1.25rem;
   font-weight: 700;
   color: #fff;
   background: linear-gradient(135deg, rgba(255, 45, 120, 0.85), rgba(255, 107, 53, 0.85));
@@ -560,13 +562,15 @@
   }
 
   .reactionOverlay {
-    width: 50%;
-    bottom: 60px;
-    height: 60%;
+    bottom: 100px;
   }
 
   .reactionEmoji {
-    font-size: 2rem;
+    font-size: 2.25rem;
+  }
+
+  .reactionText {
+    font-size: 1rem;
   }
 
   .qrSection {
