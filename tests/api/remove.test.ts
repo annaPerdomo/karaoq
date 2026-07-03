@@ -40,7 +40,7 @@ function makeQueue(...ids: string[]): QueueEntry[] {
     id,
     userName: `User${i}`,
     songTitle: `Song ${i}`,
-    videoId: `vid${i}`,
+    videoId: `vidvidvid${i}`,
   }));
 }
 

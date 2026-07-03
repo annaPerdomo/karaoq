@@ -75,7 +75,7 @@ export default async function handler(
 
     await collection.updateOne(
       { id: roomId },
-      { $set: { reactions: updated } }
+      { $set: { reactions: updated, lastActivity: new Date() } }
     );
 
     trackEvent(req, "reaction_sent", { roomId: roomId as string, userName: userName!, emoji });

@@ -68,6 +68,7 @@ describe("POST /api/queue/[id]/videos - Add song to queue", () => {
             songTitle: "Never Gonna Give You Up",
           },
         },
+        $set: { lastActivity: expect.any(Date) },
       }
     );
   });
@@ -81,7 +82,7 @@ describe("POST /api/queue/[id]/videos - Add song to queue", () => {
       body: {
         entryId: "e1",
         userName: "Bob",
-        videoId: "v1",
+        videoId: "dQw4w9WgXcQ",
         songTitle: "Song",
       },
     });

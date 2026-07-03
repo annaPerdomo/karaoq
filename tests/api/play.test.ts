@@ -53,7 +53,7 @@ describe("POST /api/queue/[id]/play - Set play state", () => {
     expect(res.getStatus()).toBe(200);
     expect(mockCollection.updateOne).toHaveBeenCalledWith(
       { id: "ROOM1" },
-      { $set: { isPlaying: true } }
+      { $set: { isPlaying: true, lastActivity: expect.any(Date) } }
     );
   });
 
@@ -71,7 +71,7 @@ describe("POST /api/queue/[id]/play - Set play state", () => {
 
     expect(mockCollection.updateOne).toHaveBeenCalledWith(
       { id: "ROOM1" },
-      { $set: { isPlaying: false } }
+      { $set: { isPlaying: false, lastActivity: expect.any(Date) } }
     );
   });
 

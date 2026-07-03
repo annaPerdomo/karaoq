@@ -36,9 +36,9 @@ function createRes() {
 }
 
 const sampleQueue: QueueEntry[] = [
-  { id: "a", userName: "Alice", songTitle: "Song A", videoId: "va" },
-  { id: "b", userName: "Bob", songTitle: "Song B", videoId: "vb" },
-  { id: "c", userName: "Carol", songTitle: "Song C", videoId: "vc" },
+  { id: "a", userName: "Alice", songTitle: "Song A", videoId: "vidvidvidva" },
+  { id: "b", userName: "Bob", songTitle: "Song B", videoId: "vidvidvidvb" },
+  { id: "c", userName: "Carol", songTitle: "Song C", videoId: "vidvidvidvc" },
 ];
 
 describe("POST /api/queue/[id]/reorder - Reorder queue", () => {
@@ -61,7 +61,7 @@ describe("POST /api/queue/[id]/reorder - Reorder queue", () => {
     expect(res.getStatus()).toBe(200);
     expect(mockCollection.updateOne).toHaveBeenCalledWith(
       { id: "ROOM1" },
-      { $set: { queue: reorderedQueue, activeVideoIndex: 1 } }
+      { $set: { queue: reorderedQueue, activeVideoIndex: 1, lastActivity: expect.any(Date) } }
     );
   });
 

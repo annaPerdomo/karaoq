@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { ApiError, Room } from "../../types";
 import { trackEvent } from "../../../../lib/analytics";
+import { rateLimit } from "../../../../lib/limits";
 import { getRoomsCollection } from "../../../../lib/mongodb";
 import { normalizeRoomId } from "../../../../lib/roomCode";
 
@@ -28,10 +29,24 @@ export default async function handler(
         res.status(409).json({ code: 409, message: "Room code already in use." });
       } else if (existing) {
         // Reset play state whenever host reconnects — they control when songs start
-        await collection.updateOne({ id: roomId }, { $set: { isPlaying: false } });
+        await collection.updateOne(
+          { id: roomId },
+          { $set: { isPlaying: false, lastActivity: new Date() } }
+        );
         res.status(200).json({ ...existing, isPlaying: false });
+      } else if (!rateLimit(req, "room-create", 10, 300_000)) {
+        res.status(429).json({ code: 429, message: "Too many rooms created, try again later." });
       } else {
-        const room: Room = { id: roomId, queue: [], activeVideoIndex: 0, isPlaying: false, reactionsEnabled: true };
+        const now = new Date();
+        const room: Room = {
+          id: roomId,
+          queue: [],
+          activeVideoIndex: 0,
+          isPlaying: false,
+          reactionsEnabled: true,
+          createdAt: now,
+          lastActivity: now,
+        };
         await collection.insertOne(room);
         trackEvent(req, "room_created", { roomId });
         res.status(201).json(room);

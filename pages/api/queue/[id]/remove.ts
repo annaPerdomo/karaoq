@@ -47,7 +47,7 @@ export default async function handler(
 
     await collection.updateOne(
       { id: roomId },
-      { $set: { queue: newQueue, activeVideoIndex: newActiveIndex } }
+      { $set: { queue: newQueue, activeVideoIndex: newActiveIndex, lastActivity: new Date() } }
     );
     res.status(200).json({ code: 200, message: "Entry removed." });
   } catch (e) {

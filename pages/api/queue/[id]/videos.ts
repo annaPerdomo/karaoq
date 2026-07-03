@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { trackEvent } from "../../../../lib/analytics";
+import { isValidQueueEntry, MAX_QUEUE_LENGTH, rateLimit } from "../../../../lib/limits";
 import { getRoomsCollection } from "../../../../lib/mongodb";
 import { normalizeRoomId } from "../../../../lib/roomCode";
 
@@ -30,14 +31,15 @@ export default async function handler(
   }
 
   const { entryId, userName, videoId, songTitle } = body;
+  const entry = { id: entryId, userName, videoId, songTitle };
 
-  if (
-    typeof entryId !== "string" ||
-    typeof userName !== "string" ||
-    typeof videoId !== "string" ||
-    typeof songTitle !== "string"
-  ) {
+  if (!isValidQueueEntry(entry)) {
     res.status(400).json({ code: 400, message: "Invalid request." });
+    return;
+  }
+
+  if (!rateLimit(req, "song-add", 15, 30_000)) {
+    res.status(429).json({ code: 429, message: "Too many songs added, slow down." });
     return;
   }
 
@@ -47,13 +49,14 @@ export default async function handler(
 
     if (!room) {
       res.status(404).json({ code: 404, message: "Room not found." });
+    } else if (room.queue.length >= MAX_QUEUE_LENGTH) {
+      res.status(409).json({ code: 409, message: "Queue is full." });
     } else {
       await collection.updateOne(
         { id: roomId },
         {
-          $push: {
-            queue: { id: entryId, userName, videoId, songTitle },
-          },
+          $push: { queue: entry },
+          $set: { lastActivity: new Date() },
         }
       );
       trackEvent(req, "song_added", { roomId: roomId as string, userName, songTitle, videoId });

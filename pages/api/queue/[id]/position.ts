@@ -28,7 +28,7 @@ export default async function handler(
     } else {
       await collection.updateOne(
         { id: roomId },
-        { $set: { activeVideoIndex, isPlaying: false } }
+        { $set: { activeVideoIndex, isPlaying: false, lastActivity: new Date() } }
       );
       res.status(200).json({ code: 200, message: "Position updated." });
     }

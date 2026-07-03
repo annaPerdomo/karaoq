@@ -53,7 +53,7 @@ describe("POST /api/queue/[id]/position - Advance song position", () => {
     expect(res.getStatus()).toBe(200);
     expect(mockCollection.updateOne).toHaveBeenCalledWith(
       { id: "ROOM1" },
-      { $set: { activeVideoIndex: 2, isPlaying: false } }
+      { $set: { activeVideoIndex: 2, isPlaying: false, lastActivity: expect.any(Date) } }
     );
   });
 

@@ -28,7 +28,7 @@ export default async function handler(
     } else {
       await collection.updateOne(
         { id: roomId },
-        { $set: { isPlaying } }
+        { $set: { isPlaying, lastActivity: new Date() } }
       );
       res.status(200).json({ code: 200, message: "Play state updated." });
     }

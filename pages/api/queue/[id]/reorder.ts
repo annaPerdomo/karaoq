@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { QueueEntry } from "../../types";
+import { isValidQueueEntry, MAX_QUEUE_LENGTH } from "../../../../lib/limits";
 import { getRoomsCollection } from "../../../../lib/mongodb";
 import { normalizeRoomId } from "../../../../lib/roomCode";
 
@@ -27,7 +28,15 @@ export default async function handler(
     return;
   }
 
-  if (!Array.isArray(body.queue) || typeof body.activeVideoIndex !== "number") {
+  if (
+    !Array.isArray(body.queue) ||
+    body.queue.length > MAX_QUEUE_LENGTH ||
+    !body.queue.every(isValidQueueEntry) ||
+    typeof body.activeVideoIndex !== "number" ||
+    !Number.isInteger(body.activeVideoIndex) ||
+    body.activeVideoIndex < 0 ||
+    body.activeVideoIndex > body.queue.length
+  ) {
     res.status(400).json({ code: 400, message: "Invalid request body." });
     return;
   }
@@ -41,7 +50,7 @@ export default async function handler(
     } else {
       await collection.updateOne(
         { id: roomId },
-        { $set: { queue: body.queue, activeVideoIndex: body.activeVideoIndex } }
+        { $set: { queue: body.queue, activeVideoIndex: body.activeVideoIndex, lastActivity: new Date() } }
       );
       res.status(200).json({ code: 200, message: "Queue reordered." });
     }

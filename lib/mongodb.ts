@@ -25,9 +25,58 @@ export function getMongoClient(): Promise<MongoClient> {
   return globalForMongo._karaoqMongoClient;
 }
 
+// Rooms expire 30 days after their last write (song add, playback change,
+// reaction, host reconnect). Long enough that "what was that room code from
+// last weekend?" still works; short enough that abandoned rooms don't
+// accumulate against the Atlas free-tier storage cap.
+export const ROOM_EXPIRY_SECONDS = 30 * 24 * 60 * 60;
+
+const SEARCH_CACHE_TTL_SECONDS = 24 * 60 * 60;
+
+let roomIndexesEnsured = false;
+
+function ensureRoomIndexes(db: Db): void {
+  if (roomIndexesEnsured) return;
+  roomIndexesEnsured = true;
+  try {
+    Promise.all([
+      db.collection("rooms").createIndex({ id: 1 }, { unique: true }),
+      db.collection("rooms").createIndex(
+        { lastActivity: 1 },
+        { expireAfterSeconds: ROOM_EXPIRY_SECONDS }
+      ),
+      db.collection("search_cache").createIndex(
+        { createdAt: 1 },
+        { expireAfterSeconds: SEARCH_CACHE_TTL_SECONDS }
+      ),
+      db.collection("search_cache").createIndex({ key: 1 }, { unique: true }),
+    ]).catch((e) => {
+      console.error("Room index creation failed:", e);
+      roomIndexesEnsured = false;
+    });
+  } catch (e) {
+    console.error("Room index creation failed:", e);
+  }
+}
+
 export async function getRoomsCollection(): Promise<Collection<Room>> {
   const client = await getMongoClient();
-  return client.db(process.env.MONGODB_DB).collection<Room>("rooms");
+  const db = client.db(process.env.MONGODB_DB);
+  ensureRoomIndexes(db);
+  return db.collection<Room>("rooms");
+}
+
+interface SearchCacheDoc {
+  key: string;
+  results: { title: string; thumbnailUrl: string; videoId: string }[];
+  createdAt: Date;
+}
+
+export async function getSearchCacheCollection(): Promise<Collection<SearchCacheDoc>> {
+  const client = await getMongoClient();
+  const db = client.db(process.env.MONGODB_DB);
+  ensureRoomIndexes(db);
+  return db.collection<SearchCacheDoc>("search_cache");
 }
 
 let indexesEnsured = false;

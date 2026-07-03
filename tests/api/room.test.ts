@@ -67,6 +67,8 @@ describe("POST /api/queue/[id] - Room creation", () => {
       activeVideoIndex: 0,
       isPlaying: false,
       reactionsEnabled: true,
+      createdAt: expect.any(Date),
+      lastActivity: expect.any(Date),
     });
     expect(mockCollection.insertOne).toHaveBeenCalledWith({
       id: "ABC12",
@@ -74,6 +76,8 @@ describe("POST /api/queue/[id] - Room creation", () => {
       activeVideoIndex: 0,
       isPlaying: false,
       reactionsEnabled: true,
+      createdAt: expect.any(Date),
+      lastActivity: expect.any(Date),
     });
   });
 
@@ -95,7 +99,7 @@ describe("POST /api/queue/[id] - Room creation", () => {
     expect((res.getBody() as Room).isPlaying).toBe(false);
     expect(mockCollection.updateOne).toHaveBeenCalledWith(
       { id: "ABC12" },
-      { $set: { isPlaying: false } }
+      { $set: { isPlaying: false, lastActivity: expect.any(Date) } }
     );
   });
 

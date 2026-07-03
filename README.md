@@ -105,7 +105,7 @@ Copy `.env.example` to `.env.local` and fill in your credentials:
 ```
 MONGODB_URI=mongodb+srv://...
 MONGODB_DB=karaoq
-NEXT_PUBLIC_YOUTUBE_API_KEY=AIza...
+YOUTUBE_API_KEY=AIza...
 ```
 
 ```bash
@@ -128,8 +128,8 @@ pnpm lint         # ESLint
 ## Trade-offs
 
 - **Polling over WebSockets** — The original implementation used Pusher for real-time updates. Replaced with 3-second polling to eliminate external service dependencies and stay compatible with serverless deployment. Karaoke has natural pauses between songs, so 0-3s latency isn't noticeable. Upgrade path to SSE exists if needed.
-- **New MongoDB connection per request** — Acceptable for current scale (single-digit concurrent users). Would add connection pooling via a cached client singleton before scaling further.
-- **YouTube API key on the client** — `NEXT_PUBLIC_` prefix exposes the key in the browser bundle. Acceptable because YouTube API keys are domain-restricted and read-only. Could move search server-side for tighter control.
+- **Pooled MongoDB client** — A cached client singleton on `globalThis` reuses one connection per serverless instance instead of opening a fresh TCP+TLS handshake per request.
+- **Server-side YouTube search with caching** — Searches proxy through `/api/search`, keeping the API key out of the browser bundle. Results are cached in MongoDB for 24h (TTL index), so repeated queries don't burn the 10k-unit daily quota; Invidious serves as a fallback when the quota runs out.
 - **No auth** — Currently stateless by design. Singers are identified by a self-reported name in localStorage. Works for trusted groups (friends at a party). Auth is the next planned addition.
 - **CSS Modules over a component library** — Keeps the bundle small and avoids framework lock-in. Will migrate to a design system (MUI or similar) when theming and venue branding features require it.
 
