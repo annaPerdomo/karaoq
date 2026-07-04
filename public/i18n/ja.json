@@ -6,6 +6,8 @@
   "common.yourName": "あなたの名前",
   "common.enterYourName": "名前を入力してね",
   "common.enterNameFirst": "先に名前を入力してね",
+  "common.fullscreen": "全画面表示",
+  "common.exitFullscreen": "全画面表示を終了",
   "footer.credit": "variations on a string が ♥ を込めて作りました",
   "lang.label": "言語",
   "lang.choose": "言語を選ぶ",

@@ -42,8 +42,9 @@
 }
 
 .headerLang {
-  /* Push the language control to the right edge of the header bar. */
-  margin-left: auto;
+  /* The fullscreen button ahead of it carries margin-left:auto; this just adds
+     a small gap between the two right-aligned controls. */
+  margin-left: 0.5rem;
 }
 
 .brand {
@@ -77,6 +78,30 @@
   height: 100%;
   border: none;
   background: #000;
+}
+
+/* Fullscreen toggle in the header, sitting just before the language pill. Same
+   icon-button look as the app's other header controls (matches Host's .gearBtn);
+   margin-left:auto pushes it — and the language switcher after it — to the right
+   edge of the header bar. */
+.headerFullscreen {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.headerFullscreen:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
 }
 
 /* ─── Autoplay-blocked overlay (one tap unlocks playback) ─── */

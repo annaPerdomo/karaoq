@@ -932,6 +932,13 @@
   cursor: not-allowed;
 }
 
+/* Fullscreen is a display-mode toggle, not a playback control — nudge it a bit
+   further from the prev/play/next cluster so it doesn't read as a 4th transport
+   button. (transportControls already supplies a 0.5rem gap.) */
+.tFullscreen {
+  margin-left: 0.5rem;
+}
+
 .tPlay {
   width: 56px;
   height: 48px;

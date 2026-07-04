@@ -6,6 +6,8 @@
   "common.yourName": "Tvoje jméno",
   "common.enterYourName": "Zadej svoje jméno",
   "common.enterNameFirst": "Nejdřív zadej svoje jméno",
+  "common.fullscreen": "Celá obrazovka",
+  "common.exitFullscreen": "Ukončit celou obrazovku",
   "footer.credit": "vyrobeno s ♥ od variations on a string",
   "lang.label": "Jazyk",
   "lang.choose": "Vyber jazyk",

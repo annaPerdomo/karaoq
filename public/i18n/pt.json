@@ -6,6 +6,8 @@
   "common.yourName": "Seu nome",
   "common.enterYourName": "Digite seu nome",
   "common.enterNameFirst": "Digite seu nome primeiro",
+  "common.fullscreen": "Tela cheia",
+  "common.exitFullscreen": "Sair da tela cheia",
   "footer.credit": "feito com ♥ por variations on a string",
   "lang.label": "Idioma",
   "lang.choose": "Escolha o idioma",

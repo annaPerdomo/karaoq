@@ -1,0 +1,23 @@
+/* Icon-button base, cloned from Host's .gearBtn so the fullscreen toggle looks
+   identical on both the host and display headers. Header-specific positioning
+   (e.g. margin) comes in via the className prop. */
+.btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  color: var(--text-muted);
+  transition: background 0.15s, color 0.15s;
+  flex-shrink: 0;
+  cursor: pointer;
+  background: none;
+  border: none;
+}
+
+.btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+}

@@ -54,6 +54,7 @@ import { v4 as uuidv4 } from "uuid";
 import { useT } from "../lib/i18n/I18nProvider";
 import { renderWithHeart } from "../lib/i18n/renderWithHeart";
 import LanguageSwitcher from "./LanguageSwitcher";
+import FullscreenToggle from "./FullscreenToggle";
 
 const POLL_INTERVAL = 3000;
 // Backstop only: how long a cast display's heartbeat can stay stale before the
@@ -1821,6 +1822,7 @@ const Host = ({
                   >
                     {Icons.next}
                   </button>
+                  <FullscreenToggle className={`${styles.tBtn} ${styles.tFullscreen}`} />
                 </div>
               </div>
               <div className={styles.transportFooter}>

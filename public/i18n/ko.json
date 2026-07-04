@@ -6,6 +6,8 @@
   "common.yourName": "이름",
   "common.enterYourName": "이름을 입력하세요",
   "common.enterNameFirst": "이름부터 입력해 주세요",
+  "common.fullscreen": "전체 화면",
+  "common.exitFullscreen": "전체 화면 종료",
   "footer.credit": "made with ♥ by variations on a string",
   "lang.label": "언어",
   "lang.choose": "언어 선택",

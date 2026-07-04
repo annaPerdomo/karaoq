@@ -17,6 +17,7 @@ import { PlayMode, QueueEntry, Reaction, Room } from '../pages/api/types';
 import { useT } from '../lib/i18n/I18nProvider';
 import { renderWithHeart } from '../lib/i18n/renderWithHeart';
 import LanguageSwitcher from './LanguageSwitcher';
+import FullscreenToggle from './FullscreenToggle';
 
 const POLL_INTERVAL = 1500;
 // Liveness heartbeat cadence; the server treats a display as gone after ~75s
@@ -407,6 +408,7 @@ const Display = (): React.ReactElement => {
       {/* Header */}
       <header className={styles.header}>
         <div className={styles.brand}>KaraoQ</div>
+        <FullscreenToggle className={styles.headerFullscreen} />
         <LanguageSwitcher className={styles.headerLang} />
       </header>
 
