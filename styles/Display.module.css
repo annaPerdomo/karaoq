@@ -74,6 +74,56 @@
   background: #000;
 }
 
+/* ─── Autoplay-blocked overlay (one tap unlocks playback) ─── */
+.tapOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.9rem;
+  padding: 2rem;
+  background: rgba(10, 10, 25, 0.88);
+  backdrop-filter: blur(6px);
+  border: none;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+  text-align: center;
+}
+
+.tapPlayIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ff2d78, #00f0ff);
+  color: #fff;
+  animation: tapPulse 2s ease-in-out infinite;
+}
+
+@keyframes tapPulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 45, 120, 0.5); }
+  50% { transform: scale(1.06); box-shadow: 0 0 0 16px rgba(255, 45, 120, 0); }
+}
+
+.tapTitle {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.tapHint {
+  max-width: 34rem;
+  color: var(--text-muted);
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
 /* ─── Center states (loading, waiting) ─── */
 .centerState {
   flex: 1;

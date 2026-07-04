@@ -204,6 +204,39 @@ const Display = (): React.ReactElement => {
     return () => window.removeEventListener('message', onMessage);
   }, [isPlaying, joinCode, activeIndex, playsVideoHere]);
 
+  // Autoplay watchdog: if YouTube hasn't reported playing/buffering shortly
+  // after the iframe mounts, the browser blocked autoplay on this screen.
+  React.useEffect(() => {
+    if (!isPlaying || !currentSongId || !playsVideoHere) {
+      setNeedsTap(false);
+      return;
+    }
+    playbackConfirmedRef.current = false;
+    const timer = setTimeout(() => {
+      if (!playbackConfirmedRef.current) setNeedsTap(true);
+    }, 3000);
+    return () => {
+      clearTimeout(timer);
+      if (unlockRetryRef.current) clearTimeout(unlockRetryRef.current);
+    };
+  }, [isPlaying, currentSongId, playsVideoHere]);
+
+  // The tap gives this page sticky user activation — with allow="autoplay" on
+  // the iframe, this song and every later one can now play with sound. Also
+  // kick the already-mounted player directly, and re-show the overlay if the
+  // kick didn't take.
+  function unlockPlayback() {
+    videoRef.current?.contentWindow?.postMessage(
+      JSON.stringify({ event: 'command', func: 'playVideo', args: [] }),
+      'https://www.youtube.com'
+    );
+    setNeedsTap(false);
+    if (unlockRetryRef.current) clearTimeout(unlockRetryRef.current);
+    unlockRetryRef.current = setTimeout(() => {
+      if (!playbackConfirmedRef.current) setNeedsTap(true);
+    }, 2000);
+  }
+
   function handleIframeLoad() {
     videoRef.current?.contentWindow?.postMessage(
       JSON.stringify({ event: 'listening', id: 'karaoq-display' }),
@@ -290,6 +323,22 @@ const Display = (): React.ReactElement => {
             <h1 className={styles.waitingTitle}>KaraoQ</h1>
             <p className={styles.waitingText}>Scan the QR code or visit <strong>{(origin || 'karaoq.live').replace(/^https?:\/\/(www\.)?/, '')}</strong> and enter code <strong>{joinCode?.toUpperCase()}</strong> to add songs and cheer on the singers!</p>
           </div>
+        )}
+
+        {/* Autoplay blocked: one tap unlocks playback on this screen */}
+        {needsTap && isPlaying && currentSong && (
+          <button className={styles.tapOverlay} onClick={unlockPlayback}>
+            <span className={styles.tapPlayIcon}>
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            </span>
+            <span className={styles.tapTitle}>Tap to start playback</span>
+            <span className={styles.tapHint}>
+              This screen needs one tap before videos can play — after that,
+              songs start automatically.
+            </span>
+          </button>
         )}
 
         {/* Reaction overlay */}
