@@ -4,9 +4,11 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { QRCodeSVG } from 'qrcode.react';
 import styles from '../../styles/Print.module.css';
+import { useT } from '../../lib/i18n/I18nProvider';
 
 const PrintPage: NextPage = () => {
   const router = useRouter();
+  const { t } = useT();
   const joinCode = router.query.joinCode as string | undefined;
   const [origin, setOrigin] = React.useState('');
 
@@ -34,14 +36,14 @@ const PrintPage: NextPage = () => {
   return (
     <>
       <Head>
-        <title>KaraoQ — Print QR Code</title>
+        <title>{t('print.pageTitle')}</title>
         <meta name="robots" content="noindex, nofollow" />
       </Head>
       <main className={styles.page}>
         <div className={styles.card}>
           <div className={styles.brand}>KaraoQ</div>
 
-          <div className={styles.label}>Scan to join</div>
+          <div className={styles.label}>{t('print.scanToJoin')}</div>
 
           {joinUrl && (
             <div className={styles.qr}>
@@ -55,7 +57,11 @@ const PrintPage: NextPage = () => {
             </div>
           )}
           <div className={styles.url}>
-            or join <strong>{displayUrl}</strong> and enter <span className={styles.code}>{joinCode}</span>
+            {t('print.orJoin').split(/(\{url\}|\{code\})/).map((part, i) => {
+              if (part === '{url}') return <strong key={i}>{displayUrl}</strong>;
+              if (part === '{code}') return <span key={i} className={styles.code}>{joinCode}</span>;
+              return <React.Fragment key={i}>{part}</React.Fragment>;
+            })}
           </div>
 
           <div className={styles.actions}>
@@ -65,10 +71,10 @@ const PrintPage: NextPage = () => {
                 <rect x="1.5" y="6" width="15" height="7.5" rx="1" />
                 <path d="M4.5 10.5h9v6h-9z" />
               </svg>
-              Print
+              {t('print.print')}
             </button>
             <button className={styles.backBtn} onClick={handleClose}>
-              Close
+              {t('common.close')}
             </button>
           </div>
         </div>

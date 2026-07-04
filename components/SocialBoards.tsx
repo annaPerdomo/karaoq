@@ -10,6 +10,7 @@ import postSuggestion from '../app/queue/postSuggestion';
 import claimSuggestion from '../app/queue/claimSuggestion';
 import removeSuggestion from '../app/queue/removeSuggestion';
 import { SingWithMePost, SuggestedSong } from '../pages/api/types';
+import { useT } from '../lib/i18n/I18nProvider';
 
 function decodeHtml(html: string): string {
   if (typeof document === 'undefined') return html;
@@ -44,6 +45,7 @@ const SocialBoards: React.FC<SocialBoardsProps> = ({
   onChange,
 }) => {
   const isHost = mode === 'host';
+  const { t, tn } = useT();
   const [tab, setTab] = React.useState<BoardTab>('singwithme');
   const [posting, setPosting] = React.useState<BoardTab | null>(null);
   const [busy, setBusy] = React.useState(false);
@@ -175,14 +177,14 @@ const SocialBoards: React.FC<SocialBoardsProps> = ({
           className={`${styles.tab} ${tab === 'singwithme' ? styles.tabActive : ''}`}
           onClick={() => setTab('singwithme')}
         >
-          Sing together
+          {t('boards.tab.singTogether')}
           {singWithMe.length > 0 && <span className={styles.tabCount}>{singWithMe.length}</span>}
         </button>
         <button
           className={`${styles.tab} ${tab === 'suggestions' ? styles.tabActive : ''}`}
           onClick={() => setTab('suggestions')}
         >
-          Requests
+          {t('boards.tab.requests')}
           {suggestions.length > 0 && <span className={styles.tabCount}>{suggestions.length}</span>}
         </button>
       </div>
@@ -191,16 +193,16 @@ const SocialBoards: React.FC<SocialBoardsProps> = ({
         <div className={styles.list}>
           {!isHost && (
             <button className={styles.postBtn} onClick={() => setPosting('singwithme')}>
-              + Post a song to sing together
+              {t('boards.post.singTogether')}
             </button>
           )}
           {singWithMe.length === 0 ? (
             <div className={styles.empty}>
-              <p>No open songs yet</p>
+              <p>{t('boards.empty.swm.title')}</p>
               <span>
                 {isHost
-                  ? 'Singers can post a song and gather people to sing it together.'
-                  : 'Post a duet or group number and gather people to sing it together!'}
+                  ? t('boards.empty.swm.host')
+                  : t('boards.empty.swm.singer')}
               </span>
             </div>
           ) : (
@@ -217,21 +219,21 @@ const SocialBoards: React.FC<SocialBoardsProps> = ({
                       {/* A named poster already leads the "Singing:" list below,
                           so only call out anonymous posts. */}
                       {(post.anonymous || !post.createdBy) && (
-                        <span className={styles.cardMeta}>posted anonymously</span>
+                        <span className={styles.cardMeta}>{t('boards.postedAnon')}</span>
                       )}
                       <div className={styles.progressRow}>
                         <span className={styles.progressText}>
                           {!post.queued
-                            ? `needs ${post.minSingers - joined} more singer${post.minSingers - joined === 1 ? '' : 's'}`
+                            ? tn('boards.needMore', post.minSingers - joined)
                             : full
-                            ? `${joined} singers · full`
-                            : `${joined} singers · room for ${post.maxSingers - joined} more`}
+                            ? t('boards.full', { count: joined })
+                            : t('boards.roomFor', { count: joined, more: post.maxSingers - joined })}
                         </span>
-                        {post.queued && <span className={styles.queuedBadge}>In queue 🎶</span>}
+                        {post.queued && <span className={styles.queuedBadge}>{t('boards.inQueue')}</span>}
                       </div>
                       {post.joinedSingers.length > 0 && (
                         <span className={styles.joinedNames}>
-                          Singing: {post.joinedSingers.join(', ')}
+                          {t('boards.singing', { names: post.joinedSingers.join(', ') })}
                         </span>
                       )}
                     </div>
@@ -240,8 +242,8 @@ const SocialBoards: React.FC<SocialBoardsProps> = ({
                         className={styles.removeBtn}
                         onClick={() => handleRemoveSwm(post)}
                         disabled={busy}
-                        aria-label={isHost ? 'Remove post' : 'Remove your post'}
-                        title={isHost ? 'Remove post' : 'Remove your post'}
+                        aria-label={isHost ? t('boards.removePost') : t('boards.removeYourPost')}
+                        title={isHost ? t('boards.removePost') : t('boards.removeYourPost')}
                       >
                         ×
                       </button>
@@ -251,19 +253,19 @@ const SocialBoards: React.FC<SocialBoardsProps> = ({
                     <button
                       className={styles.previewBtn}
                       onClick={() => openPreview({ kind: 'singwithme', post })}
-                      aria-label="Preview this song"
-                      title="Preview this song"
+                      aria-label={t('boards.previewAria')}
+                      title={t('boards.previewAria')}
                     >
-                      <span className={styles.previewBtnIcon}>▶</span> Preview
+                      <span className={styles.previewBtnIcon}>▶</span> {t('boards.preview')}
                     </button>
                     {!canRemoveSwm && (
                       <button
                         className={`${styles.joinBtn} ${alreadyIn ? styles.joinBtnDone : ''}`}
                         onClick={() => handleJoin(post)}
                         disabled={busy || alreadyIn || full || !name}
-                        title={!name ? 'Enter your name first' : undefined}
+                        title={!name ? t('common.enterNameFirst') : undefined}
                       >
-                        {alreadyIn ? '✓ Joined' : full ? 'Full' : 'Join'}
+                        {alreadyIn ? t('boards.joined') : full ? t('boards.full.short') : t('boards.join')}
                       </button>
                     )}
                   </div>
@@ -276,16 +278,16 @@ const SocialBoards: React.FC<SocialBoardsProps> = ({
         <div className={styles.list}>
           {!isHost && (
             <button className={styles.postBtn} onClick={() => setPosting('suggestions')}>
-              + Request a song
+              {t('boards.post.request')}
             </button>
           )}
           {suggestions.length === 0 ? (
             <div className={styles.empty}>
-              <p>No requests yet</p>
+              <p>{t('boards.empty.req.title')}</p>
               <span>
                 {isHost
-                  ? 'Singers can request songs for anyone in the room to pick up.'
-                  : 'Got a song idea that would slap right now? Request it and someone else can grab it.'}
+                  ? t('boards.empty.req.host')
+                  : t('boards.empty.req.singer')}
               </span>
             </div>
           ) : (
@@ -297,7 +299,7 @@ const SocialBoards: React.FC<SocialBoardsProps> = ({
                     <div className={styles.cardMain}>
                       <span className={styles.cardSong}>{decodeHtml(s.songTitle)}</span>
                       <span className={styles.cardMeta}>
-                        requested by {s.anonymous || !s.suggestedBy ? 'Anonymous' : s.suggestedBy}
+                        {t('boards.requestedBy', { name: s.anonymous || !s.suggestedBy ? t('boards.anonymous') : s.suggestedBy })}
                       </span>
                     </div>
                     {canRemoveRequest && (
@@ -305,8 +307,8 @@ const SocialBoards: React.FC<SocialBoardsProps> = ({
                         className={styles.removeBtn}
                         onClick={() => handleRemoveSuggestion(s)}
                         disabled={busy}
-                        aria-label={isHost ? 'Remove request' : 'Remove your request'}
-                        title={isHost ? 'Remove request' : 'Remove your request'}
+                        aria-label={isHost ? t('boards.removeRequest') : t('boards.removeYourRequest')}
+                        title={isHost ? t('boards.removeRequest') : t('boards.removeYourRequest')}
                       >
                         ×
                       </button>
@@ -316,19 +318,19 @@ const SocialBoards: React.FC<SocialBoardsProps> = ({
                     <button
                       className={styles.previewBtn}
                       onClick={() => openPreview({ kind: 'suggestion', post: s })}
-                      aria-label="Preview this song"
-                      title="Preview this song"
+                      aria-label={t('boards.previewAria')}
+                      title={t('boards.previewAria')}
                     >
-                      <span className={styles.previewBtnIcon}>▶</span> Preview
+                      <span className={styles.previewBtnIcon}>▶</span> {t('boards.preview')}
                     </button>
                     {!canRemoveRequest && (
                       <button
                         className={styles.joinBtn}
                         onClick={() => handleClaim(s)}
                         disabled={busy || !name}
-                        title={!name ? 'Enter your name first' : undefined}
+                        title={!name ? t('common.enterNameFirst') : undefined}
                       >
-                        I&apos;ll sing this
+                        {t('boards.illSing')}
                       </button>
                     )}
                   </div>
@@ -345,9 +347,9 @@ const SocialBoards: React.FC<SocialBoardsProps> = ({
           <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
             <div className={styles.modalHeader}>
               <h3 className={styles.modalTitle}>
-                {posting === 'singwithme' ? 'Sing together' : 'Request a song'}
+                {posting === 'singwithme' ? t('boards.modal.singTogether') : t('boards.modal.request')}
               </h3>
-              <button className={styles.modalClose} onClick={closeModal} aria-label="Close">
+              <button className={styles.modalClose} onClick={closeModal} aria-label={t('common.close')}>
                 ×
               </button>
             </div>
@@ -375,7 +377,7 @@ const SocialBoards: React.FC<SocialBoardsProps> = ({
                       type="button"
                       className={styles.previewPlayBtn}
                       onClick={() => setDraftPlaying(true)}
-                      title="Play preview"
+                      title={t('boards.previewAria')}
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element -- external YouTube thumbnail */}
                       <img src={picked.thumbnailUrl} alt="" className={styles.previewThumb} />
@@ -385,13 +387,13 @@ const SocialBoards: React.FC<SocialBoardsProps> = ({
                 </div>
                 <p className={styles.draftSong}>{picked.title}</p>
                 <button className={styles.changeBtn} onClick={() => pickSong(null)}>
-                  Choose a different song
+                  {t('boards.chooseDifferent')}
                 </button>
 
                 {posting === 'singwithme' && (
                   <div className={styles.stepperRow}>
                     <Stepper
-                      label="Singers needed"
+                      label={t('boards.singersNeeded')}
                       value={minSingers}
                       min={2}
                       max={20}
@@ -401,7 +403,7 @@ const SocialBoards: React.FC<SocialBoardsProps> = ({
                       }}
                     />
                     <Stepper
-                      label="Max singers"
+                      label={t('boards.maxSingers')}
                       value={Math.max(minSingers, maxSingers)}
                       min={minSingers}
                       max={20}
@@ -416,7 +418,7 @@ const SocialBoards: React.FC<SocialBoardsProps> = ({
                     checked={anonymous}
                     onChange={(e) => setAnonymous(e.target.checked)}
                   />
-                  Post anonymously
+                  {t('boards.postAnon')}
                 </label>
 
                 <button
@@ -424,7 +426,7 @@ const SocialBoards: React.FC<SocialBoardsProps> = ({
                   onClick={posting === 'singwithme' ? submitSingWithMe : submitSuggestion}
                   disabled={busy}
                 >
-                  {posting === 'singwithme' ? 'Post it' : 'Request it'}
+                  {posting === 'singwithme' ? t('boards.postIt') : t('boards.requestIt')}
                 </button>
               </div>
             )}
@@ -443,11 +445,11 @@ const SocialBoards: React.FC<SocialBoardsProps> = ({
           <div className={styles.overlay} onClick={() => setPreview(null)}>
             <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
               <div className={styles.modalHeader}>
-                <h3 className={styles.modalTitle}>Preview</h3>
+                <h3 className={styles.modalTitle}>{t('boards.preview')}</h3>
                 <button
                   className={styles.modalClose}
                   onClick={() => setPreview(null)}
-                  aria-label="Close"
+                  aria-label={t('common.close')}
                 >
                   ×
                 </button>
@@ -467,7 +469,7 @@ const SocialBoards: React.FC<SocialBoardsProps> = ({
                       type="button"
                       className={styles.previewPlayBtn}
                       onClick={() => setPreviewPlaying(true)}
-                      title="Play preview"
+                      title={t('boards.previewAria')}
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element -- external YouTube thumbnail; Next optimization adds cost/latency without benefit */}
                       <img
@@ -486,9 +488,9 @@ const SocialBoards: React.FC<SocialBoardsProps> = ({
                     className={styles.submitBtn}
                     onClick={handleClaimFromPreview}
                     disabled={busy || !name}
-                    title={!name ? 'Enter your name first' : undefined}
+                    title={!name ? t('common.enterNameFirst') : undefined}
                   >
-                    I&apos;ll sing this
+                    {t('boards.illSing')}
                   </button>
                 )}
 
@@ -497,9 +499,9 @@ const SocialBoards: React.FC<SocialBoardsProps> = ({
                     className={styles.submitBtn}
                     onClick={handleJoinFromPreview}
                     disabled={busy || previewAlreadyIn || previewFull || !name}
-                    title={!name ? 'Enter your name first' : undefined}
+                    title={!name ? t('common.enterNameFirst') : undefined}
                   >
-                    {previewAlreadyIn ? '✓ Joined' : previewFull ? 'Full' : 'Join'}
+                    {previewAlreadyIn ? t('boards.joined') : previewFull ? t('boards.full.short') : t('boards.join')}
                   </button>
                 )}
               </div>
@@ -519,7 +521,9 @@ interface StepperProps {
   onChange: (v: number) => void;
 }
 
-const Stepper: React.FC<StepperProps> = ({ label, value, min, max, onChange }) => (
+const Stepper: React.FC<StepperProps> = ({ label, value, min, max, onChange }) => {
+  const { t } = useT();
+  return (
   <div className={styles.stepper}>
     <span className={styles.stepperLabel}>{label}</span>
     <div className={styles.stepperControls}>
@@ -527,7 +531,7 @@ const Stepper: React.FC<StepperProps> = ({ label, value, min, max, onChange }) =
         className={styles.stepperBtn}
         onClick={() => onChange(Math.max(min, value - 1))}
         disabled={value <= min}
-        aria-label={`Decrease ${label}`}
+        aria-label={t('boards.decrease', { label })}
       >
         −
       </button>
@@ -536,12 +540,13 @@ const Stepper: React.FC<StepperProps> = ({ label, value, min, max, onChange }) =
         className={styles.stepperBtn}
         onClick={() => onChange(Math.min(max, value + 1))}
         disabled={value >= max}
-        aria-label={`Increase ${label}`}
+        aria-label={t('boards.increase', { label })}
       >
         +
       </button>
     </div>
   </div>
-);
+  );
+};
 
 export default SocialBoards;

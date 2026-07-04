@@ -26,19 +26,21 @@ import {
 } from '../app/queue/songSuggestions';
 import useCountry from '../app/queue/useCountry';
 import fetchRegionalPack from '../app/queue/regionalPack';
+import { useT } from '../lib/i18n/I18nProvider';
+import { renderWithHeart } from '../lib/i18n/renderWithHeart';
 
-const DURATION_OPTIONS: { value: VideoDuration; label: string }[] = [
-  { value: 'any', label: 'Any length' },
-  { value: 'short', label: 'Short (< 4 min)' },
-  { value: 'medium', label: 'Medium (4–20 min)' },
-  { value: 'long', label: 'Long (> 20 min)' },
+const DURATION_OPTIONS: { value: VideoDuration; tKey: string }[] = [
+  { value: 'any', tKey: 'search.duration.any' },
+  { value: 'short', tKey: 'search.duration.short' },
+  { value: 'medium', tKey: 'search.duration.medium' },
+  { value: 'long', tKey: 'search.duration.long' },
 ];
 
-const SORT_OPTIONS: { value: SortOrder; label: string }[] = [
-  { value: 'relevance', label: 'Relevance' },
-  { value: 'viewCount', label: 'View count' },
-  { value: 'date', label: 'Upload date' },
-  { value: 'rating', label: 'Rating' },
+const SORT_OPTIONS: { value: SortOrder; tKey: string }[] = [
+  { value: 'relevance', tKey: 'search.sort.relevance' },
+  { value: 'viewCount', tKey: 'search.sort.viewCount' },
+  { value: 'date', tKey: 'search.sort.date' },
+  { value: 'rating', tKey: 'search.sort.rating' },
 ];
 
 interface SongSearchProps {
@@ -98,6 +100,16 @@ const SongSearch: React.FC<SongSearchProps> = ({
   const [trendingSongs, setTrendingSongs] = React.useState<SongSuggestion[]>([]);
   const userPickedTabRef = React.useRef(false);
   const country = useCountry();
+  const { t } = useT();
+  // Translate a browse label by its data id, falling back to the curated
+  // English name when a locale hasn't translated that section/category.
+  const label = React.useCallback(
+    (key: string, fallback: string) => {
+      const v = t(key);
+      return v === key ? fallback : v;
+    },
+    [t]
+  );
 
   // Localize the discovery sections: reorder by country and, where a curated
   // regional pack exists, splice it in as the first tab.
@@ -166,7 +178,7 @@ const SongSearch: React.FC<SongSearchProps> = ({
     trendingSongs.length > 0
       ? {
           id: 'trending',
-          name: 'Trending on KaraoQ',
+          name: t('category.trending'),
           emoji: '📈',
           songs: trendingSongs,
         }
@@ -406,10 +418,10 @@ const SongSearch: React.FC<SongSearchProps> = ({
     <div className={styles.container}>
       {showNameInput && (
         <div className={styles.nameSection}>
-          <label className={styles.nameLabel}>Your name</label>
+          <label className={styles.nameLabel}>{t('common.yourName')}</label>
           <input
             className={styles.nameInput}
-            placeholder="Enter your name"
+            placeholder={t('common.enterYourName')}
             value={userName}
             onChange={(e) => onNameChange?.(e.target.value)}
           />
@@ -420,7 +432,7 @@ const SongSearch: React.FC<SongSearchProps> = ({
         <input
           className={styles.searchInput}
           type="text"
-          placeholder={karaokeMode ? 'Search for a song...' : 'Search YouTube...'}
+          placeholder={karaokeMode ? t('search.placeholder.karaoke') : t('search.placeholder.youtube')}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && search()}
@@ -430,7 +442,7 @@ const SongSearch: React.FC<SongSearchProps> = ({
           onClick={() => search()}
           disabled={!query.trim() || searching}
         >
-          Search
+          {t('search.button')}
         </button>
         {/* Slim branded progress bar — absolutely positioned so it signals an
             in-flight search (including filter-change refreshes that keep the
@@ -440,7 +452,7 @@ const SongSearch: React.FC<SongSearchProps> = ({
 
       <div className={styles.options}>
         <label className={styles.toggleRow}>
-          <span className={styles.toggleLabel}>Auto-add &ldquo;karaoke&rdquo; to search term</span>
+          <span className={styles.toggleLabel}>{t('search.autoAddKaraoke')}</span>
           <button
             type="button"
             role="switch"
@@ -455,7 +467,7 @@ const SongSearch: React.FC<SongSearchProps> = ({
         {showFilters && (
           <div className={styles.filterSection}>
             <div className={styles.filterGroup}>
-              <span className={styles.filterLabel}>Duration</span>
+              <span className={styles.filterLabel}>{t('search.duration')}</span>
               <div className={styles.filterChips}>
                 {DURATION_OPTIONS.map((opt) => (
                   <button
@@ -465,13 +477,13 @@ const SongSearch: React.FC<SongSearchProps> = ({
                     }`}
                     onClick={() => updateFilter('duration', opt.value)}
                   >
-                    {opt.label}
+                    {t(opt.tKey)}
                   </button>
                 ))}
               </div>
             </div>
             <div className={styles.filterGroup}>
-              <span className={styles.filterLabel}>Sort by</span>
+              <span className={styles.filterLabel}>{t('search.sortBy')}</span>
               <div className={styles.filterChips}>
                 {SORT_OPTIONS.map((opt) => (
                   <button
@@ -481,7 +493,7 @@ const SongSearch: React.FC<SongSearchProps> = ({
                     }`}
                     onClick={() => updateFilter('sortBy', opt.value)}
                   >
-                    {opt.label}
+                    {t(opt.tKey)}
                   </button>
                 ))}
               </div>
@@ -492,26 +504,26 @@ const SongSearch: React.FC<SongSearchProps> = ({
 
       {justAdded && (
         <div className={styles.toast}>
-          Added &ldquo;{justAdded}&rdquo; to the queue!
+          {t('search.added', { title: justAdded })}
         </div>
       )}
 
       {addError && (
         <div className={styles.toastError}>
-          Failed to add song. Check your connection and try again.
+          {t('search.addFailed')}
         </div>
       )}
 
       {hasSearched && (
         <button className={styles.backToBrowse} onClick={clearSearch}>
           <span className={styles.backToBrowseArrow} aria-hidden="true">←</span>
-          Back to song ideas
+          {t('search.backToIdeas')}
         </button>
       )}
 
       {hasSearched && !searching && results.length === 0 && (
         <div className={styles.noResults}>
-          No songs found. Try a different search.
+          {t('search.noResults')}
         </div>
       )}
 
@@ -528,7 +540,7 @@ const SongSearch: React.FC<SongSearchProps> = ({
               <span />
               <span />
             </span>
-            <span className={styles.loadingText}>Finding songs&hellip;</span>
+            <span className={styles.loadingText}>{t('search.finding')}</span>
           </div>
           {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className={styles.skeletonCard} aria-hidden="true">
@@ -551,8 +563,8 @@ const SongSearch: React.FC<SongSearchProps> = ({
                 type="button"
                 className={styles.resultPreviewBtn}
                 onClick={() => openConfirm(song, true)}
-                aria-label="Preview this song"
-                title="Preview this song"
+                aria-label={t('search.previewAria')}
+                title={t('search.previewAria')}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element -- external YouTube thumbnails; Next optimization adds cost/latency without benefit */}
                 <img
@@ -571,10 +583,10 @@ const SongSearch: React.FC<SongSearchProps> = ({
                 disabled={!canAdd}
                 title={
                   !canAdd
-                    ? 'Enter your name first'
+                    ? t('common.enterNameFirst')
                     : onPick
-                    ? 'Choose this song'
-                    : 'Add to queue'
+                    ? t('search.add.choose')
+                    : t('search.add.add')
                 }
               >
                 +
@@ -589,7 +601,7 @@ const SongSearch: React.FC<SongSearchProps> = ({
         const nonLangSections = orderedSections.filter((s) => !LANG_IDS.includes(s.id));
         const TAB_DEFS = [
           ...nonLangSections,
-          { id: 'language', label: 'Language', categories: [] as SongCategory[] },
+          { id: 'language', label: t('search.tab.language'), categories: [] as SongCategory[] },
         ];
         const langSections = [
           ...orderedSections.filter((s) => LANG_IDS.includes(s.id)),
@@ -635,9 +647,9 @@ const SongSearch: React.FC<SongSearchProps> = ({
             {!expandedData && belowSearch}
             {!expandedData && (
               <div className={styles.discoveryHeading}>
-                <span className={styles.discoveryTitle}>Song ideas</span>
+                <span className={styles.discoveryTitle}>{t('search.ideas.title')}</span>
                 <span className={styles.discoverySub}>
-                  Not sure what to sing? Tap any song to look it up.
+                  {t('search.ideas.sub')}
                 </span>
               </div>
             )}
@@ -651,7 +663,7 @@ const SongSearch: React.FC<SongSearchProps> = ({
                     &larr;
                   </button>
                   <span className={styles.songPanelTitle}>
-                    <span>{expandedData.emoji}</span> {expandedData.name}
+                    <span>{expandedData.emoji}</span> {label(`category.${expandedData.id}`, expandedData.name)}
                   </span>
                 </div>
                 <div className={styles.songPanel}>
@@ -678,7 +690,7 @@ const SongSearch: React.FC<SongSearchProps> = ({
                       className={styles.showMoreBtn}
                       onClick={() => setExpandedCategory(true)}
                     >
-                      Show all {songs.length} songs
+                      {t('search.showAll', { count: songs.length })}
                     </button>
                   )}
                 </div>
@@ -692,7 +704,7 @@ const SongSearch: React.FC<SongSearchProps> = ({
                       className={`${styles.tabBtn} ${activeTab === s.id ? styles.tabBtnActive : ''}`}
                       onClick={() => { userPickedTabRef.current = true; setActiveTab(s.id); setActiveCategory(null); setExpandedCategory(false); }}
                     >
-                      {s.label}
+                      {s.id === 'language' ? s.label : label(`section.${s.id}`, s.label)}
                     </button>
                   ))}
                 </div>
@@ -703,7 +715,7 @@ const SongSearch: React.FC<SongSearchProps> = ({
                   return (
                     <>
                       <div className={styles.langPickerRow}>
-                        <span className={styles.langPickerLabel}>Language</span>
+                        <span className={styles.langPickerLabel}>{t('search.tab.language')}</span>
                         <select
                           className={styles.langPicker}
                           value={currentLang?.id ?? ''}
@@ -732,7 +744,7 @@ const SongSearch: React.FC<SongSearchProps> = ({
                             }}
                           >
                             <span className={styles.categoryEmoji}>{cat.emoji}</span>
-                            <span className={styles.categoryName}>{cat.name}</span>
+                            <span className={styles.categoryName}>{label(`category.${cat.id}`, cat.name)}</span>
                           </button>
                         ))}
                       </div>
@@ -753,23 +765,23 @@ const SongSearch: React.FC<SongSearchProps> = ({
                         }}
                       >
                         <span className={styles.categoryEmoji}>{cat.emoji}</span>
-                        <span className={styles.categoryName}>{cat.name}</span>
+                        <span className={styles.categoryName}>{label(`category.${cat.id}`, cat.name)}</span>
                       </button>
                     ))}
                   </div>
                 )}
 
                 <div className={styles.randWrap}>
-                  <span className={styles.randLabel}>Want some help deciding?</span>
+                  <span className={styles.randLabel}>{t('search.help')}</span>
                   <button className={styles.surpriseBtn} onClick={handleSurpriseMe}>
                     <span className={styles.surpriseIcon}>🎲</span>
-                    Pick a random song for me
+                    {t('search.surprise')}
                   </button>
                 </div>
 
                 <div className={styles.inlineFooter}>
                   <a href="https://variationsonastring.com" target="_blank" rel="noopener noreferrer" className={styles.inlineFooterLink}>
-                    made with <span className={styles.inlineFooterHeart}>&#9829;</span> by variations on a string
+                    {renderWithHeart(t('footer.credit'), styles.inlineFooterHeart)}
                   </a>
                 </div>
               </>
@@ -782,7 +794,7 @@ const SongSearch: React.FC<SongSearchProps> = ({
       {confirmSong && (
         <div className={styles.overlay} onClick={() => setConfirmSong(null)}>
           <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <h3 className={styles.modalTitle}>{onPick ? 'Preview' : 'Add to queue?'}</h3>
+            <h3 className={styles.modalTitle}>{onPick ? t('search.confirm.preview') : t('search.confirm.addTitle')}</h3>
             <div className={styles.previewWrap}>
               {previewPlaying ? (
                 <iframe
@@ -796,7 +808,7 @@ const SongSearch: React.FC<SongSearchProps> = ({
                   type="button"
                   className={styles.previewPlayBtn}
                   onClick={() => setPreviewPlaying(true)}
-                  title="Preview this video"
+                  title={t('search.confirm.previewVideo')}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element -- external YouTube thumbnail; Next optimization adds cost/latency without benefit */}
                   <img
@@ -811,7 +823,9 @@ const SongSearch: React.FC<SongSearchProps> = ({
             <p className={styles.modalSong}>{confirmSong.title}</p>
             {!onPick && (
               <p className={styles.modalAs}>
-                Adding as <strong>{userName}</strong>
+                {t('search.confirm.addingAs').split(/(\{name\})/).map((part, i) =>
+                  part === '{name}' ? <strong key={i}>{userName}</strong> : <React.Fragment key={i}>{part}</React.Fragment>
+                )}
               </p>
             )}
             <div className={styles.modalActions}>
@@ -819,13 +833,13 @@ const SongSearch: React.FC<SongSearchProps> = ({
                 className={styles.btnPrimary}
                 onClick={() => (onPick ? handlePick(confirmSong) : addSong(confirmSong))}
               >
-                {onPick ? 'Choose this song' : 'Add Song'}
+                {onPick ? t('search.confirm.choose') : t('search.confirm.add')}
               </button>
               <button
                 className={styles.btnGhost}
                 onClick={() => setConfirmSong(null)}
               >
-                Cancel
+                {t('common.cancel')}
               </button>
             </div>
           </div>

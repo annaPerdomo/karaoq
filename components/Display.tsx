@@ -13,6 +13,8 @@ import { startSessionTracking } from '../app/queue/trackSession';
 import { startVisiblePolling } from '../app/queue/pollWhileVisible';
 import { isTextReaction } from '../app/queue/cheerConstants';
 import { PlayMode, QueueEntry, Reaction, Room } from '../pages/api/types';
+import { useT } from '../lib/i18n/I18nProvider';
+import { renderWithHeart } from '../lib/i18n/renderWithHeart';
 
 const POLL_INTERVAL = 1500;
 // Liveness heartbeat cadence; the server treats a display as gone after ~25s
@@ -28,6 +30,7 @@ function decodeHtml(html: string): string {
 
 const Display = (): React.ReactElement => {
   const router = useRouter();
+  const { t } = useT();
   const joinCode = normalizeRoomId(router.query.joinCode) as string | undefined;
 
   const [queue, setQueue] = React.useState<QueueEntry[]>([]);
@@ -195,7 +198,7 @@ const Display = (): React.ReactElement => {
         applyRoom(room, false);
         setLoading(false);
       } else {
-        setError('Room not found');
+        setError(t('display.errorTitle'));
         setLoading(false);
       }
     }
@@ -382,8 +385,8 @@ const Display = (): React.ReactElement => {
     return (
       <main className={styles.main}>
         <div className={styles.errorState}>
-          <h2>Room not found</h2>
-          <p>Check the room code and try again.</p>
+          <h2>{t('display.errorTitle')}</h2>
+          <p>{t('display.errorBody')}</p>
         </div>
       </main>
     );
@@ -418,7 +421,7 @@ const Display = (): React.ReactElement => {
                 mode), this screen stays a queue board with an on-stage
                 banner instead of double-playing the song. */}
             <div className={styles.readyTag}>
-              {isPlaying ? 'ON STAGE' : 'UP NEXT'}
+              {isPlaying ? t('display.tag.onStage') : t('display.tag.upNext')}
             </div>
             <h1 className={styles.readySinger}>{currentSong.userName}</h1>
             <p className={styles.readySong}>
@@ -443,7 +446,13 @@ const Display = (): React.ReactElement => {
               </svg>
             </div>
             <h1 className={styles.waitingTitle}>KaraoQ</h1>
-            <p className={styles.waitingText}>Scan the QR code or visit <strong>{(origin || 'karaoq.live').replace(/^https?:\/\/(www\.)?/, '')}</strong> and enter code <strong>{joinCode?.toUpperCase()}</strong> to add songs and cheer on the singers!</p>
+            <p className={styles.waitingText}>
+              {t('display.waiting').split(/(\{url\}|\{code\})/).map((part, i) => {
+                if (part === '{url}') return <strong key={i}>{(origin || 'karaoq.live').replace(/^https?:\/\/(www\.)?/, '')}</strong>;
+                if (part === '{code}') return <strong key={i}>{joinCode?.toUpperCase()}</strong>;
+                return <React.Fragment key={i}>{part}</React.Fragment>;
+              })}
+            </p>
           </div>
         )}
 
@@ -455,10 +464,9 @@ const Display = (): React.ReactElement => {
                 <path d="M8 5v14l11-7z" />
               </svg>
             </span>
-            <span className={styles.tapTitle}>Tap to start playback</span>
+            <span className={styles.tapTitle}>{t('display.tapTitle')}</span>
             <span className={styles.tapHint}>
-              This screen needs one tap before videos can play — after that,
-              songs start automatically.
+              {t('display.tapHint')}
             </span>
           </button>
         )}
@@ -491,7 +499,7 @@ const Display = (): React.ReactElement => {
           <div className={styles.nowContent}>
             <div className={styles.nowTop}>
               <span className={styles.nowDot} />
-              <span className={styles.nowLabel}>ON STAGE</span>
+              <span className={styles.nowLabel}>{t('display.tag.onStage')}</span>
             </div>
             <div className={styles.nowSinger}>{currentSong.userName}</div>
             <div className={styles.nowSong}>
@@ -505,7 +513,7 @@ const Display = (): React.ReactElement => {
       <div className={styles.footer}>
         <span className={styles.footerLogo}>KaraoQ</span>
         <a href="https://variationsonastring.com" target="_blank" rel="noopener noreferrer" className={styles.footerLink}>
-          made with <span className={styles.footerHeart}>&#9829;</span> by variations on a string
+          {renderWithHeart(t('footer.credit'), styles.footerHeart)}
         </a>
       </div>
 
@@ -519,7 +527,7 @@ const Display = (): React.ReactElement => {
 
         <div className={styles.upNextSection}>
           <h3 className={styles.upNextTitle}>
-            Up Next
+            {t('display.upNextTitle')}
             {upNext.length > 0 && (
               <span className={styles.upNextCount}>{upNext.length}</span>
             )}
@@ -547,13 +555,13 @@ const Display = (): React.ReactElement => {
               ))}
               {upNext.length > 8 && (
                 <div className={styles.moreCount}>
-                  +{upNext.length - 8} more
+                  {t('display.moreCount', { count: upNext.length - 8 })}
                 </div>
               )}
             </div>
           ) : (
             <p className={styles.emptyQueue}>
-              No songs queued yet — join to add songs and cheer!
+              {t('display.emptyQueue')}
             </p>
           )}
         </div>

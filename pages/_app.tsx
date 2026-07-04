@@ -3,13 +3,16 @@ import type { AppProps } from 'next/app'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
 import { Analytics } from '@vercel/analytics/next'
+import { I18nProvider, useT } from '../lib/i18n/I18nProvider'
+import { renderWithHeart } from '../lib/i18n/renderWithHeart'
 
 function AppFooter() {
+  const { t } = useT();
   return (
     <footer className="app-footer">
       <span className="app-footer-logo">KaraoQ</span>
       <a href="https://variationsonastring.com" target="_blank" rel="noopener noreferrer" className="app-footer-link">
-        made with <span className="app-footer-heart">&#9829;</span> by variations on a string
+        {renderWithHeart(t('footer.credit'), 'app-footer-heart')}
       </a>
     </footer>
   );
@@ -25,14 +28,14 @@ function MyApp({ Component, pageProps }: AppProps) {
   const showFooter = !isLanding && !isDisplay && !isHost && !isAdmin && !isSing;
 
   return (
-    <>
+    <I18nProvider>
       <Head>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
       <Component {...pageProps} />
       {showFooter && <AppFooter />}
       <Analytics />
-    </>
+    </I18nProvider>
   );
 }
 

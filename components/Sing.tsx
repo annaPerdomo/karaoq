@@ -13,6 +13,8 @@ import { CHEER_EMOJIS, REACTION_COOLDOWN_MS, isTextReaction } from '../app/queue
 import { startSessionTracking } from '../app/queue/trackSession';
 import { startVisiblePolling } from '../app/queue/pollWhileVisible';
 import { QueueEntry, Reaction, SingWithMePost, SuggestedSong } from '../pages/api/types';
+import { useT } from '../lib/i18n/I18nProvider';
+import LanguageSwitcher from './LanguageSwitcher';
 
 
 const POLL_INTERVAL = 5000;
@@ -26,6 +28,7 @@ function decodeHtml(html: string): string {
 
 const Sing = (): React.ReactElement => {
   const router = useRouter();
+  const { t } = useT();
   const joinCode = normalizeRoomId(router.query.joinCode) as string | undefined;
 
   const [queue, setQueue] = React.useState<QueueEntry[]>([]);
@@ -170,7 +173,7 @@ const Sing = (): React.ReactElement => {
         processReactions(room.reactions, false);
         setLoading(false);
       } else {
-        setError('Room not found. Check your code and try again.');
+        setError(t('sing.error.notFound'));
         setLoading(false);
       }
     }
@@ -280,10 +283,10 @@ const Sing = (): React.ReactElement => {
       <main className={styles.main}>
         <div className={styles.errorCard}>
           <div className={styles.errorIcon}>😕</div>
-          <h2>Room Not Found</h2>
+          <h2>{t('sing.error.title')}</h2>
           <p>{error}</p>
           <button className={styles.btnPink} onClick={() => router.push('/')}>
-            Go Home
+            {t('common.goHome')}
           </button>
         </div>
       </main>
@@ -305,8 +308,9 @@ const Sing = (): React.ReactElement => {
           KaraoQ
         </div>
         <div className={styles.headerRight}>
+          <LanguageSwitcher />
           <div className={styles.roomBadge}>
-            Room: <strong>{joinCode?.toUpperCase()}</strong>
+            {t('common.room')}: <strong>{joinCode?.toUpperCase()}</strong>
           </div>
         </div>
       </header>
@@ -320,17 +324,16 @@ const Sing = (): React.ReactElement => {
             <div className={styles.tipsBanner}>
               <div className={styles.tipsBannerBody}>
                 <span className={styles.tipsBannerTitle}>
-                  Welcome{username ? `, ${username}` : ''}! 🎤
+                  {username ? t('sing.tips.welcomeNamed', { name: username }) : t('sing.tips.welcome')}
                 </span>
                 <span className={styles.tipsBannerText}>
-                  Search any song to add it to the queue, follow along in Up
-                  Next, and cheer on whoever&apos;s on stage.
+                  {t('sing.tips.body')}
                 </span>
               </div>
               <button
                 className={styles.tipsBannerClose}
                 onClick={dismissTips}
-                aria-label="Dismiss tips"
+                aria-label={t('sing.tips.dismiss')}
               >
                 ×
               </button>
@@ -355,7 +358,7 @@ const Sing = (): React.ReactElement => {
                   >
                     <span className={styles.boardsTitle}>
                       <span className={styles.boardsLiveDot} />
-                      Sing together &amp; requests
+                      {t('sing.boards.toggle')}
                       {singWithMe.length + suggestions.length > 0 && (
                         <span className={styles.boardsCountBadge}>
                           {singWithMe.length + suggestions.length}
@@ -371,9 +374,7 @@ const Sing = (): React.ReactElement => {
                   {boardsOpen && (
                     <div className={styles.boardsBody}>
                       <span className={styles.boardsSub}>
-                        Posted by people in room {joinCode?.toUpperCase()} —
-                        join someone&apos;s song, or request one for others
-                        here to pick up.
+                        {t('sing.boards.sub', { code: joinCode?.toUpperCase() ?? '' })}
                       </span>
                       <SocialBoards
                         roomId={joinCode}
@@ -396,7 +397,7 @@ const Sing = (): React.ReactElement => {
             <div className={styles.nowPlaying}>
               <div className={styles.nowHeader}>
                 <span className={styles.nowDot} />
-                <span className={styles.nowLabel}>Now Playing</span>
+                <span className={styles.nowLabel}>{t('sing.nowPlaying')}</span>
               </div>
               <p className={styles.nowSinger}>{currentSong.userName}</p>
               <p className={styles.nowSong}>
@@ -416,13 +417,13 @@ const Sing = (): React.ReactElement => {
             />
           ) : reactionsOn && queueItems.length > 0 && (
             <div className={styles.cheerHint}>
-              Send reactions like 🔥👏❤️ and words of encouragement to cheer on the performer!
+              {t('sing.cheerHint')}
             </div>
           )}
 
           <div className={styles.queueSection}>
             <div className={styles.queueHeader}>
-              <h3 className={styles.queueTitle}>Up Next</h3>
+              <h3 className={styles.queueTitle}>{t('sing.upNext')}</h3>
               {queueCount > 0 && (
                 <span className={styles.queueBadge}>{queueCount}</span>
               )}
@@ -449,8 +450,8 @@ const Sing = (): React.ReactElement => {
               </div>
             ) : (
               <div className={styles.emptyQueue}>
-                <p>No songs queued yet</p>
-                <span>Search to add songs, or cheer when someone&apos;s on stage!</span>
+                <p>{t('sing.queue.emptyTitle')}</p>
+                <span>{t('sing.queue.emptyBody')}</span>
               </div>
             )}
           </div>
@@ -487,10 +488,10 @@ const Sing = (): React.ReactElement => {
                 </div>
               </>
             ) : (
-              <span className={styles.drawerLabel}>Queue</span>
+              <span className={styles.drawerLabel}>{t('sing.drawer.queue')}</span>
             )}
             {queueCount > 0 && (
-              <span className={styles.drawerBadge}>{queueCount} up next</span>
+              <span className={styles.drawerBadge}>{t('sing.drawer.upNext', { count: queueCount })}</span>
             )}
             <span className={`${styles.drawerChevron} ${mobileQueueOpen ? styles.drawerChevronOpen : ''}`}>
               &#x25B2;
@@ -506,19 +507,19 @@ const Sing = (): React.ReactElement => {
                   className={`${styles.quickCheerBtn} ${reactionCooldown ? styles.quickCheerBtnCooldown : ''}`}
                   onClick={() => sendReaction(emoji)}
                   disabled={reactionCooldown || !username.trim()}
-                  aria-label={`Send ${emoji} cheer`}
+                  aria-label={t('sing.cheer.sendAria', { emoji })}
                 >
                   {emoji}
                 </button>
               ))}
               {lastSentEmoji ? (
-                <span className={styles.quickCheerSent}>{lastSentEmoji} Sent!</span>
+                <span className={styles.quickCheerSent}>{t('sing.quickCheer.sent', { emoji: lastSentEmoji })}</span>
               ) : (
                 <button
                   className={styles.quickCheerMore}
                   onClick={() => setMobileQueueOpen(true)}
                 >
-                  More…
+                  {t('sing.quickCheer.more')}
                 </button>
               )}
             </div>
@@ -541,7 +542,7 @@ const Sing = (): React.ReactElement => {
             )}
 
             <div className={styles.drawerQueueHeader}>
-              <h3 className={styles.queueTitle}>Up Next</h3>
+              <h3 className={styles.queueTitle}>{t('sing.upNext')}</h3>
               {queueCount > 0 && (
                 <span className={styles.queueBadge}>{queueCount}</span>
               )}
@@ -569,8 +570,8 @@ const Sing = (): React.ReactElement => {
               </div>
             ) : (
               <div className={styles.emptyQueue}>
-                <p>No songs queued yet</p>
-                <span>Search to add songs, or cheer when someone&apos;s on stage!</span>
+                <p>{t('sing.queue.emptyTitle')}</p>
+                <span>{t('sing.queue.emptyBody')}</span>
               </div>
             )}
           </div>
@@ -602,12 +603,16 @@ const Sing = (): React.ReactElement => {
           <div className={styles.welcomeCard}>
             <div className={styles.welcomeLogo}>KaraoQ</div>
             <p className={styles.welcomeRoom}>
-              Room <strong>{joinCode?.toUpperCase()}</strong>
+              {t('sing.welcome.room').split(/(\{code\})/).map((part, i) =>
+                part === '{code}'
+                  ? <strong key={i}>{joinCode?.toUpperCase()}</strong>
+                  : <React.Fragment key={i}>{part}</React.Fragment>
+              )}
             </p>
-            <h2 className={styles.welcomePrompt}>What&apos;s your name?</h2>
+            <h2 className={styles.welcomePrompt}>{t('sing.welcome.prompt')}</h2>
             <input
               className={styles.welcomeInput}
-              placeholder="Enter your name"
+              placeholder={t('common.enterYourName')}
               value={welcomeName}
               onChange={(e) => setWelcomeName(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleWelcomeSubmit()}
@@ -619,7 +624,7 @@ const Sing = (): React.ReactElement => {
               onClick={handleWelcomeSubmit}
               disabled={!welcomeName.trim()}
             >
-              Let&apos;s go
+              {t('sing.welcome.go')}
             </button>
           </div>
         </div>

@@ -51,6 +51,9 @@ import {
   SuggestedSong,
 } from "../pages/api/types";
 import { v4 as uuidv4 } from "uuid";
+import { useT } from "../lib/i18n/I18nProvider";
+import { renderWithHeart } from "../lib/i18n/renderWithHeart";
+import LanguageSwitcher from "./LanguageSwitcher";
 
 const POLL_INTERVAL = 3000;
 
@@ -338,6 +341,7 @@ function SettingsPopover({
   onChangeName: () => void;
   onInviteCohost: () => void;
 }) {
+  const { t } = useT();
   const ref = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
@@ -368,14 +372,14 @@ function SettingsPopover({
       {!remote && (
         <>
           <div className={styles.spGroup}>
-            <div className={styles.spLabel}>Audience</div>
+            <div className={styles.spLabel}>{t('host.settings.audience')}</div>
             <button className={styles.spToggleRow} onClick={onToggleReactions}>
               <div>
-                <div className={styles.spBtnTitle}>Reactions</div>
+                <div className={styles.spBtnTitle}>{t('host.settings.reactions')}</div>
                 <div className={styles.spBtnDesc}>
                   {reactionsOn
-                    ? "Audience can send cheers"
-                    : "Reactions disabled"}
+                    ? t('host.settings.reactionsOn')
+                    : t('host.settings.reactionsOff')}
                 </div>
               </div>
               <div
@@ -387,13 +391,13 @@ function SettingsPopover({
           </div>
           <div className={styles.spSep} />
           <div className={styles.spGroup}>
-            <div className={styles.spLabel}>Co-hosts</div>
+            <div className={styles.spLabel}>{t('host.settings.cohosts')}</div>
             <button className={styles.spBtn} onClick={onInviteCohost}>
               {Icons.users}
               <div>
-                <div className={styles.spBtnTitle}>Bring on a co-host</div>
+                <div className={styles.spBtnTitle}>{t('host.cohost.title')}</div>
                 <div className={styles.spBtnDesc}>
-                  Show a QR code or copy a link so a friend can manage the queue.
+                  {t('host.cohost.short')}
                 </div>
               </div>
             </button>
@@ -402,12 +406,12 @@ function SettingsPopover({
         </>
       )}
       <div className={styles.spGroup}>
-        <div className={styles.spLabel}>{remote ? "Co-host" : "Host"}</div>
+        <div className={styles.spLabel}>{remote ? t('host.role.cohost') : t('host.role.host')}</div>
         <button className={styles.spBtn} onClick={onChangeName}>
           {Icons.edit}
           <div>
             <div className={styles.spBtnTitle}>{hostName}</div>
-            <div className={styles.spBtnDesc}>Change your name</div>
+            <div className={styles.spBtnDesc}>{t('host.settings.changeName')}</div>
           </div>
         </button>
       </div>
@@ -435,6 +439,7 @@ function SortableQueueItem({
   onEditSave: (name: string) => void;
   onRemove: () => void;
 }) {
+  const { t } = useT();
   const {
     attributes,
     listeners,
@@ -473,7 +478,7 @@ function SortableQueueItem({
         className={styles.dragHandle}
         {...attributes}
         {...listeners}
-        aria-label="Drag to reorder"
+        aria-label={t('host.queue.dragReorder')}
       >
         {Icons.drag}
       </button>
@@ -507,8 +512,8 @@ function SortableQueueItem({
           <button
             className={styles.actionBtn}
             onClick={onMoveTop}
-            title="Move to top"
-            aria-label="Move to top"
+            title={t('host.queue.moveTop')}
+            aria-label={t('host.queue.moveTop')}
           >
             {Icons.moveTop}
           </button>
@@ -516,16 +521,16 @@ function SortableQueueItem({
         <button
           className={`${styles.actionBtn} ${editing ? styles.actionBtnActive : ""}`}
           onClick={onEdit}
-          title="Edit singer name"
-          aria-label="Edit singer name"
+          title={t('host.queue.editName')}
+          aria-label={t('host.queue.editName')}
         >
           {Icons.edit}
         </button>
         <button
           className={`${styles.actionBtn} ${styles.removeBtn}`}
           onClick={onRemove}
-          title="Remove"
-          aria-label="Remove"
+          title={t('host.queue.remove')}
+          aria-label={t('host.queue.remove')}
         >
           {Icons.remove}
         </button>
@@ -543,6 +548,7 @@ const Host = ({
   remote = false,
 }: { remote?: boolean } = {}): React.ReactElement => {
   const router = useRouter();
+  const { t, tn } = useT();
   const joinCode = normalizeRoomId(router.query.joinCode) as string | undefined;
 
   const [queue, setQueue] = React.useState<QueueEntry[]>([]);
@@ -769,7 +775,7 @@ const Host = ({
     setPlayMode("tv");
     rememberMode("tv");
     setModeMenuOpen(false);
-    showToast("Display window opened");
+    showToast(t('host.toast.displayOpened'));
   }
 
   async function copyCohostLink() {
@@ -778,7 +784,7 @@ const Host = ({
     const url = `${base}/remote/${joinCode}`;
     try {
       await navigator.clipboard.writeText(url);
-      showToast("Co-host link copied");
+      showToast(t('host.toast.cohostCopied'));
     } catch {
       showToast(url);
     }
@@ -853,7 +859,7 @@ const Host = ({
         processReactions(room.reactions, false);
         setLoading(false);
       } else {
-        setError("Room not found");
+        setError(t('host.error.notFound'));
         setLoading(false);
       }
     }
@@ -1043,7 +1049,7 @@ const Host = ({
         isPlaying,
         reactionsEnabled: next,
       });
-      showToast(next ? "Reactions enabled" : "Reactions disabled");
+      showToast(next ? t('host.toast.reactionsOn') : t('host.toast.reactionsOff'));
     }
   }
 
@@ -1052,7 +1058,7 @@ const Host = ({
     const newQueue = [...queue, entry];
     setQueue(newQueue);
     broadcast(newQueue, activeIndex, isPlaying);
-    showToast(`Added "${decodeHtml(entry.songTitle)}"`);
+    showToast(t('host.toast.added', { title: decodeHtml(entry.songTitle) }));
     setSearchOpen(false);
   }
 
@@ -1162,7 +1168,7 @@ const Host = ({
       const moved = arrayMove(upcoming, idx, 0);
       await handleReorder(moved);
     }
-    showToast("Moved to top of queue");
+    showToast(t('host.toast.movedTop'));
   }
 
   // Move one history entry back into the queue as the next song, leaving the
@@ -1190,7 +1196,7 @@ const Host = ({
     setActiveIndex(newActiveIndex);
     await reorderQueue(joinCode, newQueue, newActiveIndex);
     broadcast(newQueue, newActiveIndex, isPlaying);
-    showToast(`Restored "${decodeHtml(entry.songTitle)}"`);
+    showToast(t('host.toast.restored', { title: decodeHtml(entry.songTitle) }));
   }
 
   async function removeSong(entryId: string) {
@@ -1212,7 +1218,7 @@ const Host = ({
     setConfirmRemove(null);
     broadcast(newQueue, newActiveIndex, isPlaying);
     await removeFromQueue(joinCode, entryId);
-    if (entry) showToast(`Removed "${decodeHtml(entry.songTitle)}"`);
+    if (entry) showToast(t('host.toast.removed', { title: decodeHtml(entry.songTitle) }));
   }
 
   function editSave(id: string, newName: string) {
@@ -1272,16 +1278,16 @@ const Host = ({
     }).catch(() => {});
   }
 
-  if (!joinCode) return <div className={styles.loading}>Loading...</div>;
+  if (!joinCode) return <div className={styles.loading}>{t('host.loading')}</div>;
 
   if (error) {
     return (
       <main className={styles.main}>
         <div className={styles.errorCard}>
-          <h2>Oops!</h2>
+          <h2>{t('host.error.title')}</h2>
           <p>{error}</p>
           <button className={styles.btn} onClick={() => router.push("/")}>
-            Go Home
+            {t('common.goHome')}
           </button>
         </div>
       </main>
@@ -1294,7 +1300,7 @@ const Host = ({
       <header className={styles.header}>
         <div className={styles.brand} onClick={() => router.push("/")}>
           KaraoQ
-          {remote && <span className={styles.cohostBadge}>Co-host</span>}
+          {remote && <span className={styles.cohostBadge}>{t('host.role.cohost')}</span>}
         </div>
 
         {/* Playback-mode pill — always shows where the video is playing and
@@ -1307,11 +1313,11 @@ const Host = ({
                 setModeMenuOpen((o) => !o);
                 setSettingsOpen(false);
               }}
-              title="Where the karaoke video is playing"
+              title={t('host.mode.pillTitle')}
             >
               {tvMode ? Icons.tv : Icons.monitor}
               <span className={styles.modePillText}>
-                {tvMode ? "Playing on a different screen" : "Playing here"}
+                {tvMode ? t('host.mode.playingTv') : t('host.mode.playingHere')}
               </span>
               <span className={styles.modePillCaret}>{Icons.caret}</span>
             </button>
@@ -1322,16 +1328,16 @@ const Host = ({
                   onClick={() => setModeMenuOpen(false)}
                 />
                 <div className={styles.modeMenu}>
-                  <div className={styles.spLabel}>Where the video plays</div>
+                  <div className={styles.spLabel}>{t('host.mode.menuLabel')}</div>
                   <button
                     className={`${styles.modeMenuItem} ${!tvMode ? styles.modeMenuItemActive : ""}`}
                     onClick={playHere}
                   >
                     {Icons.monitor}
                     <div>
-                      <div className={styles.spBtnTitle}>On this screen</div>
+                      <div className={styles.spBtnTitle}>{t('host.mode.thisScreen')}</div>
                       <div className={styles.spBtnDesc}>
-                        Video plays right here
+                        {t('host.mode.thisScreenDesc')}
                       </div>
                     </div>
                     {!tvMode && <span className={styles.modeCheck}>✓</span>}
@@ -1343,12 +1349,12 @@ const Host = ({
                     {Icons.tv}
                     <div>
                       <div className={styles.spBtnTitle}>
-                        On a different screen
+                        {t('host.mode.diffScreen')}
                       </div>
                       <div className={styles.spBtnDesc}>
                         {tvMode
-                          ? "Re-open the display window"
-                          : "Cast to a TV or projector"}
+                          ? t('host.mode.reopen')
+                          : t('host.mode.cast')}
                       </div>
                     </div>
                     {tvMode && <span className={styles.modeCheck}>✓</span>}
@@ -1360,13 +1366,14 @@ const Host = ({
         )}
 
         <div className={styles.headerActions}>
+          <LanguageSwitcher />
           <button
             className={`${styles.gearBtn} ${settingsOpen ? styles.gearBtnOpen : ""}`}
             onClick={() => {
               setSettingsOpen(!settingsOpen);
               setModeMenuOpen(false);
             }}
-            aria-label="Settings"
+            aria-label={t('host.settingsAria')}
           >
             {Icons.gear}
           </button>
@@ -1397,28 +1404,28 @@ const Host = ({
           {loading ? (
             <div className={styles.emptyState}>
               <div className={styles.spinner} />
-              <p>Loading room...</p>
+              <p>{t('host.loadingRoom')}</p>
             </div>
           ) : currentSong ? (
             remote ? (
               /* ── Co-host mode: status only, no player or audio ── */
               <div className={styles.songControl}>
                 {isPlaying && displayPaused ? (
-                  <div className={styles.readyLabel}>PAUSED ON THE DISPLAY</div>
+                  <div className={styles.readyLabel}>{t('host.status.pausedDisplay')}</div>
                 ) : isPlaying ? (
                   <div className={styles.liveIndicator}>
                     <span className={styles.liveDot} />
-                    <span>NOW PLAYING</span>
+                    <span>{t('host.status.nowPlaying')}</span>
                   </div>
                 ) : (
-                  <div className={styles.readyLabel}>UP NEXT</div>
+                  <div className={styles.readyLabel}>{t('host.status.upNext')}</div>
                 )}
                 <h1 className={styles.controlSinger}>{currentSong.userName}</h1>
                 <p className={styles.controlSong}>
                   {decodeHtml(currentSong.songTitle)}
                 </p>
                 <p className={styles.cohostNote}>
-                  Playback is controlled on the host screen
+                  {t('host.cohost.playbackNote')}
                 </p>
               </div>
             ) : tvMode ? (
@@ -1427,7 +1434,7 @@ const Host = ({
               <div className={styles.songControl}>
                 {isPlaying && displayPaused ? (
                   <>
-                    <div className={styles.readyLabel}>PAUSED ON THE DISPLAY</div>
+                    <div className={styles.readyLabel}>{t('host.status.pausedDisplay')}</div>
                     <p className={styles.controlSinger}>
                       {currentSong.userName}
                     </p>
@@ -1435,15 +1442,14 @@ const Host = ({
                       {decodeHtml(currentSong.songTitle)}
                     </h2>
                     <p className={styles.cohostNote}>
-                      The video is paused on the display — resume it from the
-                      controls below, or tap the screen there.
+                      {t('host.status.pausedDisplayNote')}
                     </p>
                   </>
                 ) : isPlaying ? (
                   <>
                     <div className={styles.liveIndicator}>
                       <span className={styles.liveDot} />
-                      <span>PLAYING ON A DIFFERENT SCREEN</span>
+                      <span>{t('host.status.playingDiffScreen')}</span>
                     </div>
                     <p className={styles.controlSinger}>
                       {currentSong.userName}
@@ -1454,7 +1460,7 @@ const Host = ({
                   </>
                 ) : (
                   <>
-                    <div className={styles.readyLabel}>UP NEXT</div>
+                    <div className={styles.readyLabel}>{t('host.status.upNext')}</div>
                     <h1 className={styles.controlSinger}>
                       {currentSong.userName}
                     </h1>
@@ -1465,8 +1471,7 @@ const Host = ({
                 )}
                 {!displayConnected && (
                   <p className={styles.cohostNote}>
-                    No display connected — open one so videos have somewhere
-                    to play.
+                    {t('host.status.noDisplay')}
                   </p>
                 )}
                 <button
@@ -1474,8 +1479,8 @@ const Host = ({
                   onClick={openTvDisplay}
                 >
                   {displayConnected
-                    ? "Display window closed? Re-open it"
-                    : "Open the display window"}
+                    ? t('host.status.reopenDisplay')
+                    : t('host.status.openDisplay')}
                 </button>
               </div>
             ) : /* ── All-in-one mode: video plays here ── */
@@ -1496,19 +1501,19 @@ const Host = ({
               <div className={styles.songControl}>
                 <div className={styles.liveIndicator}>
                   <span className={styles.liveDot} />
-                  <span>PLAYING ON ANOTHER HOST DEVICE</span>
+                  <span>{t('host.status.playingOtherDevice')}</span>
                 </div>
                 <p className={styles.controlSinger}>{currentSong.userName}</p>
                 <h2 className={styles.controlSong}>
                   {decodeHtml(currentSong.songTitle)}
                 </h2>
                 <button className={styles.switchModeLink} onClick={startSong}>
-                  Play it on this screen instead
+                  {t('host.status.playHereInstead')}
                 </button>
               </div>
             ) : (
               <div className={styles.songControl}>
-                <div className={styles.readyLabel}>UP NEXT</div>
+                <div className={styles.readyLabel}>{t('host.status.upNext')}</div>
                 <h1 className={styles.controlSinger}>{currentSong.userName}</h1>
                 <p className={styles.controlSong}>
                   {decodeHtml(currentSong.songTitle)}
@@ -1522,8 +1527,7 @@ const Host = ({
                 KaraoQ
               </h2>
               <p>
-                No songs in the queue yet. Add songs from the panel — playback
-                is controlled on the host screen.
+                {t('host.cohost.emptyQueue')}
               </p>
             </div>
           ) : (
@@ -1532,22 +1536,21 @@ const Host = ({
                  on is offered as a secondary step. ── */
             <div className={styles.emptyState}>
               <div className={styles.emptyStage}>
-                <h2 className={styles.emptyTitle}>Your stage is ready</h2>
+                <h2 className={styles.emptyTitle}>{t('host.empty.title')}</h2>
                 <p className={styles.emptyStageLede}>
-                  Add the first song and start singing — guests can join and
-                  pile on the queue anytime.
+                  {t('host.empty.lede')}
                 </p>
                 <button
                   className={styles.emptyAddBtn}
                   onClick={() => setSearchOpen(true)}
                 >
-                  {Icons.plus} Add the first song
+                  {Icons.plus} {t('host.empty.addFirst')}
                 </button>
               </div>
 
               <div className={styles.emptyInvite}>
                 <span className={styles.emptyInviteLabel}>
-                  Want the room adding songs too? Have them join:
+                  {t('host.empty.inviteLabel')}
                 </span>
                 <div className={styles.emptyInviteRow}>
                   {joinUrl && (
@@ -1563,13 +1566,13 @@ const Host = ({
                   )}
                   <div className={styles.emptyInviteInfo}>
                     <div className={styles.emptyJoinKicker}>
-                      Scan, or visit {displayUrl}
+                      {t('host.empty.scanVisit', { url: displayUrl })}
                     </div>
                     <div className={styles.emptyInviteCode}>
                       {joinCode?.toUpperCase()}
                     </div>
                     <button className={styles.emptyJoinPrint} onClick={printQr}>
-                      Print join code
+                      {t('host.empty.printCode')}
                     </button>
                   </div>
                 </div>
@@ -1610,7 +1613,7 @@ const Host = ({
                         className={`${styles.tLabel} ${isPlaying ? styles.tLabelPlaying : styles.tLabelReady}`}
                       >
                         {isPlaying && <span className={styles.tDot} />}
-                        {isPlaying ? "ON STAGE" : "UP NEXT"}
+                        {isPlaying ? t('host.status.onStage') : t('host.status.upNext')}
                       </div>
                       <div className={styles.tSinger}>
                         {currentSong.userName}
@@ -1622,9 +1625,9 @@ const Host = ({
                   ) : (
                     <div className={styles.transportStatus}>
                       <div className={`${styles.tLabel} ${styles.tLabelEmpty}`}>
-                        WAITING
+                        {t('host.status.waiting')}
                       </div>
-                      <div className={styles.tSong}>No songs in queue</div>
+                      <div className={styles.tSong}>{t('host.status.noSongs')}</div>
                     </div>
                   )}
                 </div>
@@ -1633,7 +1636,7 @@ const Host = ({
                     className={styles.tBtn}
                     onClick={playPrevious}
                     disabled={activeIndex <= 0}
-                    title="Previous"
+                    title={t('host.transport.previous')}
                   >
                     {Icons.prev}
                   </button>
@@ -1648,8 +1651,8 @@ const Host = ({
                           onClick={toggleDisplayPause}
                           title={
                             displayPaused
-                              ? "Resume on the display"
-                              : "Pause the display"
+                              ? t('host.transport.resumeDisplay')
+                              : t('host.transport.pauseDisplay')
                           }
                         >
                           {displayPaused ? Icons.resume : Icons.pause}
@@ -1658,7 +1661,7 @@ const Host = ({
                       <button
                         className={`${styles.tBtn} ${styles.tStop}`}
                         onClick={stopSong}
-                        title="Stop"
+                        title={t('host.transport.stop')}
                       >
                         {Icons.stop}
                       </button>
@@ -1672,14 +1675,14 @@ const Host = ({
                       <button
                         className={`${styles.tBtn} ${styles.tPause}`}
                         onClick={toggleHereVideo}
-                        title={hereVideoPlaying ? "Pause" : "Play"}
+                        title={hereVideoPlaying ? t('host.transport.pause') : t('host.transport.play')}
                       >
                         {hereVideoPlaying ? Icons.pause : Icons.resume}
                       </button>
                       <button
                         className={`${styles.tBtn} ${styles.tStop}`}
                         onClick={stopSong}
-                        title="Stop"
+                        title={t('host.transport.stop')}
                       >
                         {Icons.stop}
                       </button>
@@ -1693,10 +1696,10 @@ const Host = ({
                       disabled={!currentSong}
                       title={
                         tvMode
-                          ? "Play on the other screen"
+                          ? t('host.transport.playOther')
                           : isPlaying
-                          ? "Play on this screen"
-                          : "Play"
+                          ? t('host.transport.playThis')
+                          : t('host.transport.play')
                       }
                     >
                       {Icons.play}
@@ -1706,7 +1709,7 @@ const Host = ({
                     className={styles.tBtn}
                     onClick={playNext}
                     disabled={activeIndex + 1 >= queue.length}
-                    title="Next Song"
+                    title={t('host.transport.next')}
                   >
                     {Icons.next}
                   </button>
@@ -1720,9 +1723,7 @@ const Host = ({
                   rel="noopener noreferrer"
                   className={styles.transportLink}
                 >
-                  made with{" "}
-                  <span className={styles.transportHeart}>&#9829;</span> by
-                  variations on a string
+                  {renderWithHeart(t('footer.credit'), styles.transportHeart)}
                 </a>
               </div>
             </div>
@@ -1738,13 +1739,13 @@ const Host = ({
             <button
               className={styles.sidebarReopen}
               onClick={() => setSidebarCollapsed(false)}
-              title="Show queue"
-              aria-label="Show queue"
+              title={t('host.sidebar.showQueue')}
+              aria-label={t('host.sidebar.showQueue')}
             >
               <span className={styles.sidebarReopenIcon}>
                 {Icons.chevronRight}
               </span>
-              <span className={styles.sidebarReopenLabel}>Up Next</span>
+              <span className={styles.sidebarReopenLabel}>{t('host.sidebar.upNext')}</span>
               {upNext.length > 0 && (
                 <span className={styles.sidebarBadge}>{upNext.length}</span>
               )}
@@ -1758,7 +1759,7 @@ const Host = ({
                     className={`${styles.sidebarTab} ${sidebarTab === "queue" ? styles.sidebarTabActive : ""}`}
                     onClick={() => setSidebarTab("queue")}
                   >
-                    Up Next
+                    {t('host.sidebar.upNext')}
                     {upNext.length > 0 && (
                       <span className={styles.sidebarBadge}>
                         {upNext.length}
@@ -1769,7 +1770,7 @@ const Host = ({
                     className={`${styles.sidebarTab} ${sidebarTab === "history" ? styles.sidebarTabActive : ""}`}
                     onClick={() => setSidebarTab("history")}
                   >
-                    History
+                    {t('host.sidebar.history')}
                     {historyItems.length > 0 && (
                       <span className={styles.historyBadge}>
                         {historyItems.length}
@@ -1780,8 +1781,8 @@ const Host = ({
                 <button
                   className={styles.sidebarCollapseBtn}
                   onClick={() => setSidebarCollapsed(true)}
-                  title="Hide panel"
-                  aria-label="Hide panel"
+                  title={t('host.sidebar.hidePanel')}
+                  aria-label={t('host.sidebar.hidePanel')}
                 >
                   {Icons.chevronRight}
                 </button>
@@ -1792,7 +1793,7 @@ const Host = ({
                 className={`${styles.addSongBtn} ${searchOpen ? styles.addSongBtnActive : ""}`}
                 onClick={() => setSearchOpen(!searchOpen)}
               >
-                {Icons.plus} Add a song
+                {Icons.plus} {t('host.sidebar.addSong')}
               </button>
 
               {/* Up Next tab */}
@@ -1801,11 +1802,11 @@ const Host = ({
                   {upNext.length > 0 && (
                     <div className={styles.queueStats}>
                       <span>
-                        {upNext.length} song{upNext.length !== 1 ? "s" : ""}
+                        {tn('host.stats.songs', upNext.length)}
                       </span>
                       <span className={styles.statDot} />
                       <span>
-                        {uniqueSingers} singer{uniqueSingers !== 1 ? "s" : ""}
+                        {tn('host.stats.singers', uniqueSingers)}
                       </span>
                     </div>
                   )}
@@ -1842,7 +1843,7 @@ const Host = ({
                       </SortableContext>
                     </DndContext>
                   ) : (
-                    <p className={styles.emptyQueue}>No songs queued yet</p>
+                    <p className={styles.emptyQueue}>{t('host.sidebar.noQueued')}</p>
                   )}
                 </>
               )}
@@ -1870,16 +1871,16 @@ const Host = ({
                         <button
                           className={styles.replayBtn}
                           onClick={() => replayFromHistory(item.id)}
-                          title="Restore this song to the queue"
-                          aria-label="Restore this song to the queue"
+                          title={t('host.history.restoreTitle')}
+                          aria-label={t('host.history.restoreTitle')}
                         >
                           {Icons.replay}
-                          <span className={styles.replayBtnLabel}>Restore</span>
+                          <span className={styles.replayBtnLabel}>{t('host.history.restore')}</span>
                         </button>
                       </div>
                     ))
                   ) : (
-                    <p className={styles.emptyQueue}>No songs played yet</p>
+                    <p className={styles.emptyQueue}>{t('host.history.empty')}</p>
                   )}
                 </div>
               )}
@@ -1908,7 +1909,7 @@ const Host = ({
                       >
                         <path d="M0 0l5 6 5-6z" />
                       </svg>
-                      Cheers
+                      {t('host.cheers')}
                     </button>
                     {cheersOpen && (
                       <div className={styles.cheersLive}>
@@ -1938,7 +1939,7 @@ const Host = ({
                       >
                         <path d="M0 0l5 6 5-6z" />
                       </svg>
-                      Singer boards
+                      {t('host.singerBoards')}
                       <span className={styles.boardsCount}>
                         {singWithMe.length + suggestions.length}
                       </span>
@@ -1973,15 +1974,15 @@ const Host = ({
                       >
                         <path d="M0 0l5 6 5-6z" />
                       </svg>
-                      Scan to join
+                      {t('host.scanToJoin')}
                     </button>
                     {qrShelfOpen && (
                       <div className={styles.qrShelf}>
                         <button
                           className={styles.qrShelfThumb}
                           onClick={() => setQrModalOpen(true)}
-                          title="Enlarge QR code"
-                          aria-label="Enlarge QR code"
+                          title={t('host.qr.enlarge')}
+                          aria-label={t('host.qr.enlarge')}
                         >
                           <QRCodeSVG
                             value={joinUrl}
@@ -1993,10 +1994,14 @@ const Host = ({
                         </button>
                         <div className={styles.qrShelfInfo}>
                           <span className={styles.qrShelfHint}>
-                            Tap code to enlarge
+                            {t('host.qr.tapEnlarge')}
                           </span>
                           <span className={styles.qrShelfAlt}>
-                            or visit <strong>{displayUrl}</strong> and enter
+                            {t('host.qr.orVisitEnter').split(/(\{url\})/).map((part, i) =>
+                              part === '{url}'
+                                ? <strong key={i}>{displayUrl}</strong>
+                                : <React.Fragment key={i}>{part}</React.Fragment>
+                            )}
                           </span>
                           <span className={styles.qrShelfCode}>
                             {(joinCode || "").toUpperCase()}
@@ -2015,7 +2020,7 @@ const Host = ({
                     <button
                       className={styles.searchClose}
                       onClick={() => setSearchOpen(false)}
-                      title="Close search"
+                      title={t('host.search.close')}
                     >
                       ×
                     </button>
@@ -2048,8 +2053,7 @@ const Host = ({
             rel="noopener noreferrer"
             className={styles.transportLink}
           >
-            made with <span className={styles.transportHeart}>&#9829;</span> by
-            variations on a string
+            {renderWithHeart(t('footer.credit'), styles.transportHeart)}
           </a>
         </footer>
       )}
@@ -2061,21 +2065,20 @@ const Host = ({
             <button
               className={styles.qrModalClose}
               onClick={() => setCohostOpen(false)}
-              title="Close"
-              aria-label="Close"
+              title={t('common.close')}
+              aria-label={t('common.close')}
             >
               &times;
             </button>
-            <h3 className={styles.inviteTitle}>Bring on a co-host</h3>
+            <h3 className={styles.inviteTitle}>{t('host.cohost.title')}</h3>
             <p className={styles.cohostLede}>
-              A co-host helps you run the night from their own phone. Here is
-              how to add one:
+              {t('host.cohost.lede')}
             </p>
             <ol className={styles.cohostSteps}>
-              <li>Have your co-host scan the code below, or send them the link.</li>
-              <li>It opens karaoq on their phone, ready to help.</li>
-              <li>They can search for songs and manage the queue.</li>
-              <li>You stay in charge of playing, pausing, and skipping.</li>
+              <li>{t('host.cohost.step1')}</li>
+              <li>{t('host.cohost.step2')}</li>
+              <li>{t('host.cohost.step3')}</li>
+              <li>{t('host.cohost.step4')}</li>
             </ol>
             {cohostUrl && (
               <div className={styles.qrModalCode}>
@@ -2088,15 +2091,15 @@ const Host = ({
                 />
               </div>
             )}
-            <p className={styles.qrModalScan}>Scan</p>
+            <p className={styles.qrModalScan}>{t('host.scan')}</p>
             <p className={styles.qrModalAlt}>
-              or send them this link:
+              {t('host.cohost.sendLink')}
             </p>
             <p className={styles.cohostLink}>
               <strong>{cohostDisplayUrl}</strong>
             </p>
             <button className={styles.qrModalPrint} onClick={copyCohostLink}>
-              Copy co-host link
+              {t('host.cohost.copyLink')}
             </button>
           </div>
         </div>
@@ -2109,8 +2112,8 @@ const Host = ({
             <button
               className={styles.qrModalClose}
               onClick={() => setQrModalOpen(false)}
-              title="Close"
-              aria-label="Close"
+              title={t('common.close')}
+              aria-label={t('common.close')}
             >
               &times;
             </button>
@@ -2123,12 +2126,13 @@ const Host = ({
                 level="M"
               />
             </div>
-            <p className={styles.qrModalScan}>Scan to join</p>
+            <p className={styles.qrModalScan}>{t('host.scanToJoin')}</p>
             <p className={styles.qrModalAlt}>
-              or visit <strong>{displayUrl}</strong> and enter code{" "}
-              <strong className={styles.qrShelfCode}>
-                {(joinCode || "").toUpperCase()}
-              </strong>
+              {t('host.qr.orVisitEnterCode').split(/(\{url\}|\{code\})/).map((part, i) => {
+                if (part === '{url}') return <strong key={i}>{displayUrl}</strong>;
+                if (part === '{code}') return <strong key={i} className={styles.qrShelfCode}>{(joinCode || "").toUpperCase()}</strong>;
+                return <React.Fragment key={i}>{part}</React.Fragment>;
+              })}
             </p>
           </div>
         </div>
@@ -2138,12 +2142,12 @@ const Host = ({
       {confirmRemove && (
         <div className={styles.overlay} onClick={() => setConfirmRemove(null)}>
           <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <h3 className={styles.modalTitle}>Remove from queue?</h3>
+            <h3 className={styles.modalTitle}>{t('host.confirm.title')}</h3>
             <p className={styles.modalText}>
               {(() => {
                 const entry = queue.find((e) => e.id === confirmRemove);
-                if (!entry) return "This song will be removed from the queue.";
-                return `Remove "${decodeHtml(entry.songTitle)}" by ${entry.userName}?`;
+                if (!entry) return t('host.confirm.fallback');
+                return t('host.confirm.body', { title: decodeHtml(entry.songTitle), name: entry.userName });
               })()}
             </p>
             <div className={styles.modalActions}>
@@ -2151,13 +2155,13 @@ const Host = ({
                 className={styles.btnDanger}
                 onClick={() => removeSong(confirmRemove)}
               >
-                Remove
+                {t('host.confirm.remove')}
               </button>
               <button
                 className={styles.btnGhost}
                 onClick={() => setConfirmRemove(null)}
               >
-                Cancel
+                {t('common.cancel')}
               </button>
             </div>
           </div>
@@ -2177,12 +2181,16 @@ const Host = ({
           <div className={styles.welcomeCard}>
             <div className={styles.welcomeLogo}>KaraoQ</div>
             <p className={styles.welcomeRoom}>
-              Room <strong>{joinCode?.toUpperCase()}</strong>
+              {t('sing.welcome.room').split(/(\{code\})/).map((part, i) =>
+                part === '{code}'
+                  ? <strong key={i}>{joinCode?.toUpperCase()}</strong>
+                  : <React.Fragment key={i}>{part}</React.Fragment>
+              )}
             </p>
-            <h2 className={styles.welcomePrompt}>What&apos;s your name?</h2>
+            <h2 className={styles.welcomePrompt}>{t('sing.welcome.prompt')}</h2>
             <input
               className={styles.welcomeInput}
-              placeholder="Enter your name"
+              placeholder={t('common.enterYourName')}
               value={welcomeName}
               onChange={(e) => setWelcomeName(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleWelcomeSubmit()}
@@ -2194,7 +2202,7 @@ const Host = ({
               onClick={handleWelcomeSubmit}
               disabled={!welcomeName.trim()}
             >
-              Let&apos;s go
+              {t('sing.welcome.go')}
             </button>
           </div>
         </div>

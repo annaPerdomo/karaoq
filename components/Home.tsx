@@ -7,48 +7,61 @@ import {
   rememberLastHostedRoom,
 } from '../lib/lastRoom';
 import styles from '../styles/Home.module.css';
+import { useT } from '../lib/i18n/I18nProvider';
+import { renderWithHeart } from '../lib/i18n/renderWithHeart';
+import LanguageSwitcher from './LanguageSwitcher';
 
 // ─── FAQ content ───
 // Exported so the landing page can mirror it in FAQPage structured data.
 // Google requires the JSON-LD text to match the visible answers, so keep both
-// sourced from here.
-export const FAQ_ITEMS: { question: string; answer: string }[] = [
+// sourced from here. The English text here is what SSR + JSON-LD emit (kept
+// consistent for SEO); `id` maps each item to its faq.* translation keys, which
+// the client swaps in for the visitor's language.
+export const FAQ_ITEMS: { id: string; question: string; answer: string }[] = [
   {
+    id: 'free',
     question: 'Is KaraoQ free to use?',
     answer:
       'Yes. KaraoQ is free to host and free to join. Songs play from YouTube, so there is nothing to buy or rent.',
   },
   {
+    id: 'app',
     question: 'Do I need to download an app?',
     answer:
       'No downloads and no installs. KaraoQ runs entirely in your web browser on phones, tablets, laptops, and smart TVs.',
   },
   {
+    id: 'equipment',
     question: 'What equipment do I need to host karaoke night?',
     answer:
       'A device with a browser and something that makes sound — a laptop or iPad on its own is enough. For a bigger night, put the video on a TV by casting or plugging in with HDMI. No karaoke machine or microphones required.',
   },
   {
+    id: 'tv',
     question: 'How do I get the karaoke video on my TV?',
     answer:
       'Cast your screen with AirPlay or Google Cast, or connect your laptop to the TV with an HDMI cable. KaraoQ can also pop the video out into its own window, so the TV shows the song and lyrics while the controls stay on your screen.',
   },
   {
+    id: 'account',
     question: 'Do my guests need an account to sing?',
     answer:
       'No sign-up is required for anyone. Guests scan a QR code or enter the room code, then start adding songs from their own phones.',
   },
   {
+    id: 'join',
     question: 'How do guests join the karaoke session?',
     answer:
       'Create a room to get a short join code and QR code. Share either one, and guests can search YouTube and queue songs from their phones in seconds.',
   },
   {
+    id: 'songs',
     question: 'Where do the karaoke songs come from?',
     answer:
       'Every song streams from YouTube, so you have millions of karaoke tracks, lyric videos, and instrumentals to choose from — no separate karaoke library needed.',
   },
   {
+    id: 'venue',
     question: 'Can I use KaraoQ at a bar, party, or venue?',
     answer:
       'Absolutely. Cast the queue to any screen and let guests add songs from their phones. It works just as well for house parties, team events, and venue karaoke nights.',
@@ -631,6 +644,7 @@ const CUSTOM_CODE_PATTERN = /^[A-Z0-9]{3,12}$/;
 
 const Home = (): React.ReactElement => {
   const router = useRouter();
+  const { t, tn } = useT();
   const [joinCode, setJoinCode] = React.useState('');
   const [showJoin, setShowJoin] = React.useState(false);
   const [showCustom, setShowCustom] = React.useState(false);
@@ -686,12 +700,12 @@ const Home = (): React.ReactElement => {
     if (creating) return;
     const name = hostName.trim();
     if (!name) {
-      setHostError('Enter your name to start');
+      setHostError(t('home.err.enterName'));
       return;
     }
     const code = useCustom ? customCode.trim().toUpperCase() : generateCode();
     if (useCustom && !CUSTOM_CODE_PATTERN.test(code)) {
-      setHostError('Code must be 3\u201312 letters or numbers');
+      setHostError(t('home.err.codeFormat'));
       return;
     }
     setHostError('');
@@ -708,14 +722,14 @@ const Home = (): React.ReactElement => {
         rememberLastHostedRoom(code);
         router.push(`/host/${code}`);
       } else if (resp.status === 409) {
-        setHostError('That code is already in use');
+        setHostError(t('home.err.codeInUse'));
         setCreating(false);
       } else {
-        setHostError('Something went wrong. Try again.');
+        setHostError(t('home.err.generic'));
         setCreating(false);
       }
     } catch {
-      setHostError('Something went wrong. Try again.');
+      setHostError(t('home.err.generic'));
       setCreating(false);
     }
   }
@@ -757,15 +771,16 @@ const Home = (): React.ReactElement => {
       <nav className={styles.nav}>
         <span className={styles.navLogo}>KaraoQ</span>
         <div className={styles.navLinks}>
-          <a href="#how-it-works" className={styles.navLink}>How It Works</a>
-          <a href="#setup" className={styles.navLink}>Setup</a>
-          <a href="#features" className={styles.navLink}>Features</a>
+          <a href="#how-it-works" className={styles.navLink}>{t('home.nav.how')}</a>
+          <a href="#setup" className={styles.navLink}>{t('home.nav.setup')}</a>
+          <a href="#features" className={styles.navLink}>{t('home.nav.features')}</a>
           <button className={styles.navCtaOutline} onClick={handleJoinCta}>
-            Join a Session
+            {t('home.nav.join')}
           </button>
           <button className={styles.navCta} onClick={handleHostCta} disabled={creating}>
-            {creating ? 'Creating…' : 'Host a Session'}
+            {creating ? t('home.creating') : t('home.nav.host')}
           </button>
+          <LanguageSwitcher />
         </div>
       </nav>
 
@@ -778,11 +793,9 @@ const Home = (): React.ReactElement => {
               form, so newcomers see what KaraoQ is before it asks for a name. */}
           <div className={styles.heroInner}>
             <div className={styles.heroCopy}>
-              <h1 className={styles.heroTitle}>YouTube Karaoke. Zero Setup.</h1>
+              <h1 className={styles.heroTitle}>{t('home.hero.title')}</h1>
               <p className={styles.heroSub}>
-                Everyone adds songs from their own phone &mdash; the queue plays
-                on any screen you&apos;ve got. Host a room for the party, or hop
-                into one with a code. No app, no karaoke machine, no setup.
+                {t('home.hero.sub')}
               </p>
               {/* A room from earlier tonight outranks starting a new one —
                   the duplicate-room path this banner exists to close. */}
@@ -790,24 +803,25 @@ const Home = (): React.ReactElement => {
                 <div className={styles.resumeCard}>
                   <span className={styles.resumeDot} aria-hidden="true" />
                   <span className={styles.resumeText}>
-                    Your room <strong>{resumeRoom.code.toUpperCase()}</strong>{' '}
-                    is still open
+                    {t('home.resume.open').split(/(\{code\})/).map((part, i) =>
+                      part === '{code}'
+                        ? <strong key={i}>{resumeRoom.code.toUpperCase()}</strong>
+                        : <React.Fragment key={i}>{part}</React.Fragment>
+                    )}
                     {resumeRoom.songCount > 0 &&
-                      ` — ${resumeRoom.songCount} song${
-                        resumeRoom.songCount !== 1 ? 's' : ''
-                      } queued`}
+                      tn('home.resume.queued', resumeRoom.songCount)}
                   </span>
                   <button
                     className={styles.resumeBtn}
                     onClick={() => router.push(`/host/${resumeRoom.code}`)}
                   >
-                    Resume hosting
+                    {t('home.resume.button')}
                   </button>
                   <button
                     className={styles.resumeDismiss}
                     onClick={dismissResume}
-                    aria-label="Dismiss"
-                    title="Dismiss"
+                    aria-label={t('home.resume.dismiss')}
+                    title={t('home.resume.dismiss')}
                   >
                     &times;
                   </button>
@@ -822,13 +836,13 @@ const Home = (): React.ReactElement => {
                   codes tucked behind a small toggle), or join with a code. */}
               <div className={styles.hostCard}>
                 <span className={styles.hostCardKicker}>
-                  Host tonight&rsquo;s karaoke
+                  {t('home.host.kicker')}
                 </span>
                 <input
                     ref={nameInputRef}
                     className={styles.nameInput}
-                    placeholder="Your name"
-                    aria-label="Your name"
+                    placeholder={t('common.yourName')}
+                    aria-label={t('common.yourName')}
                     maxLength={30}
                     value={hostName}
                     onChange={(e) => {
@@ -846,14 +860,14 @@ const Home = (): React.ReactElement => {
                       onClick={() => handleHost(false)}
                       disabled={creating}
                     >
-                      {creating ? 'Creating…' : 'Start a Room'}
+                      {creating ? t('home.creating') : t('home.host.start')}
                     </button>
                   ) : (
                     <div className={styles.joinRow}>
                       <input
                         className={styles.joinInput}
-                        placeholder="CUSTOM CODE"
-                        aria-label="Custom room code"
+                        placeholder={t('home.host.customPlaceholder')}
+                        aria-label={t('home.host.customAria')}
                         maxLength={12}
                         value={customCode}
                         onChange={(e) => {
@@ -868,7 +882,7 @@ const Home = (): React.ReactElement => {
                         onClick={() => handleHost(true)}
                         disabled={creating || !customCode.trim()}
                       >
-                        {creating ? 'Creating…' : 'Create'}
+                        {creating ? t('home.creating') : t('home.host.create')}
                       </button>
                     </div>
                   )}
@@ -882,8 +896,8 @@ const Home = (): React.ReactElement => {
                     }}
                   >
                     {showCustom
-                      ? 'Use a random code instead'
-                      : 'Use a custom room code'}
+                      ? t('home.host.useRandom')
+                      : t('home.host.useCustom')}
                   </button>
 
                 {hostError && <p className={styles.hostError}>{hostError}</p>}
@@ -897,14 +911,14 @@ const Home = (): React.ReactElement => {
                       className={styles.joinLink}
                       onClick={() => setShowJoin(true)}
                     >
-                      Have a code? <span>Join a session →</span>
+                      {t('home.join.haveCode')} <span>{t('home.join.link')}</span>
                     </button>
                   ) : (
                     <div className={styles.joinRow}>
                       <input
                         className={styles.joinInput}
-                        placeholder="ROOM CODE"
-                        aria-label="Room code"
+                        placeholder={t('home.join.roomPlaceholder')}
+                        aria-label={t('home.join.roomAria')}
                         maxLength={12}
                         value={joinCode}
                         onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
@@ -916,13 +930,13 @@ const Home = (): React.ReactElement => {
                         onClick={handleJoin}
                         disabled={!joinCode.trim()}
                       >
-                        Join
+                        {t('home.join.button')}
                       </button>
                     </div>
                   )}
                 </div>
               </div>
-              <p className={styles.heroNote}>No account needed. Ready in seconds.</p>
+              <p className={styles.heroNote}>{t('home.hero.note')}</p>
             </div>
           </div>
         </section>
@@ -930,17 +944,16 @@ const Home = (): React.ReactElement => {
         {/* ─── How It Works ─── */}
         <section id="how-it-works" className={styles.howSection}>
           <Reveal>
-            <h2 className={styles.sectionTitle}>How It Works</h2>
+            <h2 className={styles.sectionTitle}>{t('home.how.title')}</h2>
             <p className={styles.sectionSub}>
-              Three steps, under a minute &mdash; whether it&apos;s two friends
-              or a whole bar.
+              {t('home.how.sub')}
             </p>
           </Reveal>
 
           <div className={styles.steps}>
             <Reveal className={styles.step}>
               <div className={styles.stepDevice}>
-                <span className={styles.stepTag}>You, the host</span>
+                <span className={styles.stepTag}>{t('home.step1.tag')}</span>
                 <div className={styles.laptopFrame}>
                   <div className={styles.laptopScreen}>
                     <span className={styles.laptopCamera} />
@@ -951,19 +964,16 @@ const Home = (): React.ReactElement => {
               </div>
               <div className={styles.stepText}>
                 <span className={styles.stepNum}>1</span>
-                <h3 className={styles.stepTitle}>Start a Room</h3>
+                <h3 className={styles.stepTitle}>{t('home.step1.title')}</h3>
                 <p className={styles.stepDesc}>
-                  One tap gets you a room code and QR &mdash; no accounts, no
-                  downloads, no sign-ups. Add the first song yourself or share
-                  the code around. And if you step away mid-night, your room
-                  and its queue are right where you left them.
+                  {t('home.step1.desc')}
                 </p>
               </div>
             </Reveal>
 
             <Reveal className={`${styles.step} ${styles.stepReverse}`}>
               <div className={styles.stepDevice}>
-                <span className={styles.stepTag}>Everyone&apos;s phones</span>
+                <span className={styles.stepTag}>{t('home.step2.tag')}</span>
                 <div className={styles.phoneFrameSm}>
                   <div className={styles.phoneNotch} />
                   <div className={styles.phoneScreen}>
@@ -973,18 +983,16 @@ const Home = (): React.ReactElement => {
               </div>
               <div className={styles.stepText}>
                 <span className={styles.stepNum}>2</span>
-                <h3 className={styles.stepTitle}>Everyone Adds Songs</h3>
+                <h3 className={styles.stepTitle}>{t('home.step2.title')}</h3>
                 <p className={styles.stepDesc}>
-                  Anyone in the room scans the code and searches YouTube from their
-                  own phone, dropping songs into the shared queue. Karaoke mode
-                  finds the best versions automatically.
+                  {t('home.step2.desc')}
                 </p>
               </div>
             </Reveal>
 
             <Reveal className={styles.step}>
               <div className={styles.stepDevice}>
-                <span className={styles.stepTag}>The big screen</span>
+                <span className={styles.stepTag}>{t('home.step3.tag')}</span>
                 <div className={styles.tvFrame}>
                   <div className={styles.tvScreen}>
                     <BigScreenDemo />
@@ -994,11 +1002,9 @@ const Home = (): React.ReactElement => {
               </div>
               <div className={styles.stepText}>
                 <span className={styles.stepNum}>3</span>
-                <h3 className={styles.stepTitle}>Sing on Any Screen</h3>
+                <h3 className={styles.stepTitle}>{t('home.step3.title')}</h3>
                 <p className={styles.stepDesc}>
-                  Open the display on whatever everyone&apos;s facing &mdash; TV,
-                  laptop, projector, tablet. Lyrics light up as you sing, the host
-                  steers the queue, and a QR code lets latecomers jump in.
+                  {t('home.step3.desc')}
                 </p>
               </div>
             </Reveal>
@@ -1011,28 +1017,24 @@ const Home = (): React.ReactElement => {
             browser plus whatever plays the audio. */}
         <section id="setup" className={styles.setupSection}>
           <Reveal>
-            <h2 className={styles.sectionTitle}>What You Need to Host</h2>
+            <h2 className={styles.sectionTitle}>{t('home.setup.title')}</h2>
             <p className={styles.sectionSub}>
-              Less than you think &mdash; a screen with a browser and something
-              that makes sound. Three ways people run it:
+              {t('home.setup.sub')}
             </p>
           </Reveal>
 
           <div className={styles.setupGrid}>
             <Reveal delay={0}>
               <div className={styles.setupCard} style={{ '--accent': '#06b6d4' } as React.CSSProperties}>
-                <span className={styles.setupTag}>Zero setup</span>
-                <h3 className={styles.setupTitle}>Just a Laptop or iPad</h3>
+                <span className={styles.setupTag}>{t('home.setup.card1.tag')}</span>
+                <h3 className={styles.setupTitle}>{t('home.setup.card1.title')}</h3>
                 <p className={styles.setupDesc}>
-                  Open KaraoQ, turn up the volume, and you&apos;re hosting. The
-                  video plays right on the device while everyone queues songs
-                  from their phones. Plug in a Bluetooth speaker if the room
-                  gets loud.
+                  {t('home.setup.card1.desc')}
                 </p>
                 <div className={styles.setupGearBox}>
-                  <span className={styles.setupGearLabel}>You need</span>
+                  <span className={styles.setupGearLabel}>{t('home.setup.youNeed')}</span>
                   <ul className={styles.setupGear}>
-                    <li>A laptop, iPad, or any device with a browser</li>
+                    <li>{t('home.setup.card1.gear1')}</li>
                   </ul>
                 </div>
               </div>
@@ -1040,20 +1042,17 @@ const Home = (): React.ReactElement => {
 
             <Reveal delay={100}>
               <div className={styles.setupCard} style={{ '--accent': '#a855f7' } as React.CSSProperties}>
-                <span className={styles.setupTag}>Most popular</span>
-                <h3 className={styles.setupTitle}>The Living Room TV</h3>
+                <span className={styles.setupTag}>{t('home.setup.card2.tag')}</span>
+                <h3 className={styles.setupTitle}>{t('home.setup.card2.title')}</h3>
                 <p className={styles.setupDesc}>
-                  Put the song on the big screen &mdash; cast with AirPlay or
-                  Google Cast, or plug your laptop into the TV with HDMI. The
-                  TV&apos;s speakers carry the sound, and your device stays the
-                  control booth.
+                  {t('home.setup.card2.desc')}
                 </p>
                 <div className={styles.setupGearBox}>
-                  <span className={styles.setupGearLabel}>You need</span>
+                  <span className={styles.setupGearLabel}>{t('home.setup.youNeed')}</span>
                   <ul className={styles.setupGear}>
-                    <li>A laptop or phone</li>
-                    <li>A TV</li>
-                    <li>HDMI or casting (AirPlay / Google Cast)</li>
+                    <li>{t('home.setup.card2.gear1')}</li>
+                    <li>{t('home.setup.card2.gear2')}</li>
+                    <li>{t('home.setup.card2.gear3')}</li>
                   </ul>
                 </div>
               </div>
@@ -1061,20 +1060,17 @@ const Home = (): React.ReactElement => {
 
             <Reveal delay={200}>
               <div className={styles.setupCard} style={{ '--accent': '#ec4899' } as React.CSSProperties}>
-                <span className={styles.setupTag}>Bars &amp; big parties</span>
-                <h3 className={styles.setupTitle}>Screen + Sound System</h3>
+                <span className={styles.setupTag}>{t('home.setup.card3.tag')}</span>
+                <h3 className={styles.setupTitle}>{t('home.setup.card3.title')}</h3>
                 <p className={styles.setupDesc}>
-                  Run a laptop into the venue&apos;s display and sound system
-                  &mdash; HDMI to the screen, aux to the speakers. Guests add
-                  songs from their phones all night, and mics go through the PA
-                  like any other karaoke night.
+                  {t('home.setup.card3.desc')}
                 </p>
                 <div className={styles.setupGearBox}>
-                  <span className={styles.setupGearLabel}>You need</span>
+                  <span className={styles.setupGearLabel}>{t('home.setup.youNeed')}</span>
                   <ul className={styles.setupGear}>
-                    <li>A laptop</li>
-                    <li>A big screen or projector</li>
-                    <li>Speakers or a PA system</li>
+                    <li>{t('home.setup.card3.gear1')}</li>
+                    <li>{t('home.setup.card3.gear2')}</li>
+                    <li>{t('home.setup.card3.gear3')}</li>
                   </ul>
                 </div>
               </div>
@@ -1083,11 +1079,8 @@ const Home = (): React.ReactElement => {
 
           <Reveal>
             <p className={styles.setupNote}>
-              <strong>No karaoke machine, no microphones required.</strong>{' '}
-              KaraoQ puts the song and lyrics on screen; sound comes from
-              whatever&apos;s playing the video. Most living rooms just sing
-              out loud &mdash; and if you have mics, run them through your
-              speakers and you&apos;re a full venue.
+              <strong>{t('home.setup.note.strong')}</strong>
+              {t('home.setup.note.rest')}
             </p>
           </Reveal>
         </section>
@@ -1095,9 +1088,9 @@ const Home = (): React.ReactElement => {
         {/* ─── Features ─── */}
         <section id="features" className={styles.featuresSection}>
           <Reveal>
-            <h2 className={styles.sectionTitle}>Everything You Need</h2>
+            <h2 className={styles.sectionTitle}>{t('home.features.title')}</h2>
             <p className={styles.sectionSub}>
-              No DJ equipment. No karaoke machine. Just phones and a screen.
+              {t('home.features.sub')}
             </p>
           </Reveal>
 
@@ -1111,10 +1104,9 @@ const Home = (): React.ReactElement => {
                     <polygon points="10,8 14,11 10,14" fill="currentColor" stroke="none" />
                   </svg>
                 </div>
-                <h3 className={styles.featureTitle}>YouTube-Powered</h3>
+                <h3 className={styles.featureTitle}>{t('home.feature1.title')}</h3>
                 <p className={styles.featureDesc}>
-                  Millions of karaoke tracks at your fingertips. Search, preview,
-                  and queue songs instantly from YouTube.
+                  {t('home.feature1.desc')}
                 </p>
               </div>
             </Reveal>
@@ -1129,10 +1121,9 @@ const Home = (): React.ReactElement => {
                     <path d="M21.5 12.5a10 10 0 0 1-18.8 4.2" />
                   </svg>
                 </div>
-                <h3 className={styles.featureTitle}>Real-Time Sync</h3>
+                <h3 className={styles.featureTitle}>{t('home.feature2.title')}</h3>
                 <p className={styles.featureDesc}>
-                  Everyone sees the queue update live across all devices. No
-                  refreshing needed &mdash; it just works.
+                  {t('home.feature2.desc')}
                 </p>
               </div>
             </Reveal>
@@ -1146,10 +1137,9 @@ const Home = (): React.ReactElement => {
                     <line x1="12" y1="17" x2="12" y2="21" />
                   </svg>
                 </div>
-                <h3 className={styles.featureTitle}>Cast to Any Screen</h3>
+                <h3 className={styles.featureTitle}>{t('home.feature3.title')}</h3>
                 <p className={styles.featureDesc}>
-                  Any screen with a browser becomes your karaoke display &mdash;
-                  TV, laptop, projector, tablet. Just open the link.
+                  {t('home.feature3.desc')}
                 </p>
               </div>
             </Reveal>
@@ -1166,10 +1156,9 @@ const Home = (): React.ReactElement => {
                     <circle cx="16" cy="18" r="1.5" />
                   </svg>
                 </div>
-                <h3 className={styles.featureTitle}>Drag &amp; Drop Queue</h3>
+                <h3 className={styles.featureTitle}>{t('home.feature4.title')}</h3>
                 <p className={styles.featureDesc}>
-                  Hosts can reorder songs with a drag, move tracks to the top, or
-                  remove them. Full control over the lineup.
+                  {t('home.feature4.desc')}
                 </p>
               </div>
             </Reveal>
@@ -1184,10 +1173,9 @@ const Home = (): React.ReactElement => {
                     <line x1="15" y1="9" x2="15.01" y2="9" strokeWidth="2.5" />
                   </svg>
                 </div>
-                <h3 className={styles.featureTitle}>Live Reactions</h3>
+                <h3 className={styles.featureTitle}>{t('home.feature5.title')}</h3>
                 <p className={styles.featureDesc}>
-                  The audience cheers with emojis and messages that float across the
-                  display in real time. Hype up the singer!
+                  {t('home.feature5.desc')}
                 </p>
               </div>
             </Reveal>
@@ -1200,10 +1188,9 @@ const Home = (): React.ReactElement => {
                     <line x1="12" y1="18" x2="12.01" y2="18" />
                   </svg>
                 </div>
-                <h3 className={styles.featureTitle}>Works on Any Device</h3>
+                <h3 className={styles.featureTitle}>{t('home.feature6.title')}</h3>
                 <p className={styles.featureDesc}>
-                  Phones, tablets, laptops &mdash; any device with a browser becomes
-                  a karaoke remote control.
+                  {t('home.feature6.desc')}
                 </p>
               </div>
             </Reveal>
@@ -1213,47 +1200,43 @@ const Home = (): React.ReactElement => {
         {/* ─── Use Cases ─── */}
         <section className={styles.useCasesSection}>
           <Reveal>
-            <h2 className={styles.sectionTitle}>Where Karaoke Happens</h2>
+            <h2 className={styles.sectionTitle}>{t('home.useCases.title')}</h2>
           </Reveal>
 
           <div className={styles.useCasesGrid}>
             <Reveal delay={0}>
               <div className={styles.useCaseCard} style={{ '--accent': '#ec4899' } as React.CSSProperties}>
                 <EqBars color="#ec4899" />
-                <h3 className={styles.useCaseTitle}>House Parties</h3>
+                <h3 className={styles.useCaseTitle}>{t('home.useCase1.title')}</h3>
                 <p className={styles.useCaseDesc}>
-                  Turn your living room into a karaoke bar. Everyone picks songs
-                  from their phone &mdash; no aux cord fights.
+                  {t('home.useCase1.desc')}
                 </p>
               </div>
             </Reveal>
             <Reveal delay={100}>
               <div className={styles.useCaseCard} style={{ '--accent': '#06b6d4' } as React.CSSProperties}>
                 <EqBars color="#06b6d4" />
-                <h3 className={styles.useCaseTitle}>Bars &amp; Venues</h3>
+                <h3 className={styles.useCaseTitle}>{t('home.useCase2.title')}</h3>
                 <p className={styles.useCaseDesc}>
-                  Run karaoke night with just a laptop and a screen. Guests queue
-                  songs from their own phones.
+                  {t('home.useCase2.desc')}
                 </p>
               </div>
             </Reveal>
             <Reveal delay={200}>
               <div className={styles.useCaseCard} style={{ '--accent': '#f97316' } as React.CSSProperties}>
                 <EqBars color="#f97316" />
-                <h3 className={styles.useCaseTitle}>Team Events</h3>
+                <h3 className={styles.useCaseTitle}>{t('home.useCase3.title')}</h3>
                 <p className={styles.useCaseDesc}>
-                  Nothing breaks the ice like your manager singing Bohemian Rhapsody.
-                  Perfect for offsites and holiday parties.
+                  {t('home.useCase3.desc')}
                 </p>
               </div>
             </Reveal>
             <Reveal delay={300}>
               <div className={styles.useCaseCard} style={{ '--accent': '#a855f7' } as React.CSSProperties}>
                 <EqBars color="#a855f7" />
-                <h3 className={styles.useCaseTitle}>Celebrations</h3>
+                <h3 className={styles.useCaseTitle}>{t('home.useCase4.title')}</h3>
                 <p className={styles.useCaseDesc}>
-                  Birthdays, graduations, weddings &mdash; dedicate the first
-                  song and let the party take over.
+                  {t('home.useCase4.desc')}
                 </p>
               </div>
             </Reveal>
@@ -1263,18 +1246,18 @@ const Home = (): React.ReactElement => {
         {/* ─── FAQ ─── */}
         <section className={styles.faqSection}>
           <Reveal>
-            <h2 className={styles.sectionTitle}>Frequently Asked Questions</h2>
+            <h2 className={styles.sectionTitle}>{t('home.faq.title')}</h2>
             <p className={styles.sectionSub}>
-              Everything you need to know before your first song.
+              {t('home.faq.sub')}
             </p>
           </Reveal>
 
           <div className={styles.faqList}>
             {FAQ_ITEMS.map((item, i) => (
-              <Reveal key={item.question} delay={i * 60}>
+              <Reveal key={item.id} delay={i * 60}>
                 <details className={styles.faqItem}>
-                  <summary className={styles.faqQuestion}>{item.question}</summary>
-                  <p className={styles.faqAnswer}>{item.answer}</p>
+                  <summary className={styles.faqQuestion}>{t(`faq.${item.id}.q`)}</summary>
+                  <p className={styles.faqAnswer}>{t(`faq.${item.id}.a`)}</p>
                 </details>
               </Reveal>
             ))}
@@ -1284,9 +1267,9 @@ const Home = (): React.ReactElement => {
         {/* ─── Final CTA ─── */}
         <section className={styles.ctaSection}>
           <Reveal>
-            <h2 className={styles.ctaTitle}>Ready to Sing?</h2>
+            <h2 className={styles.ctaTitle}>{t('home.cta.title')}</h2>
             <p className={styles.ctaSub}>
-              Start a karaoke session in seconds. No sign-up required.
+              {t('home.cta.sub')}
             </p>
             <div className={styles.ctaButtons}>
               <button
@@ -1294,10 +1277,10 @@ const Home = (): React.ReactElement => {
                 onClick={handleHostCta}
                 disabled={creating}
               >
-                {creating ? 'Creating…' : 'Host a Session'}
+                {creating ? t('home.creating') : t('home.nav.host')}
               </button>
               <button className={styles.btnOutline} onClick={handleJoinCta}>
-                Join a Session
+                {t('home.nav.join')}
               </button>
             </div>
           </Reveal>
@@ -1308,7 +1291,7 @@ const Home = (): React.ReactElement => {
       <footer className={styles.footer}>
         <div className={styles.footerInner}>
           <a href="https://variationsonastring.com" target="_blank" rel="noopener noreferrer" className={styles.footerLink}>
-            made with <span className={styles.footerHeart}>&#9829;</span> by Variations on a String
+            {renderWithHeart(t('footer.credit'), styles.footerHeart)}
           </a>
         </div>
       </footer>

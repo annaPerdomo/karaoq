@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import styles from '../styles/QrJoinCard.module.css';
+import { useT } from '../lib/i18n/I18nProvider';
 
 interface QrJoinCardProps {
   joinUrl: string;
@@ -11,7 +12,12 @@ interface QrJoinCardProps {
 }
 
 const QrJoinCard = ({ joinUrl, joinCode, origin, onClose, onPrint }: QrJoinCardProps): React.ReactElement => {
+  const { t } = useT();
   const displayUrl = (origin || 'karaoq.live').replace(/^https?:\/\/(www\.)?/, '');
+
+  // "or visit {url} and enter {code}" — split on the placeholders so the URL
+  // and code keep their emphasis while translators control word order.
+  const altParts = t('qr.orVisit').split(/(\{url\}|\{code\})/);
 
   return (
     <div className={styles.card}>
@@ -23,13 +29,19 @@ const QrJoinCard = ({ joinUrl, joinCode, origin, onClose, onPrint }: QrJoinCardP
           fgColor="#ffffff"
           level="M"
         />
-        <span className={styles.label}>SCAN TO JOIN</span>
+        <span className={styles.label}>{t('qr.scanToJoin')}</span>
       </div>
-      <span className={styles.alt}>or visit <strong>{displayUrl}</strong> and enter <strong className={styles.code}>{joinCode.toUpperCase()}</strong></span>
+      <span className={styles.alt}>
+        {altParts.map((part, i) => {
+          if (part === '{url}') return <strong key={i}>{displayUrl}</strong>;
+          if (part === '{code}') return <strong key={i} className={styles.code}>{joinCode.toUpperCase()}</strong>;
+          return <React.Fragment key={i}>{part}</React.Fragment>;
+        })}
+      </span>
       {(onPrint || onClose) && (
         <div className={styles.actions}>
           {onPrint && (
-            <button className={styles.print} onClick={onPrint} title="Print QR code">
+            <button className={styles.print} onClick={onPrint} title={t('qr.print')}>
               <svg width="14" height="14" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M4.5 6V1.5h9V6" />
                 <rect x="1.5" y="6" width="15" height="7.5" rx="1" />
@@ -38,7 +50,7 @@ const QrJoinCard = ({ joinUrl, joinCode, origin, onClose, onPrint }: QrJoinCardP
             </button>
           )}
           {onClose && (
-            <button className={styles.close} onClick={onClose} title="Hide QR code">
+            <button className={styles.close} onClick={onClose} title={t('qr.hide')}>
               &times;
             </button>
           )}
