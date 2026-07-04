@@ -1,5 +1,7 @@
+import Link from 'next/link';
 import { useRouter } from 'next/router';
 import * as React from 'react';
+import { GUIDES } from '../lib/guides';
 import getRoom from '../app/queue/getRoom';
 import {
   clearLastHostedRoom,
@@ -1289,6 +1291,18 @@ const Home = (): React.ReactElement => {
 
       {/* ─── Footer ─── */}
       <footer className={styles.footer}>
+        <nav className={styles.footerGuides} aria-label={t('home.guides.title')}>
+          <span className={styles.footerGuidesTitle}>{t('home.guides.title')}</span>
+          <ul className={styles.footerGuidesList}>
+            {GUIDES.map((g) => (
+              <li key={g.id}>
+                <Link href={`/guide/${g.slug}`} className={styles.footerGuidesLink}>
+                  {t(`guide.${g.id}.h1`)}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
         <div className={styles.footerInner}>
           <a href="https://variationsonastring.com" target="_blank" rel="noopener noreferrer" className={styles.footerLink}>
             {renderWithHeart(t('footer.credit'), styles.footerHeart)}

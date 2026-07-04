@@ -1,0 +1,267 @@
+/* ═══════════════════════════════════════════
+   KaraoQ Guide / content article
+   Long-form, readable pages that answer specific search + LLM queries.
+   Same palette + type system as the landing (globals.css).
+   ═══════════════════════════════════════════ */
+
+.page {
+  min-height: 100vh;
+  background:
+    radial-gradient(ellipse at 20% 0%, rgba(255, 45, 120, 0.10) 0%, transparent 45%),
+    radial-gradient(ellipse at 85% 8%, rgba(0, 240, 255, 0.07) 0%, transparent 45%),
+    linear-gradient(to bottom, #0f0f23 0%, #1a1a2e 60%, #0f0f23 100%);
+  color: var(--text-primary);
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 20px 24px;
+}
+
+.wordmark {
+  font-family: var(--font-brand);
+  font-size: 1.5rem;
+  color: #fff;
+  text-decoration: none;
+  letter-spacing: 0.5px;
+}
+
+.article {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 8px 24px 96px;
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  text-decoration: none;
+  margin-bottom: 28px;
+  transition: color 0.15s ease;
+}
+.back:hover { color: #ff2d78; }
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #ff2d78;
+  margin: 0 0 12px;
+}
+
+.h1 {
+  font-family: var(--font-headline);
+  font-size: clamp(2rem, 6vw, 3rem);
+  line-height: 1.08;
+  font-weight: 700;
+  margin: 0 0 20px;
+  background: linear-gradient(100deg, #ffffff 30%, #ffd9e8 70%, #b9f4ff 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.intro {
+  font-size: 1.15rem;
+  line-height: 1.65;
+  color: var(--text-secondary);
+  margin: 0 0 48px;
+}
+
+.stepsHeading {
+  font-family: var(--font-headline);
+  font-size: 1.05rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin: 0 0 24px;
+}
+
+.steps {
+  list-style: none;
+  margin: 0 0 48px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.step {
+  display: flex;
+  gap: 18px;
+  padding: 22px;
+  border-radius: 16px;
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.05), rgba(26, 26, 46, 0.5));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.stepNum {
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  font-family: var(--font-headline);
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: #fff;
+  background: linear-gradient(135deg, #ff2d78, #00f0ff);
+}
+
+.stepBody { flex: 1 1 auto; min-width: 0; }
+
+.stepTitle {
+  font-family: var(--font-headline);
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 4px 0 8px;
+  color: #fff;
+}
+
+.stepText {
+  font-size: 1.02rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.closing {
+  font-size: 1.1rem;
+  line-height: 1.65;
+  color: var(--text-secondary);
+  margin: 0 0 56px;
+  padding-left: 18px;
+  border-left: 3px solid rgba(255, 45, 120, 0.5);
+}
+
+.cta {
+  text-align: center;
+  padding: 40px 28px;
+  border-radius: 20px;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(139, 92, 246, 0.22) 0%, transparent 60%),
+    linear-gradient(165deg, rgba(255, 255, 255, 0.05), rgba(26, 26, 46, 0.6));
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 56px;
+}
+
+.ctaTitle {
+  font-family: var(--font-headline);
+  font-size: 1.7rem;
+  font-weight: 700;
+  margin: 0 0 10px;
+  color: #fff;
+}
+
+.ctaSub {
+  font-size: 1.05rem;
+  line-height: 1.55;
+  color: var(--text-secondary);
+  margin: 0 auto 24px;
+  max-width: 44ch;
+}
+
+.ctaButtons {
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.btnPrimary,
+.btnOutline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 13px 28px;
+  border-radius: 999px;
+  font-family: var(--font-headline);
+  font-weight: 600;
+  font-size: 1rem;
+  text-decoration: none;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.btnPrimary {
+  color: #fff;
+  background: linear-gradient(135deg, #ff2d78, #e01b50);
+  box-shadow: 0 8px 24px rgba(255, 45, 120, 0.3);
+}
+.btnPrimary:hover { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(255, 45, 120, 0.42); }
+
+.btnOutline {
+  color: #fff;
+  background: transparent;
+  border: 1.5px solid rgba(255, 255, 255, 0.28);
+}
+.btnOutline:hover { transform: translateY(-2px); border-color: #fff; }
+
+.related { margin-top: 8px; }
+
+.relatedHeading {
+  font-family: var(--font-headline);
+  font-size: 1.05rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin: 0 0 18px;
+}
+
+.relatedList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.relatedLink {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 16px 20px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  text-decoration: none;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.relatedLink:hover {
+  background: rgba(255, 45, 120, 0.08);
+  border-color: rgba(255, 45, 120, 0.4);
+}
+
+.relatedTitle {
+  font-family: var(--font-headline);
+  font-size: 1.08rem;
+  font-weight: 500;
+  color: #fff;
+}
+
+.relatedArrow {
+  color: #ff2d78;
+  font-size: 1.15rem;
+  flex: 0 0 auto;
+}
+
+@media (max-width: 520px) {
+  .step { padding: 18px; gap: 14px; }
+  .stepNum { width: 32px; height: 32px; font-size: 1rem; }
+  .ctaButtons { flex-direction: column; }
+  .btnPrimary, .btnOutline { width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .back, .btnPrimary, .btnOutline, .relatedLink { transition: none; }
+}

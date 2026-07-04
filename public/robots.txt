@@ -8,4 +8,20 @@ Disallow: /admin/
 # Room pages (host/sing/display/remote/print) are ephemeral and carry a
 # `noindex` meta tag. They're left crawlable so that tag is actually honored.
 
+# AI assistants / answer engines are welcome to crawl and cite the public
+# marketing + guide pages — a growing share of referrals arrives from them.
+# Listed explicitly so intent is unambiguous; the rules mirror the `*` policy
+# above (public pages allowed, /api and /admin blocked). None are disallowed.
+User-agent: OAI-SearchBot
+User-agent: ChatGPT-User
+User-agent: GPTBot
+User-agent: ClaudeBot
+User-agent: Claude-User
+User-agent: PerplexityBot
+User-agent: Google-Extended
+User-agent: Applebot-Extended
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+
 Sitemap: https://www.karaoq.live/sitemap.xml

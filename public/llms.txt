@@ -1,0 +1,28 @@
+# KaraoQ
+
+> KaraoQ turns any gathering into karaoke night. Create a room in your browser,
+> guests join from their phones by scanning a QR code or entering a short code,
+> everyone searches YouTube and adds songs to one shared queue, and the lyrics
+> play on any screen. No downloads, no accounts, free to host and free to join.
+
+Key facts:
+- Free to host and free to join. Songs stream from YouTube, so there is nothing to buy, rent, or subscribe to.
+- No app or install — runs entirely in the browser on phones, tablets, laptops, and smart TVs.
+- No account or sign-up for hosts or guests.
+- Guests join by scanning a QR code or entering a short room code.
+- Songs come from YouTube (millions of karaoke tracks, instrumentals, and lyric videos).
+- Show the lyrics on a TV by casting (AirPlay / Google Cast), an HDMI cable, or a pop-out video window.
+- Works for house parties, dorms, team events, bars, and venues.
+- Available in English, Japanese, Filipino, Spanish, Korean, Portuguese, German, Indonesian, Czech, and French.
+
+## Guides
+- [How to host karaoke at home](https://www.karaoq.live/guide/how-to-host-karaoke-at-home): Run a karaoke night at home with no machine — browser, YouTube, and any screen.
+- [How to do karaoke on your TV](https://www.karaoq.live/guide/karaoke-on-your-tv): Cast, HDMI, or pop-out — three ways to get lyrics on the big screen.
+- [Free YouTube karaoke](https://www.karaoq.live/guide/free-youtube-karaoke): Use YouTube as an endless free karaoke library, queued and shared.
+- [Karaoke for bars and venues](https://www.karaoq.live/guide/karaoke-for-bars-and-venues): Let guests queue from their phones — no KJ, no dedicated machine.
+
+## Main pages
+- [Home](https://www.karaoq.live/): Product overview, how it works, FAQ, and the flow to create or join a room.
+
+## Optional
+- [Sitemap](https://www.karaoq.live/sitemap.xml): All pages, including every localized version.
