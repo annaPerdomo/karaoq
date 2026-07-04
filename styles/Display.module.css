@@ -41,6 +41,11 @@
   z-index: 15;
 }
 
+.headerLang {
+  /* Push the language control to the right edge of the header bar. */
+  margin-left: auto;
+}
+
 .brand {
   font-family: var(--font-brand);
   font-weight: 400;
