@@ -14,10 +14,13 @@ import { startSessionTracking } from '../app/queue/trackSession';
 import { startVisiblePolling } from '../app/queue/pollWhileVisible';
 import { QueueEntry, Reaction, SingWithMePost, SuggestedSong } from '../pages/api/types';
 import { useT } from '../lib/i18n/I18nProvider';
+import { getStoredName, setStoredName } from '../lib/username';
 import LanguageSwitcher from './LanguageSwitcher';
 
 
 const POLL_INTERVAL = 5000;
+// Global (not per-room) so a returning singer is remembered across any room.
+const NAME_STORAGE_KEY = 'karaoq_username';
 
 function decodeHtml(html: string): string {
   if (typeof document === 'undefined') return html;
@@ -61,19 +64,30 @@ const Sing = (): React.ReactElement => {
 
   // Load saved username
   React.useEffect(() => {
-    const saved = localStorage.getItem('karaoq_username');
+    const saved = getStoredName(NAME_STORAGE_KEY);
     if (saved) {
       setUsername(saved);
       setShowWelcome(false);
     }
-    if (!localStorage.getItem('karaoq_seen_tips')) setShowTipsBanner(true);
+    try {
+      if (!localStorage.getItem('karaoq_seen_tips')) setShowTipsBanner(true);
+    } catch {
+      /* private mode — show the first-run banner, harmless */
+      setShowTipsBanner(true);
+    }
   }, []);
+
+  // Persist the name wherever the singer sets it — welcome overlay or the inline
+  // search field — so a reload or a return trip skips the prompt. The helper is
+  // guarded + cookie-backed for the flaky mobile/in-app storage singers hit.
+  React.useEffect(() => {
+    setStoredName(NAME_STORAGE_KEY, username);
+  }, [username]);
 
   function handleWelcomeSubmit() {
     const name = welcomeName.trim();
     if (!name) return;
     setUsername(name);
-    localStorage.setItem('karaoq_username', name);
     setShowWelcome(false);
   }
 
@@ -213,7 +227,6 @@ const Sing = (): React.ReactElement => {
 
   function handleSongAdded(entry: QueueEntry) {
     setQueue([...queue, entry]);
-    localStorage.setItem('karaoq_username', username.trim());
   }
 
   async function sendReaction(emoji: string) {
