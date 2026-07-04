@@ -337,6 +337,7 @@
   "host.confirm.body": "Alisin si “{title}” ni {name}?",
   "host.confirm.remove": "Alisin",
   "host.toast.displayOpened": "Nabuksan ang display window",
+  "host.toast.displayClosedFallback": "Sarado ang display — pinapatugtog sa screen na ito",
   "host.toast.cohostCopied": "Nakopya ang co-host link",
   "host.toast.reactionsOn": "Naka-on ang reactions",
   "host.toast.reactionsOff": "Naka-off ang reactions",

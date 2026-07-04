@@ -5,6 +5,7 @@ import QrJoinCard from './QrJoinCard';
 import getRoom from '../app/queue/getRoom';
 import postVideoEnded from '../app/queue/postVideoEnded';
 import postDisplaySeen from '../app/queue/postDisplaySeen';
+import postDisplayGone from '../app/queue/postDisplayGone';
 import reportDisplayPaused from '../app/queue/setDisplayPaused';
 import setPlaying from '../app/queue/setPlaying';
 import { normalizeRoomId } from '../lib/roomCode';
@@ -18,7 +19,7 @@ import { renderWithHeart } from '../lib/i18n/renderWithHeart';
 import LanguageSwitcher from './LanguageSwitcher';
 
 const POLL_INTERVAL = 1500;
-// Liveness heartbeat cadence; the server treats a display as gone after ~25s
+// Liveness heartbeat cadence; the server treats a display as gone after ~75s
 // without one and clears any playback that display was supposed to be running.
 const HEARTBEAT_INTERVAL = 10_000;
 
@@ -113,9 +114,17 @@ const Display = (): React.ReactElement => {
       if (document.visibilityState === 'visible') beat();
     };
     document.addEventListener('visibilitychange', onVisibilityChange);
+
+    // Cross-device backstop: when this tab is torn down, beacon the server so a
+    // host on another device can fall back without waiting out the heartbeat
+    // TTL. A same-browser host detects the close far faster via the window
+    // handle it kept from window.open, so this mainly serves remote displays.
+    const onPageHide = () => postDisplayGone(joinCode);
+    window.addEventListener('pagehide', onPageHide);
     return () => {
       stopTicker();
       document.removeEventListener('visibilitychange', onVisibilityChange);
+      window.removeEventListener('pagehide', onPageHide);
     };
   }, [joinCode, error]);
 

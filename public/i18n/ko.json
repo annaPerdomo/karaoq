@@ -337,6 +337,7 @@
   "host.confirm.body": "{name}님의 “{title}”을(를) 삭제할까요?",
   "host.confirm.remove": "삭제",
   "host.toast.displayOpened": "디스플레이 창이 열렸어요",
+  "host.toast.displayClosedFallback": "디스플레이가 닫힘 — 이 화면에서 재생 중",
   "host.toast.cohostCopied": "공동 호스트 링크가 복사됐어요",
   "host.toast.reactionsOn": "리액션 활성화됨",
   "host.toast.reactionsOff": "리액션 비활성화됨",

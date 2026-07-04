@@ -337,6 +337,7 @@
   "host.confirm.body": "Hapus “{title}” oleh {name}?",
   "host.confirm.remove": "Hapus",
   "host.toast.displayOpened": "Jendela tampilan dibuka",
+  "host.toast.displayClosedFallback": "Layar ditutup — memutar di layar ini",
   "host.toast.cohostCopied": "Tautan co-host disalin",
   "host.toast.reactionsOn": "Reaksi diaktifkan",
   "host.toast.reactionsOff": "Reaksi dinonaktifkan",

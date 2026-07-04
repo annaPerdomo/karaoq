@@ -337,6 +337,7 @@
   "host.confirm.body": "{name} の「{title}」を削除する？",
   "host.confirm.remove": "削除",
   "host.toast.displayOpened": "表示ウィンドウを開きました",
+  "host.toast.displayClosedFallback": "ディスプレイが閉じられました — この画面で再生します",
   "host.toast.cohostCopied": "共同ホストのリンクをコピーしました",
   "host.toast.reactionsOn": "リアクションを有効にしました",
   "host.toast.reactionsOff": "リアクションを無効にしました",

@@ -56,6 +56,11 @@ import { renderWithHeart } from "../lib/i18n/renderWithHeart";
 import LanguageSwitcher from "./LanguageSwitcher";
 
 const POLL_INTERVAL = 3000;
+// Backstop only: how long a cast display's heartbeat can stay stale before the
+// host falls back to playing on its own screen. Long enough (a couple of poll
+// cycles) to ride out a cross-device display reload. Same-browser displays are
+// caught far faster by the window-handle watcher, so this rarely comes into play.
+const DISPLAY_GONE_CONFIRM_MS = 6000;
 
 function playModeStorageKey(joinCode: string): string {
   return `karaoq_play_mode_${joinCode}`;
@@ -592,6 +597,21 @@ const Host = ({
   const [displayPaused, setDisplayPaused] = React.useState(false);
   // A display page has heartbeated recently (server-computed on each GET).
   const [displayConnected, setDisplayConnected] = React.useState(false);
+  // Auto-fallback bookkeeping (see the effects below). displayWindowRef holds
+  // the window.open handle for a display this host opened — the fast, reliable
+  // close signal. displaySeenLiveRef gates the slower server-heartbeat path so
+  // the startup gap before the first heartbeat can't trip it; displayGoneTimer
+  // is that path's confirm delay, which absorbs a cross-device display reload.
+  const displayWindowRef = React.useRef<Window | null>(null);
+  // Bumped whenever we open a display window, so the handle watcher re-arms even
+  // when we were already in TV mode (e.g. a restored session hits "reopen").
+  const [displayWindowNonce, setDisplayWindowNonce] = React.useState(0);
+  const displaySeenLiveRef = React.useRef(false);
+  const displayGoneTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isPlayingRef = React.useRef(false);
+  React.useEffect(() => {
+    isPlayingRef.current = isPlaying;
+  }, [isPlaying]);
   const playsVideoHere =
     isPlaying && !!serverPlayToken && serverPlayToken === ownedPlayToken;
 
@@ -769,9 +789,13 @@ const Host = ({
     setModeMenuOpen(false);
   }
 
-  // Choose "separate TV" — open (or re-open) the display window to cast.
+  // Choose "separate TV" — open (or re-open) the display window to cast. Keep
+  // the window handle: its `.closed` is the fast, reliable signal that the host
+  // watches to fall back to this screen the instant the display is closed.
   function openTvDisplay() {
-    window.open(`/display/${joinCode}`, "_blank");
+    displayWindowRef.current = window.open(`/display/${joinCode}`, "_blank");
+    fallbackFiredRef.current = false;
+    setDisplayWindowNonce((n) => n + 1);
     setPlayMode("tv");
     rememberMode("tv");
     setModeMenuOpen(false);
@@ -887,6 +911,90 @@ const Host = ({
       }
     }, POLL_INTERVAL);
   }, [joinCode, error, isPaused]);
+
+  // ── Auto-fallback to "this screen" when a cast display disappears. Casting
+  // to a dead TV strands the host on a "playing on another screen" panel for a
+  // song that isn't playing anywhere; switching the room back to here-mode keeps
+  // it usable. Co-hosts (remote) never own the mode, so they sit this out.
+  function cancelDisplayFallback() {
+    if (displayGoneTimer.current) {
+      clearTimeout(displayGoneTimer.current);
+      displayGoneTimer.current = null;
+    }
+  }
+
+  // The actual switch back, shared by both detection paths. Guarded to fire
+  // exactly once per TV session so overlapping signals (handle close + stale
+  // heartbeat) can't double-switch or double-toast.
+  const fallbackFiredRef = React.useRef(false);
+  function runDisplayFallback() {
+    if (fallbackFiredRef.current) return;
+    fallbackFiredRef.current = true;
+    cancelDisplayFallback();
+    displayWindowRef.current = null;
+    displaySeenLiveRef.current = false;
+    // Flip everything in one synchronous batch so the panel transitions
+    // straight from "playing on the TV" to "ready to play here" — no flash
+    // through a stale "playing on another device" frame while an async stop
+    // resolves. We clear the local playing flag up front, then persist it.
+    if (isPlayingRef.current) {
+      setIsPlaying(false);
+      setServerPlayToken(null);
+      stopSong();
+    }
+    setPlayMode("here");
+    rememberMode("here");
+    showToast(t("host.toast.displayClosedFallback"));
+  }
+
+  // Fast path: watch the window.open handle for a display this host opened.
+  // `.closed` flips true the instant the window/tab is closed and — unlike an
+  // unload-time signal — stays false across a reload, so we react immediately
+  // with no confirm delay and no network round-trip. This covers the common
+  // laptop→TV case; a display opened by URL on another device leaves no handle
+  // and relies on the server-heartbeat path below.
+  React.useEffect(() => {
+    if (remote || !tvMode || !playModeRestored) return;
+    if (!displayWindowRef.current) return;
+    const check = () => {
+      if (displayWindowRef.current && displayWindowRef.current.closed) {
+        runDisplayFallback();
+      }
+    };
+    const interval = setInterval(check, 400);
+    // React instantly when the host tab regains focus — the user just closed
+    // the display and switched back — instead of waiting for the next tick.
+    window.addEventListener("focus", check);
+    document.addEventListener("visibilitychange", check);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("focus", check);
+      document.removeEventListener("visibilitychange", check);
+    };
+  }, [remote, tvMode, playModeRestored, displayWindowNonce]);
+
+  // Backstop: the server heartbeat going stale (covers a cross-device display,
+  // or one whose handle we lost to a host reload). A couple of poll cycles of
+  // confirm ride out a display reload before we give up on it.
+  React.useEffect(() => {
+    if (remote || !tvMode || !playModeRestored) {
+      displaySeenLiveRef.current = false;
+      cancelDisplayFallback();
+      return;
+    }
+    if (displayConnected) {
+      displaySeenLiveRef.current = true;
+      fallbackFiredRef.current = false; // a live display — arm the fallback again
+      cancelDisplayFallback();
+      return;
+    }
+    // Ignore the startup gap before the first heartbeat, and never stack timers.
+    if (!displaySeenLiveRef.current || displayGoneTimer.current) return;
+    displayGoneTimer.current = setTimeout(() => {
+      displayGoneTimer.current = null;
+      runDisplayFallback();
+    }, DISPLAY_GONE_CONFIRM_MS);
+  }, [remote, tvMode, playModeRestored, displayConnected]);
 
   // Immediately re-pull after a host moderation action on the boards.
   const refreshBoards = React.useCallback(async () => {

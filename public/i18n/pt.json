@@ -337,6 +337,7 @@
   "host.confirm.body": "Remover “{title}” de {name}?",
   "host.confirm.remove": "Remover",
   "host.toast.displayOpened": "Janela de exibição aberta",
+  "host.toast.displayClosedFallback": "Tela fechada — reproduzindo nesta tela",
   "host.toast.cohostCopied": "Link de coanfitrião copiado",
   "host.toast.reactionsOn": "Reações ativadas",
   "host.toast.reactionsOff": "Reações desativadas",

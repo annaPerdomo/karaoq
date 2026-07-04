@@ -337,6 +337,7 @@
   "host.confirm.body": "Odebrat „{title}“ od {name}?",
   "host.confirm.remove": "Odebrat",
   "host.toast.displayOpened": "Okno zobrazení otevřeno",
+  "host.toast.displayClosedFallback": "Displej zavřen — přehrává se na této obrazovce",
   "host.toast.cohostCopied": "Odkaz pro spoluhostitele zkopírován",
   "host.toast.reactionsOn": "Reakce zapnuté",
   "host.toast.reactionsOff": "Reakce vypnuté",
