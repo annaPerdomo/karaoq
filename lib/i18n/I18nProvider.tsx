@@ -1,0 +1,188 @@
+import * as React from 'react';
+
+import { en, Catalog } from './messages';
+import {
+  Locale,
+  DEFAULT_LOCALE,
+  isLocale,
+  matchNavigatorLocale,
+  localeForCountry,
+} from './config';
+
+const STORAGE_KEY = 'karaoq_lang';
+const COUNTRY_KEY = 'karaoq_country'; // shared with useCountry's geo cache
+
+// Cache fetched catalogs for the session so switching back and forth never
+// re-hits the network. English is bundled; the rest are CDN-cached JSON.
+const catalogCache: Partial<Record<Locale, Catalog>> = { en };
+
+interface I18nValue {
+  locale: Locale;
+  setLocale: (locale: Locale) => void;
+  /** Translate a key, interpolating {vars}. Falls back to English, then key. */
+  t: (key: string, vars?: Record<string, string | number>) => string;
+  /** Plural-aware translate: resolves {key}.{Intl category} with .other fallback. */
+  tn: (key: string, count: number, vars?: Record<string, string | number>) => string;
+}
+
+const I18nContext = React.createContext<I18nValue | null>(null);
+
+function interpolate(
+  template: string,
+  vars?: Record<string, string | number>
+): string {
+  if (!vars) return template;
+  return template.replace(/\{(\w+)\}/g, (m, name) =>
+    name in vars ? String(vars[name]) : m
+  );
+}
+
+/**
+ * Resolve the visitor's UI locale from the fastest available signals, or null
+ * if none of them tell us anything. Returning null (rather than English) lets
+ * the caller tell "the browser is genuinely set to English" apart from "no
+ * signal at all" — only the latter should fall through to a country guess, so a
+ * visitor whose device is in English keeps English even abroad.
+ */
+function readInitialLocale(): Locale | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const override = new URLSearchParams(window.location.search).get('lang');
+    if (isLocale(override)) return override;
+  } catch {}
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (isLocale(stored)) return stored;
+  } catch {}
+  // The device/browser language — the same preference that decides what
+  // language they read other sites in. This wins over any location guess.
+  const nav = matchNavigatorLocale(
+    navigator.languages ?? (navigator.language ? [navigator.language] : [])
+  );
+  if (nav) return nav;
+  // Cached geo country from a prior visit (useCountry writes this).
+  try {
+    const raw = localStorage.getItem(COUNTRY_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as { country?: string };
+      const geo = localeForCountry(parsed.country);
+      if (geo) return geo;
+    }
+  } catch {}
+  return null;
+}
+
+async function loadCatalog(locale: Locale): Promise<Catalog> {
+  if (catalogCache[locale]) return catalogCache[locale]!;
+  try {
+    const res = await fetch(`/i18n/${locale}.json`);
+    if (!res.ok) throw new Error(String(res.status));
+    const data = (await res.json()) as Catalog;
+    catalogCache[locale] = data;
+    return data;
+  } catch {
+    // Network/parse failure — fall back to English so the UI stays usable.
+    return en;
+  }
+}
+
+export function I18nProvider({ children }: { children: React.ReactNode }): React.ReactElement {
+  // Start from the server-safe default so the first client render matches SSR;
+  // the real locale is applied in the effect below to avoid hydration drift.
+  const [locale, setLocaleState] = React.useState<Locale>(DEFAULT_LOCALE);
+  const [catalog, setCatalog] = React.useState<Catalog>(en);
+
+  const applyLocale = React.useCallback((next: Locale) => {
+    setLocaleState(next);
+    if (typeof document !== 'undefined') document.documentElement.lang = next;
+    if (next === 'en') {
+      setCatalog(en);
+      return;
+    }
+    loadCatalog(next).then((c) => {
+      // Ignore a stale load if the locale changed again meanwhile.
+      setLocaleState((cur) => {
+        if (cur === next) setCatalog(c);
+        return cur;
+      });
+    });
+  }, []);
+
+  // Resolve the visitor's locale after mount. A URL/stored/browser-language
+  // signal wins outright (so an English device stays English anywhere). Only
+  // when there's no such signal do we guess from the country via /api/geo —
+  // that's what localizes a visitor whose browser language we don't support.
+  React.useEffect(() => {
+    const resolved = readInitialLocale();
+    if (resolved) {
+      applyLocale(resolved);
+      return;
+    }
+    // No explicit/browser signal — try geo once as a last resort.
+    let cancelled = false;
+    fetch('/api/geo')
+      .then((r) => r.json())
+      .then((d: { country: string | null }) => {
+        if (cancelled) return;
+        const geo = localeForCountry(d.country);
+        if (geo) applyLocale(geo);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [applyLocale]);
+
+  const setLocale = React.useCallback(
+    (next: Locale) => {
+      try {
+        localStorage.setItem(STORAGE_KEY, next);
+      } catch {}
+      applyLocale(next);
+    },
+    [applyLocale]
+  );
+
+  const value = React.useMemo<I18nValue>(() => {
+    const t = (key: string, vars?: Record<string, string | number>): string => {
+      const template = catalog[key] ?? en[key as keyof typeof en] ?? key;
+      return interpolate(template, vars);
+    };
+    const tn = (
+      key: string,
+      count: number,
+      vars?: Record<string, string | number>
+    ): string => {
+      let category = 'other';
+      try {
+        category = new Intl.PluralRules(locale).select(count);
+      } catch {}
+      const withCount = { count, ...vars };
+      const primary = `${key}.${category}`;
+      if (catalog[primary] ?? en[primary as keyof typeof en]) {
+        return t(primary, withCount);
+      }
+      return t(`${key}.other`, withCount);
+    };
+    return { locale, setLocale, t, tn };
+  }, [catalog, locale, setLocale]);
+
+  return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
+}
+
+export function useT(): I18nValue {
+  const ctx = React.useContext(I18nContext);
+  if (!ctx) {
+    // Defensive fallback so a component rendered outside the provider (tests,
+    // storybook) still returns English instead of throwing.
+    const t = (key: string, vars?: Record<string, string | number>) =>
+      interpolate(en[key as keyof typeof en] ?? key, vars);
+    return {
+      locale: DEFAULT_LOCALE,
+      setLocale: () => {},
+      t,
+      tn: (key, count, vars) => t(`${key}.other`, { count, ...vars }),
+    };
+  }
+  return ctx;
+}
