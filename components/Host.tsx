@@ -589,6 +589,15 @@ const Host = ({
   const playsVideoHere =
     isPlaying && !!serverPlayToken && serverPlayToken === ownedPlayToken;
 
+  // Here-mode only: whether the host's own YouTube player is currently playing,
+  // so the transport can show a real Pause/Play control (parity with TV mode)
+  // instead of leaving the host to hunt for YouTube's own chrome. Starts
+  // optimistically true (the room says it's playing); the watchdog below flips
+  // it to false if autoplay was actually blocked. herePlayingRef mirrors it for
+  // the watchdog and the postMessage listener.
+  const [hereVideoPlaying, setHereVideoPlaying] = React.useState(true);
+  const herePlayingRef = React.useRef(false);
+
   React.useEffect(() => {
     if (!joinCode || remote) return;
     setOwnedPlayToken(readStoredPlayToken(joinCode));
@@ -938,11 +947,21 @@ const Host = ({
       if (e.origin !== "https://www.youtube.com") return;
       try {
         const data = typeof e.data === "string" ? JSON.parse(e.data) : e.data;
-        if (
-          (data.event === "onStateChange" && data.info === 0) ||
-          (data.event === "infoDelivery" && data.info?.playerState === 0)
-        ) {
+        const state =
+          data.event === "onStateChange"
+            ? data.info
+            : data.event === "infoDelivery"
+              ? data.info?.playerState
+              : undefined;
+        if (state === 0) {
           onVideoEndedRef.current();
+        } else if (state === 1 || state === 3) {
+          // Playing or buffering.
+          herePlayingRef.current = true;
+          setHereVideoPlaying(true);
+        } else if (state === 2) {
+          // Paused (via YouTube's own controls or our button).
+          setHereVideoPlaying(false);
         }
       } catch {}
     }
@@ -950,6 +969,34 @@ const Host = ({
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
   }, [playsVideoHere, tvMode, remote]);
+
+  // Here-mode autoplay watchdog: assume playing (the room says so), but if
+  // YouTube never confirms shortly after the player (re)mounts, autoplay was
+  // blocked — flip the control to Play so the host can start it with one tap.
+  React.useEffect(() => {
+    if (remote || tvMode || !playsVideoHere) return;
+    herePlayingRef.current = false;
+    setHereVideoPlaying(true);
+    const timer = setTimeout(() => {
+      if (!herePlayingRef.current) setHereVideoPlaying(false);
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [playsVideoHere, tvMode, remote, activeIndex]);
+
+  // Pause/resume the host's own player. A click is the user gesture that lets a
+  // blocked player start with sound (same trick the display uses on tap).
+  function toggleHereVideo() {
+    const playing = hereVideoPlaying;
+    videoRef.current?.contentWindow?.postMessage(
+      JSON.stringify({
+        event: "command",
+        func: playing ? "pauseVideo" : "playVideo",
+        args: [],
+      }),
+      "https://www.youtube.com",
+    );
+    setHereVideoPlaying(!playing);
+  }
 
   // All-in-one mode: subscribe to YouTube events when iframe loads
   function handleIframeLoad() {
@@ -1617,9 +1664,26 @@ const Host = ({
                       </button>
                     </>
                   ) : playsVideoHere ? (
-                    // Video is playing on this device in all-in-one mode —
-                    // YouTube's own controls handle pause, so no button here.
-                    null
+                    // Video plays on this device. Give a real Pause/Play toggle
+                    // plus a Stop (parity with TV mode) so the host isn't left
+                    // hunting for YouTube's own chrome — and so a blocked
+                    // autoplay has a one-tap recovery.
+                    <>
+                      <button
+                        className={`${styles.tBtn} ${styles.tPause}`}
+                        onClick={toggleHereVideo}
+                        title={hereVideoPlaying ? "Pause" : "Play"}
+                      >
+                        {hereVideoPlaying ? Icons.pause : Icons.resume}
+                      </button>
+                      <button
+                        className={`${styles.tBtn} ${styles.tStop}`}
+                        onClick={stopSong}
+                        title="Stop"
+                      >
+                        {Icons.stop}
+                      </button>
+                    </>
                   ) : (
                     // Nothing playing here: either idle, or the song is live on
                     // another host device and this is the takeover control.
