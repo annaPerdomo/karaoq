@@ -967,6 +967,30 @@
   56% { transform: scale(1); }
 }
 
+/* ─── Mobile: one page-level scroll ───
+   On phones the pinned name/search block plus the fixed cheer drawer left
+   only a sliver of inner scroll, and the room boards inside it were barely
+   reachable. Collapse the nested scroll areas so the parent (the Sing page's
+   search panel, the host's search overlay, or the post modal) scrolls the
+   whole thing as one page. */
+@media (max-width: 640px) {
+  .container {
+    flex: 0 0 auto;
+    overflow: visible;
+  }
+
+  .discovery {
+    flex: 0 0 auto;
+    height: auto;
+    overflow-y: visible;
+  }
+
+  .results {
+    flex: 0 0 auto;
+    overflow-y: visible;
+  }
+}
+
 /* ─── Confirm modal ─── */
 .overlay {
   position: fixed;

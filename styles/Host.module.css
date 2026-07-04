@@ -1500,10 +1500,13 @@
   }
 
   /* Song search gets the whole screen — inside the stacked sidebar it was
-     fighting the on-screen keyboard for a sliver of space. */
+     fighting the on-screen keyboard for a sliver of space. The overlay owns
+     the scrolling on phones, where SongSearch stops nesting its own. */
   .searchOverlay {
     position: fixed;
     z-index: 400;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   .settingsPopover {
