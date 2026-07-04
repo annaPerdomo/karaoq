@@ -67,6 +67,7 @@ describe("POST /api/queue/[id] - Room creation", () => {
       activeVideoIndex: 0,
       isPlaying: false,
       reactionsEnabled: true,
+      playMode: "here",
       createdAt: expect.any(Date),
       lastActivity: expect.any(Date),
     });
@@ -76,17 +77,53 @@ describe("POST /api/queue/[id] - Room creation", () => {
       activeVideoIndex: 0,
       isPlaying: false,
       reactionsEnabled: true,
+      playMode: "here",
       createdAt: expect.any(Date),
       lastActivity: expect.any(Date),
     });
   });
 
-  it("returns existing room with isPlaying reset to false", async () => {
+  it("resets isPlaying when the device that was playing reconnects", async () => {
+    // Its page reloaded, so the playback died with it — token proves identity
     const existing: Room = {
       id: "ABC12",
       queue: [{ id: "e1", userName: "Anna", songTitle: "Song", videoId: "v1" }],
       activeVideoIndex: 0,
       isPlaying: true,
+      reactionsEnabled: true,
+      playToken: "tok-owner",
+    };
+    mockCollection.findOne.mockResolvedValue(existing);
+    mockCollection.updateOne.mockResolvedValue({ modifiedCount: 1 });
+
+    const req = createMockReq({
+      method: "POST",
+      query: { id: "ABC12" },
+      headers: { "x-play-token": "tok-owner" },
+    });
+    const res = createRes();
+    await handler(req, res);
+
+    expect(res.getStatus()).toBe(200);
+    expect((res.getBody() as Room).isPlaying).toBe(false);
+    expect(mockCollection.updateOne).toHaveBeenCalledWith(
+      { id: "ABC12" },
+      {
+        $set: { isPlaying: false, lastActivity: expect.any(Date) },
+        $unset: { playToken: "" },
+      }
+    );
+  });
+
+  it("does not reset isPlaying when a different host device connects", async () => {
+    // The song is playing on another device's screen — joining must not cut it
+    const existing: Room = {
+      id: "ABC12",
+      queue: [{ id: "e1", userName: "Anna", songTitle: "Song", videoId: "v1" }],
+      activeVideoIndex: 0,
+      isPlaying: true,
+      reactionsEnabled: true,
+      playToken: "tok-owner",
     };
     mockCollection.findOne.mockResolvedValue(existing);
     mockCollection.updateOne.mockResolvedValue({ modifiedCount: 1 });
@@ -96,10 +133,66 @@ describe("POST /api/queue/[id] - Room creation", () => {
     await handler(req, res);
 
     expect(res.getStatus()).toBe(200);
-    expect((res.getBody() as Room).isPlaying).toBe(false);
+    expect((res.getBody() as Room).isPlaying).toBe(true);
     expect(mockCollection.updateOne).toHaveBeenCalledWith(
       { id: "ABC12" },
-      { $set: { isPlaying: false, lastActivity: expect.any(Date) } }
+      { $set: { lastActivity: expect.any(Date) } }
+    );
+  });
+
+  it("does not reset isPlaying for a stale token from an older song", async () => {
+    const existing: Room = {
+      id: "ABC12",
+      queue: [{ id: "e1", userName: "Anna", songTitle: "Song", videoId: "v1" }],
+      activeVideoIndex: 0,
+      isPlaying: true,
+      reactionsEnabled: true,
+      playToken: "tok-current-owner",
+    };
+    mockCollection.findOne.mockResolvedValue(existing);
+    mockCollection.updateOne.mockResolvedValue({ modifiedCount: 1 });
+
+    const req = createMockReq({
+      method: "POST",
+      query: { id: "ABC12" },
+      headers: { "x-play-token": "tok-from-last-week" },
+    });
+    const res = createRes();
+    await handler(req, res);
+
+    expect(res.getStatus()).toBe(200);
+    expect((res.getBody() as Room).isPlaying).toBe(true);
+  });
+
+  it("keeps isPlaying untouched when the room plays on a separate screen", async () => {
+    // Even the owner's token must not reset a TV room — playback lives on the
+    // display device, not the reconnecting host page.
+    const existing: Room = {
+      id: "ABC12",
+      queue: [{ id: "e1", userName: "Anna", songTitle: "Song", videoId: "v1" }],
+      activeVideoIndex: 0,
+      isPlaying: true,
+      reactionsEnabled: true,
+      playMode: "tv",
+      playToken: "tok-owner",
+    };
+    mockCollection.findOne.mockResolvedValue(existing);
+    mockCollection.updateOne.mockResolvedValue({ modifiedCount: 1 });
+
+    const req = createMockReq({
+      method: "POST",
+      query: { id: "ABC12" },
+      headers: { "x-play-token": "tok-owner" },
+    });
+    const res = createRes();
+    await handler(req, res);
+
+    expect(res.getStatus()).toBe(200);
+    // A host (re)connecting must not stop what the display is playing
+    expect((res.getBody() as Room).isPlaying).toBe(true);
+    expect(mockCollection.updateOne).toHaveBeenCalledWith(
+      { id: "ABC12" },
+      { $set: { lastActivity: expect.any(Date) } }
     );
   });
 

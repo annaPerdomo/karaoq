@@ -28,12 +28,35 @@ export default async function handler(
         // Custom code already taken — tell the client to pick another
         res.status(409).json({ code: 409, message: "Room code already in use." });
       } else if (existing) {
-        // Reset play state whenever host reconnects — they control when songs start
-        await collection.updateOne(
-          { id: roomId },
-          { $set: { isPlaying: false, lastActivity: new Date() } }
-        );
-        res.status(200).json({ ...existing, isPlaying: false });
+        // Only reset play state when the device that was PLAYING the current
+        // song reconnects (its stored token matches the room's) — that page
+        // was the playback surface, so the song died with it. Any other host
+        // connecting (second device, co-host promotion, new phone) must never
+        // cut what's already playing. TV rooms never reset: playback lives on
+        // the display, not on whichever host page just loaded.
+        const priorToken = req.headers["x-play-token"];
+        const ownerReturned =
+          existing.playMode !== "tv" &&
+          (existing.isPlaying ?? false) &&
+          typeof priorToken === "string" &&
+          priorToken.length > 0 &&
+          existing.playToken === priorToken;
+        if (ownerReturned) {
+          await collection.updateOne(
+            { id: roomId },
+            {
+              $set: { isPlaying: false, lastActivity: new Date() },
+              $unset: { playToken: "" },
+            }
+          );
+          res.status(200).json({ ...existing, isPlaying: false });
+        } else {
+          await collection.updateOne(
+            { id: roomId },
+            { $set: { lastActivity: new Date() } }
+          );
+          res.status(200).json(existing);
+        }
       } else if (!rateLimit(req, "room-create", 10, 300_000)) {
         res.status(429).json({ code: 429, message: "Too many rooms created, try again later." });
       } else {
@@ -44,6 +67,9 @@ export default async function handler(
           activeVideoIndex: 0,
           isPlaying: false,
           reactionsEnabled: true,
+          // Matches the host UI default; switching to a separate screen
+          // updates it via the mode endpoint.
+          playMode: "here",
           createdAt: now,
           lastActivity: now,
         };

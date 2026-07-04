@@ -30,21 +30,42 @@ import updatePosition from "../app/queue/updatePosition";
 import reorderQueue from "../app/queue/reorderQueue";
 import removeFromQueue from "../app/queue/removeFromQueue";
 import setPlaying from "../app/queue/setPlaying";
+import savePlayMode from "../app/queue/setPlayMode";
 import { broadcastRoomState, onVideoEnded } from "../app/queue/roomChannel";
 import setReactionsEnabled from "../app/queue/setReactionsEnabled";
 import postReaction from "../app/queue/postReaction";
 import { REACTION_COOLDOWN_MS } from "../app/queue/cheerConstants";
 import { startSessionTracking } from "../app/queue/trackSession";
 import { startVisiblePolling } from "../app/queue/pollWhileVisible";
-import { QueueEntry, Reaction, SingWithMePost, SuggestedSong } from "../pages/api/types";
+import {
+  PlayMode,
+  QueueEntry,
+  Reaction,
+  Room,
+  SingWithMePost,
+  SuggestedSong,
+} from "../pages/api/types";
 import { v4 as uuidv4 } from "uuid";
 
 const POLL_INTERVAL = 3000;
 
-type PlayMode = "here" | "tv";
-
 function playModeStorageKey(joinCode: string): string {
   return `karaoq_play_mode_${joinCode}`;
+}
+
+// Token minted when THIS device starts a song in "here" mode; matches
+// Room.playToken while our playback is the live one. Persisted so a reload
+// can prove to the server that the previous playback surface was ours.
+function playTokenStorageKey(joinCode: string): string {
+  return `karaoq_play_token_${joinCode}`;
+}
+
+function readStoredPlayToken(joinCode: string): string | null {
+  try {
+    return localStorage.getItem(playTokenStorageKey(joinCode));
+  } catch {
+    return null;
+  }
 }
 
 function qrHiddenStorageKey(joinCode: string): string {
@@ -536,6 +557,19 @@ const Host = ({
   const [playModeRestored, setPlayModeRestored] = React.useState(false);
   const tvMode = playMode === "tv";
 
+  // ─── Which device owns the current playback (here-mode only). We render the
+  // video iff the room's playToken is one we minted; other host devices show a
+  // status panel instead of double-playing the song.
+  const [ownedPlayToken, setOwnedPlayToken] = React.useState<string | null>(null);
+  const [serverPlayToken, setServerPlayToken] = React.useState<string | null>(null);
+  const playsVideoHere =
+    isPlaying && !!serverPlayToken && serverPlayToken === ownedPlayToken;
+
+  React.useEffect(() => {
+    if (!joinCode || remote) return;
+    setOwnedPlayToken(readStoredPlayToken(joinCode));
+  }, [joinCode, remote]);
+
   const [hostName, setHostName] = React.useState("");
   const [showWelcome, setShowWelcome] = React.useState(true);
   const [welcomeName, setWelcomeName] = React.useState("");
@@ -605,6 +639,8 @@ const Host = ({
   // Restore where this device last played video for this room, so a refresh
   // keeps the host's setup instead of re-asking. Runs the moment we know the
   // room code — independent of room loading — so the chooser never flashes.
+  // The room's server-stored playMode (applied once the room loads) wins over
+  // this: it's what lets a brand-new host device pick up an existing TV setup.
   React.useEffect(() => {
     if (remote) {
       setPlayModeRestored(true);
@@ -674,12 +710,17 @@ const Host = ({
     });
   }
 
+  // Persist the mode on the room (so every host device agrees) and in
+  // localStorage (fallback for rooms that predate server-stored modes).
   function rememberMode(mode: PlayMode) {
-    if (joinCode) {
-      try {
-        localStorage.setItem(playModeStorageKey(joinCode), mode);
-      } catch {}
-    }
+    if (!joinCode) return;
+    try {
+      localStorage.setItem(playModeStorageKey(joinCode), mode);
+    } catch {}
+    // Hold polling briefly so an in-flight poll with the old mode can't
+    // flip the pill back before the server write lands.
+    pausePolling();
+    savePlayMode(joinCode, mode);
   }
 
   // Choose "this screen" — the simplest setup, nothing else to open.
@@ -743,27 +784,37 @@ const Host = ({
     reactionTimers.current.push(timer);
   }
 
+  // Apply a fresh server snapshot to local state. Non-remote hosts also adopt
+  // the room's playMode so a host device that joins (or rejoins) an existing
+  // TV-mode room acts as a remote instead of defaulting to playing locally.
+  function applyRoomState(room: Room) {
+    setQueue(room.queue);
+    setSingWithMe(room.singWithMe ?? []);
+    setSuggestions(room.suggestions ?? []);
+    setActiveIndex(room.activeVideoIndex);
+    setIsPlaying(room.isPlaying ?? false);
+    setServerPlayToken(room.playToken ?? null);
+    setReactionsOn(room.reactionsEnabled ?? true);
+    if (!remote && room.playMode) setPlayMode(room.playMode);
+  }
+
   React.useEffect(() => {
     if (!joinCode) return;
 
     let cancelled = false;
 
     async function init() {
-      // A co-host only reads the room — never create it (createRoom resets
-      // isPlaying, which would stop the song on the real host screen).
-      if (!remote) await createRoom(joinCode!);
+      // A co-host only reads the room — never create it. Sending our stored
+      // play token lets the server reset play state only when WE were the
+      // playback surface and just reloaded (the song died with the page).
+      if (!remote) await createRoom(joinCode!, readStoredPlayToken(joinCode!));
       const room = await getRoom(joinCode!);
       if (cancelled) return;
       if (room) {
         // Mark this as the device's current room so the landing page offers
         // "resume" instead of a duplicate. Co-hosts don't own the room.
         if (!remote) rememberLastHostedRoom(joinCode!);
-        setQueue(room.queue);
-        setSingWithMe(room.singWithMe ?? []);
-        setSuggestions(room.suggestions ?? []);
-        setActiveIndex(room.activeVideoIndex);
-        setIsPlaying(room.isPlaying ?? false);
-        setReactionsOn(room.reactionsEnabled ?? true);
+        applyRoomState(room);
         processReactions(room.reactions, false);
         setLoading(false);
       } else {
@@ -790,12 +841,7 @@ const Host = ({
     return startVisiblePolling(async () => {
       const room = await getRoom(joinCode);
       if (room && !isPausedRef.current) {
-        setQueue(room.queue);
-        setSingWithMe(room.singWithMe ?? []);
-        setSuggestions(room.suggestions ?? []);
-        setActiveIndex(room.activeVideoIndex);
-        setIsPlaying(room.isPlaying ?? false);
-        setReactionsOn(room.reactionsEnabled ?? true);
+        applyRoomState(room);
         processReactions(room.reactions);
       }
     }, POLL_INTERVAL);
@@ -856,9 +902,11 @@ const Host = ({
     }
   };
 
-  // All-in-one mode: listen for YouTube postMessage when the video ends
+  // All-in-one mode: listen for YouTube postMessage when the video ends.
+  // Only the device actually playing the video (playsVideoHere) listens —
+  // other host pages have no player and must not advance the queue.
   React.useEffect(() => {
-    if (remote || !isPlaying || tvMode) return;
+    if (remote || !playsVideoHere || tvMode) return;
 
     function onMessage(e: MessageEvent) {
       if (e.origin !== "https://www.youtube.com") return;
@@ -875,7 +923,7 @@ const Host = ({
 
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [isPlaying, tvMode, remote]);
+  }, [playsVideoHere, tvMode, remote]);
 
   // All-in-one mode: subscribe to YouTube events when iframe loads
   function handleIframeLoad() {
@@ -885,10 +933,19 @@ const Host = ({
     );
   }
 
-  // TV mode: listen for video-ended from Display via BroadcastChannel
+  // TV mode: the display advances the room server-side when a video ends,
+  // then pings same-browser host tabs over BroadcastChannel. Refetch instead
+  // of advancing again — advancing here too would double-skip. Cross-device
+  // hosts don't get the ping and pick the change up on the next poll.
   React.useEffect(() => {
     if (remote || !joinCode || !tvMode) return;
-    return onVideoEnded(joinCode, () => onVideoEndedRef.current());
+    return onVideoEnded(joinCode, async () => {
+      const room = await getRoom(joinCode);
+      if (room && !isPausedRef.current) {
+        applyRoomState(room);
+        processReactions(room.reactions);
+      }
+    });
   }, [joinCode, tvMode, remote]);
 
   async function sendReaction(emoji: string) {
@@ -952,8 +1009,17 @@ const Host = ({
 
   async function startSong() {
     if (!joinCode) return;
-    const ok = await setPlaying(joinCode, true);
+    // Mint a fresh playback token: this device becomes the playback surface.
+    // If another host device was playing, it sees the foreign token on its
+    // next poll and yields — starting here doubles as a clean takeover.
+    const token = uuidv4();
+    const ok = await setPlaying(joinCode, true, token);
     if (ok) {
+      setOwnedPlayToken(token);
+      setServerPlayToken(token);
+      try {
+        localStorage.setItem(playTokenStorageKey(joinCode), token);
+      } catch {}
       setIsPlaying(true);
       broadcast(queue, activeIndex, true);
     }
@@ -963,6 +1029,7 @@ const Host = ({
     if (!joinCode) return;
     const ok = await setPlaying(joinCode, false);
     if (ok) {
+      setServerPlayToken(null);
       setIsPlaying(false);
       broadcast(queue, activeIndex, false);
     }
@@ -1298,7 +1365,7 @@ const Host = ({
                 </button>
               </div>
             ) : /* ── All-in-one mode: video plays here ── */
-            isPlaying ? (
+            playsVideoHere ? (
               <iframe
                 ref={videoRef}
                 key={currentSong.id}
@@ -1308,6 +1375,23 @@ const Host = ({
                 allowFullScreen
                 onLoad={handleIframeLoad}
               />
+            ) : isPlaying ? (
+              /* ── Song is playing on a different host device: show status
+                   instead of double-playing it. Starting it here mints a new
+                   token, so the other device yields — a clean takeover. ── */
+              <div className={styles.songControl}>
+                <div className={styles.liveIndicator}>
+                  <span className={styles.liveDot} />
+                  <span>PLAYING ON ANOTHER HOST DEVICE</span>
+                </div>
+                <p className={styles.controlSinger}>{currentSong.userName}</p>
+                <h2 className={styles.controlSong}>
+                  {decodeHtml(currentSong.songTitle)}
+                </h2>
+                <button className={styles.switchModeLink} onClick={startSong}>
+                  Play it on this screen instead
+                </button>
+              </div>
             ) : (
               <div className={styles.songControl}>
                 <div className={styles.readyLabel}>UP NEXT</div>

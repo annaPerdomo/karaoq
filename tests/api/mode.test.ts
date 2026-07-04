@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextApiResponse } from "next";
-import { Room } from "../../pages/api/types";
 import { createMockReq } from "../helpers/mockRequest";
 
 const mockCollection = {
@@ -21,7 +20,7 @@ vi.mock("mongodb", () => ({
 process.env.MONGODB_URI = "mongodb://test";
 process.env.MONGODB_DB = "test-db";
 
-import handler from "../../pages/api/queue/[id]/position";
+import handler from "../../pages/api/queue/[id]/mode";
 
 function createRes() {
   let statusCode = 200;
@@ -35,17 +34,15 @@ function createRes() {
   return res as unknown as NextApiResponse & { getStatus: () => number; getBody: () => unknown };
 }
 
-describe("POST /api/queue/[id]/position - Advance song position", () => {
+describe("POST /api/queue/[id]/mode - Set play mode", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("updates position and resets isPlaying to false", async () => {
-    const room: Room = { id: "ROOM1", queue: [], activeVideoIndex: 0, isPlaying: true };
-    mockCollection.findOne.mockResolvedValue(room);
-    mockCollection.updateOne.mockResolvedValue({ modifiedCount: 1 });
+  it("stores tv mode on the room", async () => {
+    mockCollection.updateOne.mockResolvedValue({ matchedCount: 1 });
 
     const req = createMockReq({
       method: "POST",
-      query: { id: "ROOM1", activeVideoIndex: "2" },
+      query: { id: "ROOM1", playMode: "tv" },
     });
     const res = createRes();
     await handler(req, res);
@@ -53,31 +50,45 @@ describe("POST /api/queue/[id]/position - Advance song position", () => {
     expect(res.getStatus()).toBe(200);
     expect(mockCollection.updateOne).toHaveBeenCalledWith(
       { id: "ROOM1" },
-      {
-        $set: { activeVideoIndex: 2, isPlaying: false, lastActivity: expect.any(Date) },
-        $unset: { playToken: "" },
-      }
+      { $set: { playMode: "tv", lastActivity: expect.any(Date) } }
     );
   });
 
-  it("returns 400 for non-numeric activeVideoIndex", async () => {
+  it("stores here mode on the room", async () => {
+    mockCollection.updateOne.mockResolvedValue({ matchedCount: 1 });
+
     const req = createMockReq({
       method: "POST",
-      query: { id: "ROOM1", activeVideoIndex: "abc" },
+      query: { id: "ROOM1", playMode: "here" },
+    });
+    const res = createRes();
+    await handler(req, res);
+
+    expect(res.getStatus()).toBe(200);
+    expect(mockCollection.updateOne).toHaveBeenCalledWith(
+      { id: "ROOM1" },
+      { $set: { playMode: "here", lastActivity: expect.any(Date) } }
+    );
+  });
+
+  it("rejects unknown modes with 400", async () => {
+    const req = createMockReq({
+      method: "POST",
+      query: { id: "ROOM1", playMode: "chromecast" },
     });
     const res = createRes();
     await handler(req, res);
 
     expect(res.getStatus()).toBe(400);
-    expect(mockCollection.findOne).not.toHaveBeenCalled();
+    expect(mockCollection.updateOne).not.toHaveBeenCalled();
   });
 
-  it("returns 404 when room does not exist", async () => {
-    mockCollection.findOne.mockResolvedValue(null);
+  it("returns 404 for non-existent room", async () => {
+    mockCollection.updateOne.mockResolvedValue({ matchedCount: 0 });
 
     const req = createMockReq({
       method: "POST",
-      query: { id: "NOPE1", activeVideoIndex: "0" },
+      query: { id: "NOPE1", playMode: "tv" },
     });
     const res = createRes();
     await handler(req, res);
@@ -86,10 +97,7 @@ describe("POST /api/queue/[id]/position - Advance song position", () => {
   });
 
   it("rejects non-POST methods", async () => {
-    const req = createMockReq({
-      method: "GET",
-      query: { id: "ROOM1", activeVideoIndex: "0" },
-    });
+    const req = createMockReq({ method: "GET", query: { id: "ROOM1", playMode: "tv" } });
     const res = createRes();
     await handler(req, res);
 

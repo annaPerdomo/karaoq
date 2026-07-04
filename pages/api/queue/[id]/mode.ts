@@ -12,28 +12,24 @@ export default async function handler(
   }
 
   const roomId = normalizeRoomId(req.query.id);
-  const activeVideoIndex = parseInt(req.query.activeVideoIndex as string);
+  const playMode = req.query.playMode;
 
-  if (typeof roomId !== "string" || isNaN(activeVideoIndex)) {
+  if (typeof roomId !== "string" || (playMode !== "here" && playMode !== "tv")) {
     res.status(400).json({ code: 400, message: "Invalid request." });
     return;
   }
 
   try {
     const collection = await getRoomsCollection();
-    const room = await collection.findOne({ id: roomId });
+    const result = await collection.updateOne(
+      { id: roomId },
+      { $set: { playMode, lastActivity: new Date() } }
+    );
 
-    if (!room) {
+    if (result.matchedCount === 0) {
       res.status(404).json({ code: 404, message: "Room not found." });
     } else {
-      await collection.updateOne(
-        { id: roomId },
-        {
-          $set: { activeVideoIndex, isPlaying: false, lastActivity: new Date() },
-          $unset: { playToken: "" },
-        }
-      );
-      res.status(200).json({ code: 200, message: "Position updated." });
+      res.status(200).json({ code: 200, message: "Play mode updated." });
     }
   } catch (e) {
     console.error(e);

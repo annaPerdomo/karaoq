@@ -13,6 +13,10 @@ export default async function handler(
 
   const roomId = normalizeRoomId(req.query.id);
   const isPlaying = req.query.isPlaying === "true";
+  const playToken =
+    typeof req.query.playToken === "string" && req.query.playToken
+      ? req.query.playToken
+      : null;
 
   if (typeof roomId !== "string") {
     res.status(400).json({ code: 400, message: "Invalid request." });
@@ -26,10 +30,18 @@ export default async function handler(
     if (!room) {
       res.status(404).json({ code: 404, message: "Room not found." });
     } else {
-      await collection.updateOne(
-        { id: roomId },
-        { $set: { isPlaying, lastActivity: new Date() } }
-      );
+      // Starting a song records which device is the playback surface;
+      // stopping clears it — no token means nothing is playing anywhere.
+      const update =
+        isPlaying && playToken
+          ? { $set: { isPlaying, playToken, lastActivity: new Date() } }
+          : isPlaying
+            ? { $set: { isPlaying, lastActivity: new Date() } }
+            : {
+                $set: { isPlaying, lastActivity: new Date() },
+                $unset: { playToken: "" as const },
+              };
+      await collection.updateOne({ id: roomId }, update);
       res.status(200).json({ code: 200, message: "Play state updated." });
     }
   } catch (e) {

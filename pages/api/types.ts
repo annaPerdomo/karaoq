@@ -47,12 +47,28 @@ export interface SuggestedSong {
   timestamp: number;
 }
 
+/**
+ * Where the room's video plays: on the host page itself ("here") or on a
+ * separate display screen ("tv"). Stored on the room so every host device
+ * agrees on the mode, not just the one that picked it.
+ */
+export type PlayMode = "here" | "tv";
+
 export interface Room {
   id: string;
   queue: QueueEntry[];
   activeVideoIndex: number;
   isPlaying: boolean;
   reactionsEnabled: boolean;
+  /** Unset on rooms where the host has never chosen a mode. */
+  playMode?: PlayMode;
+  /**
+   * Random token minted by the device that started the current song in
+   * "here" mode — that device is the playback surface. Cleared whenever
+   * playback stops. Lets a reloading owner be told apart from a second
+   * host device joining mid-song.
+   */
+  playToken?: string;
   reactions?: Reaction[];
   singWithMe?: SingWithMePost[];
   suggestions?: SuggestedSong[];

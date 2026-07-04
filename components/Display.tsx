@@ -3,12 +3,13 @@ import { useRouter } from 'next/router';
 import styles from '../styles/Display.module.css';
 import QrJoinCard from './QrJoinCard';
 import getRoom from '../app/queue/getRoom';
+import postVideoEnded from '../app/queue/postVideoEnded';
 import { normalizeRoomId } from '../lib/roomCode';
 import { onRoomState, broadcastVideoEnded } from '../app/queue/roomChannel';
 import { startSessionTracking } from '../app/queue/trackSession';
 import { startVisiblePolling } from '../app/queue/pollWhileVisible';
 import { isTextReaction } from '../app/queue/cheerConstants';
-import { QueueEntry, Reaction } from '../pages/api/types';
+import { PlayMode, QueueEntry, Reaction, Room } from '../pages/api/types';
 
 const POLL_INTERVAL = 1500;
 
@@ -26,6 +27,11 @@ const Display = (): React.ReactElement => {
   const [queue, setQueue] = React.useState<QueueEntry[]>([]);
   const [activeIndex, setActiveIndex] = React.useState(0);
   const [isPlaying, setIsPlaying] = React.useState(false);
+  // In "here" mode the host page is the playback surface — this screen shows
+  // the queue and an on-stage banner instead of double-playing the video.
+  // Unset playMode (legacy rooms) is treated like "tv" so old setups keep
+  // working.
+  const [playMode, setPlayMode] = React.useState<PlayMode | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [origin, setOrigin] = React.useState('');
@@ -34,6 +40,16 @@ const Display = (): React.ReactElement => {
   const seenReactionIds = React.useRef(new Set<string>());
   const reactionTimers = React.useRef<ReturnType<typeof setTimeout>[]>([]);
   const videoRef = React.useRef<HTMLIFrameElement>(null);
+
+  // Autoplay handling: browsers block autoplay-with-sound until this page has
+  // been interacted with. When YouTube never reports a playing state we show
+  // a tap-to-start overlay; one tap unlocks this and all future songs.
+  const [needsTap, setNeedsTap] = React.useState(false);
+  const playbackConfirmedRef = React.useRef(false);
+  const unlockRetryRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Guards against reporting the same video-end more than once (YouTube sends
+  // both onStateChange and infoDelivery for the same event).
+  const endedHandledRef = React.useRef(false);
 
   React.useEffect(() => {
     setOrigin(window.location.origin);
@@ -81,6 +97,18 @@ const Display = (): React.ReactElement => {
     reactionTimers.current.push(timer);
   }
 
+  function applyRoom(room: Room, animateReactions = true) {
+    setQueue(room.queue);
+    setActiveIndex(room.activeVideoIndex);
+    setIsPlaying(room.isPlaying ?? false);
+    setPlayMode(room.playMode ?? null);
+    setReactionsOn(room.reactionsEnabled ?? true);
+    processReactions(room.reactions, animateReactions);
+  }
+
+  // Whether this screen is the room's playback surface right now.
+  const playsVideoHere = playMode !== 'here';
+
   // Initial room load
   React.useEffect(() => {
     if (!joinCode) return;
@@ -91,11 +119,7 @@ const Display = (): React.ReactElement => {
       const room = await getRoom(joinCode!);
       if (cancelled) return;
       if (room) {
-        setQueue(room.queue);
-        setActiveIndex(room.activeVideoIndex);
-        setIsPlaying(room.isPlaying ?? false);
-        setReactionsOn(room.reactionsEnabled ?? true);
-        processReactions(room.reactions, false);
+        applyRoom(room, false);
         setLoading(false);
       } else {
         setError('Room not found');
@@ -125,37 +149,60 @@ const Display = (): React.ReactElement => {
 
     return startVisiblePolling(async () => {
       const room = await getRoom(joinCode);
-      if (room) {
-        setQueue(room.queue);
-        setActiveIndex(room.activeVideoIndex);
-        setIsPlaying(room.isPlaying ?? false);
-        setReactionsOn(room.reactionsEnabled ?? true);
-        processReactions(room.reactions);
-      }
+      if (room) applyRoom(room);
     }, POLL_INTERVAL);
   }, [joinCode, error]);
 
-  // Notify Host when a YouTube video ends (for TV mode)
+  const currentSongId = queue[activeIndex]?.id;
+
+  // A new song — or a replay of the same one — needs its end reported again.
   React.useEffect(() => {
-    if (!isPlaying || !joinCode) return;
+    endedHandledRef.current = false;
+  }, [currentSongId, isPlaying]);
+
+  // Watch YouTube player events while a song should be playing: advance the
+  // room when the video ends, and confirm playback actually started (if it
+  // never does, the browser blocked autoplay — show the tap-to-start overlay).
+  React.useEffect(() => {
+    if (!isPlaying || !joinCode || !playsVideoHere) return;
     const roomId = joinCode;
+    const endedIndex = activeIndex;
+
+    async function reportVideoEnded() {
+      if (endedHandledRef.current) return;
+      endedHandledRef.current = true;
+      // Advance the room on the server first — that's what reaches hosts on
+      // other devices — then refresh this screen right away instead of waiting
+      // out the poll, and finally nudge any same-browser host tabs to refetch.
+      await postVideoEnded(roomId, endedIndex);
+      const room = await getRoom(roomId);
+      if (room) applyRoom(room);
+      broadcastVideoEnded(roomId);
+    }
 
     function onMessage(e: MessageEvent) {
       if (e.origin !== 'https://www.youtube.com') return;
       try {
         const data = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
-        if (
-          (data.event === 'onStateChange' && data.info === 0) ||
-          (data.event === 'infoDelivery' && data.info?.playerState === 0)
-        ) {
-          broadcastVideoEnded(roomId);
+        const state =
+          data.event === 'onStateChange'
+            ? data.info
+            : data.event === 'infoDelivery'
+              ? data.info?.playerState
+              : undefined;
+        if (state === 0) {
+          reportVideoEnded();
+        } else if (state === 1 || state === 3) {
+          // Playing or buffering — autoplay worked, no tap needed.
+          playbackConfirmedRef.current = true;
+          setNeedsTap(false);
         }
       } catch {}
     }
 
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
-  }, [isPlaying, joinCode]);
+  }, [isPlaying, joinCode, activeIndex, playsVideoHere]);
 
   function handleIframeLoad() {
     videoRef.current?.contentWindow?.postMessage(
@@ -200,7 +247,7 @@ const Display = (): React.ReactElement => {
           <div className={styles.centerState}>
             <div className={styles.spinner} />
           </div>
-        ) : currentSong && isPlaying ? (
+        ) : currentSong && isPlaying && playsVideoHere ? (
           <iframe
             ref={videoRef}
             key={currentSong.id}
@@ -212,7 +259,12 @@ const Display = (): React.ReactElement => {
           />
         ) : currentSong ? (
           <div className={styles.readyState}>
-            <div className={styles.readyTag}>UP NEXT</div>
+            {/* When the host plays the video on their own screen ("here"
+                mode), this screen stays a queue board with an on-stage
+                banner instead of double-playing the song. */}
+            <div className={styles.readyTag}>
+              {isPlaying ? 'ON STAGE' : 'UP NEXT'}
+            </div>
             <h1 className={styles.readySinger}>{currentSong.userName}</h1>
             <p className={styles.readySong}>
               {decodeHtml(currentSong.songTitle)}
@@ -260,8 +312,9 @@ const Display = (): React.ReactElement => {
         )}
       </div>
 
-      {/* Now playing bar */}
-      {currentSong && isPlaying && (
+      {/* Now playing bar (only under the video — the here-mode banner above
+          already announces the singer) */}
+      {currentSong && isPlaying && playsVideoHere && (
         <div className={styles.nowBar}>
           <div className={styles.nowGlow} />
           <div className={styles.nowContent}>

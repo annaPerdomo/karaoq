@@ -71,7 +71,29 @@ describe("POST /api/queue/[id]/play - Set play state", () => {
 
     expect(mockCollection.updateOne).toHaveBeenCalledWith(
       { id: "ROOM1" },
-      { $set: { isPlaying: false, lastActivity: expect.any(Date) } }
+      {
+        $set: { isPlaying: false, lastActivity: expect.any(Date) },
+        $unset: { playToken: "" },
+      }
+    );
+  });
+
+  it("records the playback token when starting with one", async () => {
+    const room: Room = { id: "ROOM1", queue: [], activeVideoIndex: 0, isPlaying: false };
+    mockCollection.findOne.mockResolvedValue(room);
+    mockCollection.updateOne.mockResolvedValue({ modifiedCount: 1 });
+
+    const req = createMockReq({
+      method: "POST",
+      query: { id: "ROOM1", isPlaying: "true", playToken: "tok-abc" },
+    });
+    const res = createRes();
+    await handler(req, res);
+
+    expect(res.getStatus()).toBe(200);
+    expect(mockCollection.updateOne).toHaveBeenCalledWith(
+      { id: "ROOM1" },
+      { $set: { isPlaying: true, playToken: "tok-abc", lastActivity: expect.any(Date) } }
     );
   });
 
