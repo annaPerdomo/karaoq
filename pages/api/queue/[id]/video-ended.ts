@@ -47,7 +47,10 @@ export default async function handler(
 
     const result = await collection.updateOne(
       { id: roomId, activeVideoIndex: endedIndex, isPlaying: true },
-      { $set: { ...update, lastActivity: new Date() }, $unset: { playToken: "" } }
+      {
+        $set: { ...update, lastActivity: new Date() },
+        $unset: { playToken: "", displayPaused: "", playStartedAt: "" },
+      }
     );
 
     res.status(200).json({

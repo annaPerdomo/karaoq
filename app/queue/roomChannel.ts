@@ -40,6 +40,27 @@ export function onRoomState(
   return () => channel.close();
 }
 
+// Display pause/resume commands (Host → Display for TV mode). The display also
+// picks this up from its room poll; the broadcast just lets a same-browser
+// display (e.g. the projector window the host opened) react instantly instead
+// of waiting out the poll.
+export function broadcastDisplayPause(roomId: string, paused: boolean) {
+  if (typeof BroadcastChannel === "undefined") return;
+  const ch = new BroadcastChannel(`karaoq-display-pause:${roomId}`);
+  ch.postMessage(paused);
+  ch.close();
+}
+
+export function onDisplayPause(
+  roomId: string,
+  callback: (paused: boolean) => void
+): () => void {
+  if (typeof BroadcastChannel === "undefined") return () => {};
+  const ch = new BroadcastChannel(`karaoq-display-pause:${roomId}`);
+  ch.onmessage = (e: MessageEvent<boolean>) => callback(e.data);
+  return () => ch.close();
+}
+
 // Video-ended events (Display → Host for TV mode)
 export function broadcastVideoEnded(roomId: string) {
   if (typeof BroadcastChannel === "undefined") return;

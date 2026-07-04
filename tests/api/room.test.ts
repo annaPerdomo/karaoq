@@ -110,7 +110,7 @@ describe("POST /api/queue/[id] - Room creation", () => {
       { id: "ABC12" },
       {
         $set: { isPlaying: false, lastActivity: expect.any(Date) },
-        $unset: { playToken: "" },
+        $unset: { playToken: "", displayPaused: "", playStartedAt: "" },
       }
     );
   });
@@ -216,6 +216,8 @@ describe("GET /api/queue/[id] - Room retrieval", () => {
       queue: [],
       activeVideoIndex: 0,
       isPlaying: true,
+      reactionsEnabled: true,
+      displayLastSeen: new Date(), // live display → playback is real
     };
     mockCollection.findOne.mockResolvedValue(room);
 
@@ -224,7 +226,136 @@ describe("GET /api/queue/[id] - Room retrieval", () => {
     await handler(req, res);
 
     expect(res.getStatus()).toBe(200);
-    expect(res.getBody()).toEqual({ ...room, isPlaying: true, reactionsEnabled: true, reactions: [] });
+    expect(res.getBody()).toEqual({
+      ...room,
+      isPlaying: true,
+      displayConnected: true,
+      reactionsEnabled: true,
+      reactions: [],
+    });
+    expect(mockCollection.updateOne).not.toHaveBeenCalled();
+  });
+
+  it("heals orphaned TV playback when no display is alive", async () => {
+    const room: Room = {
+      id: "XYZ99",
+      queue: [],
+      activeVideoIndex: 0,
+      isPlaying: true,
+      reactionsEnabled: true,
+      playMode: "tv",
+      playToken: "tok-dead",
+      // Started long ago, display last seen well past the 75s liveness
+      // window → nothing is playing
+      playStartedAt: new Date(Date.now() - 300_000),
+      displayLastSeen: new Date(Date.now() - 300_000),
+    };
+    mockCollection.findOne.mockResolvedValue(room);
+    mockCollection.updateOne.mockResolvedValue({ modifiedCount: 1 });
+
+    const req = createMockReq({ method: "GET", query: { id: "XYZ99" } });
+    const res = createRes();
+    await handler(req, res);
+
+    expect(res.getStatus()).toBe(200);
+    const body = res.getBody() as Room;
+    expect(body.isPlaying).toBe(false);
+    expect(body.displayConnected).toBe(false);
+    expect(mockCollection.updateOne).toHaveBeenCalledWith(
+      { id: "XYZ99", isPlaying: true },
+      {
+        $set: { isPlaying: false },
+        $unset: { playToken: "", displayPaused: "", playStartedAt: "" },
+      }
+    );
+  });
+
+  it("keeps a recently-throttled heartbeat inside the liveness window", async () => {
+    // Hidden tabs can throttle timers to ~1/min; a 60s-old beat still counts
+    const room: Room = {
+      id: "XYZ99",
+      queue: [],
+      activeVideoIndex: 0,
+      isPlaying: true,
+      reactionsEnabled: true,
+      playMode: "tv",
+      playStartedAt: new Date(Date.now() - 300_000),
+      displayLastSeen: new Date(Date.now() - 60_000),
+    };
+    mockCollection.findOne.mockResolvedValue(room);
+
+    const req = createMockReq({ method: "GET", query: { id: "XYZ99" } });
+    const res = createRes();
+    await handler(req, res);
+
+    const body = res.getBody() as Room;
+    expect(body.isPlaying).toBe(true);
+    expect(body.displayConnected).toBe(true);
+    expect(mockCollection.updateOne).not.toHaveBeenCalled();
+  });
+
+  it("never heals on a display's own read — it proves a display exists", async () => {
+    const room: Room = {
+      id: "XYZ99",
+      queue: [],
+      activeVideoIndex: 0,
+      isPlaying: true,
+      reactionsEnabled: true,
+      playMode: "tv",
+      playStartedAt: new Date(Date.now() - 300_000),
+      displayLastSeen: new Date(Date.now() - 300_000),
+    };
+    mockCollection.findOne.mockResolvedValue(room);
+
+    const req = createMockReq({
+      method: "GET",
+      query: { id: "XYZ99", display: "1" },
+    });
+    const res = createRes();
+    await handler(req, res);
+
+    expect((res.getBody() as Room).isPlaying).toBe(true);
+    expect(mockCollection.updateOne).not.toHaveBeenCalled();
+  });
+
+  it("gives a just-started song grace for the display to load", async () => {
+    const room: Room = {
+      id: "XYZ99",
+      queue: [],
+      activeVideoIndex: 0,
+      isPlaying: true,
+      reactionsEnabled: true,
+      playMode: "tv",
+      playStartedAt: new Date(), // pressed play moments ago
+    };
+    mockCollection.findOne.mockResolvedValue(room);
+
+    const req = createMockReq({ method: "GET", query: { id: "XYZ99" } });
+    const res = createRes();
+    await handler(req, res);
+
+    expect((res.getBody() as Room).isPlaying).toBe(true);
+    expect(mockCollection.updateOne).not.toHaveBeenCalled();
+  });
+
+  it("never heals here-mode playback (its player is a host page)", async () => {
+    const room: Room = {
+      id: "XYZ99",
+      queue: [],
+      activeVideoIndex: 0,
+      isPlaying: true,
+      reactionsEnabled: true,
+      playMode: "here",
+      playStartedAt: new Date(Date.now() - 60_000),
+    };
+    mockCollection.findOne.mockResolvedValue(room);
+
+    const req = createMockReq({ method: "GET", query: { id: "XYZ99" } });
+    const res = createRes();
+    await handler(req, res);
+
+    expect((res.getBody() as Room).isPlaying).toBe(true);
+    expect(mockCollection.updateOne).not.toHaveBeenCalled();
   });
 
   it("defaults isPlaying to false for legacy rooms", async () => {

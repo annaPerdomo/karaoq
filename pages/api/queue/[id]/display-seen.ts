@@ -2,6 +2,10 @@ import { NextApiRequest, NextApiResponse } from "next";
 import { getRoomsCollection } from "../../../../lib/mongodb";
 import { normalizeRoomId } from "../../../../lib/roomCode";
 
+/**
+ * Display heartbeat. Deliberately does NOT bump lastActivity: a forgotten
+ * display tab shouldn't keep an abandoned room from expiring.
+ */
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -12,28 +16,23 @@ export default async function handler(
   }
 
   const roomId = normalizeRoomId(req.query.id);
-  const activeVideoIndex = parseInt(req.query.activeVideoIndex as string);
 
-  if (typeof roomId !== "string" || isNaN(activeVideoIndex)) {
+  if (typeof roomId !== "string") {
     res.status(400).json({ code: 400, message: "Invalid request." });
     return;
   }
 
   try {
     const collection = await getRoomsCollection();
-    const room = await collection.findOne({ id: roomId });
+    const result = await collection.updateOne(
+      { id: roomId },
+      { $set: { displayLastSeen: new Date() } }
+    );
 
-    if (!room) {
+    if (result.matchedCount === 0) {
       res.status(404).json({ code: 404, message: "Room not found." });
     } else {
-      await collection.updateOne(
-        { id: roomId },
-        {
-          $set: { activeVideoIndex, isPlaying: false, lastActivity: new Date() },
-          $unset: { playToken: "", displayPaused: "", playStartedAt: "" },
-        }
-      );
-      res.status(200).json({ code: 200, message: "Position updated." });
+      res.status(200).json({ code: 200, message: "Display seen." });
     }
   } catch (e) {
     console.error(e);

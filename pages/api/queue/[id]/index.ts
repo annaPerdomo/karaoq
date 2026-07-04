@@ -7,6 +7,15 @@ import { normalizeRoomId } from "../../../../lib/roomCode";
 
 const REACTION_TTL_MS = 30000;
 
+// A display heartbeats every ~10s from a Web Worker (immune to background-tab
+// timer throttling). The window is still sized to survive a worst-case
+// once-per-minute throttled beat, so a hidden-but-playing display is never
+// mistaken for a dead one.
+const DISPLAY_LIVE_MS = 75_000;
+// After the host presses play, give a display this long to load and start
+// heartbeating before treating the playback as orphaned.
+const PLAY_GRACE_MS = 15_000;
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<Room | ApiError>
@@ -46,7 +55,7 @@ export default async function handler(
             { id: roomId },
             {
               $set: { isPlaying: false, lastActivity: new Date() },
-              $unset: { playToken: "" },
+              $unset: { playToken: "", displayPaused: "", playStartedAt: "" },
             }
           );
           res.status(200).json({ ...existing, isPlaying: false });
@@ -81,16 +90,46 @@ export default async function handler(
       res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
       const room = await collection.findOne({ id: roomId });
       if (room) {
+        const now = Date.now();
+        const displayConnected = !!(
+          room.displayLastSeen &&
+          now - new Date(room.displayLastSeen).getTime() < DISPLAY_LIVE_MS
+        );
+
+        // Self-heal orphaned playback: a TV room can't really be playing with
+        // no live display. Without this, a dead display session leaves the
+        // host showing a stop button for a song that isn't playing anywhere.
+        // (Here-mode rooms are exempt — their player is a host page. Reads
+        // from a display page are exempt too: they are living proof a display
+        // exists, and a display must never heal-stop its own playback.)
+        const isDisplayReader = req.query.display === "1";
+        let isPlaying = room.isPlaying ?? false;
+        if (isPlaying && !isDisplayReader && room.playMode !== "here" && !displayConnected) {
+          const playAge = room.playStartedAt
+            ? now - new Date(room.playStartedAt).getTime()
+            : Infinity;
+          if (playAge > PLAY_GRACE_MS) {
+            await collection.updateOne(
+              { id: roomId, isPlaying: true },
+              {
+                $set: { isPlaying: false },
+                $unset: { playToken: "", displayPaused: "", playStartedAt: "" },
+              }
+            );
+            isPlaying = false;
+          }
+        }
+
         // Filter stale reactions in-memory only — persisting the cleanup here
         // would turn every poll into a write. The reactions POST route prunes
         // the stored array whenever a new reaction comes in.
-        const now = Date.now();
         const reactions = (room.reactions ?? []).filter(
           (r) => now - r.timestamp < REACTION_TTL_MS
         );
         res.status(200).json({
           ...room,
-          isPlaying: room.isPlaying ?? false,
+          isPlaying,
+          displayConnected,
           reactionsEnabled: room.reactionsEnabled ?? true,
           reactions,
         });

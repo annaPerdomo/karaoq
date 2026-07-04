@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextApiResponse } from "next";
-import { Room } from "../../pages/api/types";
 import { createMockReq } from "../helpers/mockRequest";
 
 const mockCollection = {
@@ -21,7 +20,7 @@ vi.mock("mongodb", () => ({
 process.env.MONGODB_URI = "mongodb://test";
 process.env.MONGODB_DB = "test-db";
 
-import handler from "../../pages/api/queue/[id]/position";
+import handler from "../../pages/api/queue/[id]/display-paused";
 
 function createRes() {
   let statusCode = 200;
@@ -35,17 +34,32 @@ function createRes() {
   return res as unknown as NextApiResponse & { getStatus: () => number; getBody: () => unknown };
 }
 
-describe("POST /api/queue/[id]/position - Advance song position", () => {
+describe("POST /api/queue/[id]/display-paused - Display reports pause state", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("updates position and resets isPlaying to false", async () => {
-    const room: Room = { id: "ROOM1", queue: [], activeVideoIndex: 0, isPlaying: true };
-    mockCollection.findOne.mockResolvedValue(room);
-    mockCollection.updateOne.mockResolvedValue({ modifiedCount: 1 });
+  it("marks the room paused only while it is playing", async () => {
+    mockCollection.updateOne.mockResolvedValue({ matchedCount: 1, modifiedCount: 1 });
 
     const req = createMockReq({
       method: "POST",
-      query: { id: "ROOM1", activeVideoIndex: "2" },
+      query: { id: "ROOM1", paused: "true" },
+    });
+    const res = createRes();
+    await handler(req, res);
+
+    expect(res.getStatus()).toBe(200);
+    expect(mockCollection.updateOne).toHaveBeenCalledWith(
+      { id: "ROOM1", isPlaying: true },
+      { $set: { displayPaused: true, lastActivity: expect.any(Date) } }
+    );
+  });
+
+  it("clears the paused flag on resume", async () => {
+    mockCollection.updateOne.mockResolvedValue({ matchedCount: 1, modifiedCount: 1 });
+
+    const req = createMockReq({
+      method: "POST",
+      query: { id: "ROOM1", paused: "false" },
     });
     const res = createRes();
     await handler(req, res);
@@ -54,30 +68,18 @@ describe("POST /api/queue/[id]/position - Advance song position", () => {
     expect(mockCollection.updateOne).toHaveBeenCalledWith(
       { id: "ROOM1" },
       {
-        $set: { activeVideoIndex: 2, isPlaying: false, lastActivity: expect.any(Date) },
-        $unset: { playToken: "", displayPaused: "", playStartedAt: "" },
+        $set: { lastActivity: expect.any(Date) },
+        $unset: { displayPaused: "" },
       }
     );
   });
 
-  it("returns 400 for non-numeric activeVideoIndex", async () => {
-    const req = createMockReq({
-      method: "POST",
-      query: { id: "ROOM1", activeVideoIndex: "abc" },
-    });
-    const res = createRes();
-    await handler(req, res);
-
-    expect(res.getStatus()).toBe(400);
-    expect(mockCollection.findOne).not.toHaveBeenCalled();
-  });
-
-  it("returns 404 when room does not exist", async () => {
-    mockCollection.findOne.mockResolvedValue(null);
+  it("returns 404 when clearing on a non-existent room", async () => {
+    mockCollection.updateOne.mockResolvedValue({ matchedCount: 0, modifiedCount: 0 });
 
     const req = createMockReq({
       method: "POST",
-      query: { id: "NOPE1", activeVideoIndex: "0" },
+      query: { id: "NOPE1", paused: "false" },
     });
     const res = createRes();
     await handler(req, res);
@@ -86,10 +88,7 @@ describe("POST /api/queue/[id]/position - Advance song position", () => {
   });
 
   it("rejects non-POST methods", async () => {
-    const req = createMockReq({
-      method: "GET",
-      query: { id: "ROOM1", activeVideoIndex: "0" },
-    });
+    const req = createMockReq({ method: "GET", query: { id: "ROOM1", paused: "true" } });
     const res = createRes();
     await handler(req, res);
 

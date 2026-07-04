@@ -31,7 +31,12 @@ import reorderQueue from "../app/queue/reorderQueue";
 import removeFromQueue from "../app/queue/removeFromQueue";
 import setPlaying from "../app/queue/setPlaying";
 import savePlayMode from "../app/queue/setPlayMode";
-import { broadcastRoomState, onVideoEnded } from "../app/queue/roomChannel";
+import saveDisplayPaused from "../app/queue/setDisplayPaused";
+import {
+  broadcastRoomState,
+  broadcastDisplayPause,
+  onVideoEnded,
+} from "../app/queue/roomChannel";
 import setReactionsEnabled from "../app/queue/setReactionsEnabled";
 import postReaction from "../app/queue/postReaction";
 import { REACTION_COOLDOWN_MS } from "../app/queue/cheerConstants";
@@ -172,6 +177,17 @@ const Icons = {
   stop: (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
       <rect x="2" y="2" width="12" height="12" rx="2" />
+    </svg>
+  ),
+  pause: (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+      <rect x="3" y="2" width="3.5" height="12" rx="1.2" />
+      <rect x="9.5" y="2" width="3.5" height="12" rx="1.2" />
+    </svg>
+  ),
+  resume: (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+      <path d="M4 2.5l9 5.5-9 5.5z" />
     </svg>
   ),
   prev: (
@@ -566,6 +582,10 @@ const Host = ({
   // status panel instead of double-playing the song.
   const [ownedPlayToken, setOwnedPlayToken] = React.useState<string | null>(null);
   const [serverPlayToken, setServerPlayToken] = React.useState<string | null>(null);
+  // Someone paused the video on the display screen (reported by the display).
+  const [displayPaused, setDisplayPaused] = React.useState(false);
+  // A display page has heartbeated recently (server-computed on each GET).
+  const [displayConnected, setDisplayConnected] = React.useState(false);
   const playsVideoHere =
     isPlaying && !!serverPlayToken && serverPlayToken === ownedPlayToken;
 
@@ -798,6 +818,8 @@ const Host = ({
     setActiveIndex(room.activeVideoIndex);
     setIsPlaying(room.isPlaying ?? false);
     setServerPlayToken(room.playToken ?? null);
+    setDisplayPaused(room.displayPaused ?? false);
+    setDisplayConnected(room.displayConnected ?? false);
     setReactionsOn(room.reactionsEnabled ?? true);
     if (!remote && room.playMode) setPlayMode(room.playMode);
   }
@@ -1037,6 +1059,23 @@ const Host = ({
       setIsPlaying(false);
       broadcast(queue, activeIndex, false);
     }
+  }
+
+  // TV mode: pause or resume the video playing on the display, from here.
+  // Flips the room's shared pause flag; the display watches it and drives its
+  // own player, then reports the real state back — which also keeps a pause
+  // made on the display screen itself reflected on this button.
+  async function toggleDisplayPause() {
+    if (!joinCode) return;
+    const next = !displayPaused;
+    // Hold polling briefly so an in-flight poll with the old value can't flip
+    // the button back before the write lands (same trick as rememberMode).
+    pausePolling();
+    setDisplayPaused(next);
+    // Nudge a same-browser display right away so it reacts instantly; the POST
+    // persists it and reaches cross-device displays on their next poll.
+    broadcastDisplayPause(joinCode, next);
+    await saveDisplayPaused(joinCode, next);
   }
 
   async function handleReorder(
@@ -1317,7 +1356,9 @@ const Host = ({
             remote ? (
               /* ── Co-host mode: status only, no player or audio ── */
               <div className={styles.songControl}>
-                {isPlaying ? (
+                {isPlaying && displayPaused ? (
+                  <div className={styles.readyLabel}>PAUSED ON THE DISPLAY</div>
+                ) : isPlaying ? (
                   <div className={styles.liveIndicator}>
                     <span className={styles.liveDot} />
                     <span>NOW PLAYING</span>
@@ -1337,7 +1378,21 @@ const Host = ({
               /* ── TV Display mode: status panel; playback runs from the
                    transport bar so there's one set of controls. ── */
               <div className={styles.songControl}>
-                {isPlaying ? (
+                {isPlaying && displayPaused ? (
+                  <>
+                    <div className={styles.readyLabel}>PAUSED ON THE DISPLAY</div>
+                    <p className={styles.controlSinger}>
+                      {currentSong.userName}
+                    </p>
+                    <h2 className={styles.controlSong}>
+                      {decodeHtml(currentSong.songTitle)}
+                    </h2>
+                    <p className={styles.cohostNote}>
+                      The video is paused on the display — resume it from the
+                      controls below, or tap the screen there.
+                    </p>
+                  </>
+                ) : isPlaying ? (
                   <>
                     <div className={styles.liveIndicator}>
                       <span className={styles.liveDot} />
@@ -1361,11 +1416,19 @@ const Host = ({
                     </p>
                   </>
                 )}
+                {!displayConnected && (
+                  <p className={styles.cohostNote}>
+                    No display connected — open one so videos have somewhere
+                    to play.
+                  </p>
+                )}
                 <button
                   className={styles.switchModeLink}
                   onClick={openTvDisplay}
                 >
-                  Display window closed? Re-open it
+                  {displayConnected
+                    ? "Display window closed? Re-open it"
+                    : "Open the display window"}
                 </button>
               </div>
             ) : /* ── All-in-one mode: video plays here ── */
@@ -1528,14 +1591,31 @@ const Host = ({
                     {Icons.prev}
                   </button>
                   {isPlaying && tvMode ? (
-                    // While playing on a TV the host needs a Stop here.
-                    <button
-                      className={`${styles.tBtn} ${styles.tStop}`}
-                      onClick={stopSong}
-                      title="Stop"
-                    >
-                      {Icons.stop}
-                    </button>
+                    // Playing on a separate display: pause/resume that screen
+                    // from here (only useful with a live display to receive
+                    // it), plus a Stop.
+                    <>
+                      {displayConnected && (
+                        <button
+                          className={`${styles.tBtn} ${styles.tPause}`}
+                          onClick={toggleDisplayPause}
+                          title={
+                            displayPaused
+                              ? "Resume on the display"
+                              : "Pause the display"
+                          }
+                        >
+                          {displayPaused ? Icons.resume : Icons.pause}
+                        </button>
+                      )}
+                      <button
+                        className={`${styles.tBtn} ${styles.tStop}`}
+                        onClick={stopSong}
+                        title="Stop"
+                      >
+                        {Icons.stop}
+                      </button>
+                    </>
                   ) : playsVideoHere ? (
                     // Video is playing on this device in all-in-one mode —
                     // YouTube's own controls handle pause, so no button here.

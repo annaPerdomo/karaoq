@@ -1,4 +1,6 @@
+import type { UpdateFilter } from "mongodb";
 import { NextApiRequest, NextApiResponse } from "next";
+import { Room } from "../../types";
 import { getRoomsCollection } from "../../../../lib/mongodb";
 import { normalizeRoomId } from "../../../../lib/roomCode";
 
@@ -32,14 +34,21 @@ export default async function handler(
     } else {
       // Starting a song records which device is the playback surface;
       // stopping clears it — no token means nothing is playing anywhere.
-      const update =
+      // Either way a stale display-pause flag no longer applies.
+      const update: UpdateFilter<Room> =
         isPlaying && playToken
-          ? { $set: { isPlaying, playToken, lastActivity: new Date() } }
+          ? {
+              $set: { isPlaying, playToken, playStartedAt: new Date(), lastActivity: new Date() },
+              $unset: { displayPaused: "" },
+            }
           : isPlaying
-            ? { $set: { isPlaying, lastActivity: new Date() } }
+            ? {
+                $set: { isPlaying, playStartedAt: new Date(), lastActivity: new Date() },
+                $unset: { displayPaused: "" },
+              }
             : {
                 $set: { isPlaying, lastActivity: new Date() },
-                $unset: { playToken: "" as const },
+                $unset: { playToken: "", displayPaused: "", playStartedAt: "" },
               };
       await collection.updateOne({ id: roomId }, update);
       res.status(200).json({ code: 200, message: "Play state updated." });

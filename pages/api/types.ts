@@ -69,6 +69,23 @@ export interface Room {
    * host device joining mid-song.
    */
   playToken?: string;
+  /**
+   * True while someone has paused the video on the display screen (reported
+   * by the display's player watcher). Cleared whenever playback starts,
+   * stops, or advances.
+   */
+  displayPaused?: boolean;
+  /**
+   * Heartbeat from any open display page (~10s cadence). A TV room that
+   * claims to be playing with no recent heartbeat has orphaned playback —
+   * the room GET clears it so host controls never show a phantom song.
+   */
+  displayLastSeen?: Date;
+  /** When the current playback started; gives a just-pressed play a grace
+   * window for a display to load before orphan-healing kicks in. */
+  playStartedAt?: Date;
+  /** Computed on GET (never stored): a display heartbeat was seen recently. */
+  displayConnected?: boolean;
   reactions?: Reaction[];
   singWithMe?: SingWithMePost[];
   suggestions?: SuggestedSong[];

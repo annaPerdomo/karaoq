@@ -4,14 +4,20 @@ import styles from '../styles/Display.module.css';
 import QrJoinCard from './QrJoinCard';
 import getRoom from '../app/queue/getRoom';
 import postVideoEnded from '../app/queue/postVideoEnded';
+import postDisplaySeen from '../app/queue/postDisplaySeen';
+import reportDisplayPaused from '../app/queue/setDisplayPaused';
+import setPlaying from '../app/queue/setPlaying';
 import { normalizeRoomId } from '../lib/roomCode';
-import { onRoomState, broadcastVideoEnded } from '../app/queue/roomChannel';
+import { onRoomState, onDisplayPause, broadcastVideoEnded } from '../app/queue/roomChannel';
 import { startSessionTracking } from '../app/queue/trackSession';
 import { startVisiblePolling } from '../app/queue/pollWhileVisible';
 import { isTextReaction } from '../app/queue/cheerConstants';
 import { PlayMode, QueueEntry, Reaction, Room } from '../pages/api/types';
 
 const POLL_INTERVAL = 1500;
+// Liveness heartbeat cadence; the server treats a display as gone after ~25s
+// without one and clears any playback that display was supposed to be running.
+const HEARTBEAT_INTERVAL = 10_000;
 
 function decodeHtml(html: string): string {
   if (typeof document === 'undefined') return html;
@@ -27,6 +33,11 @@ const Display = (): React.ReactElement => {
   const [queue, setQueue] = React.useState<QueueEntry[]>([]);
   const [activeIndex, setActiveIndex] = React.useState(0);
   const [isPlaying, setIsPlaying] = React.useState(false);
+  // The room's shared pause flag. Set when the video is paused on this screen
+  // (reported by the player watcher below) OR when the host pauses from their
+  // controls; either way this screen is the single place the video lives, so it
+  // reconciles its player to match.
+  const [displayPaused, setDisplayPaused] = React.useState(false);
   // In "here" mode the host page is the playback surface — this screen shows
   // the queue and an on-stage banner instead of double-playing the video.
   // Unset playMode (legacy rooms) is treated like "tv" so old setups keep
@@ -50,6 +61,14 @@ const Display = (): React.ReactElement => {
   // Guards against reporting the same video-end more than once (YouTube sends
   // both onStateChange and infoDelivery for the same event).
   const endedHandledRef = React.useRef(false);
+  // Whether we've told the server the video is paused on this screen, so we
+  // only report transitions (pause → report once, resume → clear once).
+  const pausedReportedRef = React.useRef(false);
+  // The pause state we most recently drove locally (a host broadcast, or a
+  // pause/resume on this screen). Lets applyRoom ignore a lagging poll that
+  // still carries the old value before the server write propagates — the same
+  // optimism the host uses via pausePolling.
+  const localPauseRef = React.useRef<{ paused: boolean; at: number } | null>(null);
 
   React.useEffect(() => {
     setOrigin(window.location.origin);
@@ -60,6 +79,41 @@ const Display = (): React.ReactElement => {
     if (!joinCode) return;
     return startSessionTracking(joinCode, 'Display', 'display');
   }, [joinCode]);
+
+  // Liveness heartbeat. Ticks from a dedicated Web Worker because browsers
+  // throttle window timers in hidden tabs (Chrome: down to once a minute) —
+  // a backgrounded display kept playing audio but its starved heartbeat made
+  // the server think it died and orphan-heal the song. Worker timers are
+  // exempt from that throttling. Also beats immediately when the tab is
+  // re-shown, so a returning display never looks stale.
+  React.useEffect(() => {
+    if (!joinCode || error) return;
+    // Fire-and-forget: a dropped beat just means the next one matters more.
+    const beat = () => postDisplaySeen(joinCode).catch(() => {});
+    beat();
+
+    let stopTicker: () => void;
+    try {
+      const src = `setInterval(() => postMessage(0), ${HEARTBEAT_INTERVAL});`;
+      const url = URL.createObjectURL(new Blob([src], { type: 'application/javascript' }));
+      const worker = new Worker(url);
+      URL.revokeObjectURL(url);
+      worker.onmessage = beat;
+      stopTicker = () => worker.terminate();
+    } catch {
+      const interval = setInterval(beat, HEARTBEAT_INTERVAL);
+      stopTicker = () => clearInterval(interval);
+    }
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') beat();
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => {
+      stopTicker();
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
+  }, [joinCode, error]);
 
   // Clean up reaction timers on unmount
   React.useEffect(() => {
@@ -101,6 +155,14 @@ const Display = (): React.ReactElement => {
     setQueue(room.queue);
     setActiveIndex(room.activeVideoIndex);
     setIsPlaying(room.isPlaying ?? false);
+    // Trust a just-issued local pause/resume over a lagging poll that predates
+    // the server write; after a short window the server is authoritative again.
+    let paused = room.displayPaused ?? false;
+    const local = localPauseRef.current;
+    if (local && paused !== local.paused && Date.now() - local.at < 3000) {
+      paused = local.paused;
+    }
+    setDisplayPaused(paused);
     setPlayMode(room.playMode ?? null);
     setReactionsOn(room.reactionsEnabled ?? true);
     processReactions(room.reactions, animateReactions);
@@ -116,9 +178,20 @@ const Display = (): React.ReactElement => {
     let cancelled = false;
 
     async function init() {
-      const room = await getRoom(joinCode!);
+      let room = await getRoom(joinCode!, { display: true });
       if (cancelled) return;
       if (room) {
+        // For TV rooms this page IS the playback surface, so a display that
+        // is just now loading proves any recorded playback no longer exists
+        // (stale session, or this page reloading mid-song). Clear it instead
+        // of blasting a song the host didn't just start — songs only begin
+        // with the host's play button. Here-mode rooms are left alone: their
+        // video lives on the host screen and is none of our business.
+        if (room.isPlaying && room.playMode !== 'here') {
+          await setPlaying(joinCode!, false);
+          room = { ...room, isPlaying: false };
+        }
+        if (cancelled) return;
         applyRoom(room, false);
         setLoading(false);
       } else {
@@ -143,21 +216,33 @@ const Display = (): React.ReactElement => {
     });
   }, [joinCode]);
 
+  // Instant pause/resume from the host controls (same-browser displays). The
+  // poll below is the cross-device fallback; this just skips the poll wait.
+  React.useEffect(() => {
+    if (!joinCode) return;
+    return onDisplayPause(joinCode, (paused) => {
+      localPauseRef.current = { paused, at: Date.now() };
+      setDisplayPaused(paused);
+    });
+  }, [joinCode]);
+
   // Poll as fallback (for cross-device, e.g. Chromecast)
   React.useEffect(() => {
     if (!joinCode || error) return;
 
     return startVisiblePolling(async () => {
-      const room = await getRoom(joinCode);
+      const room = await getRoom(joinCode, { display: true });
       if (room) applyRoom(room);
     }, POLL_INTERVAL);
   }, [joinCode, error]);
 
   const currentSongId = queue[activeIndex]?.id;
 
-  // A new song — or a replay of the same one — needs its end reported again.
+  // A new song — or a replay of the same one — needs its end reported again,
+  // and starts with a clean pause state.
   React.useEffect(() => {
     endedHandledRef.current = false;
+    pausedReportedRef.current = false;
   }, [currentSongId, isPlaying]);
 
   // Watch YouTube player events while a song should be playing: advance the
@@ -175,7 +260,7 @@ const Display = (): React.ReactElement => {
       // other devices — then refresh this screen right away instead of waiting
       // out the poll, and finally nudge any same-browser host tabs to refetch.
       await postVideoEnded(roomId, endedIndex);
-      const room = await getRoom(roomId);
+      const room = await getRoom(roomId, { display: true });
       if (room) applyRoom(room);
       broadcastVideoEnded(roomId);
     }
@@ -196,6 +281,21 @@ const Display = (): React.ReactElement => {
           // Playing or buffering — autoplay worked, no tap needed.
           playbackConfirmedRef.current = true;
           setNeedsTap(false);
+          if (pausedReportedRef.current) {
+            // Resumed after a pause we reported — tell the host controls.
+            pausedReportedRef.current = false;
+            localPauseRef.current = { paused: false, at: Date.now() };
+            reportDisplayPaused(roomId, false);
+          }
+        } else if (state === 2) {
+          // Someone paused the player on this screen. Only report it once
+          // per pause and only after playback actually started (scrubbing
+          // and pre-start states also pass through 2).
+          if (playbackConfirmedRef.current && !pausedReportedRef.current) {
+            pausedReportedRef.current = true;
+            localPauseRef.current = { paused: true, at: Date.now() };
+            reportDisplayPaused(roomId, true);
+          }
         }
       } catch {}
     }
@@ -220,6 +320,28 @@ const Display = (): React.ReactElement => {
       if (unlockRetryRef.current) clearTimeout(unlockRetryRef.current);
     };
   }, [isPlaying, currentSongId, playsVideoHere]);
+
+  // Host-driven pause/resume. In TV mode the host controls flip the room's
+  // shared pause flag from a different device; this screen owns the player, so
+  // when the polled flag disagrees with what the player is actually doing
+  // (tracked by pausedReportedRef), drive the player to match. A pause/resume
+  // made on this screen itself already keeps the two in sync, so it no-ops here.
+  React.useEffect(() => {
+    if (!isPlaying || !playsVideoHere || !playbackConfirmedRef.current) return;
+    const player = videoRef.current?.contentWindow;
+    if (!player) return;
+    if (displayPaused && !pausedReportedRef.current) {
+      player.postMessage(
+        JSON.stringify({ event: 'command', func: 'pauseVideo', args: [] }),
+        'https://www.youtube.com'
+      );
+    } else if (!displayPaused && pausedReportedRef.current) {
+      player.postMessage(
+        JSON.stringify({ event: 'command', func: 'playVideo', args: [] }),
+        'https://www.youtube.com'
+      );
+    }
+  }, [displayPaused, isPlaying, playsVideoHere]);
 
   // The tap gives this page sticky user activation — with allow="autoplay" on
   // the iframe, this song and every later one can now play with sound. Also

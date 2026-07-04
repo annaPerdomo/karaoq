@@ -948,6 +948,22 @@
   color: #fff;
 }
 
+.tPause {
+  width: 56px;
+  height: 48px;
+  background: linear-gradient(135deg, #ff2d78, #ff6b35);
+  color: #fff;
+  border-radius: 14px;
+  box-shadow: 0 3px 16px rgba(255, 45, 120, 0.35);
+}
+
+.tPause:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(255, 45, 120, 0.5);
+  background: linear-gradient(135deg, #ff2d78, #ff6b35);
+  color: #fff;
+}
+
 .tStop {
   width: 56px;
   height: 48px;
