@@ -919,6 +919,13 @@
     gap: 0.5rem;
     padding: 0 1rem 0.7rem;
     animation: quickCheerIn 0.35s ease;
+    transition: opacity 0.2s ease;
+  }
+
+  /* While a finger is dragging the drawer, the full cheer bar in the body is
+     already sliding into view — fade the duplicate quick row out */
+  .mobileDrawerDragging .quickCheerRow {
+    opacity: 0;
   }
 
   @keyframes quickCheerIn {
@@ -984,6 +991,9 @@
     flex-shrink: 0;
     position: relative;
     min-height: 3.25rem;
+    /* the handle is draggable — keep the browser from scrolling the page
+       underneath the gesture */
+    touch-action: none;
   }
 
   .drawerGrabber {

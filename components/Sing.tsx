@@ -40,6 +40,11 @@ const Sing = (): React.ReactElement => {
   const [reactionCooldown, setReactionCooldown] = React.useState(false);
   const [lastSentEmoji, setLastSentEmoji] = React.useState<string | null>(null);
   const [mobileQueueOpen, setMobileQueueOpen] = React.useState(false);
+  // Live height while a finger is dragging the drawer handle; null hands
+  // control back to the CSS max-height + transition.
+  const [drawerDragHeight, setDrawerDragHeight] = React.useState<number | null>(null);
+  const drawerRef = React.useRef<HTMLDivElement>(null);
+  const drawerDrag = React.useRef({ startY: 0, startHeight: 0, delta: 0, dragging: false });
   const [boardsOpen, setBoardsOpen] = React.useState(true);
   const [showWelcome, setShowWelcome] = React.useState(true);
   // First-run tips are a non-blocking banner above search (see render) rather
@@ -220,6 +225,47 @@ const Sing = (): React.ReactElement => {
     seenReactionIds.current.add(id);
     spawnReactionPops([{ id, emoji, userName: username.trim(), timestamp: Date.now() }]);
     await postReaction(joinCode, id, emoji, username.trim());
+  }
+
+  // The grabber invites dragging, so the handle honors it: the drawer follows
+  // the finger, then snaps open or closed based on which way it moved. Taps
+  // (movement under the start threshold) fall through to the click toggle.
+  const DRAG_START_PX = 8;
+  const DRAG_COMMIT_PX = 40;
+  const DRAWER_COLLAPSED_PX = 52; // matches the 3.25rem collapsed max-height
+
+  function handleDrawerTouchStart(e: React.TouchEvent) {
+    drawerDrag.current = {
+      startY: e.touches[0].clientY,
+      startHeight: drawerRef.current?.getBoundingClientRect().height ?? 0,
+      delta: 0,
+      dragging: false,
+    };
+  }
+
+  function handleDrawerTouchMove(e: React.TouchEvent) {
+    const drag = drawerDrag.current;
+    drag.delta = drag.startY - e.touches[0].clientY;
+    if (!drag.dragging && Math.abs(drag.delta) < DRAG_START_PX) return;
+    drag.dragging = true;
+    const maxHeight = window.innerHeight * 0.75; // matches the 75vh open max-height
+    setDrawerDragHeight(
+      Math.min(Math.max(drag.startHeight + drag.delta, DRAWER_COLLAPSED_PX), maxHeight)
+    );
+  }
+
+  function handleDrawerTouchEnd() {
+    const drag = drawerDrag.current;
+    if (!drag.dragging) return;
+    if (drag.delta > DRAG_COMMIT_PX) setMobileQueueOpen(true);
+    else if (drag.delta < -DRAG_COMMIT_PX) setMobileQueueOpen(false);
+    setDrawerDragHeight(null);
+  }
+
+  function handleDrawerHandleClick() {
+    // A drag can still synthesize a click on release; only toggle on real taps.
+    if (drawerDrag.current.dragging) return;
+    setMobileQueueOpen(!mobileQueueOpen);
   }
 
   const upcomingSongs = queue.slice(activeIndex);
@@ -412,11 +458,22 @@ const Sing = (): React.ReactElement => {
 
         {/* ─── Mobile bottom drawer ─── */}
         <div
-          className={`${styles.mobileDrawer} ${quickCheerVisible ? styles.mobileDrawerCheer : ''} ${mobileQueueOpen ? styles.mobileDrawerOpen : ''}`}
+          ref={drawerRef}
+          className={`${styles.mobileDrawer} ${quickCheerVisible ? styles.mobileDrawerCheer : ''} ${mobileQueueOpen ? styles.mobileDrawerOpen : ''} ${drawerDragHeight !== null ? styles.mobileDrawerDragging : ''}`}
+          style={
+            drawerDragHeight !== null
+              ? { maxHeight: drawerDragHeight, transition: 'none' }
+              : undefined
+          }
         >
           <button
             className={styles.drawerHandle}
-            onClick={() => setMobileQueueOpen(!mobileQueueOpen)}
+            onClick={handleDrawerHandleClick}
+            onTouchStart={handleDrawerTouchStart}
+            onTouchMove={handleDrawerTouchMove}
+            onTouchEnd={handleDrawerTouchEnd}
+            onTouchCancel={() => setDrawerDragHeight(null)}
+            aria-expanded={mobileQueueOpen}
           >
             <span className={styles.drawerGrabber} />
             {currentSong && isPlaying ? (

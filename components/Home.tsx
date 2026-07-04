@@ -472,7 +472,7 @@ function HeroCheerPhone() {
             <span className={styles.hpCheerBtn}>{'\u{2B50}'}</span>
             <span className={styles.hpCheerBtn}>{'\u{1F64C}'}</span>
             <span className={styles.hpCheerBtn}>{'\u{1F929}'}</span>
-            <span className={styles.hpCheerBtn}>{'\u{1F483}'}</span>
+            <span className={styles.hpCheerBtn}>{'\u{1F3B5}'}</span>
           </div>
         </div>
         {/* Same drawer as the search phone — the queue is shared, so its
