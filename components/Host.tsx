@@ -477,10 +477,14 @@ function SortableQueueItem({
               }}
             />
           ) : (
-            <span className={styles.queueSingerName}>{item.userName}</span>
+            <span className={styles.queueSingerName} title={item.userName}>
+              {item.userName}
+            </span>
           )}
         </div>
-        <div className={styles.queueSong}>{decodeHtml(item.songTitle)}</div>
+        <div className={styles.queueSong} title={decodeHtml(item.songTitle)}>
+          {decodeHtml(item.songTitle)}
+        </div>
       </div>
       <div className={styles.queueActions}>
         {!isFirst && (
@@ -1523,24 +1527,33 @@ const Host = ({
                   >
                     {Icons.prev}
                   </button>
-                  {isPlaying ? (
-                    // While playing on a TV the host needs a Stop here; in
-                    // all-in-one mode YouTube's own controls handle pause.
-                    tvMode ? (
-                      <button
-                        className={`${styles.tBtn} ${styles.tStop}`}
-                        onClick={stopSong}
-                        title="Stop"
-                      >
-                        {Icons.stop}
-                      </button>
-                    ) : null
+                  {isPlaying && tvMode ? (
+                    // While playing on a TV the host needs a Stop here.
+                    <button
+                      className={`${styles.tBtn} ${styles.tStop}`}
+                      onClick={stopSong}
+                      title="Stop"
+                    >
+                      {Icons.stop}
+                    </button>
+                  ) : playsVideoHere ? (
+                    // Video is playing on this device in all-in-one mode —
+                    // YouTube's own controls handle pause, so no button here.
+                    null
                   ) : (
+                    // Nothing playing here: either idle, or the song is live on
+                    // another host device and this is the takeover control.
                     <button
                       className={`${styles.tBtn} ${styles.tPlay}`}
                       onClick={startSong}
                       disabled={!currentSong}
-                      title={tvMode ? "Play on the other screen" : "Play"}
+                      title={
+                        tvMode
+                          ? "Play on the other screen"
+                          : isPlaying
+                          ? "Play on this screen"
+                          : "Play"
+                      }
                     >
                       {Icons.play}
                     </button>
@@ -1700,10 +1713,13 @@ const Host = ({
                           {historyItems.length - i}
                         </span>
                         <div className={styles.queueInfo}>
-                          <div className={styles.queueArtist}>
+                          <div className={styles.queueArtist} title={item.userName}>
                             {item.userName}
                           </div>
-                          <div className={styles.queueSong}>
+                          <div
+                            className={styles.queueSong}
+                            title={decodeHtml(item.songTitle)}
+                          >
                             {decodeHtml(item.songTitle)}
                           </div>
                         </div>

@@ -408,10 +408,16 @@ const Display = (): React.ReactElement => {
                 <div key={item.id} className={styles.upNextItem}>
                   <span className={styles.upNextNum}>{i + 1}</span>
                   <div className={styles.upNextInfo}>
-                    <span className={styles.upNextItemSinger}>
+                    <span
+                      className={styles.upNextItemSinger}
+                      title={item.userName}
+                    >
                       {item.userName}
                     </span>
-                    <span className={styles.upNextItemSong}>
+                    <span
+                      className={styles.upNextItemSong}
+                      title={decodeHtml(item.songTitle)}
+                    >
                       {decodeHtml(item.songTitle)}
                     </span>
                   </div>
