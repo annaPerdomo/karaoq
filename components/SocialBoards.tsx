@@ -285,7 +285,7 @@ const SocialBoards: React.FC<SocialBoardsProps> = ({
               <span>
                 {isHost
                   ? 'Singers can request songs for anyone in the room to pick up.'
-                  : 'Too shy to sing? Request a song and someone else can grab it.'}
+                  : 'Got a song idea that would slap right now? Request it and someone else can grab it.'}
               </span>
             </div>
           ) : (
