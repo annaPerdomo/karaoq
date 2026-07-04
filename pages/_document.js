@@ -1,8 +1,10 @@
 import { Html, Head, Main, NextScript } from 'next/document';
 
-export default function Document() {
+// `lang` is driven by the active i18n locale (not hardcoded) so localized
+// landing routes like /ja render `<html lang="ja">` for crawlers and a11y.
+export default function Document({ locale }) {
   return (
-    <Html lang="en">
+    <Html lang={locale || 'en'}>
       <Head>
         <link rel="icon" href="/favicon.ico" sizes="any" />
         <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -19,3 +21,10 @@ export default function Document() {
     </Html>
   );
 }
+
+Document.getInitialProps = async (ctx) => {
+  // Must run the default document flow (it produces the `html` string Next
+  // needs); we just thread the active locale through for `<Html lang>`.
+  const initialProps = await ctx.defaultGetInitialProps(ctx);
+  return { ...initialProps, locale: ctx.locale };
+};

@@ -55,6 +55,39 @@ export const LOCALE_SHORT_LABELS: Record<Locale, string> = {
   id: 'Indonesia',
 };
 
+/** Canonical production origin — used for canonical URLs, hreflang, OG. */
+export const SITE_URL = 'https://www.karaoq.live';
+
+/**
+ * Open Graph locale codes (language_TERRITORY) per UI locale. og:locale wants a
+ * territory; these pick the primary market for each language.
+ */
+export const OG_LOCALES: Record<Locale, string> = {
+  en: 'en_US',
+  ja: 'ja_JP',
+  fil: 'fil_PH',
+  es: 'es_ES',
+  ko: 'ko_KR',
+  pt: 'pt_BR',
+  de: 'de_DE',
+  id: 'id_ID',
+  cs: 'cs_CZ',
+  fr: 'fr_FR',
+};
+
+/**
+ * Path prefix for a locale's landing page. English is the default locale and
+ * lives at the root; every other locale is served from its own sub-path.
+ */
+export function localePath(locale: Locale): string {
+  return locale === DEFAULT_LOCALE ? '' : `/${locale}`;
+}
+
+/** Absolute canonical URL for a locale's landing page. */
+export function localeUrl(locale: Locale): string {
+  return `${SITE_URL}${localePath(locale)}`;
+}
+
 const SPANISH = 'es' as const;
 
 /**

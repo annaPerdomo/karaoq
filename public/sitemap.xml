@@ -1,8 +1,172 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
     <loc>https://www.karaoq.live</loc>
-    <lastmod>2026-06-25</lastmod>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.karaoq.live"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://www.karaoq.live/ja"/>
+    <xhtml:link rel="alternate" hreflang="fil" href="https://www.karaoq.live/fil"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.karaoq.live/es"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://www.karaoq.live/ko"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://www.karaoq.live/pt"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.karaoq.live/de"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://www.karaoq.live/id"/>
+    <xhtml:link rel="alternate" hreflang="cs" href="https://www.karaoq.live/cs"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://www.karaoq.live/fr"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.karaoq.live"/>
+    <lastmod>2026-07-04</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://www.karaoq.live/ja</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.karaoq.live"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://www.karaoq.live/ja"/>
+    <xhtml:link rel="alternate" hreflang="fil" href="https://www.karaoq.live/fil"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.karaoq.live/es"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://www.karaoq.live/ko"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://www.karaoq.live/pt"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.karaoq.live/de"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://www.karaoq.live/id"/>
+    <xhtml:link rel="alternate" hreflang="cs" href="https://www.karaoq.live/cs"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://www.karaoq.live/fr"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.karaoq.live"/>
+    <lastmod>2026-07-04</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://www.karaoq.live/fil</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.karaoq.live"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://www.karaoq.live/ja"/>
+    <xhtml:link rel="alternate" hreflang="fil" href="https://www.karaoq.live/fil"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.karaoq.live/es"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://www.karaoq.live/ko"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://www.karaoq.live/pt"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.karaoq.live/de"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://www.karaoq.live/id"/>
+    <xhtml:link rel="alternate" hreflang="cs" href="https://www.karaoq.live/cs"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://www.karaoq.live/fr"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.karaoq.live"/>
+    <lastmod>2026-07-04</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://www.karaoq.live/es</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.karaoq.live"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://www.karaoq.live/ja"/>
+    <xhtml:link rel="alternate" hreflang="fil" href="https://www.karaoq.live/fil"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.karaoq.live/es"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://www.karaoq.live/ko"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://www.karaoq.live/pt"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.karaoq.live/de"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://www.karaoq.live/id"/>
+    <xhtml:link rel="alternate" hreflang="cs" href="https://www.karaoq.live/cs"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://www.karaoq.live/fr"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.karaoq.live"/>
+    <lastmod>2026-07-04</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://www.karaoq.live/ko</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.karaoq.live"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://www.karaoq.live/ja"/>
+    <xhtml:link rel="alternate" hreflang="fil" href="https://www.karaoq.live/fil"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.karaoq.live/es"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://www.karaoq.live/ko"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://www.karaoq.live/pt"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.karaoq.live/de"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://www.karaoq.live/id"/>
+    <xhtml:link rel="alternate" hreflang="cs" href="https://www.karaoq.live/cs"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://www.karaoq.live/fr"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.karaoq.live"/>
+    <lastmod>2026-07-04</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://www.karaoq.live/pt</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.karaoq.live"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://www.karaoq.live/ja"/>
+    <xhtml:link rel="alternate" hreflang="fil" href="https://www.karaoq.live/fil"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.karaoq.live/es"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://www.karaoq.live/ko"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://www.karaoq.live/pt"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.karaoq.live/de"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://www.karaoq.live/id"/>
+    <xhtml:link rel="alternate" hreflang="cs" href="https://www.karaoq.live/cs"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://www.karaoq.live/fr"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.karaoq.live"/>
+    <lastmod>2026-07-04</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://www.karaoq.live/de</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.karaoq.live"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://www.karaoq.live/ja"/>
+    <xhtml:link rel="alternate" hreflang="fil" href="https://www.karaoq.live/fil"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.karaoq.live/es"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://www.karaoq.live/ko"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://www.karaoq.live/pt"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.karaoq.live/de"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://www.karaoq.live/id"/>
+    <xhtml:link rel="alternate" hreflang="cs" href="https://www.karaoq.live/cs"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://www.karaoq.live/fr"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.karaoq.live"/>
+    <lastmod>2026-07-04</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://www.karaoq.live/id</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.karaoq.live"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://www.karaoq.live/ja"/>
+    <xhtml:link rel="alternate" hreflang="fil" href="https://www.karaoq.live/fil"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.karaoq.live/es"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://www.karaoq.live/ko"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://www.karaoq.live/pt"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.karaoq.live/de"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://www.karaoq.live/id"/>
+    <xhtml:link rel="alternate" hreflang="cs" href="https://www.karaoq.live/cs"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://www.karaoq.live/fr"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.karaoq.live"/>
+    <lastmod>2026-07-04</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://www.karaoq.live/cs</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.karaoq.live"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://www.karaoq.live/ja"/>
+    <xhtml:link rel="alternate" hreflang="fil" href="https://www.karaoq.live/fil"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.karaoq.live/es"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://www.karaoq.live/ko"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://www.karaoq.live/pt"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.karaoq.live/de"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://www.karaoq.live/id"/>
+    <xhtml:link rel="alternate" hreflang="cs" href="https://www.karaoq.live/cs"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://www.karaoq.live/fr"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.karaoq.live"/>
+    <lastmod>2026-07-04</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://www.karaoq.live/fr</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.karaoq.live"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://www.karaoq.live/ja"/>
+    <xhtml:link rel="alternate" hreflang="fil" href="https://www.karaoq.live/fil"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.karaoq.live/es"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://www.karaoq.live/ko"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://www.karaoq.live/pt"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.karaoq.live/de"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://www.karaoq.live/id"/>
+    <xhtml:link rel="alternate" hreflang="cs" href="https://www.karaoq.live/cs"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://www.karaoq.live/fr"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.karaoq.live"/>
+    <lastmod>2026-07-04</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>

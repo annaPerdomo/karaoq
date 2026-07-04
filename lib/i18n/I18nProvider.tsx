@@ -86,11 +86,32 @@ async function loadCatalog(locale: Locale): Promise<Catalog> {
   }
 }
 
-export function I18nProvider({ children }: { children: React.ReactNode }): React.ReactElement {
-  // Start from the server-safe default so the first client render matches SSR;
-  // the real locale is applied in the effect below to avoid hydration drift.
-  const [locale, setLocaleState] = React.useState<Locale>(DEFAULT_LOCALE);
-  const [catalog, setCatalog] = React.useState<Catalog>(en);
+export function I18nProvider({
+  children,
+  initialLocale = null,
+  initialCatalog = null,
+}: {
+  children: React.ReactNode;
+  /**
+   * Locale a page rendered on the server (a localized landing route). When set,
+   * both SSR and the first client render use it — no detection, no flash, no
+   * hydration drift — and the switcher can still change it afterward. Left null
+   * on `/` and app pages, which fall back to client-side detection.
+   */
+  initialLocale?: Locale | null;
+  /** The `initialLocale` catalog, shipped from getStaticProps so SSR is localized. */
+  initialCatalog?: Catalog | null;
+}): React.ReactElement {
+  const seeded = !!initialLocale;
+  // Register the server-provided catalog so a later re-visit is instant.
+  if (initialLocale && initialCatalog) catalogCache[initialLocale] = initialCatalog;
+
+  // A seeded page starts in its server locale (first client render must match
+  // the localized SSR HTML); otherwise start from the default and detect below.
+  const [locale, setLocaleState] = React.useState<Locale>(initialLocale ?? DEFAULT_LOCALE);
+  const [catalog, setCatalog] = React.useState<Catalog>(
+    (initialLocale && initialCatalog) || en
+  );
 
   const applyLocale = React.useCallback((next: Locale) => {
     setLocaleState(next);
@@ -112,7 +133,12 @@ export function I18nProvider({ children }: { children: React.ReactNode }): React
   // signal wins outright (so an English device stays English anywhere). Only
   // when there's no such signal do we guess from the country via /api/geo —
   // that's what localizes a visitor whose browser language we don't support.
+  // Skipped entirely when the page was server-rendered in a chosen locale.
   React.useEffect(() => {
+    if (seeded) {
+      if (typeof document !== 'undefined') document.documentElement.lang = initialLocale!;
+      return;
+    }
     const resolved = readInitialLocale();
     if (resolved) {
       applyLocale(resolved);
@@ -131,7 +157,7 @@ export function I18nProvider({ children }: { children: React.ReactNode }): React
     return () => {
       cancelled = true;
     };
-  }, [applyLocale]);
+  }, [applyLocale, seeded, initialLocale]);
 
   const setLocale = React.useCallback(
     (next: Locale) => {

@@ -28,7 +28,10 @@ function MyApp({ Component, pageProps }: AppProps) {
   const showFooter = !isLanding && !isDisplay && !isHost && !isAdmin && !isSing;
 
   return (
-    <I18nProvider>
+    <I18nProvider
+      initialLocale={pageProps.i18nLocale ?? null}
+      initialCatalog={pageProps.i18nCatalog ?? null}
+    >
       <Head>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
