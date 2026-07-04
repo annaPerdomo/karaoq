@@ -309,7 +309,7 @@ const Sing = (): React.ReactElement => {
                   >
                     <span className={styles.boardsTitle}>
                       <span className={styles.boardsLiveDot} />
-                      Live room suggestions
+                      Sing together &amp; requests
                       {singWithMe.length + suggestions.length > 0 && (
                         <span className={styles.boardsCountBadge}>
                           {singWithMe.length + suggestions.length}
@@ -326,8 +326,8 @@ const Sing = (): React.ReactElement => {
                     <div className={styles.boardsBody}>
                       <span className={styles.boardsSub}>
                         Posted by people in room {joinCode?.toUpperCase()} —
-                        join someone&apos;s song, or post one for others here
-                        to pick up.
+                        join someone&apos;s song, or request one for others
+                        here to pick up.
                       </span>
                       <SocialBoards
                         roomId={joinCode}

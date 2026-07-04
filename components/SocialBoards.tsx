@@ -182,7 +182,7 @@ const SocialBoards: React.FC<SocialBoardsProps> = ({
           className={`${styles.tab} ${tab === 'suggestions' ? styles.tabActive : ''}`}
           onClick={() => setTab('suggestions')}
         >
-          Suggestions
+          Requests
           {suggestions.length > 0 && <span className={styles.tabCount}>{suggestions.length}</span>}
         </button>
       </div>
@@ -208,68 +208,65 @@ const SocialBoards: React.FC<SocialBoardsProps> = ({
               const joined = post.joinedSingers.length;
               const alreadyIn = !!name && post.joinedSingers.includes(name);
               const full = joined >= post.maxSingers;
+              const canRemoveSwm = isHost || ownsSwm(post);
               return (
                 <div key={post.id} className={styles.card}>
-                  <div className={styles.cardMain}>
-                    <span className={styles.cardSong}>{decodeHtml(post.songTitle)}</span>
-                    {/* A named poster already leads the "Singing:" list below,
-                        so only call out anonymous posts. */}
-                    {(post.anonymous || !post.createdBy) && (
-                      <span className={styles.cardMeta}>posted anonymously</span>
-                    )}
-                    <div className={styles.progressRow}>
-                      <span className={styles.progressText}>
-                        {!post.queued
-                          ? `needs ${post.minSingers - joined} more singer${post.minSingers - joined === 1 ? '' : 's'}`
-                          : full
-                          ? `${joined} singers · full`
-                          : `${joined} singers · room for ${post.maxSingers - joined} more`}
-                      </span>
-                      {post.queued && <span className={styles.queuedBadge}>In queue 🎶</span>}
+                  <div className={styles.cardTop}>
+                    <div className={styles.cardMain}>
+                      <span className={styles.cardSong}>{decodeHtml(post.songTitle)}</span>
+                      {/* A named poster already leads the "Singing:" list below,
+                          so only call out anonymous posts. */}
+                      {(post.anonymous || !post.createdBy) && (
+                        <span className={styles.cardMeta}>posted anonymously</span>
+                      )}
+                      <div className={styles.progressRow}>
+                        <span className={styles.progressText}>
+                          {!post.queued
+                            ? `needs ${post.minSingers - joined} more singer${post.minSingers - joined === 1 ? '' : 's'}`
+                            : full
+                            ? `${joined} singers · full`
+                            : `${joined} singers · room for ${post.maxSingers - joined} more`}
+                        </span>
+                        {post.queued && <span className={styles.queuedBadge}>In queue 🎶</span>}
+                      </div>
+                      {post.joinedSingers.length > 0 && (
+                        <span className={styles.joinedNames}>
+                          Singing: {post.joinedSingers.join(', ')}
+                        </span>
+                      )}
                     </div>
-                    {post.joinedSingers.length > 0 && (
-                      <span className={styles.joinedNames}>
-                        Singing: {post.joinedSingers.join(', ')}
-                      </span>
+                    {canRemoveSwm && (
+                      <button
+                        className={styles.removeBtn}
+                        onClick={() => handleRemoveSwm(post)}
+                        disabled={busy}
+                        aria-label={isHost ? 'Remove post' : 'Remove your post'}
+                        title={isHost ? 'Remove post' : 'Remove your post'}
+                      >
+                        ×
+                      </button>
                     )}
                   </div>
-                  <button
-                    className={styles.previewBtn}
-                    onClick={() => openPreview({ kind: 'singwithme', post })}
-                    aria-label="Preview this song"
-                    title="Preview this song"
-                  >
-                    <span className={styles.previewBtnIcon}>▶</span> Preview
-                  </button>
-                  {isHost ? (
+                  <div className={styles.cardActions}>
                     <button
-                      className={styles.removeBtn}
-                      onClick={() => handleRemoveSwm(post)}
-                      disabled={busy}
-                      aria-label="Remove post"
+                      className={styles.previewBtn}
+                      onClick={() => openPreview({ kind: 'singwithme', post })}
+                      aria-label="Preview this song"
+                      title="Preview this song"
                     >
-                      ×
+                      <span className={styles.previewBtnIcon}>▶</span> Preview
                     </button>
-                  ) : ownsSwm(post) ? (
-                    <button
-                      className={styles.removeBtn}
-                      onClick={() => handleRemoveSwm(post)}
-                      disabled={busy}
-                      aria-label="Remove your post"
-                      title="Remove your post"
-                    >
-                      ×
-                    </button>
-                  ) : (
-                    <button
-                      className={`${styles.joinBtn} ${alreadyIn ? styles.joinBtnDone : ''}`}
-                      onClick={() => handleJoin(post)}
-                      disabled={busy || alreadyIn || full || !name}
-                      title={!name ? 'Enter your name first' : undefined}
-                    >
-                      {alreadyIn ? '✓ Joined' : full ? 'Full' : 'Join'}
-                    </button>
-                  )}
+                    {!canRemoveSwm && (
+                      <button
+                        className={`${styles.joinBtn} ${alreadyIn ? styles.joinBtnDone : ''}`}
+                        onClick={() => handleJoin(post)}
+                        disabled={busy || alreadyIn || full || !name}
+                        title={!name ? 'Enter your name first' : undefined}
+                      >
+                        {alreadyIn ? '✓ Joined' : full ? 'Full' : 'Join'}
+                      </button>
+                    )}
+                  </div>
                 </div>
               );
             })
@@ -279,66 +276,65 @@ const SocialBoards: React.FC<SocialBoardsProps> = ({
         <div className={styles.list}>
           {!isHost && (
             <button className={styles.postBtn} onClick={() => setPosting('suggestions')}>
-              + Suggest a song for someone
+              + Request a song
             </button>
           )}
           {suggestions.length === 0 ? (
             <div className={styles.empty}>
-              <p>No suggestions yet</p>
+              <p>No requests yet</p>
               <span>
                 {isHost
-                  ? 'Singers can suggest songs for anyone in the room to pick up.'
-                  : 'Too shy to sing? Suggest a song and someone else can grab it.'}
+                  ? 'Singers can request songs for anyone in the room to pick up.'
+                  : 'Too shy to sing? Request a song and someone else can grab it.'}
               </span>
             </div>
           ) : (
-            suggestions.map((s) => (
-              <div key={s.id} className={styles.card}>
-                <div className={styles.cardMain}>
-                  <span className={styles.cardSong}>{decodeHtml(s.songTitle)}</span>
-                  <span className={styles.cardMeta}>
-                    from {s.anonymous || !s.suggestedBy ? 'Anonymous' : s.suggestedBy}
-                  </span>
+            suggestions.map((s) => {
+              const canRemoveRequest = isHost || ownsSuggestion(s);
+              return (
+                <div key={s.id} className={styles.card}>
+                  <div className={styles.cardTop}>
+                    <div className={styles.cardMain}>
+                      <span className={styles.cardSong}>{decodeHtml(s.songTitle)}</span>
+                      <span className={styles.cardMeta}>
+                        requested by {s.anonymous || !s.suggestedBy ? 'Anonymous' : s.suggestedBy}
+                      </span>
+                    </div>
+                    {canRemoveRequest && (
+                      <button
+                        className={styles.removeBtn}
+                        onClick={() => handleRemoveSuggestion(s)}
+                        disabled={busy}
+                        aria-label={isHost ? 'Remove request' : 'Remove your request'}
+                        title={isHost ? 'Remove request' : 'Remove your request'}
+                      >
+                        ×
+                      </button>
+                    )}
+                  </div>
+                  <div className={styles.cardActions}>
+                    <button
+                      className={styles.previewBtn}
+                      onClick={() => openPreview({ kind: 'suggestion', post: s })}
+                      aria-label="Preview this song"
+                      title="Preview this song"
+                    >
+                      <span className={styles.previewBtnIcon}>▶</span> Preview
+                    </button>
+                    {!canRemoveRequest && (
+                      <button
+                        className={styles.joinBtn}
+                        onClick={() => handleClaim(s)}
+                        disabled={busy || !name}
+                        title={!name ? 'Enter your name first' : undefined}
+                      >
+                        I&apos;ll sing this
+                      </button>
+                    )}
+                  </div>
                 </div>
-                <button
-                  className={styles.previewBtn}
-                  onClick={() => openPreview({ kind: 'suggestion', post: s })}
-                  aria-label="Preview this song"
-                  title="Preview this song"
-                >
-                  <span className={styles.previewBtnIcon}>▶</span> Preview
-                </button>
-                {isHost ? (
-                  <button
-                    className={styles.removeBtn}
-                    onClick={() => handleRemoveSuggestion(s)}
-                    disabled={busy}
-                    aria-label="Remove suggestion"
-                  >
-                    ×
-                  </button>
-                ) : ownsSuggestion(s) ? (
-                  <button
-                    className={styles.removeBtn}
-                    onClick={() => handleRemoveSuggestion(s)}
-                    disabled={busy}
-                    aria-label="Remove your suggestion"
-                    title="Remove your suggestion"
-                  >
-                    ×
-                  </button>
-                ) : (
-                  <button
-                    className={styles.joinBtn}
-                    onClick={() => handleClaim(s)}
-                    disabled={busy || !name}
-                    title={!name ? 'Enter your name first' : undefined}
-                  >
-                    I&apos;ll sing this
-                  </button>
-                )}
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       )}
@@ -349,7 +345,7 @@ const SocialBoards: React.FC<SocialBoardsProps> = ({
           <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
             <div className={styles.modalHeader}>
               <h3 className={styles.modalTitle}>
-                {posting === 'singwithme' ? 'Sing together' : 'Suggest a song'}
+                {posting === 'singwithme' ? 'Sing together' : 'Request a song'}
               </h3>
               <button className={styles.modalClose} onClick={closeModal} aria-label="Close">
                 ×
@@ -428,7 +424,7 @@ const SocialBoards: React.FC<SocialBoardsProps> = ({
                   onClick={posting === 'singwithme' ? submitSingWithMe : submitSuggestion}
                   disabled={busy}
                 >
-                  {posting === 'singwithme' ? 'Post it' : 'Suggest it'}
+                  {posting === 'singwithme' ? 'Post it' : 'Request it'}
                 </button>
               </div>
             )}

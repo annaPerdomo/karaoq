@@ -110,7 +110,7 @@ const SECTION_LABELS: Record<string, string> = {
 
 const VIA_LABELS: Record<string, string> = {
   search: 'Search',
-  board_claim: 'Suggestion Board',
+  board_claim: 'Request Board',
   singwithme: 'Sing With Me',
 };
 
@@ -820,9 +820,9 @@ const Analytics = (): React.ReactElement => {
           </section>
 
           <section className={styles.section}>
-            <h2 className={styles.sectionTitle}>Suggestion Board</h2>
+            <h2 className={styles.sectionTitle}>Request Board</h2>
             <div className={styles.statGrid}>
-              <StatCard label="Songs Suggested" value={social.board.suggested} />
+              <StatCard label="Songs Requested" value={social.board.suggested} />
               <StatCard
                 label="Claimed"
                 value={social.board.claimed}
@@ -833,7 +833,7 @@ const Analytics = (): React.ReactElement => {
                 }
               />
             </div>
-            <h3 className={styles.sectionTitle}>Songs Suggested (Last 30 Days)</h3>
+            <h3 className={styles.sectionTitle}>Songs Requested (Last 30 Days)</h3>
             <BarChart data={fillDays(social.board.byDay, 30)} color="#a78bfa" />
           </section>
         </div>
