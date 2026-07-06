@@ -622,6 +622,17 @@ a.roomCode:hover {
 
   .tabs {
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tab {
+    flex-shrink: 0;
+    white-space: nowrap;
   }
 
   .barLabel {
@@ -638,14 +649,57 @@ a.roomCode:hover {
     min-width: 60px;
   }
 
-  .roomHeader,
-  .roomRow {
-    grid-template-columns: 60px 1fr 60px 45px 28px;
+  /* Rooms: drop the cramped table grid for stacked, fully-labeled cards so
+     every field — including Location — stays readable on a phone. */
+  .roomHeader {
+    display: none;
   }
 
-  .roomHeader span:nth-child(3),
-  .roomRow span:nth-child(3) {
-    display: none;
+  .roomTable {
+    gap: 0.5rem;
+  }
+
+  .roomRow {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    padding: 0.85rem;
+    position: relative;
+  }
+
+  .roomCode {
+    font-size: 1rem;
+    text-align: left;
+    align-self: flex-start;
+    padding-right: 4.5rem; /* clear the pinned action buttons */
+  }
+
+  .roomActions {
+    position: absolute;
+    top: 0.7rem;
+    right: 0.7rem;
+  }
+
+  .roomRow span[data-label] {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 1rem;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+  }
+
+  .roomRow span[data-label]::before {
+    content: attr(data-label);
+    color: var(--text-muted);
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
+  }
+
+  .roomRow span[data-label="Location"] {
+    text-align: right;
   }
 
   .sessionStats {

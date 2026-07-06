@@ -891,10 +891,12 @@ const Analytics = (): React.ReactElement => {
                       >
                         {r.roomId}
                       </a>
-                      <span>{formatTimestamp(r.timestamp)}</span>
-                      <span>{r.city ? `${safeDecode(r.city)}, ${r.country}` : r.country || '—'}</span>
-                      <span>{r.songs}</span>
-                      <span>{r.participants}</span>
+                      <span data-label="Created">{formatTimestamp(r.timestamp)}</span>
+                      <span data-label="Location">
+                        {r.city ? `${safeDecode(r.city)}, ${r.country}` : r.country || '—'}
+                      </span>
+                      <span data-label="Songs">{r.songs}</span>
+                      <span data-label="People">{r.participants}</span>
                       <div className={styles.roomActions}>
                         <button
                           className={`${styles.mergeBtn} ${mergeSource === r.roomId ? styles.mergeBtnActive : ''}`}
