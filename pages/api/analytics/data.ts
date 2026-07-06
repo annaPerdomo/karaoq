@@ -10,6 +10,12 @@ import {
 
 const FUNNEL_WINDOW_DAYS = 30;
 
+// Ceiling on a single session's counted length. No real continuous karaoke
+// session runs longer, so anything above this is the legacy revisit artifact
+// (firstSeen anchored days before lastSeen). Capping keeps avg/max/median
+// meaningful for pre-fix docs whose true start time can't be reconstructed.
+const MAX_SESSION_MINUTES = 360;
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -203,7 +209,12 @@ export default async function handler(
               durationMin: {
                 $cond: [
                   { $ne: ["$role", "display"] },
-                  { $divide: [{ $subtract: ["$lastSeen", "$firstSeen"] }, 60000] },
+                  {
+                    $min: [
+                      { $divide: [{ $subtract: ["$lastSeen", "$firstSeen"] }, 60000] },
+                      MAX_SESSION_MINUTES,
+                    ],
+                  },
                   null,
                 ],
               },

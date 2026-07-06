@@ -37,6 +37,13 @@ export interface AnalyticsEvent {
   via?: "search" | "board_claim" | "singwithme";
 }
 
+// A heartbeat fires every 60s while a tab is open. If more than this elapses
+// between heartbeats for the same room+browser, the tab was closed (or the room
+// revisited days later), so the next beat starts a fresh session rather than
+// stretching the old one's span. 30 min tolerates a briefly backgrounded tab
+// whose timers were throttled without splitting a genuine continuous session.
+const SESSION_GAP_MS = 30 * 60 * 1000;
+
 function headerString(value: string | string[] | undefined): string | undefined {
   if (Array.isArray(value)) return value[0];
   return value || undefined;
@@ -82,28 +89,46 @@ export async function trackSessionHeartbeat(
   try {
     const db = await getAnalyticsDb();
     const geo = extractGeo(req);
+    const userAgent = headerString(req.headers["user-agent"]);
     const now = new Date();
     // Key on the stable per-browser clientId so name edits update the same
     // session doc instead of spawning a new one. Fall back to userName for
     // older clients that don't send a clientId.
     const sessionKey = `${roomId}:${clientId || userName}:${role}`;
 
+    // $literal-wrap externally-supplied strings so a value like a userName of
+    // "$role" can't be misread as a field path inside the update pipeline.
+    const set: Record<string, unknown> = {
+      roomId: { $literal: roomId },
+      userName: { $literal: userName },
+      role: { $literal: role },
+      lastSeen: now,
+      // Anchor firstSeen at the start of the *current* session. Keep the
+      // existing anchor only while heartbeats stay within SESSION_GAP_MS;
+      // otherwise (a reopened tab or a room revisited days later) reset it so
+      // the session's span reflects one sitting, not the room's whole lifetime.
+      firstSeen: {
+        $cond: [
+          {
+            $and: [
+              { $ne: [{ $type: "$lastSeen" }, "missing"] },
+              { $lte: [{ $subtract: [now, "$lastSeen"] }, SESSION_GAP_MS] },
+            ],
+          },
+          "$firstSeen",
+          now,
+        ],
+      },
+    };
+    if (clientId !== undefined) set.clientId = { $literal: clientId };
+    if (geo.country) set.country = { $literal: geo.country };
+    if (geo.region) set.region = { $literal: geo.region };
+    if (geo.city) set.city = { $literal: geo.city };
+    if (userAgent) set.userAgent = { $literal: userAgent };
+
     await db.collection("analytics_sessions").updateOne(
       { sessionKey },
-      {
-        $set: {
-          roomId,
-          userName,
-          role,
-          clientId,
-          lastSeen: now,
-          ...geo,
-          userAgent: headerString(req.headers["user-agent"]),
-        },
-        $setOnInsert: {
-          firstSeen: now,
-        },
-      },
+      [{ $set: set }],
       { upsert: true }
     );
   } catch (e) {
