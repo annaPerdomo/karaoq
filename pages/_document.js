@@ -11,8 +11,14 @@ export default function Document({ locale }) {
         <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
         <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
         <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+        <link rel="manifest" href="/site.webmanifest" />
         <meta name="theme-color" content="#0f0f23" />
         <meta name="application-name" content="KaraoQ" />
+        {/* Add-to-Home-Screen support so the dashboard installs as a standalone app. */}
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="KaraoQ" />
+        <meta name="mobile-web-app-capable" content="yes" />
       </Head>
       <body>
         <Main />
