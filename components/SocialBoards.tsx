@@ -55,7 +55,6 @@ const SocialBoards: React.FC<SocialBoardsProps> = ({
   const [anonymous, setAnonymous] = React.useState(false);
   const [minSingers, setMinSingers] = React.useState(2);
   const [maxSingers, setMaxSingers] = React.useState(4);
-  // Whether the draft's video preview is playing (in the post modal).
   const [draftPlaying, setDraftPlaying] = React.useState(false);
 
   // Preview state, shared between both boards — lets people confirm which
@@ -434,7 +433,6 @@ const SocialBoards: React.FC<SocialBoardsProps> = ({
         </div>
       )}
 
-      {/* Preview modal */}
       {preview && (() => {
         const previewJoined = preview.kind === 'singwithme' ? preview.post.joinedSingers.length : 0;
         const previewAlreadyIn =

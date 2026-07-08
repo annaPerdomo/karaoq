@@ -80,7 +80,6 @@ const Display = (): React.ReactElement => {
     setOrigin(window.location.origin);
   }, []);
 
-  // Session analytics tracking
   React.useEffect(() => {
     if (!joinCode) return;
     return startSessionTracking(joinCode, 'Display', 'display');
@@ -129,7 +128,6 @@ const Display = (): React.ReactElement => {
     };
   }, [joinCode, error]);
 
-  // Clean up reaction timers on unmount
   React.useEffect(() => {
     const timers = reactionTimers.current;
     return () => {
@@ -185,7 +183,6 @@ const Display = (): React.ReactElement => {
   // Whether this screen is the room's playback surface right now.
   const playsVideoHere = playMode !== 'here';
 
-  // Initial room load
   React.useEffect(() => {
     if (!joinCode) return;
 
@@ -405,14 +402,12 @@ const Display = (): React.ReactElement => {
 
   return (
     <main className={styles.main}>
-      {/* Header */}
       <header className={styles.header}>
         <div className={styles.brand}>KaraoQ</div>
         <FullscreenToggle className={styles.headerFullscreen} />
         <LanguageSwitcher className={styles.headerLang} />
       </header>
 
-      {/* Video area */}
       <div className={styles.videoArea}>
         {loading ? (
           <div className={styles.centerState}>
@@ -484,7 +479,6 @@ const Display = (): React.ReactElement => {
           </button>
         )}
 
-        {/* Reaction overlay */}
         {reactionsOn && visibleReactions.length > 0 && (
           <div className={styles.reactionOverlay}>
             {visibleReactions.map((r) => (
@@ -522,7 +516,6 @@ const Display = (): React.ReactElement => {
         </div>
       )}
 
-      {/* Footer */}
       <div className={styles.footer}>
         <span className={styles.footerLogo}>KaraoQ</span>
         <a href="https://variationsonastring.com" target="_blank" rel="noopener noreferrer" className={styles.footerLink}>
@@ -530,7 +523,6 @@ const Display = (): React.ReactElement => {
         </a>
       </div>
 
-      {/* Sidebar: Up Next + QR */}
       <div className={styles.sidebar}>
         <QrJoinCard
           joinUrl={joinUrl}

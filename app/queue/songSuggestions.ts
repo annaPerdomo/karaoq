@@ -23,9 +23,7 @@ export interface SongSection {
 }
 
 export const SONG_SECTIONS: SongSection[] = [
-  // ───────────────────────────────────────────
-  // GENRE
-  // ───────────────────────────────────────────
+  // Genre
   {
     id: 'genre',
     label: 'Genre',
@@ -328,9 +326,7 @@ export const SONG_SECTIONS: SongSection[] = [
     ],
   },
 
-  // ───────────────────────────────────────────
-  // VOICE TYPE
-  // ───────────────────────────────────────────
+  // Voice type
   {
     id: 'voice-type',
     label: 'Voice Type',
@@ -446,9 +442,7 @@ export const SONG_SECTIONS: SongSection[] = [
     ],
   },
 
-  // ───────────────────────────────────────────
-  // SPANISH
-  // ───────────────────────────────────────────
+  // Spanish
   {
     id: 'spanish',
     label: '🇲🇽 Espanol',
@@ -591,9 +585,7 @@ export const SONG_SECTIONS: SongSection[] = [
     ],
   },
 
-  // ───────────────────────────────────────────
-  // K-POP
-  // ───────────────────────────────────────────
+  // K-pop
   {
     id: 'kpop',
     label: '🇰🇷 K-Pop',
@@ -682,9 +674,7 @@ export const SONG_SECTIONS: SongSection[] = [
     ],
   },
 
-  // ───────────────────────────────────────────
-  // JAPANESE
-  // ───────────────────────────────────────────
+  // Japanese
   {
     id: 'japanese',
     label: '🇯🇵 Japanese',
@@ -810,9 +800,7 @@ export function displaySongArtist(song: SongSuggestion): string {
   return song.nativeArtist ? `${song.nativeArtist} (${song.artist})` : song.artist;
 }
 
-// ───────────────────────────────────────────
-// COUNTRY-AWARE ORDERING
-// ───────────────────────────────────────────
+// Country-aware ordering
 
 export interface CountryConfig {
   /**

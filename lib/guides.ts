@@ -1,14 +1,11 @@
-// ─── Guide/content pages ───────────────────────────────────────────────────
-// Query-targeted articles that answer the specific questions people type into
-// search engines and LLM assistants ("how to host karaoke at home", "karaoke
-// on your TV", "free YouTube karaoke", "karaoke for a bar/venue"). Each guide
-// is a crawlable, server-rendered, structured-data page in every supported
-// locale — extra surface for search + generative engines to match and cite,
-// built entirely from the same t()/catalog i18n system the rest of the app uses.
+// Guide/content pages: query-targeted articles answering questions people type
+// into search engines and LLM assistants ("how to host karaoke at home", etc.).
+// Each is a crawlable, server-rendered, structured-data page in every supported
+// locale, built from the same t()/catalog i18n system as the rest of the app.
 //
 // Slugs are English and shared across locales; Next.js i18n prefixes the locale
-// (`/guide/x`, `/es/guide/x`, …). Each guide has exactly STEP_COUNT how-to
-// steps so the visible content and the HowTo JSON-LD stay in lockstep.
+// (`/guide/x`, `/es/guide/x`, …). Each guide has exactly STEP_COUNT how-to steps
+// so the visible content and the HowTo JSON-LD stay in lockstep.
 
 import { SITE_URL, localePath, type Locale } from './i18n/config';
 

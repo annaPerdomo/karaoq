@@ -34,7 +34,6 @@ export default async function handler(
       const isCustom = req.headers["x-custom-code"] === "1";
       const existing = await collection.findOne({ id: roomId });
       if (existing && isCustom) {
-        // Custom code already taken — tell the client to pick another
         res.status(409).json({ code: 409, message: "Room code already in use." });
       } else if (existing) {
         // Only reset play state when the device that was PLAYING the current

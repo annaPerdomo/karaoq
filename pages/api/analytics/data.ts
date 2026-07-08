@@ -47,7 +47,6 @@ export default async function handler(
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     const dayKey = { format: "%Y-%m-%d", date: "$timestamp", timezone: tz };
 
-    // Run all aggregations in parallel
     const [
       totalRooms,
       roomsThisWeek,
@@ -85,22 +84,16 @@ export default async function handler(
       boardSuggestedByDay,
       addsByVia,
     ] = await Promise.all([
-      // Total rooms created
       events.countDocuments({ type: "room_created" }),
 
-      // Rooms created this week (rolling 7 days)
       events.countDocuments({ type: "room_created", timestamp: { $gte: weekAgo } }),
 
-      // Total songs added
       events.countDocuments({ type: "song_added" }),
 
-      // Total reactions
       events.countDocuments({ type: "reaction_sent" }),
 
-      // Unique userNames across song_added events
       events.distinct("userName", { type: "song_added" }).then((names) => names.length),
 
-      // Rooms created per day (last 30 days)
       events
         .aggregate([
           { $match: { type: "room_created", timestamp: { $gte: thirtyDaysAgo } } },
@@ -109,7 +102,6 @@ export default async function handler(
         ])
         .toArray(),
 
-      // Songs per day (last 30 days)
       events
         .aggregate([
           { $match: { type: "song_added", timestamp: { $gte: thirtyDaysAgo } } },
@@ -130,7 +122,6 @@ export default async function handler(
         ])
         .toArray(),
 
-      // Top cities by unique rooms
       events
         .aggregate([
           { $match: { city: { $exists: true, $ne: null } } },
@@ -146,7 +137,6 @@ export default async function handler(
         ])
         .toArray(),
 
-      // Activity by hour of day (last 30 days, viewer timezone)
       events
         .aggregate([
           { $match: { timestamp: { $gte: thirtyDaysAgo } } },
@@ -174,7 +164,6 @@ export default async function handler(
         ])
         .toArray(),
 
-      // Top songs (most queued)
       events
         .aggregate([
           { $match: { type: "song_added", songTitle: { $exists: true } } },
@@ -189,7 +178,6 @@ export default async function handler(
         ])
         .toArray(),
 
-      // Top users (most songs added)
       events
         .aggregate([
           { $match: { type: "song_added", userName: { $exists: true } } },
@@ -238,7 +226,6 @@ export default async function handler(
         ])
         .toArray(),
 
-      // Songs per room distribution
       events
         .aggregate([
           { $match: { type: "song_added" } },
@@ -254,7 +241,6 @@ export default async function handler(
         ])
         .toArray(),
 
-      // Device type breakdown (from user agent)
       sessions
         .aggregate([
           { $match: { userAgent: { $exists: true, $ne: null } } },
@@ -278,10 +264,8 @@ export default async function handler(
         ])
         .toArray(),
 
-      // Total QR prints
       events.countDocuments({ type: "qr_printed" }),
 
-      // QR prints per day (last 30 days)
       events
         .aggregate([
           { $match: { type: "qr_printed", timestamp: { $gte: thirtyDaysAgo } } },
@@ -290,7 +274,6 @@ export default async function handler(
         ])
         .toArray(),
 
-      // Total suggestion uses
       events.countDocuments({ type: "suggestion_used" }),
 
       // Suggestion uses by source (random / song_pick / genre_chip)
@@ -311,7 +294,6 @@ export default async function handler(
         ])
         .toArray(),
 
-      // Suggestion uses by category
       events
         .aggregate([
           { $match: { type: "suggestion_used", categoryId: { $exists: true, $ne: null } } },
@@ -340,7 +322,6 @@ export default async function handler(
         ])
         .toArray(),
 
-      // Suggestion uses per day (last 30 days)
       events
         .aggregate([
           { $match: { type: "suggestion_used", timestamp: { $gte: thirtyDaysAgo } } },
@@ -349,8 +330,7 @@ export default async function handler(
         ])
         .toArray(),
 
-      // Activation funnel: for each room created in the window, did anyone
-      // search, add a song, keep going — and how fast was the first song?
+      // Activation funnel per room in the window: search/add counts and minutes-to-first-song.
       events
         .aggregate([
           { $match: { type: { $in: ["room_created", "search_performed", "song_added"] } } },
@@ -394,7 +374,6 @@ export default async function handler(
         ])
         .toArray(),
 
-      // Reactions by emoji
       events
         .aggregate([
           { $match: { type: "reaction_sent", emoji: { $exists: true, $ne: null } } },

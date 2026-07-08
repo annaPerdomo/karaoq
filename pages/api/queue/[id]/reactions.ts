@@ -54,7 +54,7 @@ export default async function handler(
       (r) => now - r.timestamp < REACTION_TTL_MS
     );
 
-    // Rate limit: check if this user reacted too recently
+    // Per-user rate limit.
     const lastReaction = reactions
       .filter((r) => r.userName === userName)
       .sort((a, b) => b.timestamp - a.timestamp)[0];

@@ -94,7 +94,6 @@ function isTextReaction(emoji: string): boolean {
   return emoji.length > 2 && /[a-zA-Z]/.test(emoji);
 }
 
-// ─── Icons ───
 const Icons = {
   drag: (
     <svg
@@ -324,7 +323,6 @@ const Icons = {
   ),
 };
 
-// ─── Settings popover ───
 // The room's "set once" controls: audience reactions, the co-host invite, and
 // the host's name. Playback mode lives in the header pill, and inviting singers
 // lives in the Invite panel.
@@ -425,7 +423,6 @@ function SettingsPopover({
   );
 }
 
-// ─── Sortable queue item ───
 function SortableQueueItem({
   item,
   index,
@@ -545,7 +542,6 @@ function SortableQueueItem({
   );
 }
 
-// ─── Main Host component ───
 // `remote` renders a co-host control surface: it manages the queue (add /
 // remove / reorder / restore) but never embeds the player, never controls
 // transport, and never resets playback — so it can't disrupt the song playing
@@ -577,7 +573,7 @@ const Host = ({
   const reactionTimers = React.useRef<ReturnType<typeof setTimeout>[]>([]);
   const videoRef = React.useRef<HTMLIFrameElement>(null);
 
-  // ─── Where the video plays. `null` until the host has chosen (or we've
+  // Where the video plays. `null` until the host has chosen (or we've
   // restored a previous choice), which is what triggers the first-run chooser.
   // Co-hosts never play video, so they stay in the default "here" surface.
   const [playMode, setPlayMode] = React.useState<PlayMode | null>(
@@ -589,7 +585,7 @@ const Host = ({
   const [playModeRestored, setPlayModeRestored] = React.useState(false);
   const tvMode = playMode === "tv";
 
-  // ─── Which device owns the current playback (here-mode only). We render the
+  // Which device owns the current playback (here-mode only). We render the
   // video iff the room's playToken is one we minted; other host devices show a
   // status panel instead of double-playing the song.
   const [ownedPlayToken, setOwnedPlayToken] = React.useState<string | null>(null);
@@ -913,7 +909,7 @@ const Host = ({
     }, POLL_INTERVAL);
   }, [joinCode, error, isPaused]);
 
-  // ── Auto-fallback to "this screen" when a cast display disappears. Casting
+  // Auto-fallback to "this screen" when a cast display disappears. Casting
   // to a dead TV strands the host on a "playing on another screen" panel for a
   // song that isn't playing anywhere; switching the room back to here-mode keeps
   // it usable. Co-hosts (remote) never own the mode, so they sit this out.
@@ -1017,8 +1013,6 @@ const Host = ({
     }, 5000);
   }
 
-  // ─── Queue operations ───
-
   function broadcast(q: QueueEntry[], idx: number, playing: boolean) {
     if (!joinCode) return;
     broadcastRoomState(joinCode, {
@@ -1028,8 +1022,6 @@ const Host = ({
       reactionsEnabled: reactionsOn,
     });
   }
-
-  // ─── Video end detection ───
 
   // Use a ref so the postMessage handler always has current state
   const onVideoEndedRef = React.useRef<() => void>(() => {});
@@ -1405,15 +1397,13 @@ const Host = ({
 
   return (
     <main className={styles.main}>
-      {/* ─── Header ─── */}
       <header className={styles.header}>
         <div className={styles.brand} onClick={() => router.push("/")}>
           KaraoQ
           {remote && <span className={styles.cohostBadge}>{t('host.role.cohost')}</span>}
         </div>
 
-        {/* Playback-mode pill — always shows where the video is playing and
-            switches in one tap. */}
+        {/* Playback-mode pill: shows where the video plays and switches in one tap. */}
         {!remote && (
           <div className={styles.modePillWrap}>
             <button
@@ -1506,9 +1496,7 @@ const Host = ({
         />
       </header>
 
-      {/* ─── Content ─── */}
       <div className={styles.content}>
-        {/* Player area */}
         <div className={tvMode ? styles.controlPanel : styles.playerArea}>
           {loading ? (
             <div className={styles.emptyState}>
@@ -1517,7 +1505,7 @@ const Host = ({
             </div>
           ) : currentSong ? (
             remote ? (
-              /* ── Co-host mode: status only, no player or audio ── */
+              /* Co-host mode: status only, no player or audio. */
               <div className={styles.songControl}>
                 {isPlaying && displayPaused ? (
                   <div className={styles.readyLabel}>{t('host.status.pausedDisplay')}</div>
@@ -1538,8 +1526,8 @@ const Host = ({
                 </p>
               </div>
             ) : tvMode ? (
-              /* ── TV Display mode: status panel; playback runs from the
-                   transport bar so there's one set of controls. ── */
+              /* TV Display mode: status panel; playback runs from the
+                 transport bar so there's one set of controls. */
               <div className={styles.songControl}>
                 {isPlaying && displayPaused ? (
                   <>
@@ -1592,7 +1580,7 @@ const Host = ({
                     : t('host.status.openDisplay')}
                 </button>
               </div>
-            ) : /* ── All-in-one mode: video plays here ── */
+            ) : /* All-in-one mode: video plays here. */
             playsVideoHere ? (
               <iframe
                 ref={videoRef}
@@ -1604,9 +1592,9 @@ const Host = ({
                 onLoad={handleIframeLoad}
               />
             ) : isPlaying ? (
-              /* ── Song is playing on a different host device: show status
-                   instead of double-playing it. Starting it here mints a new
-                   token, so the other device yields — a clean takeover. ── */
+              /* Song is playing on a different host device: show status instead
+                 of double-playing it. Starting it here mints a new token, so the
+                 other device yields — a clean takeover. */
               <div className={styles.songControl}>
                 <div className={styles.liveIndicator}>
                   <span className={styles.liveDot} />
@@ -1630,7 +1618,7 @@ const Host = ({
               </div>
             )
           ) : remote ? (
-            /* ── Co-host, empty queue ── */
+            /* Co-host, empty queue. */
             <div className={styles.emptyState}>
               <h2 className={`${styles.emptyTitle} ${styles.emptyTitleBrand}`}>
                 KaraoQ
@@ -1640,9 +1628,9 @@ const Host = ({
               </p>
             </div>
           ) : (
-            /* ── Host, empty queue: make the room playable right now. Adding
-                 the first song is the primary action; inviting guests to pile
-                 on is offered as a secondary step. ── */
+            /* Host, empty queue: make the room playable right now. Adding the
+               first song is the primary action; inviting guests to pile on is
+               offered as a secondary step. */
             <div className={styles.emptyState}>
               <div className={styles.emptyStage}>
                 <h2 className={styles.emptyTitle}>{t('host.empty.title')}</h2>
@@ -1709,7 +1697,7 @@ const Host = ({
             </div>
           )}
 
-          {/* ─── Transport bar (host only — co-hosts don't control playback) ─── */}
+          {/* Transport bar — host only; co-hosts don't control playback. */}
           {!remote && (
             <div
               className={`${styles.transport} ${roomEmpty ? styles.transportEmptyMobile : ""}`}
@@ -1840,8 +1828,6 @@ const Host = ({
           )}
         </div>
 
-
-        {/* ─── Sidebar ─── */}
         <div
           className={`${styles.sidebar} ${sidebarCollapsed ? styles.sidebarCollapsed : ""} ${!remote && roomEmpty ? styles.sidebarEmptyMobile : ""}`}
         >
@@ -1862,7 +1848,6 @@ const Host = ({
             </button>
           ) : (
             <>
-              {/* Sidebar header: two tabs (Up Next / History) + collapse. */}
               <div className={styles.sidebarHeader}>
                 <div className={styles.sidebarTabs}>
                   <button
@@ -1898,7 +1883,6 @@ const Host = ({
                 </button>
               </div>
 
-              {/* Primary action: add a song. */}
               <button
                 className={`${styles.addSongBtn} ${searchOpen ? styles.addSongBtnActive : ""}`}
                 onClick={() => setSearchOpen(!searchOpen)}
@@ -1906,7 +1890,6 @@ const Host = ({
                 {Icons.plus} {t('host.sidebar.addSong')}
               </button>
 
-              {/* Up Next tab */}
               {sidebarTab === "queue" && (
                 <>
                   {upNext.length > 0 && (
@@ -1958,7 +1941,6 @@ const Host = ({
                 </>
               )}
 
-              {/* History tab */}
               {sidebarTab === "history" && (
                 <div className={styles.historyList}>
                   {historyItems.length > 0 ? (
@@ -2123,7 +2105,6 @@ const Host = ({
                 )}
               </div>
 
-              {/* Search overlay */}
               {searchOpen && joinCode && (
                 <div className={styles.searchOverlay}>
                   <div className={styles.searchOverlayHead}>
@@ -2150,9 +2131,8 @@ const Host = ({
         </div>
       </div>
 
-      {/* ─── Mobile page footer ───
-          On phones the transport footer hides (it would land mid-page, above
-          the stacked queue) and this one pins the attribution to the true
+      {/* Mobile page footer: on phones the transport footer hides (it would land
+          mid-page, above the stacked queue), so this pins the attribution to the
           bottom of the screen. Hidden on desktop. */}
       {!remote && (
         <footer className={styles.mobileFooter}>
@@ -2168,7 +2148,6 @@ const Host = ({
         </footer>
       )}
 
-      {/* ─── Co-host invite modal ─── */}
       {cohostOpen && (
         <div className={styles.overlay} onClick={() => setCohostOpen(false)}>
           <div className={styles.invitePanel} onClick={(e) => e.stopPropagation()}>
@@ -2215,7 +2194,6 @@ const Host = ({
         </div>
       )}
 
-      {/* ─── QR code popout (enlarge) ─── */}
       {qrModalOpen && joinUrl && (
         <div className={styles.overlay} onClick={() => setQrModalOpen(false)}>
           <div className={styles.invitePanel} onClick={(e) => e.stopPropagation()}>
@@ -2248,7 +2226,6 @@ const Host = ({
         </div>
       )}
 
-      {/* ─── Confirm remove modal ─── */}
       {confirmRemove && (
         <div className={styles.overlay} onClick={() => setConfirmRemove(null)}>
           <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
@@ -2278,14 +2255,12 @@ const Host = ({
         </div>
       )}
 
-      {/* ─── Toast ─── */}
       {toast && (
         <div className={styles.toast} key={toast}>
           {toast}
         </div>
       )}
 
-      {/* ─── Welcome name prompt ─── */}
       {showWelcome && !loading && !error && (
         <div className={styles.welcomeOverlay}>
           <div className={styles.welcomeCard}>

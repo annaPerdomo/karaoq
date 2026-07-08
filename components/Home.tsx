@@ -13,8 +13,7 @@ import { useT } from '../lib/i18n/I18nProvider';
 import { renderWithHeart } from '../lib/i18n/renderWithHeart';
 import LanguageSwitcher from './LanguageSwitcher';
 
-// ─── FAQ content ───
-// Exported so the landing page can mirror it in FAQPage structured data.
+// FAQ content, exported so the landing page can mirror it in FAQPage structured data.
 // Google requires the JSON-LD text to match the visible answers, so keep both
 // sourced from here. The English text here is what SSR + JSON-LD emit (kept
 // consistent for SEO); `id` maps each item to its faq.* translation keys, which
@@ -79,7 +78,6 @@ function generateCode(): string {
   return result;
 }
 
-// ─── Scroll reveal wrapper ───
 function Reveal({ children, className, delay }: {
   children: React.ReactNode;
   className?: string;
@@ -118,7 +116,6 @@ function Reveal({ children, className, delay }: {
   );
 }
 
-// ─── Equalizer bars decoration ───
 function EqBars({ color }: { color: string }) {
   return (
     <div className={styles.eqBars} aria-hidden="true">
@@ -129,7 +126,7 @@ function EqBars({ color }: { color: string }) {
   );
 }
 
-// ─── Animated Demo: start a room now, come back to it later (the host) ───
+// Animated demo: start a room now, come back to it later (the host).
 // Runs on a laptop frame — the recommended host setup (see the Setup guide),
 // and it keeps the step devices honest: laptop (host) → phones (guests) →
 // big screen. Beat 1 mirrors the landing host panel (a name and one button);
@@ -198,7 +195,7 @@ function StartResumeDemo() {
   );
 }
 
-// ─── Animated Demo: the queue-building loop on a guest's phone ───
+// Animated demo: the queue-building loop on a guest's phone.
 // One persistent Sing-view screen (header, search, the shared Up Next queue —
 // mirrors Sing.tsx/SongSearch.tsx). The motion is the state changing the way
 // it really does: type → results → tap + → toast, and the song lands in the
@@ -303,7 +300,7 @@ function QueueBuildDemo() {
   );
 }
 
-// ─── Animated Demo: the big-screen payoff (Display view) ───
+// Animated demo: the big-screen payoff (Display view).
 // The two states the room actually sees, in sequence: "UP NEXT" calling the
 // singer to the stage, then the song starting — lyrics light up, the crowd's
 // reactions float by, and the sidebar queue advances (Mike's row leaves, the
@@ -390,7 +387,7 @@ function BigScreenDemo() {
   );
 }
 
-// ─── A single phone running the real search-and-add flow ───
+// A single phone running the real search-and-add flow.
 // Mirrors SongSearch.tsx (room badge → search → results with a + to queue).
 // Used a couple of times in the hero to show "anyone can add from any phone".
 // When `toast` is set, the phone plays the real add interaction on a loop:
@@ -453,7 +450,7 @@ function HeroPhoneCard({
   );
 }
 
-// ─── The second phone: cheering the singer on ───
+// The second phone: cheering the singer on.
 // Mirrors the Sing view while a song plays — Now Playing card + CheerBar
 // (real emoji set and quick messages). The ❤️ tap is timed so the matching
 // reaction floats up the big screen a beat later: this is where the emojis
@@ -506,7 +503,7 @@ function HeroCheerPhone() {
   );
 }
 
-// ─── Hero scene: the real product in one frame ───
+// Hero scene: the real product in one frame.
 // The karaoke video (with highlighting lyrics) plays on any screen, while
 // everyone adds songs — right from the screen or from their own phones after
 // joining. Faithful to Display.tsx / SongSearch.tsx.
@@ -641,7 +638,6 @@ function HeroDemo() {
   );
 }
 
-// ─── Main Home / Landing Page ───
 const CUSTOM_CODE_PATTERN = /^[A-Z0-9]{3,12}$/;
 
 const Home = (): React.ReactElement => {
@@ -769,7 +765,6 @@ const Home = (): React.ReactElement => {
 
   return (
     <>
-      {/* ─── Navigation ─── */}
       <nav className={styles.nav}>
         <span className={styles.navLogo}>KaraoQ</span>
         <div className={styles.navLinks}>
@@ -787,7 +782,6 @@ const Home = (): React.ReactElement => {
       </nav>
 
       <main>
-        {/* ─── Hero ─── */}
         <section className={styles.hero}>
           {/* Three grid blocks — copy, demo scene, CTA card. Desktop places
               copy+CTA in the left column with the scene alongside; when the
@@ -943,7 +937,6 @@ const Home = (): React.ReactElement => {
           </div>
         </section>
 
-        {/* ─── How It Works ─── */}
         <section id="how-it-works" className={styles.howSection}>
           <Reveal>
             <h2 className={styles.sectionTitle}>{t('home.how.title')}</h2>
@@ -1013,8 +1006,7 @@ const Home = (): React.ReactElement => {
           </div>
         </section>
 
-        {/* ─── Setup Guide ─── */}
-        {/* Answers the question How It Works leaves open: "OK, but what do I
+        {/* Setup Guide — answers the question How It Works leaves open: "OK, but what do I
             physically need?" Three honest recipes — every one is just a
             browser plus whatever plays the audio. */}
         <section id="setup" className={styles.setupSection}>
@@ -1087,7 +1079,6 @@ const Home = (): React.ReactElement => {
           </Reveal>
         </section>
 
-        {/* ─── Features ─── */}
         <section id="features" className={styles.featuresSection}>
           <Reveal>
             <h2 className={styles.sectionTitle}>{t('home.features.title')}</h2>
@@ -1199,7 +1190,6 @@ const Home = (): React.ReactElement => {
           </div>
         </section>
 
-        {/* ─── Use Cases ─── */}
         <section className={styles.useCasesSection}>
           <Reveal>
             <h2 className={styles.sectionTitle}>{t('home.useCases.title')}</h2>
@@ -1245,7 +1235,6 @@ const Home = (): React.ReactElement => {
           </div>
         </section>
 
-        {/* ─── FAQ ─── */}
         <section className={styles.faqSection}>
           <Reveal>
             <h2 className={styles.sectionTitle}>{t('home.faq.title')}</h2>
@@ -1266,7 +1255,6 @@ const Home = (): React.ReactElement => {
           </div>
         </section>
 
-        {/* ─── Final CTA ─── */}
         <section className={styles.ctaSection}>
           <Reveal>
             <h2 className={styles.ctaTitle}>{t('home.cta.title')}</h2>
@@ -1289,7 +1277,6 @@ const Home = (): React.ReactElement => {
         </section>
       </main>
 
-      {/* ─── Footer ─── */}
       <footer className={styles.footer}>
         <nav className={styles.footerGuides} aria-label={t('home.guides.title')}>
           <span className={styles.footerGuidesTitle}>{t('home.guides.title')}</span>

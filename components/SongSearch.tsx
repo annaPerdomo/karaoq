@@ -195,7 +195,6 @@ const SongSearch: React.FC<SongSearchProps> = ({
   const karaokeModeRef = React.useRef(karaokeMode);
   karaokeModeRef.current = karaokeMode;
 
-  // Clear results when query is emptied
   React.useEffect(() => {
     if (query.trim().length === 0 && hasSearched) {
       setHasSearched(false);
@@ -790,7 +789,6 @@ const SongSearch: React.FC<SongSearchProps> = ({
         );
       })()}
 
-      {/* Confirm modal */}
       {confirmSong && (
         <div className={styles.overlay} onClick={() => setConfirmSong(null)}>
           <div className={styles.modal} onClick={(e) => e.stopPropagation()}>

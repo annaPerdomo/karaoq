@@ -62,7 +62,6 @@ const Sing = (): React.ReactElement => {
   const seenReactionIds = React.useRef(new Set<string>());
   const reactionTimers = React.useRef<ReturnType<typeof setTimeout>[]>([]);
 
-  // Load saved username
   React.useEffect(() => {
     const saved = getStoredName(NAME_STORAGE_KEY);
     if (saved) {
@@ -121,13 +120,11 @@ const Sing = (): React.ReactElement => {
     }
   }
 
-  // Session analytics tracking
   React.useEffect(() => {
     if (!joinCode || !username || showWelcome) return;
     return startSessionTracking(joinCode, username, 'singer');
   }, [joinCode, username, showWelcome]);
 
-  // Clean up reaction-pop timers on unmount
   React.useEffect(() => {
     const timers = reactionTimers.current;
     return () => {
@@ -169,7 +166,6 @@ const Sing = (): React.ReactElement => {
     [spawnReactionPops]
   );
 
-  // Initial room load
   React.useEffect(() => {
     if (!joinCode) return;
 
@@ -195,7 +191,6 @@ const Sing = (): React.ReactElement => {
     return () => { cancelled = true; };
   }, [joinCode, processReactions]);
 
-  // Poll for updates
   React.useEffect(() => {
     if (!joinCode || error) return;
 
@@ -315,7 +310,6 @@ const Sing = (): React.ReactElement => {
 
   return (
     <main className={styles.main}>
-      {/* Header */}
       <header className={styles.header}>
         <div className={styles.brand} onClick={() => router.push('/')}>
           KaraoQ
@@ -329,7 +323,7 @@ const Sing = (): React.ReactElement => {
       </header>
 
       <div className={styles.content}>
-        {/* ─── Left panel: search + results ─── */}
+        {/* Left panel: search + results */}
         <div
           className={`${styles.searchPanel} ${showingNowPlaying && reactionsOn ? styles.searchPanelCheer : ''}`}
         >
@@ -404,7 +398,7 @@ const Sing = (): React.ReactElement => {
           )}
         </div>
 
-        {/* ─── Right panel: queue sidebar (desktop) ─── */}
+        {/* Right panel: queue sidebar (desktop) */}
         <aside className={styles.sidebar}>
           {currentSong && isPlaying && (
             <div className={styles.nowPlaying}>
@@ -470,7 +464,7 @@ const Sing = (): React.ReactElement => {
           </div>
         </aside>
 
-        {/* ─── Mobile bottom drawer ─── */}
+        {/* Mobile bottom drawer */}
         <div
           ref={drawerRef}
           className={`${styles.mobileDrawer} ${quickCheerVisible ? styles.mobileDrawerCheer : ''} ${mobileQueueOpen ? styles.mobileDrawerOpen : ''} ${drawerDragHeight !== null ? styles.mobileDrawerDragging : ''}`}
@@ -610,7 +604,6 @@ const Sing = (): React.ReactElement => {
         </div>
       )}
 
-      {/* Welcome name gate */}
       {showWelcome && !loading && !error && (
         <div className={styles.welcomeOverlay}>
           <div className={styles.welcomeCard}>
