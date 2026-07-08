@@ -1,29 +1,10 @@
 import * as React from "react";
 import { useRouter } from "next/router";
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
-} from "@dnd-kit/core";
-import {
-  SortableContext,
-  sortableKeyboardCoordinates,
-  useSortable,
-  verticalListSortingStrategy,
-  arrayMove,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
-import { QRCodeSVG } from "qrcode.react";
+import { DragEndEvent } from "@dnd-kit/core";
+import { arrayMove } from "@dnd-kit/sortable";
 import styles from "../styles/Host.module.css";
-import CheerBar from "./CheerBar";
 import { rememberLastHostedRoom } from "../lib/lastRoom";
 import { normalizeRoomId } from "../lib/roomCode";
-import SongSearch from "./SongSearch";
-import SocialBoards from "./SocialBoards";
 import getRoom from "../app/queue/getRoom";
 import createRoom from "../app/queue/createRoom";
 import updatePosition from "../app/queue/updatePosition";
@@ -52,495 +33,25 @@ import {
 } from "../pages/api/types";
 import { v4 as uuidv4 } from "uuid";
 import { useT } from "../lib/i18n/I18nProvider";
-import { renderWithHeart } from "../lib/i18n/renderWithHeart";
-import LanguageSwitcher from "./LanguageSwitcher";
-import FullscreenToggle from "./FullscreenToggle";
-
-const POLL_INTERVAL = 3000;
-// Backstop only: how long a cast display's heartbeat can stay stale before the
-// host falls back to playing on its own screen. Long enough (a couple of poll
-// cycles) to ride out a cross-device display reload. Same-browser displays are
-// caught far faster by the window-handle watcher, so this rarely comes into play.
-const DISPLAY_GONE_CONFIRM_MS = 6000;
-
-function playModeStorageKey(joinCode: string): string {
-  return `karaoq_play_mode_${joinCode}`;
-}
-
-// Token minted when THIS device starts a song in "here" mode; matches
-// Room.playToken while our playback is the live one. Persisted so a reload
-// can prove to the server that the previous playback surface was ours.
-function playTokenStorageKey(joinCode: string): string {
-  return `karaoq_play_token_${joinCode}`;
-}
-
-function readStoredPlayToken(joinCode: string): string | null {
-  try {
-    return localStorage.getItem(playTokenStorageKey(joinCode));
-  } catch {
-    return null;
-  }
-}
-
-function qrHiddenStorageKey(joinCode: string): string {
-  return `karaoq_qr_hidden_${joinCode}`;
-}
-
-function cheersHiddenStorageKey(joinCode: string): string {
-  return `karaoq_cheers_hidden_${joinCode}`;
-}
-
-function isTextReaction(emoji: string): boolean {
-  return emoji.length > 2 && /[a-zA-Z]/.test(emoji);
-}
-
-const Icons = {
-  drag: (
-    <svg
-      width="12"
-      height="18"
-      viewBox="0 0 12 18"
-      fill="currentColor"
-      opacity="0.3"
-    >
-      <circle cx="3" cy="3" r="1.5" />
-      <circle cx="9" cy="3" r="1.5" />
-      <circle cx="3" cy="9" r="1.5" />
-      <circle cx="9" cy="9" r="1.5" />
-      <circle cx="3" cy="15" r="1.5" />
-      <circle cx="9" cy="15" r="1.5" />
-    </svg>
-  ),
-  moveTop: (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 14 14"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-    >
-      <line x1="3" y1="2" x2="11" y2="2" />
-      <polyline points="4,9 7,5 10,9" />
-      <line x1="7" y1="5" x2="7" y2="12" />
-    </svg>
-  ),
-  edit: (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 14 14"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M8.5 2.5l3 3L4.5 12.5H1.5v-3l7-7z" />
-    </svg>
-  ),
-  remove: (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 14 14"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-    >
-      <line x1="3" y1="3" x2="11" y2="11" />
-      <line x1="11" y1="3" x2="3" y2="11" />
-    </svg>
-  ),
-  replay: (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 14 14"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M2 2v4h4" />
-      <path d="M3 10a5 5 0 1 0 1-6.5L2 6" />
-    </svg>
-  ),
-  play: (
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-      <circle
-        cx="10"
-        cy="10"
-        r="9"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        fill="none"
-      />
-      <path d="M8 5.5l7 4.5-7 4.5V5.5z" fill="currentColor" />
-    </svg>
-  ),
-  stop: (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-      <rect x="2" y="2" width="12" height="12" rx="2" />
-    </svg>
-  ),
-  pause: (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-      <rect x="3" y="2" width="3.5" height="12" rx="1.2" />
-      <rect x="9.5" y="2" width="3.5" height="12" rx="1.2" />
-    </svg>
-  ),
-  resume: (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-      <path d="M4 2.5l9 5.5-9 5.5z" />
-    </svg>
-  ),
-  prev: (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 18 18"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.5"
-      strokeLinecap="round"
-    >
-      <polyline points="11,4 6,9 11,14" />
-    </svg>
-  ),
-  next: (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 18 18"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.5"
-      strokeLinecap="round"
-    >
-      <polyline points="7,4 12,9 7,14" />
-    </svg>
-  ),
-  gear: (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M12.22 2h-.44a2 2 0 00-2 2v.18a2 2 0 01-1 1.73l-.43.25a2 2 0 01-2 0l-.15-.08a2 2 0 00-2.73.73l-.22.38a2 2 0 00.73 2.73l.15.1a2 2 0 011 1.72v.51a2 2 0 01-1 1.74l-.15.09a2 2 0 00-.73 2.73l.22.38a2 2 0 002.73.73l.15-.08a2 2 0 012 0l.43.25a2 2 0 011 1.73V20a2 2 0 002 2h.44a2 2 0 002-2v-.18a2 2 0 011-1.73l.43-.25a2 2 0 012 0l.15.08a2 2 0 002.73-.73l.22-.39a2 2 0 00-.73-2.73l-.15-.08a2 2 0 01-1-1.74v-.5a2 2 0 011-1.74l.15-.09a2 2 0 00.73-2.73l-.22-.38a2 2 0 00-2.73-.73l-.15.08a2 2 0 01-2 0l-.43-.25a2 2 0 01-1-1.73V4a2 2 0 00-2-2z" />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
-  ),
-  tv: (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 18 18"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <rect x="1" y="2" width="16" height="11" rx="1.5" />
-      <line x1="6" y1="16" x2="12" y2="16" />
-      <line x1="9" y1="13" x2="9" y2="16" />
-    </svg>
-  ),
-  monitor: (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 18 18"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <rect x="2" y="3" width="14" height="9" rx="1.5" />
-      <path d="M9 12v3" />
-      <path d="M5 15.5h8" />
-    </svg>
-  ),
-  users: (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 18 18"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M12 15.5v-1.2a2.8 2.8 0 00-2.8-2.8H5.3a2.8 2.8 0 00-2.8 2.8v1.2" />
-      <circle cx="7.25" cy="5.5" r="2.5" />
-      <path d="M15.5 15.5v-1.2a2.8 2.8 0 00-2.1-2.7" />
-      <path d="M11.5 3.1a2.5 2.5 0 010 4.8" />
-    </svg>
-  ),
-  plus: (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 16 16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-    >
-      <line x1="8" y1="3" x2="8" y2="13" />
-      <line x1="3" y1="8" x2="13" y2="8" />
-    </svg>
-  ),
-  caret: (
-    <svg width="10" height="6" viewBox="0 0 10 6" fill="currentColor">
-      <path d="M0 0l5 6 5-6z" />
-    </svg>
-  ),
-  chevronRight: (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 14 14"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <polyline points="5,3 10,7 5,11" />
-    </svg>
-  ),
-};
-
-// The room's "set once" controls: audience reactions, the co-host invite, and
-// the host's name. Playback mode lives in the header pill, and inviting singers
-// lives in the Invite panel.
-function SettingsPopover({
-  isOpen,
-  onClose,
-  remote,
-  reactionsOn,
-  onToggleReactions,
-  hostName,
-  onChangeName,
-  onInviteCohost,
-}: {
-  isOpen: boolean;
-  onClose: () => void;
-  remote: boolean;
-  reactionsOn: boolean;
-  onToggleReactions: () => void;
-  hostName: string;
-  onChangeName: () => void;
-  onInviteCohost: () => void;
-}) {
-  const { t } = useT();
-  const ref = React.useRef<HTMLDivElement>(null);
-
-  React.useEffect(() => {
-    if (!isOpen) return;
-    const handler = (e: PointerEvent) => {
-      if (
-        ref.current &&
-        !ref.current.contains(e.target as Node) &&
-        !(e.target as Element).closest(`.${styles.gearBtn}`)
-      ) {
-        onClose();
-      }
-    };
-    const t = setTimeout(
-      () => document.addEventListener("pointerdown", handler),
-      10,
-    );
-    return () => {
-      clearTimeout(t);
-      document.removeEventListener("pointerdown", handler);
-    };
-  }, [isOpen, onClose]);
-
-  if (!isOpen) return null;
-
-  return (
-    <div ref={ref} className={styles.settingsPopover}>
-      {!remote && (
-        <>
-          <div className={styles.spGroup}>
-            <div className={styles.spLabel}>{t('host.settings.audience')}</div>
-            <button className={styles.spToggleRow} onClick={onToggleReactions}>
-              <div>
-                <div className={styles.spBtnTitle}>{t('host.settings.reactions')}</div>
-                <div className={styles.spBtnDesc}>
-                  {reactionsOn
-                    ? t('host.settings.reactionsOn')
-                    : t('host.settings.reactionsOff')}
-                </div>
-              </div>
-              <div
-                className={`${styles.toggle} ${reactionsOn ? styles.toggleOn : ""}`}
-              >
-                <div className={styles.toggleThumb} />
-              </div>
-            </button>
-          </div>
-          <div className={styles.spSep} />
-          <div className={styles.spGroup}>
-            <div className={styles.spLabel}>{t('host.settings.cohosts')}</div>
-            <button className={styles.spBtn} onClick={onInviteCohost}>
-              {Icons.users}
-              <div>
-                <div className={styles.spBtnTitle}>{t('host.cohost.title')}</div>
-                <div className={styles.spBtnDesc}>
-                  {t('host.cohost.short')}
-                </div>
-              </div>
-            </button>
-          </div>
-          <div className={styles.spSep} />
-        </>
-      )}
-      <div className={styles.spGroup}>
-        <div className={styles.spLabel}>{remote ? t('host.role.cohost') : t('host.role.host')}</div>
-        <button className={styles.spBtn} onClick={onChangeName}>
-          {Icons.edit}
-          <div>
-            <div className={styles.spBtnTitle}>{hostName}</div>
-            <div className={styles.spBtnDesc}>{t('host.settings.changeName')}</div>
-          </div>
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function SortableQueueItem({
-  item,
-  index,
-  isFirst,
-  editing,
-  onMoveTop,
-  onEdit,
-  onEditSave,
-  onRemove,
-}: {
-  item: QueueEntry;
-  index: number;
-  isFirst: boolean;
-  editing: boolean;
-  onMoveTop: () => void;
-  onEdit: () => void;
-  onEditSave: (name: string) => void;
-  onRemove: () => void;
-}) {
-  const { t } = useT();
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: item.id });
-
-  const [editName, setEditName] = React.useState(item.userName);
-  const inputRef = React.useRef<HTMLInputElement>(null);
-
-  React.useEffect(() => {
-    if (editing) {
-      setEditName(item.userName);
-      setTimeout(() => inputRef.current?.select(), 50);
-    }
-  }, [editing, item.userName]);
-
-  const save = () => onEditSave(editName);
-
-  const style: React.CSSProperties = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-    zIndex: isDragging ? 10 : undefined,
-  };
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={`${styles.queueItem} ${isDragging ? styles.queueItemDragging : ""} ${editing ? styles.queueItemEditing : ""}`}
-    >
-      <button
-        className={styles.dragHandle}
-        {...attributes}
-        {...listeners}
-        aria-label={t('host.queue.dragReorder')}
-      >
-        {Icons.drag}
-      </button>
-      <span className={styles.queueNum}>{index + 1}</span>
-      <div className={styles.queueInfo}>
-        <div className={styles.queueSingerLine}>
-          {editing ? (
-            <input
-              ref={inputRef}
-              className={styles.editInput}
-              value={editName}
-              onChange={(e) => setEditName(e.target.value)}
-              onBlur={save}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") save();
-                if (e.key === "Escape") onEditSave(item.userName);
-              }}
-            />
-          ) : (
-            <span className={styles.queueSingerName} title={item.userName}>
-              {item.userName}
-            </span>
-          )}
-        </div>
-        <div className={styles.queueSong} title={decodeHtml(item.songTitle)}>
-          {decodeHtml(item.songTitle)}
-        </div>
-      </div>
-      <div className={styles.queueActions}>
-        {!isFirst && (
-          <button
-            className={styles.actionBtn}
-            onClick={onMoveTop}
-            title={t('host.queue.moveTop')}
-            aria-label={t('host.queue.moveTop')}
-          >
-            {Icons.moveTop}
-          </button>
-        )}
-        <button
-          className={`${styles.actionBtn} ${editing ? styles.actionBtnActive : ""}`}
-          onClick={onEdit}
-          title={t('host.queue.editName')}
-          aria-label={t('host.queue.editName')}
-        >
-          {Icons.edit}
-        </button>
-        <button
-          className={`${styles.actionBtn} ${styles.removeBtn}`}
-          onClick={onRemove}
-          title={t('host.queue.remove')}
-          aria-label={t('host.queue.remove')}
-        >
-          {Icons.remove}
-        </button>
-      </div>
-    </div>
-  );
-}
+import { POLL_INTERVAL, DISPLAY_GONE_CONFIRM_MS } from "./host/constants";
+import { decodeHtml } from "./host/utils";
+import {
+  playModeStorageKey,
+  playTokenStorageKey,
+  readStoredPlayToken,
+  qrHiddenStorageKey,
+  cheersHiddenStorageKey,
+} from "./host/storage";
+import { ReactionOverlay } from "./host/ReactionOverlay";
+import { MobileFooter } from "./host/MobileFooter";
+import { CohostInviteModal } from "./host/CohostInviteModal";
+import { QrModal } from "./host/QrModal";
+import { ConfirmRemoveModal } from "./host/ConfirmRemoveModal";
+import { WelcomePrompt } from "./host/WelcomePrompt";
+import { HostHeader } from "./host/HostHeader";
+import { SongStage } from "./host/SongStage";
+import { TransportBar } from "./host/TransportBar";
+import { QueueSidebar } from "./host/QueueSidebar";
 
 // `remote` renders a co-host control surface: it manages the queue (add /
 // remove / reorder / restore) but never embeds the player, never controls
@@ -680,13 +191,6 @@ const Host = ({
   const [isPaused, setIsPaused] = React.useState(false);
   const isPausedRef = React.useRef(false);
   const pauseTimeout = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    }),
-  );
 
   React.useEffect(() => {
     setOrigin(window.location.origin);
@@ -1397,862 +901,161 @@ const Host = ({
 
   return (
     <main className={styles.main}>
-      <header className={styles.header}>
-        <div className={styles.brand} onClick={() => router.push("/")}>
-          KaraoQ
-          {remote && <span className={styles.cohostBadge}>{t('host.role.cohost')}</span>}
-        </div>
-
-        {/* Playback-mode pill: shows where the video plays and switches in one tap. */}
-        {!remote && (
-          <div className={styles.modePillWrap}>
-            <button
-              className={styles.modePill}
-              onClick={() => {
-                setModeMenuOpen((o) => !o);
-                setSettingsOpen(false);
-              }}
-              title={t('host.mode.pillTitle')}
-            >
-              {tvMode ? Icons.tv : Icons.monitor}
-              <span className={styles.modePillText}>
-                {tvMode ? t('host.mode.playingTv') : t('host.mode.playingHere')}
-              </span>
-              <span className={styles.modePillCaret}>{Icons.caret}</span>
-            </button>
-            {modeMenuOpen && (
-              <>
-                <div
-                  className={styles.menuBackdrop}
-                  onClick={() => setModeMenuOpen(false)}
-                />
-                <div className={styles.modeMenu}>
-                  <div className={styles.spLabel}>{t('host.mode.menuLabel')}</div>
-                  <button
-                    className={`${styles.modeMenuItem} ${!tvMode ? styles.modeMenuItemActive : ""}`}
-                    onClick={playHere}
-                  >
-                    {Icons.monitor}
-                    <div>
-                      <div className={styles.spBtnTitle}>{t('host.mode.thisScreen')}</div>
-                      <div className={styles.spBtnDesc}>
-                        {t('host.mode.thisScreenDesc')}
-                      </div>
-                    </div>
-                    {!tvMode && <span className={styles.modeCheck}>✓</span>}
-                  </button>
-                  <button
-                    className={`${styles.modeMenuItem} ${tvMode ? styles.modeMenuItemActive : ""}`}
-                    onClick={openTvDisplay}
-                  >
-                    {Icons.tv}
-                    <div>
-                      <div className={styles.spBtnTitle}>
-                        {t('host.mode.diffScreen')}
-                      </div>
-                      <div className={styles.spBtnDesc}>
-                        {tvMode
-                          ? t('host.mode.reopen')
-                          : t('host.mode.cast')}
-                      </div>
-                    </div>
-                    {tvMode && <span className={styles.modeCheck}>✓</span>}
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        )}
-
-        <div className={styles.headerActions}>
-          <LanguageSwitcher />
-          <button
-            className={`${styles.gearBtn} ${settingsOpen ? styles.gearBtnOpen : ""}`}
-            onClick={() => {
-              setSettingsOpen(!settingsOpen);
-              setModeMenuOpen(false);
-            }}
-            aria-label={t('host.settingsAria')}
-          >
-            {Icons.gear}
-          </button>
-        </div>
-        <SettingsPopover
-          isOpen={settingsOpen}
-          onClose={() => setSettingsOpen(false)}
-          remote={remote}
-          reactionsOn={reactionsOn}
-          onToggleReactions={toggleReactions}
-          hostName={hostName}
-          onChangeName={() => {
-            setSettingsOpen(false);
-            setShowWelcome(true);
-            setWelcomeName(hostName);
-          }}
-          onInviteCohost={() => {
-            setSettingsOpen(false);
-            setCohostOpen(true);
-          }}
-        />
-      </header>
+      <HostHeader
+        remote={remote}
+        tvMode={tvMode}
+        modeMenuOpen={modeMenuOpen}
+        onModePillClick={() => {
+          setModeMenuOpen((o) => !o);
+          setSettingsOpen(false);
+        }}
+        onModeMenuBackdropClick={() => setModeMenuOpen(false)}
+        onPlayHere={playHere}
+        onOpenTvDisplay={openTvDisplay}
+        settingsOpen={settingsOpen}
+        onGearClick={() => {
+          setSettingsOpen(!settingsOpen);
+          setModeMenuOpen(false);
+        }}
+        onSettingsClose={() => setSettingsOpen(false)}
+        reactionsOn={reactionsOn}
+        onToggleReactions={toggleReactions}
+        hostName={hostName}
+        onChangeName={() => {
+          setSettingsOpen(false);
+          setShowWelcome(true);
+          setWelcomeName(hostName);
+        }}
+        onInviteCohost={() => {
+          setSettingsOpen(false);
+          setCohostOpen(true);
+        }}
+        onBrandClick={() => router.push("/")}
+      />
 
       <div className={styles.content}>
         <div className={tvMode ? styles.controlPanel : styles.playerArea}>
-          {loading ? (
-            <div className={styles.emptyState}>
-              <div className={styles.spinner} />
-              <p>{t('host.loadingRoom')}</p>
-            </div>
-          ) : currentSong ? (
-            remote ? (
-              /* Co-host mode: status only, no player or audio. */
-              <div className={styles.songControl}>
-                {isPlaying && displayPaused ? (
-                  <div className={styles.readyLabel}>{t('host.status.pausedDisplay')}</div>
-                ) : isPlaying ? (
-                  <div className={styles.liveIndicator}>
-                    <span className={styles.liveDot} />
-                    <span>{t('host.status.nowPlaying')}</span>
-                  </div>
-                ) : (
-                  <div className={styles.readyLabel}>{t('host.status.upNext')}</div>
-                )}
-                <h1 className={styles.controlSinger}>{currentSong.userName}</h1>
-                <p className={styles.controlSong}>
-                  {decodeHtml(currentSong.songTitle)}
-                </p>
-                <p className={styles.cohostNote}>
-                  {t('host.cohost.playbackNote')}
-                </p>
-              </div>
-            ) : tvMode ? (
-              /* TV Display mode: status panel; playback runs from the
-                 transport bar so there's one set of controls. */
-              <div className={styles.songControl}>
-                {isPlaying && displayPaused ? (
-                  <>
-                    <div className={styles.readyLabel}>{t('host.status.pausedDisplay')}</div>
-                    <p className={styles.controlSinger}>
-                      {currentSong.userName}
-                    </p>
-                    <h2 className={styles.controlSong}>
-                      {decodeHtml(currentSong.songTitle)}
-                    </h2>
-                    <p className={styles.cohostNote}>
-                      {t('host.status.pausedDisplayNote')}
-                    </p>
-                  </>
-                ) : isPlaying ? (
-                  <>
-                    <div className={styles.liveIndicator}>
-                      <span className={styles.liveDot} />
-                      <span>{t('host.status.playingDiffScreen')}</span>
-                    </div>
-                    <p className={styles.controlSinger}>
-                      {currentSong.userName}
-                    </p>
-                    <h2 className={styles.controlSong}>
-                      {decodeHtml(currentSong.songTitle)}
-                    </h2>
-                  </>
-                ) : (
-                  <>
-                    <div className={styles.readyLabel}>{t('host.status.upNext')}</div>
-                    <h1 className={styles.controlSinger}>
-                      {currentSong.userName}
-                    </h1>
-                    <p className={styles.controlSong}>
-                      {decodeHtml(currentSong.songTitle)}
-                    </p>
-                  </>
-                )}
-                {!displayConnected && (
-                  <p className={styles.cohostNote}>
-                    {t('host.status.noDisplay')}
-                  </p>
-                )}
-                <button
-                  className={styles.switchModeLink}
-                  onClick={openTvDisplay}
-                >
-                  {displayConnected
-                    ? t('host.status.reopenDisplay')
-                    : t('host.status.openDisplay')}
-                </button>
-              </div>
-            ) : /* All-in-one mode: video plays here. */
-            playsVideoHere ? (
-              <iframe
-                ref={videoRef}
-                key={currentSong.id}
-                className={styles.video}
-                src={`https://www.youtube.com/embed/${currentSong.videoId}?autoplay=1&rel=0&enablejsapi=1`}
-                allow="autoplay; encrypted-media"
-                allowFullScreen
-                onLoad={handleIframeLoad}
-              />
-            ) : isPlaying ? (
-              /* Song is playing on a different host device: show status instead
-                 of double-playing it. Starting it here mints a new token, so the
-                 other device yields — a clean takeover. */
-              <div className={styles.songControl}>
-                <div className={styles.liveIndicator}>
-                  <span className={styles.liveDot} />
-                  <span>{t('host.status.playingOtherDevice')}</span>
-                </div>
-                <p className={styles.controlSinger}>{currentSong.userName}</p>
-                <h2 className={styles.controlSong}>
-                  {decodeHtml(currentSong.songTitle)}
-                </h2>
-                <button className={styles.switchModeLink} onClick={startSong}>
-                  {t('host.status.playHereInstead')}
-                </button>
-              </div>
-            ) : (
-              <div className={styles.songControl}>
-                <div className={styles.readyLabel}>{t('host.status.upNext')}</div>
-                <h1 className={styles.controlSinger}>{currentSong.userName}</h1>
-                <p className={styles.controlSong}>
-                  {decodeHtml(currentSong.songTitle)}
-                </p>
-              </div>
-            )
-          ) : remote ? (
-            /* Co-host, empty queue. */
-            <div className={styles.emptyState}>
-              <h2 className={`${styles.emptyTitle} ${styles.emptyTitleBrand}`}>
-                KaraoQ
-              </h2>
-              <p>
-                {t('host.cohost.emptyQueue')}
-              </p>
-            </div>
-          ) : (
-            /* Host, empty queue: make the room playable right now. Adding the
-               first song is the primary action; inviting guests to pile on is
-               offered as a secondary step. */
-            <div className={styles.emptyState}>
-              <div className={styles.emptyStage}>
-                <h2 className={styles.emptyTitle}>{t('host.empty.title')}</h2>
-                <p className={styles.emptyStageLede}>
-                  {t('host.empty.lede')}
-                </p>
-                <button
-                  className={styles.emptyAddBtn}
-                  onClick={() => setSearchOpen(true)}
-                >
-                  {Icons.plus} {t('host.empty.addFirst')}
-                </button>
-              </div>
-
-              <div className={styles.emptyInvite}>
-                <span className={styles.emptyInviteLabel}>
-                  {t('host.empty.inviteLabel')}
-                </span>
-                <div className={styles.emptyInviteRow}>
-                  {joinUrl && (
-                    <div className={styles.emptyInviteQr}>
-                      <QRCodeSVG
-                        value={joinUrl}
-                        size={92}
-                        bgColor="transparent"
-                        fgColor="#ffffff"
-                        level="M"
-                      />
-                    </div>
-                  )}
-                  <div className={styles.emptyInviteInfo}>
-                    <div className={styles.emptyJoinKicker}>
-                      {t('host.empty.scanVisit', { url: displayUrl })}
-                    </div>
-                    <div className={styles.emptyInviteCode}>
-                      {joinCode?.toUpperCase()}
-                    </div>
-                    <button className={styles.emptyJoinPrint} onClick={printQr}>
-                      {t('host.empty.printCode')}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+          <SongStage
+            loading={loading}
+            currentSong={currentSong}
+            remote={remote}
+            tvMode={tvMode}
+            isPlaying={isPlaying}
+            displayPaused={displayPaused}
+            displayConnected={displayConnected}
+            playsVideoHere={playsVideoHere}
+            videoRef={videoRef}
+            onIframeLoad={handleIframeLoad}
+            onOpenTvDisplay={openTvDisplay}
+            onStartSong={startSong}
+            joinUrl={joinUrl}
+            displayUrl={displayUrl}
+            joinCode={joinCode}
+            onPrintQr={printQr}
+            onAddFirst={() => setSearchOpen(true)}
+          />
 
           {/* Reaction overlay — inside the player area so cheers float over
               the current song, never the queue or panels */}
           {!remote && reactionsOn && visibleReactions.length > 0 && (
-            <div className={styles.reactionOverlay}>
-              {visibleReactions.map((r) => (
-                <div
-                  key={r.key}
-                  className={styles.reactionBubble}
-                  style={{ left: `${r.left}%`, '--sway': `${r.sway}px` } as React.CSSProperties}
-                >
-                  {isTextReaction(r.emoji) ? (
-                    <span className={styles.reactionText}>{r.emoji}</span>
-                  ) : (
-                    <span className={styles.reactionEmoji}>{r.emoji}</span>
-                  )}
-                </div>
-              ))}
-            </div>
+            <ReactionOverlay reactions={visibleReactions} />
           )}
 
           {/* Transport bar — host only; co-hosts don't control playback. */}
           {!remote && (
-            <div
-              className={`${styles.transport} ${roomEmpty ? styles.transportEmptyMobile : ""}`}
-            >
-              <div className={styles.transportMain}>
-                <div className={styles.transportInfo}>
-                  {currentSong ? (
-                    <div className={styles.transportStatus}>
-                      <div
-                        className={`${styles.tLabel} ${isPlaying ? styles.tLabelPlaying : styles.tLabelReady}`}
-                      >
-                        {isPlaying && <span className={styles.tDot} />}
-                        {isPlaying ? t('host.status.onStage') : t('host.status.upNext')}
-                      </div>
-                      <div className={styles.tSinger}>
-                        {currentSong.userName}
-                      </div>
-                      <div className={styles.tSong}>
-                        {decodeHtml(currentSong.songTitle)}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className={styles.transportStatus}>
-                      <div className={`${styles.tLabel} ${styles.tLabelEmpty}`}>
-                        {t('host.status.waiting')}
-                      </div>
-                      <div className={styles.tSong}>{t('host.status.noSongs')}</div>
-                    </div>
-                  )}
-                </div>
-                <div className={styles.transportControls}>
-                  <button
-                    className={styles.tBtn}
-                    onClick={playPrevious}
-                    disabled={activeIndex <= 0}
-                    title={t('host.transport.previous')}
-                  >
-                    {Icons.prev}
-                  </button>
-                  {isPlaying && tvMode ? (
-                    // Playing on a separate display: pause/resume that screen
-                    // from here (only useful with a live display to receive
-                    // it), plus a Stop.
-                    <>
-                      {displayConnected && (
-                        <button
-                          className={`${styles.tBtn} ${styles.tPause}`}
-                          onClick={toggleDisplayPause}
-                          title={
-                            displayPaused
-                              ? t('host.transport.resumeDisplay')
-                              : t('host.transport.pauseDisplay')
-                          }
-                        >
-                          {displayPaused ? Icons.resume : Icons.pause}
-                        </button>
-                      )}
-                      <button
-                        className={`${styles.tBtn} ${styles.tStop}`}
-                        onClick={stopSong}
-                        title={t('host.transport.stop')}
-                      >
-                        {Icons.stop}
-                      </button>
-                    </>
-                  ) : playsVideoHere ? (
-                    // Video plays on this device. Give a real Pause/Play toggle
-                    // plus a Stop (parity with TV mode) so the host isn't left
-                    // hunting for YouTube's own chrome — and so a blocked
-                    // autoplay has a one-tap recovery.
-                    <>
-                      <button
-                        className={`${styles.tBtn} ${styles.tPause}`}
-                        onClick={toggleHereVideo}
-                        title={hereVideoPlaying ? t('host.transport.pause') : t('host.transport.play')}
-                      >
-                        {hereVideoPlaying ? Icons.pause : Icons.resume}
-                      </button>
-                      <button
-                        className={`${styles.tBtn} ${styles.tStop}`}
-                        onClick={stopSong}
-                        title={t('host.transport.stop')}
-                      >
-                        {Icons.stop}
-                      </button>
-                    </>
-                  ) : (
-                    // Nothing playing here: either idle, or the song is live on
-                    // another host device and this is the takeover control.
-                    <button
-                      className={`${styles.tBtn} ${styles.tPlay}`}
-                      onClick={startSong}
-                      disabled={!currentSong}
-                      title={
-                        tvMode
-                          ? t('host.transport.playOther')
-                          : isPlaying
-                          ? t('host.transport.playThis')
-                          : t('host.transport.play')
-                      }
-                    >
-                      {Icons.play}
-                    </button>
-                  )}
-                  <button
-                    className={styles.tBtn}
-                    onClick={playNext}
-                    disabled={activeIndex + 1 >= queue.length}
-                    title={t('host.transport.next')}
-                  >
-                    {Icons.next}
-                  </button>
-                  <FullscreenToggle className={`${styles.tBtn} ${styles.tFullscreen}`} />
-                </div>
-              </div>
-              <div className={styles.transportFooter}>
-                <span className={styles.transportLogo}>KaraoQ</span>
-                <a
-                  href="https://variationsonastring.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={styles.transportLink}
-                >
-                  {renderWithHeart(t('footer.credit'), styles.transportHeart)}
-                </a>
-              </div>
-            </div>
+            <TransportBar
+              roomEmpty={roomEmpty}
+              currentSong={currentSong}
+              isPlaying={isPlaying}
+              tvMode={tvMode}
+              displayConnected={displayConnected}
+              displayPaused={displayPaused}
+              playsVideoHere={playsVideoHere}
+              hereVideoPlaying={hereVideoPlaying}
+              activeIndex={activeIndex}
+              queueLength={queue.length}
+              onPrevious={playPrevious}
+              onToggleDisplayPause={toggleDisplayPause}
+              onStop={stopSong}
+              onToggleHereVideo={toggleHereVideo}
+              onStart={startSong}
+              onNext={playNext}
+            />
           )}
         </div>
 
-        <div
-          className={`${styles.sidebar} ${sidebarCollapsed ? styles.sidebarCollapsed : ""} ${!remote && roomEmpty ? styles.sidebarEmptyMobile : ""}`}
-        >
-          {sidebarCollapsed ? (
-            <button
-              className={styles.sidebarReopen}
-              onClick={() => setSidebarCollapsed(false)}
-              title={t('host.sidebar.showQueue')}
-              aria-label={t('host.sidebar.showQueue')}
-            >
-              <span className={styles.sidebarReopenIcon}>
-                {Icons.chevronRight}
-              </span>
-              <span className={styles.sidebarReopenLabel}>{t('host.sidebar.upNext')}</span>
-              {upNext.length > 0 && (
-                <span className={styles.sidebarBadge}>{upNext.length}</span>
-              )}
-            </button>
-          ) : (
-            <>
-              <div className={styles.sidebarHeader}>
-                <div className={styles.sidebarTabs}>
-                  <button
-                    className={`${styles.sidebarTab} ${sidebarTab === "queue" ? styles.sidebarTabActive : ""}`}
-                    onClick={() => setSidebarTab("queue")}
-                  >
-                    {t('host.sidebar.upNext')}
-                    {upNext.length > 0 && (
-                      <span className={styles.sidebarBadge}>
-                        {upNext.length}
-                      </span>
-                    )}
-                  </button>
-                  <button
-                    className={`${styles.sidebarTab} ${sidebarTab === "history" ? styles.sidebarTabActive : ""}`}
-                    onClick={() => setSidebarTab("history")}
-                  >
-                    {t('host.sidebar.history')}
-                    {historyItems.length > 0 && (
-                      <span className={styles.historyBadge}>
-                        {historyItems.length}
-                      </span>
-                    )}
-                  </button>
-                </div>
-                <button
-                  className={styles.sidebarCollapseBtn}
-                  onClick={() => setSidebarCollapsed(true)}
-                  title={t('host.sidebar.hidePanel')}
-                  aria-label={t('host.sidebar.hidePanel')}
-                >
-                  {Icons.chevronRight}
-                </button>
-              </div>
-
-              <button
-                className={`${styles.addSongBtn} ${searchOpen ? styles.addSongBtnActive : ""}`}
-                onClick={() => setSearchOpen(!searchOpen)}
-              >
-                {Icons.plus} {t('host.sidebar.addSong')}
-              </button>
-
-              {sidebarTab === "queue" && (
-                <>
-                  {upNext.length > 0 && (
-                    <div className={styles.queueStats}>
-                      <span>
-                        {tn('host.stats.songs', upNext.length)}
-                      </span>
-                      <span className={styles.statDot} />
-                      <span>
-                        {tn('host.stats.singers', uniqueSingers)}
-                      </span>
-                    </div>
-                  )}
-
-                  {upNext.length > 0 ? (
-                    <DndContext
-                      sensors={sensors}
-                      collisionDetection={closestCenter}
-                      onDragEnd={handleDragEnd}
-                    >
-                      <SortableContext
-                        items={upNext.map((e) => e.id)}
-                        strategy={verticalListSortingStrategy}
-                      >
-                        <div className={styles.queueList}>
-                          {upNext.map((item, i) => (
-                            <SortableQueueItem
-                              key={item.id}
-                              item={item}
-                              index={i}
-                              isFirst={i === 0}
-                              editing={editingId === item.id}
-                              onMoveTop={() => moveToTop(item.id)}
-                              onEdit={() =>
-                                setEditingId(
-                                  editingId === item.id ? null : item.id,
-                                )
-                              }
-                              onEditSave={(name) => editSave(item.id, name)}
-                              onRemove={() => setConfirmRemove(item.id)}
-                            />
-                          ))}
-                        </div>
-                      </SortableContext>
-                    </DndContext>
-                  ) : (
-                    <p className={styles.emptyQueue}>{t('host.sidebar.noQueued')}</p>
-                  )}
-                </>
-              )}
-
-              {sidebarTab === "history" && (
-                <div className={styles.historyList}>
-                  {historyItems.length > 0 ? (
-                    [...historyItems].reverse().map((item, i) => (
-                      <div key={item.id} className={styles.historyItem}>
-                        <span className={styles.historyNum}>
-                          {historyItems.length - i}
-                        </span>
-                        <div className={styles.queueInfo}>
-                          <div className={styles.queueArtist} title={item.userName}>
-                            {item.userName}
-                          </div>
-                          <div
-                            className={styles.queueSong}
-                            title={decodeHtml(item.songTitle)}
-                          >
-                            {decodeHtml(item.songTitle)}
-                          </div>
-                        </div>
-                        <button
-                          className={styles.replayBtn}
-                          onClick={() => replayFromHistory(item.id)}
-                          title={t('host.history.restoreTitle')}
-                          aria-label={t('host.history.restoreTitle')}
-                        >
-                          {Icons.replay}
-                          <span className={styles.replayBtnLabel}>{t('host.history.restore')}</span>
-                        </button>
-                      </div>
-                    ))
-                  ) : (
-                    <p className={styles.emptyQueue}>{t('host.history.empty')}</p>
-                  )}
-                </div>
-              )}
-
-              {/* Bottom cluster, pinned below the queue:
-                  - Cheers, contextual (only while a song is on stage).
-                  - The "Scan to join" QR card (same component/wording as the
-                    Display screen) so guests can scan all night, with its own
-                    print + hide controls. A host can tuck it away (remembered
-                    per-room) and restore it from the slim "Show join code"
-                    button. */}
-              <div className={styles.sidebarBottom}>
-                {!remote && reactionsOn && isPlaying && currentSong && (
-                  <>
-                    <button
-                      className={`${styles.drawerToggle} ${cheersOpen ? styles.drawerToggleOpen : ""}`}
-                      onClick={toggleCheers}
-                      aria-expanded={cheersOpen}
-                    >
-                      <svg
-                        className={styles.drawerCaret}
-                        width="10"
-                        height="6"
-                        viewBox="0 0 10 6"
-                        fill="currentColor"
-                      >
-                        <path d="M0 0l5 6 5-6z" />
-                      </svg>
-                      {t('host.cheers')}
-                    </button>
-                    {cheersOpen && (
-                      <div className={styles.cheersLive}>
-                        <CheerBar
-                          onReaction={sendReaction}
-                          cooldown={reactionCooldown}
-                          lastSentEmoji={lastSentEmoji}
-                          compact
-                        />
-                      </div>
-                    )}
-                  </>
-                )}
-                {joinCode && (singWithMe.length > 0 || suggestions.length > 0) && (
-                  <>
-                    <button
-                      className={`${styles.drawerToggle} ${boardsOpen ? styles.drawerToggleOpen : ""}`}
-                      onClick={() => setBoardsOpen((o) => !o)}
-                      aria-expanded={boardsOpen}
-                    >
-                      <svg
-                        className={styles.drawerCaret}
-                        width="10"
-                        height="6"
-                        viewBox="0 0 10 6"
-                        fill="currentColor"
-                      >
-                        <path d="M0 0l5 6 5-6z" />
-                      </svg>
-                      {t('host.singerBoards')}
-                      <span className={styles.boardsCount}>
-                        {singWithMe.length + suggestions.length}
-                      </span>
-                    </button>
-                    {boardsOpen && (
-                      <div className={styles.boardsShelf}>
-                        <SocialBoards
-                          roomId={joinCode}
-                          userName={hostName || "Host"}
-                          singWithMe={singWithMe}
-                          suggestions={suggestions}
-                          mode="host"
-                          onChange={refreshBoards}
-                        />
-                      </div>
-                    )}
-                  </>
-                )}
-                {!remote && joinUrl && (
-                  <>
-                    <button
-                      className={`${styles.drawerToggle} ${qrShelfOpen ? styles.drawerToggleOpen : ""}`}
-                      onClick={toggleQrShelf}
-                      aria-expanded={qrShelfOpen}
-                    >
-                      <svg
-                        className={styles.drawerCaret}
-                        width="10"
-                        height="6"
-                        viewBox="0 0 10 6"
-                        fill="currentColor"
-                      >
-                        <path d="M0 0l5 6 5-6z" />
-                      </svg>
-                      {t('host.scanToJoin')}
-                    </button>
-                    {qrShelfOpen && (
-                      <div className={styles.qrShelf}>
-                        <button
-                          className={styles.qrShelfThumb}
-                          onClick={() => setQrModalOpen(true)}
-                          title={t('host.qr.enlarge')}
-                          aria-label={t('host.qr.enlarge')}
-                        >
-                          <QRCodeSVG
-                            value={joinUrl}
-                            size={72}
-                            bgColor="transparent"
-                            fgColor="#ffffff"
-                            level="M"
-                          />
-                        </button>
-                        <div className={styles.qrShelfInfo}>
-                          <span className={styles.qrShelfHint}>
-                            {t('host.qr.tapEnlarge')}
-                          </span>
-                          <span className={styles.qrShelfAlt}>
-                            {t('host.qr.orVisitEnter').split(/(\{url\})/).map((part, i) =>
-                              part === '{url}'
-                                ? <strong key={i}>{displayUrl}</strong>
-                                : <React.Fragment key={i}>{part}</React.Fragment>
-                            )}
-                          </span>
-                          <span className={styles.qrShelfCode}>
-                            {(joinCode || "").toUpperCase()}
-                          </span>
-                        </div>
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-
-              {searchOpen && joinCode && (
-                <div className={styles.searchOverlay}>
-                  <div className={styles.searchOverlayHead}>
-                    <button
-                      className={styles.searchClose}
-                      onClick={() => setSearchOpen(false)}
-                      title={t('host.search.close')}
-                    >
-                      ×
-                    </button>
-                  </div>
-                  <SongSearch
-                    roomId={joinCode}
-                    userName={hostName || "Host"}
-                    onSongAdded={handleSongAdded}
-                    showFilters={false}
-                    requireName={false}
-                    role="host"
-                  />
-                </div>
-              )}
-            </>
-          )}
-        </div>
+        <QueueSidebar
+          remote={remote}
+          roomEmpty={roomEmpty}
+          sidebarCollapsed={sidebarCollapsed}
+          onExpandSidebar={() => setSidebarCollapsed(false)}
+          onCollapseSidebar={() => setSidebarCollapsed(true)}
+          sidebarTab={sidebarTab}
+          onSelectTab={setSidebarTab}
+          searchOpen={searchOpen}
+          onToggleSearch={() => setSearchOpen(!searchOpen)}
+          onCloseSearch={() => setSearchOpen(false)}
+          upNext={upNext}
+          historyItems={historyItems}
+          uniqueSingers={uniqueSingers}
+          editingId={editingId}
+          onDragEnd={handleDragEnd}
+          onMoveTop={moveToTop}
+          onToggleEdit={(id) => setEditingId(editingId === id ? null : id)}
+          onEditSave={editSave}
+          onRequestRemove={setConfirmRemove}
+          onReplayFromHistory={replayFromHistory}
+          reactionsOn={reactionsOn}
+          isPlaying={isPlaying}
+          currentSong={currentSong}
+          cheersOpen={cheersOpen}
+          onToggleCheers={toggleCheers}
+          onSendReaction={sendReaction}
+          reactionCooldown={reactionCooldown}
+          lastSentEmoji={lastSentEmoji}
+          joinCode={joinCode}
+          singWithMe={singWithMe}
+          suggestions={suggestions}
+          boardsOpen={boardsOpen}
+          onToggleBoards={() => setBoardsOpen((o) => !o)}
+          hostName={hostName}
+          onRefreshBoards={refreshBoards}
+          joinUrl={joinUrl}
+          displayUrl={displayUrl}
+          qrShelfOpen={qrShelfOpen}
+          onToggleQrShelf={toggleQrShelf}
+          onOpenQrModal={() => setQrModalOpen(true)}
+          onSongAdded={handleSongAdded}
+        />
       </div>
 
-      {/* Mobile page footer: on phones the transport footer hides (it would land
-          mid-page, above the stacked queue), so this pins the attribution to the
-          bottom of the screen. Hidden on desktop. */}
-      {!remote && (
-        <footer className={styles.mobileFooter}>
-          <span className={styles.transportLogo}>KaraoQ</span>
-          <a
-            href="https://variationsonastring.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.transportLink}
-          >
-            {renderWithHeart(t('footer.credit'), styles.transportHeart)}
-          </a>
-        </footer>
-      )}
+      {!remote && <MobileFooter />}
 
       {cohostOpen && (
-        <div className={styles.overlay} onClick={() => setCohostOpen(false)}>
-          <div className={styles.invitePanel} onClick={(e) => e.stopPropagation()}>
-            <button
-              className={styles.qrModalClose}
-              onClick={() => setCohostOpen(false)}
-              title={t('common.close')}
-              aria-label={t('common.close')}
-            >
-              &times;
-            </button>
-            <h3 className={styles.inviteTitle}>{t('host.cohost.title')}</h3>
-            <p className={styles.cohostLede}>
-              {t('host.cohost.lede')}
-            </p>
-            <ol className={styles.cohostSteps}>
-              <li>{t('host.cohost.step1')}</li>
-              <li>{t('host.cohost.step2')}</li>
-              <li>{t('host.cohost.step3')}</li>
-              <li>{t('host.cohost.step4')}</li>
-            </ol>
-            {cohostUrl && (
-              <div className={styles.qrModalCode}>
-                <QRCodeSVG
-                  value={cohostUrl}
-                  size={220}
-                  bgColor="transparent"
-                  fgColor="#00f0ff"
-                  level="M"
-                />
-              </div>
-            )}
-            <p className={styles.qrModalScan}>{t('host.scan')}</p>
-            <p className={styles.qrModalAlt}>
-              {t('host.cohost.sendLink')}
-            </p>
-            <p className={styles.cohostLink}>
-              <strong>{cohostDisplayUrl}</strong>
-            </p>
-            <button className={styles.qrModalPrint} onClick={copyCohostLink}>
-              {t('host.cohost.copyLink')}
-            </button>
-          </div>
-        </div>
+        <CohostInviteModal
+          cohostUrl={cohostUrl}
+          cohostDisplayUrl={cohostDisplayUrl}
+          onClose={() => setCohostOpen(false)}
+          onCopyLink={copyCohostLink}
+        />
       )}
 
       {qrModalOpen && joinUrl && (
-        <div className={styles.overlay} onClick={() => setQrModalOpen(false)}>
-          <div className={styles.invitePanel} onClick={(e) => e.stopPropagation()}>
-            <button
-              className={styles.qrModalClose}
-              onClick={() => setQrModalOpen(false)}
-              title={t('common.close')}
-              aria-label={t('common.close')}
-            >
-              &times;
-            </button>
-            <div className={styles.qrModalCode}>
-              <QRCodeSVG
-                value={joinUrl}
-                size={260}
-                bgColor="transparent"
-                fgColor="#ffffff"
-                level="M"
-              />
-            </div>
-            <p className={styles.qrModalScan}>{t('host.scanToJoin')}</p>
-            <p className={styles.qrModalAlt}>
-              {t('host.qr.orVisitEnterCode').split(/(\{url\}|\{code\})/).map((part, i) => {
-                if (part === '{url}') return <strong key={i}>{displayUrl}</strong>;
-                if (part === '{code}') return <strong key={i} className={styles.qrShelfCode}>{(joinCode || "").toUpperCase()}</strong>;
-                return <React.Fragment key={i}>{part}</React.Fragment>;
-              })}
-            </p>
-          </div>
-        </div>
+        <QrModal
+          joinUrl={joinUrl}
+          displayUrl={displayUrl}
+          joinCode={joinCode}
+          onClose={() => setQrModalOpen(false)}
+        />
       )}
 
       {confirmRemove && (
-        <div className={styles.overlay} onClick={() => setConfirmRemove(null)}>
-          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <h3 className={styles.modalTitle}>{t('host.confirm.title')}</h3>
-            <p className={styles.modalText}>
-              {(() => {
-                const entry = queue.find((e) => e.id === confirmRemove);
-                if (!entry) return t('host.confirm.fallback');
-                return t('host.confirm.body', { title: decodeHtml(entry.songTitle), name: entry.userName });
-              })()}
-            </p>
-            <div className={styles.modalActions}>
-              <button
-                className={styles.btnDanger}
-                onClick={() => removeSong(confirmRemove)}
-              >
-                {t('host.confirm.remove')}
-              </button>
-              <button
-                className={styles.btnGhost}
-                onClick={() => setConfirmRemove(null)}
-              >
-                {t('common.cancel')}
-              </button>
-            </div>
-          </div>
-        </div>
+        <ConfirmRemoveModal
+          entryId={confirmRemove}
+          queue={queue}
+          onCancel={() => setConfirmRemove(null)}
+          onConfirm={removeSong}
+        />
       )}
 
       {toast && (
@@ -2262,45 +1065,15 @@ const Host = ({
       )}
 
       {showWelcome && !loading && !error && (
-        <div className={styles.welcomeOverlay}>
-          <div className={styles.welcomeCard}>
-            <div className={styles.welcomeLogo}>KaraoQ</div>
-            <p className={styles.welcomeRoom}>
-              {t('sing.welcome.room').split(/(\{code\})/).map((part, i) =>
-                part === '{code}'
-                  ? <strong key={i}>{joinCode?.toUpperCase()}</strong>
-                  : <React.Fragment key={i}>{part}</React.Fragment>
-              )}
-            </p>
-            <h2 className={styles.welcomePrompt}>{t('sing.welcome.prompt')}</h2>
-            <input
-              className={styles.welcomeInput}
-              placeholder={t('common.enterYourName')}
-              value={welcomeName}
-              onChange={(e) => setWelcomeName(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleWelcomeSubmit()}
-              autoFocus
-              maxLength={30}
-            />
-            <button
-              className={styles.welcomeBtn}
-              onClick={handleWelcomeSubmit}
-              disabled={!welcomeName.trim()}
-            >
-              {t('sing.welcome.go')}
-            </button>
-          </div>
-        </div>
+        <WelcomePrompt
+          joinCode={joinCode}
+          welcomeName={welcomeName}
+          onChangeName={setWelcomeName}
+          onSubmit={handleWelcomeSubmit}
+        />
       )}
     </main>
   );
 };
-
-function decodeHtml(html: string): string {
-  if (typeof document === "undefined") return html;
-  const txt = document.createElement("textarea");
-  txt.innerHTML = html;
-  return txt.value;
-}
 
 export default Host;
