@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🎤 karaoq
+# karaoq
 
 ### YouTube Karaoke. Zero Setup.
 
