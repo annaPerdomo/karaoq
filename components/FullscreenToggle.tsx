@@ -61,15 +61,18 @@ const FullscreenToggle = ({ className }: FullscreenToggleProps): React.ReactElem
   if (!supported) return null;
 
   const toggle = () => {
+    // Some browsers reject fullscreen requests outside a trusted gesture or in
+    // an embedded context (an iframe/webview without allowfullscreen); ignore
+    // and leave the screen as-is. The rejection arrives as a rejected promise,
+    // which a try/catch around a `void` call would not see.
     try {
       if (fullscreenElement()) {
-        void exitFullscreen();
+        Promise.resolve(exitFullscreen()).catch(() => {});
       } else {
-        void requestFullscreen(document.documentElement);
+        Promise.resolve(requestFullscreen(document.documentElement)).catch(() => {});
       }
     } catch {
-      // Some browsers reject fullscreen requests outside a trusted gesture or in
-      // an embedded context; ignore and leave the screen as-is.
+      // Older engines can also throw synchronously.
     }
   };
 

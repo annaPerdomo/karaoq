@@ -33,6 +33,15 @@ describe("Client API wrappers", () => {
 
       expect(result).toBe(false);
     });
+
+    it("returns false instead of throwing when the network is down", async () => {
+      mockFetch.mockRejectedValue(new TypeError("Failed to fetch"));
+      const { default: createRoom } = await import("../../app/queue/createRoom");
+
+      const result = await createRoom("FAIL1");
+
+      expect(result).toBe(false);
+    });
   });
 
   describe("getRoom", () => {
@@ -47,13 +56,31 @@ describe("Client API wrappers", () => {
       expect(mockFetch).toHaveBeenCalledWith("/api/queue/XYZ99", { cache: "no-store" });
     });
 
-    it("returns null on 404", async () => {
-      mockFetch.mockResolvedValue({ ok: false });
+    it("returns \"notFound\" only on a definitive 404", async () => {
+      mockFetch.mockResolvedValue({ ok: false, status: 404 });
       const { default: getRoom } = await import("../../app/queue/getRoom");
 
       const result = await getRoom("NOPE1");
 
-      expect(result).toBeNull();
+      expect(result).toBe("notFound");
+    });
+
+    it("returns \"error\" on a transient server failure, not \"notFound\"", async () => {
+      mockFetch.mockResolvedValue({ ok: false, status: 500 });
+      const { default: getRoom } = await import("../../app/queue/getRoom");
+
+      const result = await getRoom("ROOM1");
+
+      expect(result).toBe("error");
+    });
+
+    it("returns \"error\" when the network is down", async () => {
+      mockFetch.mockRejectedValue(new TypeError("Failed to fetch"));
+      const { default: getRoom } = await import("../../app/queue/getRoom");
+
+      const result = await getRoom("ROOM1");
+
+      expect(result).toBe("error");
     });
   });
 
@@ -128,6 +155,31 @@ describe("Client API wrappers", () => {
       expect(result).toBe(true);
       const [url] = mockFetch.mock.calls[0];
       expect(url).toBe("/api/queue/ROOM1/remove?entryId=entry-42");
+    });
+  });
+
+  // A rejected fetch (venue wifi dropping) must resolve to false in every
+  // boolean wrapper — callers use the boolean to reset busy/in-flight state,
+  // and an escaping rejection permanently bricked those UIs.
+  describe("network failure resolves to false across wrappers", () => {
+    const wrappers: [string, (mod: { default: (...args: never[]) => Promise<boolean> }) => Promise<boolean>][] = [
+      ["postEntryToQueue", (m) => (m.default as (r: string, e: QueueEntry) => Promise<boolean>)("R", { id: "e", userName: "A", songTitle: "S", videoId: "v" })],
+      ["removeFromQueue", (m) => (m.default as (r: string, e: string) => Promise<boolean>)("R", "e")],
+      ["reorderQueue", (m) => (m.default as (r: string, q: QueueEntry[], i: number) => Promise<boolean>)("R", [], 0)],
+      ["setPlaying", (m) => (m.default as (r: string, p: boolean) => Promise<boolean>)("R", true)],
+      ["updatePosition", (m) => (m.default as (r: string, i: number) => Promise<boolean>)("R", 1)],
+      ["postReaction", (m) => (m.default as (r: string, id: string, e: string, u: string) => Promise<boolean>)("R", "id", "🔥", "A")],
+      ["joinSingWithMe", (m) => (m.default as (r: string, p: string, u: string) => Promise<boolean>)("R", "p", "A")],
+      ["claimSuggestion", (m) => (m.default as (r: string, s: string, u: string) => Promise<boolean>)("R", "s", "A")],
+      ["removeSingWithMe", (m) => (m.default as (r: string, p: string) => Promise<boolean>)("R", "p")],
+      ["removeSuggestion", (m) => (m.default as (r: string, s: string) => Promise<boolean>)("R", "s")],
+    ];
+
+    it.each(wrappers)("%s resolves false", async (name, call) => {
+      mockFetch.mockRejectedValue(new TypeError("Failed to fetch"));
+      const mod = await import(`../../app/queue/${name}`);
+
+      await expect(call(mod)).resolves.toBe(false);
     });
   });
 

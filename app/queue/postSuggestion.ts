@@ -11,10 +11,14 @@ export default async function postSuggestion(
   roomId: string,
   input: SuggestionInput
 ): Promise<boolean> {
-  const resp = await fetch(`/api/queue/${roomId}/suggestions`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ id: uuidv4(), ...input }),
-  });
-  return resp.ok;
+  try {
+    const resp = await fetch(`/api/queue/${roomId}/suggestions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: uuidv4(), ...input }),
+    });
+    return resp.ok;
+  } catch {
+    return false;
+  }
 }

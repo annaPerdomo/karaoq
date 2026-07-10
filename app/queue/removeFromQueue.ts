@@ -3,8 +3,12 @@ export default async function removeFromQueue(
   entryId: string
 ): Promise<boolean> {
   const params = new URLSearchParams({ entryId });
-  const resp = await fetch(`/api/queue/${roomId}/remove?${params}`, {
-    method: "POST",
-  });
-  return resp.ok;
+  try {
+    const resp = await fetch(`/api/queue/${roomId}/remove?${params}`, {
+      method: "POST",
+    });
+    return resp.ok;
+  } catch {
+    return false;
+  }
 }

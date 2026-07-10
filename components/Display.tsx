@@ -50,7 +50,12 @@ const Display = (): React.ReactElement => {
   // working.
   const [playMode, setPlayMode] = React.useState<PlayMode | null>(null);
   const [loading, setLoading] = React.useState(true);
+  // Definitive "room doesn't exist" — terminal, stops polling.
   const [error, setError] = React.useState<string | null>(null);
+  // Transient load failure — the poll keeps running and heals it on the
+  // first successful fetch (a TV rarely has a pointer to click retry with).
+  const [loadError, setLoadError] = React.useState(false);
+  const notFoundPollsRef = React.useRef(0);
   const [origin, setOrigin] = React.useState('');
   const [reactionsOn, setReactionsOn] = React.useState(true);
   const [visibleReactions, setVisibleReactions] = React.useState<(Reaction & { key: string; left: number; sway: number })[]>([]);
@@ -191,24 +196,29 @@ const Display = (): React.ReactElement => {
     async function init() {
       let room = await getRoom(joinCode!, { display: true });
       if (cancelled) return;
-      if (room) {
+      if (room === "notFound") {
+        setError(t('display.errorTitle'));
+      } else if (room === "error") {
+        // Flaky connection — retryable state; the poll below heals it.
+        setLoadError(true);
+      } else {
         // For TV rooms this page IS the playback surface, so a display that
         // is just now loading proves any recorded playback no longer exists
         // (stale session, or this page reloading mid-song). Clear it instead
         // of blasting a song the host didn't just start — songs only begin
         // with the host's play button. Here-mode rooms are left alone: their
         // video lives on the host screen and is none of our business.
-        if (room.isPlaying && room.playMode !== 'here') {
+        // A live heartbeat means ANOTHER display is running the song right
+        // now — a second/reopened display must not stop it.
+        if (room.isPlaying && room.playMode !== 'here' && !room.displayConnected) {
           await setPlaying(joinCode!, false);
           room = { ...room, isPlaying: false };
         }
         if (cancelled) return;
         applyRoom(room, false);
-        setLoading(false);
-      } else {
-        setError(t('display.errorTitle'));
-        setLoading(false);
+        setLoadError(false);
       }
+      setLoading(false);
     }
 
     init();
@@ -243,7 +253,18 @@ const Display = (): React.ReactElement => {
 
     return startVisiblePolling(async () => {
       const room = await getRoom(joinCode, { display: true });
-      if (room) applyRoom(room);
+      if (room === "error") return; // transient — try again next tick
+      if (room === "notFound") {
+        // Only a run of definitive 404s means the room is really gone.
+        notFoundPollsRef.current += 1;
+        if (notFoundPollsRef.current >= 3) setError(t('display.errorTitle'));
+        return;
+      }
+      notFoundPollsRef.current = 0;
+      applyRoom(room);
+      // A successful poll also recovers a failed initial load.
+      setLoadError(false);
+      setLoading(false);
     }, POLL_INTERVAL);
   }, [joinCode, error]);
 
@@ -272,7 +293,7 @@ const Display = (): React.ReactElement => {
       // out the poll, and finally nudge any same-browser host tabs to refetch.
       await postVideoEnded(roomId, endedIndex);
       const room = await getRoom(roomId, { display: true });
-      if (room) applyRoom(room);
+      if (typeof room !== "string") applyRoom(room);
       broadcastVideoEnded(roomId);
     }
 
@@ -395,6 +416,19 @@ const Display = (): React.ReactElement => {
         <div className={styles.errorState}>
           <h2>{t('display.errorTitle')}</h2>
           <p>{t('display.errorBody')}</p>
+        </div>
+      </main>
+    );
+  }
+
+  // Transient failure: the poll keeps running, so this heals by itself the
+  // moment the connection comes back.
+  if (loadError) {
+    return (
+      <main className={styles.main}>
+        <div className={styles.errorState}>
+          <h2>{t('common.connectionErrorTitle')}</h2>
+          <p>{t('common.connectionErrorBody')}</p>
         </div>
       </main>
     );

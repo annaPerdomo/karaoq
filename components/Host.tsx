@@ -37,8 +37,9 @@ import { POLL_INTERVAL, DISPLAY_GONE_CONFIRM_MS } from "./host/constants";
 import { decodeHtml } from "./host/utils";
 import {
   playModeStorageKey,
-  playTokenStorageKey,
   readStoredPlayToken,
+  storePlayToken,
+  mirrorPlayTokenForRestore,
   qrHiddenStorageKey,
   cheersHiddenStorageKey,
 } from "./host/storage";
@@ -71,7 +72,16 @@ const Host = ({
   const [activeIndex, setActiveIndex] = React.useState(0);
   const [isPlaying, setIsPlaying] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
+  // Definitive "room doesn't exist" — terminal, stops polling.
   const [error, setError] = React.useState<string | null>(null);
+  // Transient load failure (flaky network, 5xx) — retryable; polling keeps
+  // running and heals it on the first successful fetch.
+  const [loadError, setLoadError] = React.useState(false);
+  const [initNonce, setInitNonce] = React.useState(0);
+  // Consecutive not-found polls; a TTL-expired room must surface the
+  // not-found state instead of a live-looking UI where every button no-ops,
+  // but a single blip shouldn't.
+  const notFoundPollsRef = React.useRef(0);
   const [origin, setOrigin] = React.useState("");
   const [confirmRemove, setConfirmRemove] = React.useState<string | null>(null);
   const [reactionsOn, setReactionsOn] = React.useState(true);
@@ -135,6 +145,16 @@ const Host = ({
   React.useEffect(() => {
     if (!joinCode || remote) return;
     setOwnedPlayToken(readStoredPlayToken(joinCode));
+  }, [joinCode, remote]);
+
+  // Mirror this tab's play token out as the tab goes away (close, navigate,
+  // reload) so a genuine restore can reclaim it — see storage.ts for why the
+  // live token is per-tab.
+  React.useEffect(() => {
+    if (!joinCode || remote) return;
+    const onPageHide = () => mirrorPlayTokenForRestore(joinCode);
+    window.addEventListener("pagehide", onPageHide);
+    return () => window.removeEventListener("pagehide", onPageHide);
   }, [joinCode, remote]);
 
   const [hostName, setHostName] = React.useState("");
@@ -280,7 +300,9 @@ const Host = ({
     // Hold polling briefly so an in-flight poll with the old mode can't
     // flip the pill back before the server write lands.
     pausePolling();
-    savePlayMode(joinCode, mode);
+    savePlayMode(joinCode, mode).then((ok) => {
+      if (!ok) resyncAfterFailedWrite();
+    });
   }
 
   // Choose "this screen" — the simplest setup, nothing else to open.
@@ -376,24 +398,28 @@ const Host = ({
       if (!remote) await createRoom(joinCode!, readStoredPlayToken(joinCode!));
       const room = await getRoom(joinCode!);
       if (cancelled) return;
-      if (room) {
+      if (room === "notFound") {
+        setError(t('host.error.notFound'));
+      } else if (room === "error") {
+        // Flaky connection — retryable state, never "room not found" (and
+        // never an eternal spinner).
+        setLoadError(true);
+      } else {
         // Mark this as the device's current room so the landing page offers
         // "resume" instead of a duplicate. Co-hosts don't own the room.
         if (!remote) rememberLastHostedRoom(joinCode!);
         applyRoomState(room);
         processReactions(room.reactions, false);
-        setLoading(false);
-      } else {
-        setError(t('host.error.notFound'));
-        setLoading(false);
+        setLoadError(false);
       }
+      setLoading(false);
     }
 
     init();
     return () => {
       cancelled = true;
     };
-  }, [joinCode, remote]);
+  }, [joinCode, remote, initNonce]);
 
   React.useEffect(() => {
     if (!joinCode) return;
@@ -406,10 +432,21 @@ const Host = ({
 
     return startVisiblePolling(async () => {
       const room = await getRoom(joinCode);
-      if (room && !isPausedRef.current) {
-        applyRoomState(room);
-        processReactions(room.reactions);
+      if (isPausedRef.current) return;
+      if (room === "error") return; // transient — try again next tick
+      if (room === "notFound") {
+        // Only a run of definitive 404s means the room is really gone
+        // (TTL-expired); surface it instead of a UI where every write no-ops.
+        notFoundPollsRef.current += 1;
+        if (notFoundPollsRef.current >= 3) setError(t('host.error.notFound'));
+        return;
       }
+      notFoundPollsRef.current = 0;
+      applyRoomState(room);
+      processReactions(room.reactions);
+      // A successful poll also recovers a failed initial load.
+      setLoadError(false);
+      setLoading(false);
     }, POLL_INTERVAL);
   }, [joinCode, error, isPaused]);
 
@@ -501,7 +538,7 @@ const Host = ({
   const refreshBoards = React.useCallback(async () => {
     if (!joinCode) return;
     const room = await getRoom(joinCode);
-    if (room) {
+    if (typeof room !== "string") {
       setSingWithMe(room.singWithMe ?? []);
       setSuggestions(room.suggestions ?? []);
     }
@@ -517,6 +554,16 @@ const Host = ({
     }, 5000);
   }
 
+  // A failed write must not fail silently: the optimistic UI would quietly
+  // revert on a later poll (~5-8s), which reads as "the button did nothing".
+  // Toast it and resync to the server's truth right away.
+  async function resyncAfterFailedWrite() {
+    showToast(t("host.toast.saveFailed"));
+    if (!joinCode) return;
+    const room = await getRoom(joinCode);
+    if (typeof room !== "string") applyRoomState(room);
+  }
+
   function broadcast(q: QueueEntry[], idx: number, playing: boolean) {
     if (!joinCode) return;
     broadcastRoomState(joinCode, {
@@ -527,10 +574,21 @@ const Host = ({
     });
   }
 
+  // Once-guard for the here-mode ended handler (mirrors the display's
+  // endedHandledRef): YouTube can deliver a straggler infoDelivery state-0
+  // after the advance commits, which would advance twice and skip a singer's
+  // song. Reset whenever a new song (or a replay) starts.
+  const endedHandledRef = React.useRef(false);
+  const currentQueueSongId = queue[activeIndex]?.id;
+  React.useEffect(() => {
+    endedHandledRef.current = false;
+  }, [currentQueueSongId, isPlaying]);
+
   // Use a ref so the postMessage handler always has current state
   const onVideoEndedRef = React.useRef<() => void>(() => {});
   onVideoEndedRef.current = async () => {
-    if (!joinCode) return;
+    if (!joinCode || endedHandledRef.current) return;
+    endedHandledRef.current = true;
     const nextIdx = activeIndex + 1;
     if (nextIdx < queue.length) {
       const ok = await updatePosition(joinCode, nextIdx);
@@ -538,12 +596,17 @@ const Host = ({
         setActiveIndex(nextIdx);
         setIsPlaying(false);
         broadcast(queue, nextIdx, false);
+      } else {
+        // Advance didn't land — allow the next end event to retry.
+        endedHandledRef.current = false;
       }
     } else {
       const ok = await setPlaying(joinCode, false);
       if (ok) {
         setIsPlaying(false);
         broadcast(queue, activeIndex, false);
+      } else {
+        endedHandledRef.current = false;
       }
     }
   };
@@ -625,7 +688,7 @@ const Host = ({
     if (remote || !joinCode || !tvMode) return;
     return onVideoEnded(joinCode, async () => {
       const room = await getRoom(joinCode);
-      if (room && !isPausedRef.current) {
+      if (typeof room !== "string" && !isPausedRef.current) {
         applyRoomState(room);
         processReactions(room.reactions);
       }
@@ -701,9 +764,7 @@ const Host = ({
     if (ok) {
       setOwnedPlayToken(token);
       setServerPlayToken(token);
-      try {
-        localStorage.setItem(playTokenStorageKey(joinCode), token);
-      } catch {}
+      storePlayToken(joinCode, token);
       setIsPlaying(true);
       broadcast(queue, activeIndex, true);
     }
@@ -733,20 +794,30 @@ const Host = ({
     // Nudge a same-browser display right away so it reacts instantly; the POST
     // persists it and reaches cross-device displays on their next poll.
     broadcastDisplayPause(joinCode, next);
-    await saveDisplayPaused(joinCode, next);
+    const ok = await saveDisplayPaused(joinCode, next);
+    if (!ok) {
+      setDisplayPaused(!next);
+      broadcastDisplayPause(joinCode, !next);
+      await resyncAfterFailedWrite();
+    }
   }
 
   async function handleReorder(
     newUpcoming: QueueEntry[],
     start = activeIndex + 1,
-  ) {
-    if (!joinCode) return;
+  ): Promise<boolean> {
+    if (!joinCode) return false;
     pausePolling();
     const history = queue.slice(0, start);
     const newQueue = [...history, ...newUpcoming];
     setQueue(newQueue);
-    await reorderQueue(joinCode, newQueue, activeIndex);
+    const ok = await reorderQueue(joinCode, newQueue, activeIndex);
+    if (!ok) {
+      await resyncAfterFailedWrite();
+      return false;
+    }
     broadcast(newQueue, activeIndex, isPlaying);
+    return true;
   }
 
   async function moveToTop(entryId: string) {
@@ -764,14 +835,18 @@ const Host = ({
       const history = queue.slice(0, activeIndex);
       const newQueue = [...history, ...moved];
       setQueue(newQueue);
-      await reorderQueue(joinCode, newQueue, activeIndex);
+      const ok = await reorderQueue(joinCode, newQueue, activeIndex);
+      if (!ok) {
+        await resyncAfterFailedWrite();
+        return;
+      }
       broadcast(newQueue, activeIndex, isPlaying);
     } else {
       const upcoming = queue.slice(activeIndex + 1);
       const idx = upcoming.findIndex((e) => e.id === entryId);
       if (idx <= 0) return;
       const moved = arrayMove(upcoming, idx, 0);
-      await handleReorder(moved);
+      if (!(await handleReorder(moved))) return;
     }
     showToast(t('host.toast.movedTop'));
   }
@@ -799,7 +874,11 @@ const Host = ({
     pausePolling();
     setQueue(newQueue);
     setActiveIndex(newActiveIndex);
-    await reorderQueue(joinCode, newQueue, newActiveIndex);
+    const ok = await reorderQueue(joinCode, newQueue, newActiveIndex);
+    if (!ok) {
+      await resyncAfterFailedWrite();
+      return;
+    }
     broadcast(newQueue, newActiveIndex, isPlaying);
     showToast(t('host.toast.restored', { title: decodeHtml(entry.songTitle) }));
   }
@@ -822,7 +901,11 @@ const Host = ({
     setActiveIndex(newActiveIndex);
     setConfirmRemove(null);
     broadcast(newQueue, newActiveIndex, isPlaying);
-    await removeFromQueue(joinCode, entryId);
+    const ok = await removeFromQueue(joinCode, entryId);
+    if (!ok) {
+      await resyncAfterFailedWrite();
+      return;
+    }
     if (entry) showToast(t('host.toast.removed', { title: decodeHtml(entry.songTitle) }));
   }
 
@@ -893,6 +976,29 @@ const Host = ({
           <p>{error}</p>
           <button className={styles.btn} onClick={() => router.push("/")}>
             {t('common.goHome')}
+          </button>
+        </div>
+      </main>
+    );
+  }
+
+  // Transient failure: retry button plus the still-running poll, so it heals
+  // by itself the moment the connection comes back.
+  if (loadError) {
+    return (
+      <main className={styles.main}>
+        <div className={styles.errorCard}>
+          <h2>{t('common.connectionErrorTitle')}</h2>
+          <p>{t('common.connectionErrorBody')}</p>
+          <button
+            className={styles.btn}
+            onClick={() => {
+              setLoadError(false);
+              setLoading(true);
+              setInitNonce((n) => n + 1);
+            }}
+          >
+            {t('common.retry')}
           </button>
         </div>
       </main>
@@ -999,6 +1105,7 @@ const Host = ({
           historyItems={historyItems}
           uniqueSingers={uniqueSingers}
           editingId={editingId}
+          onDragStart={pausePolling}
           onDragEnd={handleDragEnd}
           onMoveTop={moveToTop}
           onToggleEdit={(id) => setEditingId(editingId === id ? null : id)}

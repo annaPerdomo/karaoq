@@ -7,8 +7,12 @@ export default async function setPlaying(
 ): Promise<boolean> {
   const params = new URLSearchParams({ isPlaying: String(isPlaying) });
   if (isPlaying && playToken) params.set("playToken", playToken);
-  const resp = await fetch(`/api/queue/${roomId}/play?${params}`, {
-    method: "POST",
-  });
-  return resp.ok;
+  try {
+    const resp = await fetch(`/api/queue/${roomId}/play?${params}`, {
+      method: "POST",
+    });
+    return resp.ok;
+  } catch {
+    return false;
+  }
 }

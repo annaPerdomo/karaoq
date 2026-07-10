@@ -6,6 +6,9 @@
   "common.yourName": "Your name",
   "common.enterYourName": "Enter your name",
   "common.enterNameFirst": "Enter your name first",
+  "common.retry": "Retry",
+  "common.connectionErrorTitle": "Connection trouble",
+  "common.connectionErrorBody": "We can't reach the room right now. Check your connection — we'll keep trying.",
   "common.fullscreen": "Fullscreen",
   "common.exitFullscreen": "Exit fullscreen",
   "footer.credit": "made with ♥ by variations on a string",
@@ -347,6 +350,7 @@
   "host.toast.movedTop": "Moved to top of queue",
   "host.toast.restored": "Restored “{title}”",
   "host.toast.removed": "Removed “{title}”",
+  "host.toast.saveFailed": "That didn't save — check your connection.",
 
   "home.guides.title": "Karaoke guides",
 

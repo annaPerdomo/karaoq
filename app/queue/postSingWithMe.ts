@@ -13,10 +13,14 @@ export default async function postSingWithMe(
   roomId: string,
   input: SingWithMeInput
 ): Promise<boolean> {
-  const resp = await fetch(`/api/queue/${roomId}/sing-with-me`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ id: uuidv4(), ...input }),
-  });
-  return resp.ok;
+  try {
+    const resp = await fetch(`/api/queue/${roomId}/sing-with-me`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: uuidv4(), ...input }),
+    });
+    return resp.ok;
+  } catch {
+    return false;
+  }
 }

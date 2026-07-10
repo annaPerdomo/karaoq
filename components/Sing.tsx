@@ -42,7 +42,15 @@ const Sing = (): React.ReactElement => {
   const [isPlaying, setIsPlaying] = React.useState(false);
   const [reactionsOn, setReactionsOn] = React.useState(true);
   const [loading, setLoading] = React.useState(true);
+  // Definitive "room doesn't exist" — terminal, stops polling.
   const [error, setError] = React.useState<string | null>(null);
+  // Transient load failure (venue wifi, 5xx) — retryable; polling keeps
+  // running and heals it on the first successful fetch.
+  const [loadError, setLoadError] = React.useState(false);
+  const [initNonce, setInitNonce] = React.useState(0);
+  // Consecutive not-found polls; a TTL-expired room should surface the
+  // not-found state instead of a live-looking UI, but one blip shouldn't.
+  const notFoundPollsRef = React.useRef(0);
   const [reactionCooldown, setReactionCooldown] = React.useState(false);
   const [lastSentEmoji, setLastSentEmoji] = React.useState<string | null>(null);
   const [mobileQueueOpen, setMobileQueueOpen] = React.useState(false);
@@ -120,10 +128,19 @@ const Sing = (): React.ReactElement => {
     }
   }
 
+  // Debounce the tracked name: `username` updates per keystroke (the inline
+  // search field edits it), and restarting the tracker on each one POSTs a
+  // heartbeat with every partial name.
+  const [trackedName, setTrackedName] = React.useState('');
   React.useEffect(() => {
-    if (!joinCode || !username || showWelcome) return;
-    return startSessionTracking(joinCode, username, 'singer');
-  }, [joinCode, username, showWelcome]);
+    const timer = setTimeout(() => setTrackedName(username), 1500);
+    return () => clearTimeout(timer);
+  }, [username]);
+
+  React.useEffect(() => {
+    if (!joinCode || !trackedName || showWelcome) return;
+    return startSessionTracking(joinCode, trackedName, 'singer');
+  }, [joinCode, trackedName, showWelcome]);
 
   React.useEffect(() => {
     const timers = reactionTimers.current;
@@ -173,7 +190,13 @@ const Sing = (): React.ReactElement => {
     async function init() {
       const room = await getRoom(joinCode!);
       if (cancelled) return;
-      if (room) {
+      if (room === "notFound") {
+        setError(t('sing.error.notFound'));
+      } else if (room === "error") {
+        // Flaky connection — show a retryable state, never "room doesn't
+        // exist" (and never an eternal spinner).
+        setLoadError(true);
+      } else {
         setQueue(room.queue);
         setSingWithMe(room.singWithMe ?? []);
         setSuggestions(room.suggestions ?? []);
@@ -181,30 +204,37 @@ const Sing = (): React.ReactElement => {
         setIsPlaying(room.isPlaying ?? false);
         setReactionsOn(room.reactionsEnabled ?? true);
         processReactions(room.reactions, false);
-        setLoading(false);
-      } else {
-        setError(t('sing.error.notFound'));
-        setLoading(false);
+        setLoadError(false);
       }
+      setLoading(false);
     }
     init();
     return () => { cancelled = true; };
-  }, [joinCode, processReactions]);
+  }, [joinCode, processReactions, initNonce]);
 
   React.useEffect(() => {
     if (!joinCode || error) return;
 
     return startVisiblePolling(async () => {
       const room = await getRoom(joinCode);
-      if (room) {
-        setQueue(room.queue);
-        setSingWithMe(room.singWithMe ?? []);
-        setSuggestions(room.suggestions ?? []);
-        setActiveIndex(room.activeVideoIndex);
-        setIsPlaying(room.isPlaying ?? false);
-        setReactionsOn(room.reactionsEnabled ?? true);
-        processReactions(room.reactions);
+      if (room === "error") return; // transient — try again next tick
+      if (room === "notFound") {
+        // Only a run of definitive 404s means the room is really gone.
+        notFoundPollsRef.current += 1;
+        if (notFoundPollsRef.current >= 3) setError(t('sing.error.notFound'));
+        return;
       }
+      notFoundPollsRef.current = 0;
+      setQueue(room.queue);
+      setSingWithMe(room.singWithMe ?? []);
+      setSuggestions(room.suggestions ?? []);
+      setActiveIndex(room.activeVideoIndex);
+      setIsPlaying(room.isPlaying ?? false);
+      setReactionsOn(room.reactionsEnabled ?? true);
+      processReactions(room.reactions);
+      // A successful poll also recovers a failed initial load.
+      setLoadError(false);
+      setLoading(false);
     }, POLL_INTERVAL);
   }, [joinCode, error, processReactions]);
 
@@ -213,7 +243,7 @@ const Sing = (): React.ReactElement => {
   const refreshBoards = React.useCallback(async () => {
     if (!joinCode) return;
     const room = await getRoom(joinCode);
-    if (room) {
+    if (typeof room !== "string") {
       setQueue(room.queue);
       setSingWithMe(room.singWithMe ?? []);
       setSuggestions(room.suggestions ?? []);
@@ -221,7 +251,12 @@ const Sing = (): React.ReactElement => {
   }, [joinCode]);
 
   function handleSongAdded(entry: QueueEntry) {
-    setQueue([...queue, entry]);
+    // Functional update: the click-closure `queue` can predate a poll that
+    // landed mid-await, so spreading it would drop other singers' songs (or
+    // duplicate this one if the poll already delivered it).
+    setQueue((prev) =>
+      prev.some((e) => e.id === entry.id) ? prev : [...prev, entry]
+    );
   }
 
   async function sendReaction(emoji: string) {
@@ -235,7 +270,9 @@ const Sing = (): React.ReactElement => {
     // from replaying it.
     seenReactionIds.current.add(id);
     spawnReactionPops([{ id, emoji, userName: username.trim(), timestamp: Date.now() }]);
-    await postReaction(joinCode, id, emoji, username.trim());
+    const ok = await postReaction(joinCode, id, emoji, username.trim());
+    // Don't keep claiming "Sent!" for a cheer that never left the phone.
+    if (!ok) setLastSentEmoji(null);
   }
 
   // The grabber invites dragging, so the handle honors it: the drawer follows
@@ -295,6 +332,30 @@ const Sing = (): React.ReactElement => {
           <p>{error}</p>
           <button className={styles.btnPink} onClick={() => router.push('/')}>
             {t('common.goHome')}
+          </button>
+        </div>
+      </main>
+    );
+  }
+
+  // Transient failure: retry button plus the still-running poll, so it heals
+  // by itself the moment the connection comes back.
+  if (loadError) {
+    return (
+      <main className={styles.main}>
+        <div className={styles.errorCard}>
+          <div className={styles.errorIcon}>📶</div>
+          <h2>{t('common.connectionErrorTitle')}</h2>
+          <p>{t('common.connectionErrorBody')}</p>
+          <button
+            className={styles.btnPink}
+            onClick={() => {
+              setLoadError(false);
+              setLoading(true);
+              setInitNonce((n) => n + 1);
+            }}
+          >
+            {t('common.retry')}
           </button>
         </div>
       </main>
@@ -544,7 +605,7 @@ const Sing = (): React.ReactElement => {
               />
             ) : reactionsOn && queueItems.length > 0 && (
               <div className={styles.cheerHint}>
-                Send reactions like 🔥👏❤️ and words of encouragement to cheer on the performer!
+                {t('sing.cheerHint')}
               </div>
             )}
 

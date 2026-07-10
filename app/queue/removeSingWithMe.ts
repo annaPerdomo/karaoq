@@ -7,9 +7,13 @@ export default async function removeSingWithMe(
 ): Promise<boolean> {
   const params = new URLSearchParams({ postId });
   if (userName) params.set("userName", userName);
-  const resp = await fetch(
-    `/api/queue/${roomId}/sing-with-me-remove?${params.toString()}`,
-    { method: "POST" }
-  );
-  return resp.ok;
+  try {
+    const resp = await fetch(
+      `/api/queue/${roomId}/sing-with-me-remove?${params.toString()}`,
+      { method: "POST" }
+    );
+    return resp.ok;
+  } catch {
+    return false;
+  }
 }

@@ -5,8 +5,12 @@ export default async function updatePosition(
   const params = new URLSearchParams({
     activeVideoIndex: String(activeVideoIndex),
   });
-  const resp = await fetch(`/api/queue/${roomId}/position?${params}`, {
-    method: "POST",
-  });
-  return resp.ok;
+  try {
+    const resp = await fetch(`/api/queue/${roomId}/position?${params}`, {
+      method: "POST",
+    });
+    return resp.ok;
+  } catch {
+    return false;
+  }
 }

@@ -924,8 +924,23 @@ const Analytics = (): React.ReactElement => {
                 </div>
                 <div ref={sentinelRef} />
                 {roomsLoading && <p className={styles.empty}>Loading…</p>}
-                {!roomsHasMore && !roomsLoading && (
-                  <p className={styles.roomsEnd}>{rooms.length} rooms total</p>
+                {/* A failed page fetch must not masquerade as the end of the
+                    list — "N rooms total" over a partial list lies. */}
+                {roomsError && !roomsLoading ? (
+                  <p className={styles.empty}>
+                    Couldn&rsquo;t load more rooms.{' '}
+                    <button
+                      className={styles.retryBtn}
+                      onClick={() => loadRooms(rooms.length, false)}
+                    >
+                      Retry
+                    </button>
+                  </p>
+                ) : (
+                  !roomsHasMore &&
+                  !roomsLoading && (
+                    <p className={styles.roomsEnd}>{rooms.length} rooms total</p>
+                  )
                 )}
               </>
             )}

@@ -10,9 +10,12 @@ export default async function postReaction(
     userName,
   });
 
-  const resp = await fetch(`/api/queue/${roomId}/reactions?${params}`, {
-    method: "POST",
-  });
-
-  return resp.ok;
+  try {
+    const resp = await fetch(`/api/queue/${roomId}/reactions?${params}`, {
+      method: "POST",
+    });
+    return resp.ok;
+  } catch {
+    return false;
+  }
 }

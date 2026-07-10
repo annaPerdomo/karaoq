@@ -7,9 +7,13 @@ export default async function removeSuggestion(
 ): Promise<boolean> {
   const params = new URLSearchParams({ suggestionId });
   if (userName) params.set("userName", userName);
-  const resp = await fetch(
-    `/api/queue/${roomId}/suggestions-remove?${params.toString()}`,
-    { method: "POST" }
-  );
-  return resp.ok;
+  try {
+    const resp = await fetch(
+      `/api/queue/${roomId}/suggestions-remove?${params.toString()}`,
+      { method: "POST" }
+    );
+    return resp.ok;
+  } catch {
+    return false;
+  }
 }

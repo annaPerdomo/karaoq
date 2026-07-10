@@ -89,6 +89,9 @@ const SongSearch: React.FC<SongSearchProps> = ({
   const [hasSearched, setHasSearched] = React.useState(false);
   const [justAdded, setJustAdded] = React.useState<string | null>(null);
   const [addError, setAddError] = React.useState<string | null>(null);
+  // In-flight guard: on a slow connection a double-tapped Add would $push
+  // two fresh-uuid entries — the same song queued twice.
+  const [adding, setAdding] = React.useState(false);
   const [confirmSong, setConfirmSong] = React.useState<YoutubeResult | null>(null);
   const [previewPlaying, setPreviewPlaying] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState(SONG_SECTIONS[0].id);
@@ -197,6 +200,11 @@ const SongSearch: React.FC<SongSearchProps> = ({
 
   React.useEffect(() => {
     if (query.trim().length === 0 && hasSearched) {
+      // Mirror clearSearch(): abort any in-flight search, or its late results
+      // would land with hasSearched === false — stranding the singer with
+      // neither "back to ideas" nor the browse view.
+      abortRef.current?.abort();
+      setSearching(false);
       setHasSearched(false);
       setResults([]);
     }
@@ -321,7 +329,7 @@ const SongSearch: React.FC<SongSearchProps> = ({
     song: SongSuggestion,
     sectionId?: string,
     categoryId?: string,
-    source: 'song_pick' | 'trending' = 'song_pick'
+    source: 'song_pick' | 'trending' | 'random' = 'song_pick'
   ) {
     trackFirstSearch();
     const q = buildSongQuery(song);
@@ -357,12 +365,13 @@ const SongSearch: React.FC<SongSearchProps> = ({
     const suggestion = getRandomSuggestion(
       orderedSections.flatMap((s) => s.categories)
     );
-    trackSuggestion('random', { songTitle: suggestion.title, songArtist: suggestion.artist });
-    searchSuggestion(suggestion);
+    // The source rides through searchSuggestion's own tracking — a separate
+    // pre-track here double-counted every surprise pick as `song_pick` too.
+    searchSuggestion(suggestion, undefined, undefined, 'random');
   }
 
   async function addSong(song: YoutubeResult) {
-    if (!roomId) return;
+    if (!roomId || adding) return;
     if (requireName && !userName.trim()) return;
 
     const entry: QueueEntry = {
@@ -372,11 +381,14 @@ const SongSearch: React.FC<SongSearchProps> = ({
       videoId: song.videoId,
     };
 
+    setAdding(true);
     let ok = false;
     try {
       ok = await postEntryToQueue(roomId, entry);
     } catch {
       ok = false;
+    } finally {
+      setAdding(false);
     }
     if (ok) {
       onSongAdded(entry);
@@ -830,6 +842,7 @@ const SongSearch: React.FC<SongSearchProps> = ({
               <button
                 className={styles.btnPrimary}
                 onClick={() => (onPick ? handlePick(confirmSong) : addSong(confirmSong))}
+                disabled={adding}
               >
                 {onPick ? t('search.confirm.choose') : t('search.confirm.add')}
               </button>

@@ -674,10 +674,14 @@ const Home = (): React.ReactElement => {
     let cancelled = false;
     getRoom(last.code).then((room) => {
       if (cancelled) return;
-      if (!room) {
+      // Only a definitive 404 clears the stored pointer. A transient
+      // failure (5xx, network blip) must not destroy the resume banner —
+      // that would recreate the exact duplicate-room gap it exists to close.
+      if (room === "notFound") {
         clearLastHostedRoom();
         return;
       }
+      if (room === "error") return;
       setResumeRoom({
         code: last.code,
         // Songs still ahead of the playhead — what "resuming" gets them.

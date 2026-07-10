@@ -3,8 +3,12 @@ export default async function setDisplayPaused(
   paused: boolean
 ): Promise<boolean> {
   const params = new URLSearchParams({ paused: String(paused) });
-  const resp = await fetch(`/api/queue/${roomId}/display-paused?${params}`, {
-    method: "POST",
-  });
-  return resp.ok;
+  try {
+    const resp = await fetch(`/api/queue/${roomId}/display-paused?${params}`, {
+      method: "POST",
+    });
+    return resp.ok;
+  } catch {
+    return false;
+  }
 }

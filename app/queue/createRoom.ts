@@ -5,9 +5,13 @@ export default async function createRoom(
   // apart from an additional host device joining (leave the song alone).
   priorPlayToken?: string | null
 ): Promise<boolean> {
-  const resp = await fetch(`/api/queue/${roomId}`, {
-    method: "POST",
-    headers: priorPlayToken ? { "x-play-token": priorPlayToken } : undefined,
-  });
-  return resp.ok;
+  try {
+    const resp = await fetch(`/api/queue/${roomId}`, {
+      method: "POST",
+      headers: priorPlayToken ? { "x-play-token": priorPlayToken } : undefined,
+    });
+    return resp.ok;
+  } catch {
+    return false;
+  }
 }

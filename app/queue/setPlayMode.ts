@@ -5,8 +5,12 @@ export default async function setPlayMode(
   playMode: PlayMode
 ): Promise<boolean> {
   const params = new URLSearchParams({ playMode });
-  const resp = await fetch(`/api/queue/${roomId}/mode?${params}`, {
-    method: "POST",
-  });
-  return resp.ok;
+  try {
+    const resp = await fetch(`/api/queue/${roomId}/mode?${params}`, {
+      method: "POST",
+    });
+    return resp.ok;
+  } catch {
+    return false;
+  }
 }

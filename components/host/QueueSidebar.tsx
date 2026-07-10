@@ -47,6 +47,7 @@ export function QueueSidebar({
   historyItems,
   uniqueSingers,
   editingId,
+  onDragStart,
   onDragEnd,
   onMoveTop,
   onToggleEdit,
@@ -89,6 +90,7 @@ export function QueueSidebar({
   historyItems: QueueEntry[];
   uniqueSingers: number;
   editingId: string | null;
+  onDragStart: () => void;
   onDragEnd: (event: DragEndEvent) => void;
   onMoveTop: (id: string) => void;
   onToggleEdit: (id: string) => void;
@@ -206,6 +208,10 @@ export function QueueSidebar({
                 <DndContext
                   sensors={sensors}
                   collisionDetection={closestCenter}
+                  // Pause polling the moment a drag starts — a poll landing
+                  // mid-drag re-renders the SortableContext and the drop hits
+                  // the wrong neighbor.
+                  onDragStart={onDragStart}
                   onDragEnd={onDragEnd}
                 >
                   <SortableContext
