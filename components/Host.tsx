@@ -10,6 +10,7 @@ import createRoom from "../app/queue/createRoom";
 import updatePosition from "../app/queue/updatePosition";
 import reorderQueue from "../app/queue/reorderQueue";
 import removeFromQueue from "../app/queue/removeFromQueue";
+import renameQueueEntry from "../app/queue/renameQueueEntry";
 import setPlaying from "../app/queue/setPlaying";
 import savePlayMode from "../app/queue/setPlayMode";
 import saveDisplayPaused from "../app/queue/setDisplayPaused";
@@ -909,11 +910,20 @@ const Host = ({
     if (entry) showToast(t('host.toast.removed', { title: decodeHtml(entry.songTitle) }));
   }
 
-  function editSave(id: string, newName: string) {
-    setQueue((prev) =>
-      prev.map((e) => (e.id === id ? { ...e, userName: newName } : e)),
-    );
+  async function editSave(id: string, newName: string) {
     setEditingId(null);
+    if (!joinCode) return;
+    // Persist the rename (positional $set server-side) — local-only state
+    // would be reverted by the next poll and never reach other devices.
+    // Hold polling so an in-flight poll with the old name can't flash back.
+    pausePolling();
+    const newQueue = queue.map((e) =>
+      e.id === id ? { ...e, userName: newName } : e,
+    );
+    setQueue(newQueue);
+    broadcast(newQueue, activeIndex, isPlaying);
+    const ok = await renameQueueEntry(joinCode, id, newName);
+    if (!ok) await resyncAfterFailedWrite();
   }
 
   function handleDragEnd(event: DragEndEvent) {
