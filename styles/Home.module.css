@@ -408,13 +408,16 @@
 .joinInput {
   flex: 1;
   min-width: 0;
-  padding: 0.85rem 1rem;
+  /* ≥16px (1rem) or iOS Safari zooms in on focus and stays zoomed — these
+     are the primary mobile entry inputs. Padding trimmed to keep the
+     visual size. */
+  padding: 0.8rem 1rem;
   background: rgba(255, 255, 255, 0.07);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 50px;
   color: #fff;
   font-family: var(--font-mono);
-  font-size: 0.95rem;
+  font-size: 1rem;
   text-align: center;
   letter-spacing: 3px;
   font-weight: 700;
@@ -434,12 +437,13 @@
 
 .nameInput {
   width: 100%;
-  padding: 0.85rem 1.25rem;
+  /* ≥16px (1rem) or iOS Safari zooms in on focus — see .joinInput. */
+  padding: 0.8rem 1.25rem;
   background: rgba(255, 255, 255, 0.07);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 50px;
   color: #fff;
-  font-size: 0.95rem;
+  font-size: 1rem;
   outline: none;
   box-sizing: border-box;
   transition: border-color 0.2s;

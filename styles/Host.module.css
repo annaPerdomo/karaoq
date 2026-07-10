@@ -591,9 +591,10 @@
   border: 1px solid rgba(0, 240, 255, 0.3);
   border-radius: 4px;
   color: #00f0ff;
-  font-size: 0.85rem;
+  /* ≥16px (1rem) or iOS Safari zooms in on focus and stays zoomed. */
+  font-size: 1rem;
   font-weight: 600;
-  padding: 0.1rem 0.4rem;
+  padding: 0.05rem 0.4rem;
   outline: none;
   width: 100px;
   font-family: inherit;
