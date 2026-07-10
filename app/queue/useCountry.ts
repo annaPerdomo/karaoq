@@ -4,6 +4,27 @@ const STORAGE_KEY = 'karaoq_country';
 const MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
 /**
+ * Read the cached geo country, honoring the 7-day TTL. Shared with the i18n
+ * provider so every consumer applies the same freshness rule — a stale guess
+ * (someone home from a trip) must not keep picking the UI language.
+ */
+export function readCachedCountry(): string | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const cached = JSON.parse(raw) as { country?: unknown; storedAt?: unknown };
+    if (
+      typeof cached.country === 'string' &&
+      typeof cached.storedAt === 'number' &&
+      Date.now() - cached.storedAt < MAX_AGE_MS
+    ) {
+      return cached.country;
+    }
+  } catch {}
+  return null;
+}
+
+/**
  * Resolve the visitor's country code (ISO 3166-1 alpha-2, uppercase).
  *
  * Priority:
@@ -25,19 +46,11 @@ export default function useCountry(): string | null {
       return;
     }
 
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const cached = JSON.parse(raw) as { country: string; storedAt: number };
-        if (
-          typeof cached.country === 'string' &&
-          Date.now() - cached.storedAt < MAX_AGE_MS
-        ) {
-          setCountry(cached.country);
-          return;
-        }
-      }
-    } catch {}
+    const cached = readCachedCountry();
+    if (cached) {
+      setCountry(cached);
+      return;
+    }
 
     let cancelled = false;
     fetch('/api/geo')

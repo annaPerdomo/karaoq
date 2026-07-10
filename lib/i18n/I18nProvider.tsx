@@ -8,9 +8,9 @@ import {
   matchNavigatorLocale,
   localeForCountry,
 } from './config';
+import { readCachedCountry } from '../../app/queue/useCountry';
 
 const STORAGE_KEY = 'karaoq_lang';
-const COUNTRY_KEY = 'karaoq_country'; // shared with useCountry's geo cache
 
 // Cache fetched catalogs for the session so switching back and forth never
 // re-hits the network. English is bundled; the rest are CDN-cached JSON.
@@ -44,7 +44,12 @@ function interpolate(
  * signal at all" — only the latter should fall through to a country guess, so a
  * visitor whose device is in English keeps English even abroad.
  */
-function readInitialLocale(): Locale | null {
+/**
+ * The two signals that represent an explicit user decision — the ?lang= URL
+ * override and a stored pick from the language switcher. Unlike the browser
+ * language or a geo guess, these must win even on a server-localized route.
+ */
+function readExplicitLocale(): Locale | null {
   if (typeof window === 'undefined') return null;
   try {
     const override = new URLSearchParams(window.location.search).get('lang');
@@ -54,21 +59,23 @@ function readInitialLocale(): Locale | null {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (isLocale(stored)) return stored;
   } catch {}
+  return null;
+}
+
+function readInitialLocale(): Locale | null {
+  if (typeof window === 'undefined') return null;
+  const explicit = readExplicitLocale();
+  if (explicit) return explicit;
   // The device/browser language — the same preference that decides what
   // language they read other sites in. This wins over any location guess.
   const nav = matchNavigatorLocale(
     navigator.languages ?? (navigator.language ? [navigator.language] : [])
   );
   if (nav) return nav;
-  // Cached geo country from a prior visit (useCountry writes this).
-  try {
-    const raw = localStorage.getItem(COUNTRY_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw) as { country?: string };
-      const geo = localeForCountry(parsed.country);
-      if (geo) return geo;
-    }
-  } catch {}
+  // Cached geo country from a prior visit (useCountry writes this; the shared
+  // reader applies its 7-day TTL so a stale guess can't pick the language).
+  const geo = localeForCountry(readCachedCountry() ?? undefined);
+  if (geo) return geo;
   return null;
 }
 
@@ -137,6 +144,13 @@ export function I18nProvider({
   React.useEffect(() => {
     if (seeded) {
       if (typeof document !== 'undefined') document.documentElement.lang = initialLocale!;
+      // A seeded (SEO) route renders in its server locale, but the visitor's
+      // explicit choice — ?lang= or a stored switcher pick — still wins:
+      // someone who landed on /cs and switched to English must not be Czech
+      // again next visit. Applied post-mount so SSR and hydration both stay
+      // in the server locale (no mismatch), same as the detection below.
+      const explicit = readExplicitLocale();
+      if (explicit && explicit !== initialLocale) applyLocale(explicit);
       return;
     }
     const resolved = readInitialLocale();
