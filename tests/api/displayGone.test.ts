@@ -46,11 +46,12 @@ describe("POST /api/queue/[id]/display-gone - Display teardown", () => {
 
     expect(res.getStatus()).toBe(200);
     // A stale timestamp (epoch) makes displayConnected compute false at once,
-    // rather than waiting out the heartbeat TTL.
-    expect(mockCollection.updateOne).toHaveBeenCalledWith(
-      { id: "ROOM1" },
-      { $set: { displayLastSeen: new Date(0) } }
-    );
+    // rather than waiting out the heartbeat TTL. The filter lets a fresh
+    // heartbeat (a second, surviving display) win over the teardown.
+    const [filter, update] = mockCollection.updateOne.mock.calls[0];
+    expect(filter.id).toBe("ROOM1");
+    expect(filter.displayLastSeen.$lt).toBeInstanceOf(Date);
+    expect(update).toEqual({ $set: { displayLastSeen: new Date(0) } });
   });
 
   it("rejects non-POST methods", async () => {

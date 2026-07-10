@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from "next";
 import { ApiError, Reaction } from "../../types";
 import { CHEER_EMOJIS, REACTION_COOLDOWN_MS } from "../../../../app/queue/cheerConstants";
 import { trackEvent } from "../../../../lib/analytics";
+import { MAX_ENTRY_ID_LENGTH, MAX_NAME_LENGTH, rateLimit } from "../../../../lib/limits";
 import { getRoomsCollection } from "../../../../lib/mongodb";
 import { normalizeRoomId } from "../../../../lib/roomCode";
 
@@ -30,8 +31,21 @@ export default async function handler(
     return;
   }
 
+  if (userName.length > MAX_NAME_LENGTH || reactionId.length > MAX_ENTRY_ID_LENGTH) {
+    res.status(400).json({ code: 400, message: "Invalid request." });
+    return;
+  }
+
   if (!ALLOWED_REACTIONS.has(emoji)) {
     res.status(400).json({ code: 400, message: "Invalid reaction." });
+    return;
+  }
+
+  // The per-userName cooldown below is trivially bypassed by varying the
+  // name; this IP-scoped limit is the real cap on doc bloat. Generous enough
+  // for a venue's worth of guests behind one NAT during a hype burst.
+  if (!rateLimit(req, "reaction", 60, 10_000)) {
+    res.status(429).json({ code: 429, message: "Too fast! Wait a moment." });
     return;
   }
 
@@ -73,9 +87,16 @@ export default async function handler(
 
     const updated = [...reactions, newReaction].slice(-MAX_REACTIONS);
 
+    // Atomic $push instead of a $set of the merged array: simultaneous
+    // reactions used to collapse to ~1 as each write clobbered the others —
+    // exactly during the hype bursts reactions exist for. $slice keeps the
+    // doc bounded; expired entries age out of the window as new ones land.
     await collection.updateOne(
       { id: roomId },
-      { $set: { reactions: updated, lastActivity: new Date() } }
+      {
+        $push: { reactions: { $each: [newReaction], $slice: -MAX_REACTIONS } },
+        $set: { lastActivity: new Date() },
+      }
     );
 
     trackEvent(req, "reaction_sent", { roomId: roomId as string, userName: userName!, emoji });

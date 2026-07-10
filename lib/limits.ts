@@ -105,7 +105,21 @@ export function rateLimit(
 
   const bucket = buckets.get(key);
   if (!bucket || now >= bucket.resetAt) {
-    if (buckets.size >= MAX_BUCKETS) buckets.clear();
+    if (buckets.size >= MAX_BUCKETS) {
+      // Never clear the whole map — that would unthrottle everyone,
+      // including the abuser whose flood caused the overflow. Evict expired
+      // buckets first; if the map is somehow full of live ones, drop the
+      // oldest (Map iterates in insertion order).
+      const expired: string[] = [];
+      buckets.forEach((b, k) => {
+        if (b.resetAt <= now) expired.push(k);
+      });
+      expired.forEach((k) => buckets.delete(k));
+      if (buckets.size >= MAX_BUCKETS) {
+        const oldest = buckets.keys().next().value;
+        if (oldest !== undefined) buckets.delete(oldest);
+      }
+    }
     buckets.set(key, { count: 1, resetAt: now + windowMs });
     return true;
   }

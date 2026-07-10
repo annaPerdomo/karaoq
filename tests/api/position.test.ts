@@ -38,8 +38,17 @@ function createRes() {
 describe("POST /api/queue/[id]/position - Advance song position", () => {
   beforeEach(() => vi.clearAllMocks());
 
+  function makeQueue(length: number) {
+    return Array.from({ length }, (_, i) => ({
+      id: `e${i}`,
+      userName: `User${i}`,
+      songTitle: `Song ${i}`,
+      videoId: `vidvidvid${i}`,
+    }));
+  }
+
   it("updates position and resets isPlaying to false", async () => {
-    const room: Room = { id: "ROOM1", queue: [], activeVideoIndex: 0, isPlaying: true };
+    const room: Room = { id: "ROOM1", queue: makeQueue(3), activeVideoIndex: 0, isPlaying: true };
     mockCollection.findOne.mockResolvedValue(room);
     mockCollection.updateOne.mockResolvedValue({ modifiedCount: 1 });
 
@@ -60,6 +69,22 @@ describe("POST /api/queue/[id]/position - Advance song position", () => {
     );
   });
 
+  it("clamps an out-of-range index to just past the queue", async () => {
+    const room: Room = { id: "ROOM1", queue: makeQueue(2), activeVideoIndex: 0, isPlaying: true };
+    mockCollection.findOne.mockResolvedValue(room);
+    mockCollection.updateOne.mockResolvedValue({ modifiedCount: 1 });
+
+    const req = createMockReq({
+      method: "POST",
+      query: { id: "ROOM1", activeVideoIndex: "9999" },
+    });
+    const res = createRes();
+    await handler(req, res);
+
+    expect(res.getStatus()).toBe(200);
+    expect(mockCollection.updateOne.mock.calls[0][1].$set.activeVideoIndex).toBe(2);
+  });
+
   it("returns 400 for non-numeric activeVideoIndex", async () => {
     const req = createMockReq({
       method: "POST",
@@ -71,6 +96,21 @@ describe("POST /api/queue/[id]/position - Advance song position", () => {
     expect(res.getStatus()).toBe(400);
     expect(mockCollection.findOne).not.toHaveBeenCalled();
   });
+
+  it.each(["-1", "3.9"])(
+    "returns 400 for invalid index %s (players trust activeVideoIndex)",
+    async (raw) => {
+      const req = createMockReq({
+        method: "POST",
+        query: { id: "ROOM1", activeVideoIndex: raw },
+      });
+      const res = createRes();
+      await handler(req, res);
+
+      expect(res.getStatus()).toBe(400);
+      expect(mockCollection.findOne).not.toHaveBeenCalled();
+    }
+  );
 
   it("returns 404 when room does not exist", async () => {
     mockCollection.findOne.mockResolvedValue(null);

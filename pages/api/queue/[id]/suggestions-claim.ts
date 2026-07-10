@@ -67,18 +67,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       songTitle: suggestion.songTitle,
       videoId: suggestion.videoId,
     };
-    const nextSuggestions = suggestions.filter((s) => s.id !== suggestionId);
 
-    await collection.updateOne(
-      { id: roomId },
+    // One atomic write: the suggestion must still be on the board and the
+    // queue under its cap at write time. Two concurrent claims can't both
+    // match, so the loser gets a 409 instead of silently erasing the
+    // winner's queue entry (or any concurrently added song).
+    const result = await collection.updateOne(
       {
-        $set: {
-          queue: [...room.queue, entry],
-          suggestions: nextSuggestions,
-          lastActivity: new Date(),
-        },
+        id: roomId,
+        "suggestions.id": suggestionId,
+        $expr: { $lt: [{ $size: "$queue" }, MAX_QUEUE_LENGTH] },
+      },
+      {
+        $pull: { suggestions: { id: suggestionId } },
+        $push: { queue: entry },
+        $set: { lastActivity: new Date() },
       }
     );
+    if (result.matchedCount === 0) {
+      res.status(409).json({ code: 409, message: "Someone already claimed this one." });
+      return;
+    }
     trackEvent(req, "suggestion_claimed", {
       roomId,
       userName,

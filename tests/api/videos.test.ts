@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextApiResponse } from "next";
 import { Room } from "../../pages/api/types";
+import { MAX_QUEUE_LENGTH } from "../../lib/limits";
 import { createMockReq } from "../helpers/mockRequest";
 
 const mockCollection = {
@@ -41,7 +42,7 @@ describe("POST /api/queue/[id]/videos - Add song to queue", () => {
   it("adds a song to an existing room's queue", async () => {
     const room: Room = { id: "ROOM1", queue: [], activeVideoIndex: 0, isPlaying: false };
     mockCollection.findOne.mockResolvedValue(room);
-    mockCollection.updateOne.mockResolvedValue({ modifiedCount: 1 });
+    mockCollection.updateOne.mockResolvedValue({ matchedCount: 1, modifiedCount: 1 });
 
     const req = createMockReq({
       method: "POST",
@@ -58,7 +59,8 @@ describe("POST /api/queue/[id]/videos - Add song to queue", () => {
 
     expect(res.getStatus()).toBe(200);
     expect(mockCollection.updateOne).toHaveBeenCalledWith(
-      { id: "ROOM1" },
+      // The queue cap rides in the filter so concurrent adds can't overshoot it.
+      { id: "ROOM1", $expr: { $lt: [{ $size: "$queue" }, MAX_QUEUE_LENGTH] } },
       {
         $push: {
           queue: {
@@ -71,6 +73,28 @@ describe("POST /api/queue/[id]/videos - Add song to queue", () => {
         $set: { lastActivity: expect.any(Date) },
       }
     );
+  });
+
+  it("409s when concurrent adds filled the queue between check and write", async () => {
+    const room: Room = { id: "ROOM1", queue: [], activeVideoIndex: 0, isPlaying: false };
+    mockCollection.findOne.mockResolvedValue(room);
+    // The pre-check passed on a stale snapshot, but the guarded write matched nothing.
+    mockCollection.updateOne.mockResolvedValue({ matchedCount: 0, modifiedCount: 0 });
+
+    const req = createMockReq({
+      method: "POST",
+      query: { id: "ROOM1" },
+      body: {
+        entryId: "entry-2",
+        userName: "Bob",
+        videoId: "dQw4w9WgXcQ",
+        songTitle: "Song",
+      },
+    });
+    const res = createRes();
+    await handler(req, res);
+
+    expect(res.getStatus()).toBe(409);
   });
 
   it("returns 404 when room does not exist", async () => {

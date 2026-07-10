@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { trackEvent } from "../../../lib/analytics";
+import { MAX_ENTRY_ID_LENGTH, rateLimit } from "../../../lib/limits";
 
 // Records the first time anyone in a room runs a song search. Paired with
 // room_created and song_added, this closes the activation funnel: it tells us
@@ -24,8 +25,15 @@ export default async function handler(
 
   const { roomId, role } = body;
 
-  if (typeof roomId !== "string") {
+  // Length cap + rate limit: analytics docs never expire (only heartbeats
+  // do), so unbounded ingestion is free-tier storage exhaustion.
+  if (typeof roomId !== "string" || roomId.length > MAX_ENTRY_ID_LENGTH) {
     res.status(400).json({ code: 400, message: "Invalid request." });
+    return;
+  }
+
+  if (!rateLimit(req, "analytics-search", 30, 60_000)) {
+    res.status(429).json({ code: 429, message: "Too fast, slow down." });
     return;
   }
 

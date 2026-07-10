@@ -21,7 +21,14 @@ export default async function handler(
 
   try {
     const collection = await getRoomsCollection();
-    const room = await collection.findOne({ id: roomId });
+    // Atomic $pull instead of a read-modify-write $set: a full-array write
+    // from a stale snapshot would silently delete songs added concurrently.
+    // The "before" image tells us exactly where the entry sat at pull time.
+    const room = await collection.findOneAndUpdate(
+      { id: roomId },
+      { $pull: { queue: { id: entryId } }, $set: { lastActivity: new Date() } },
+      { returnDocument: "before" }
+    );
 
     if (!room) {
       res.status(404).json({ code: 404, message: "Room not found." });
@@ -34,20 +41,15 @@ export default async function handler(
       return;
     }
 
-    const newQueue = room.queue.filter((e) => e.id !== entryId);
-
-    // Adjust activeVideoIndex if removing an entry before the current song
-    let newActiveIndex = room.activeVideoIndex;
-    if (entryIndex < room.activeVideoIndex) {
-      newActiveIndex = Math.max(0, newActiveIndex - 1);
-    }
+    // Removing an entry before the current song shifts it down one slot. The
+    // filter re-checks the index at write time so a concurrent advance or
+    // removal can't be rewound by a stale decrement.
     // When removing the active song, keep the index — the next song slides
     // into place.  If nothing remains at that index, activeVideoIndex >= queue.length
     // and the UI correctly shows the empty state.
-
     await collection.updateOne(
-      { id: roomId },
-      { $set: { queue: newQueue, activeVideoIndex: newActiveIndex, lastActivity: new Date() } }
+      { id: roomId, activeVideoIndex: { $gt: entryIndex } },
+      { $inc: { activeVideoIndex: -1 } }
     );
     res.status(200).json({ code: 200, message: "Entry removed." });
   } catch (e) {

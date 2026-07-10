@@ -122,7 +122,12 @@ async function searchWithInvidious(q: string): Promise<SearchResult[] | null> {
         })
       );
 
-      return checks.filter(Boolean).slice(0, 8);
+      const embeddable = checks.filter(Boolean).slice(0, 8);
+      // All candidates failing the oEmbed check is this instance (or the
+      // check) having a bad minute, not a real "no results" — move on rather
+      // than handing back an empty list that would get cached for 24h.
+      if (embeddable.length === 0) continue;
+      return embeddable;
     } catch {
       // Try next instance
     }
@@ -181,7 +186,9 @@ export default async function handler(
   // Invidious ignores duration/sort filters, but degraded results beat none.
   const fallback = await searchWithInvidious(q);
   if (fallback) {
-    writeCache(cacheKey, fallback);
+    // Never cache an empty fallback: a degraded backend must not blank this
+    // query for a full cache TTL.
+    if (fallback.length > 0) writeCache(cacheKey, fallback);
     res.status(200).json(fallback);
     return;
   }

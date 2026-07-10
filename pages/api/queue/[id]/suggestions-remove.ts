@@ -38,11 +38,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return;
     }
 
-    const next = suggestions.filter((s) => s.id !== suggestionId);
-
+    // Atomic $pull — a $set of the filtered snapshot would delete any
+    // suggestion posted between the read above and this write.
     await collection.updateOne(
       { id: roomId },
-      { $set: { suggestions: next, lastActivity: new Date() } }
+      { $pull: { suggestions: { id: suggestionId } }, $set: { lastActivity: new Date() } }
     );
     res.status(200).json({ code: 200, message: "Removed." });
   } catch (e) {

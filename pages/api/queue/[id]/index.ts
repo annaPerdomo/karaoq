@@ -7,6 +7,11 @@ import { normalizeRoomId } from "../../../../lib/roomCode";
 
 const REACTION_TTL_MS = 30000;
 
+// Same pattern the landing page enforces client-side. Server-side it also
+// protects invariants that assume well-formed ids — e.g. the analytics
+// sessionKey `roomId:clientId:role`, where a ":" in a roomId would collide.
+const ROOM_CODE_PATTERN = /^[A-Z0-9]{3,12}$/;
+
 // A display heartbeats every ~10s from a Web Worker (immune to background-tab
 // timer throttling). The window is still sized to survive a worst-case
 // once-per-minute throttled beat, so a hidden-but-playing display is never
@@ -65,6 +70,8 @@ export default async function handler(
           );
           res.status(200).json(existing);
         }
+      } else if (!ROOM_CODE_PATTERN.test(roomId)) {
+        res.status(400).json({ code: 400, message: "Invalid room code." });
       } else if (!rateLimit(req, "room-create", 10, 300_000)) {
         res.status(429).json({ code: 429, message: "Too many rooms created, try again later." });
       } else {
@@ -81,7 +88,31 @@ export default async function handler(
           createdAt: now,
           lastActivity: now,
         };
-        await collection.insertOne(room);
+        try {
+          await collection.insertOne(room);
+        } catch (e) {
+          // Concurrent create with the same code: the findOne above raced the
+          // unique index. The client only maps 409 to "code in use", so a raw
+          // E11000 500 would read as a server failure.
+          if ((e as { code?: number })?.code === 11000) {
+            if (isCustom) {
+              res.status(409).json({ code: 409, message: "Room code already in use." });
+              return;
+            }
+            // Random-code path: rooms are code-keyed, so just join the room
+            // the winning create made (same as the existing-room branch).
+            const winner = await collection.findOne({ id: roomId });
+            if (winner) {
+              await collection.updateOne(
+                { id: roomId },
+                { $set: { lastActivity: new Date() } }
+              );
+              res.status(200).json(winner);
+              return;
+            }
+          }
+          throw e;
+        }
         trackEvent(req, "room_created", { roomId });
         res.status(201).json(room);
       }

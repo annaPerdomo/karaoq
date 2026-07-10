@@ -56,7 +56,7 @@ describe("POST /api/queue/[id]/suggestions - create", () => {
 
   it("suggests a song anonymously", async () => {
     mockCollection.findOne.mockResolvedValue(baseRoom());
-    mockCollection.updateOne.mockResolvedValue({ modifiedCount: 1 });
+    mockCollection.updateOne.mockResolvedValue({ matchedCount: 1, modifiedCount: 1 });
 
     const req = createMockReq({
       method: "POST",
@@ -84,7 +84,7 @@ describe("POST /api/queue/[id]/suggestions-claim", () => {
 
   it("queues the song under the claimer and clears it from the board", async () => {
     mockCollection.findOne.mockResolvedValue(baseRoom({ suggestions: [suggestion] }));
-    mockCollection.updateOne.mockResolvedValue({ modifiedCount: 1 });
+    mockCollection.updateOne.mockResolvedValue({ matchedCount: 1, modifiedCount: 1 });
 
     const req = createMockReq({
       method: "POST",
@@ -95,11 +95,30 @@ describe("POST /api/queue/[id]/suggestions-claim", () => {
     await claimHandler(req, res);
 
     expect(res.getStatus()).toBe(200);
-    const setArg = mockCollection.updateOne.mock.calls[0][1].$set;
-    expect(setArg.queue).toHaveLength(1);
-    expect(setArg.queue[0].userName).toBe("Bob");
-    expect(setArg.queue[0].songTitle).toBe("Africa");
-    expect(setArg.suggestions).toEqual([]);
+    // One atomic write: pull from the board + push onto the queue, guarded
+    // by the suggestion still being present at write time.
+    const [filter, update] = mockCollection.updateOne.mock.calls[0];
+    expect(filter["suggestions.id"]).toBe("sug-1");
+    expect(update.$pull).toEqual({ suggestions: { id: "sug-1" } });
+    expect(update.$push.queue.userName).toBe("Bob");
+    expect(update.$push.queue.songTitle).toBe("Africa");
+  });
+
+  it("409s the second of two concurrent claims instead of double-queueing", async () => {
+    mockCollection.findOne.mockResolvedValue(baseRoom({ suggestions: [suggestion] }));
+    // The other claimer's $pull already removed it, so this write matches nothing.
+    mockCollection.updateOne.mockResolvedValue({ matchedCount: 0, modifiedCount: 0 });
+
+    const req = createMockReq({
+      method: "POST",
+      query: { id: "ROOM1" },
+      body: { suggestionId: "sug-1", userName: "Cara" },
+    });
+    const res = createRes();
+    await claimHandler(req, res);
+
+    expect(res.getStatus()).toBe(409);
+    expect(mockCollection.updateOne).toHaveBeenCalledTimes(1);
   });
 
   it("returns 404 for an unknown suggestion", async () => {
@@ -122,7 +141,7 @@ describe("POST /api/queue/[id]/suggestions-remove", () => {
 
   it("lets the suggester withdraw their own suggestion", async () => {
     mockCollection.findOne.mockResolvedValue(baseRoom({ suggestions: [named] }));
-    mockCollection.updateOne.mockResolvedValue({ modifiedCount: 1 });
+    mockCollection.updateOne.mockResolvedValue({ matchedCount: 1, modifiedCount: 1 });
 
     const req = createMockReq({
       method: "POST",
@@ -132,7 +151,9 @@ describe("POST /api/queue/[id]/suggestions-remove", () => {
     await removeHandler(req, res);
 
     expect(res.getStatus()).toBe(200);
-    expect(mockCollection.updateOne.mock.calls[0][1].$set.suggestions).toEqual([]);
+    expect(mockCollection.updateOne.mock.calls[0][1].$pull).toEqual({
+      suggestions: { id: "sug-2" },
+    });
   });
 
   it("blocks someone else from removing a suggestion", async () => {
@@ -150,7 +171,7 @@ describe("POST /api/queue/[id]/suggestions-remove", () => {
 
   it("lets host moderation remove without a name", async () => {
     mockCollection.findOne.mockResolvedValue(baseRoom({ suggestions: [named] }));
-    mockCollection.updateOne.mockResolvedValue({ modifiedCount: 1 });
+    mockCollection.updateOne.mockResolvedValue({ matchedCount: 1, modifiedCount: 1 });
 
     const req = createMockReq({
       method: "POST",
@@ -160,6 +181,8 @@ describe("POST /api/queue/[id]/suggestions-remove", () => {
     await removeHandler(req, res);
 
     expect(res.getStatus()).toBe(200);
-    expect(mockCollection.updateOne.mock.calls[0][1].$set.suggestions).toEqual([]);
+    expect(mockCollection.updateOne.mock.calls[0][1].$pull).toEqual({
+      suggestions: { id: "sug-2" },
+    });
   });
 });

@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { trackEvent } from "../../../lib/analytics";
+import { MAX_ENTRY_ID_LENGTH, rateLimit } from "../../../lib/limits";
 
 export default async function handler(
   req: NextApiRequest,
@@ -21,8 +22,16 @@ export default async function handler(
 
   const { roomId } = body;
 
-  if (typeof roomId !== "string" || !roomId) {
+  // Length caps + rate limit: analytics docs live on the Atlas free tier and
+  // (unlike heartbeats) never expire, so a scripted client must not be able
+  // to fill it with MB-scale junk.
+  if (typeof roomId !== "string" || !roomId || roomId.length > MAX_ENTRY_ID_LENGTH) {
     res.status(400).json({ code: 400, message: "Invalid request." });
+    return;
+  }
+
+  if (!rateLimit(req, "analytics-print", 10, 60_000)) {
+    res.status(429).json({ code: 429, message: "Too fast, slow down." });
     return;
   }
 

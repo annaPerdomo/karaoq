@@ -12,9 +12,15 @@ export default async function handler(
   }
 
   const roomId = normalizeRoomId(req.query.id);
-  const activeVideoIndex = parseInt(req.query.activeVideoIndex as string);
+  // Strict parse (parseInt would accept "3.9" as 3) — this lands straight in
+  // activeVideoIndex, which the players trust.
+  const activeVideoIndex = Number(req.query.activeVideoIndex);
 
-  if (typeof roomId !== "string" || isNaN(activeVideoIndex)) {
+  if (
+    typeof roomId !== "string" ||
+    !Number.isInteger(activeVideoIndex) ||
+    activeVideoIndex < 0
+  ) {
     res.status(400).json({ code: 400, message: "Invalid request." });
     return;
   }
@@ -26,10 +32,13 @@ export default async function handler(
     if (!room) {
       res.status(404).json({ code: 404, message: "Room not found." });
     } else {
+      // Clamp to just past the last entry (== queue.length is the legitimate
+      // "queue finished" empty state, same bound video-ended enforces).
+      const nextIndex = Math.min(activeVideoIndex, room.queue.length);
       await collection.updateOne(
         { id: roomId },
         {
-          $set: { activeVideoIndex, isPlaying: false, lastActivity: new Date() },
+          $set: { activeVideoIndex: nextIndex, isPlaying: false, lastActivity: new Date() },
           $unset: { playToken: "", displayPaused: "", playStartedAt: "" },
         }
       );

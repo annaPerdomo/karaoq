@@ -52,13 +52,19 @@ export default async function handler(
     } else if (room.queue.length >= MAX_QUEUE_LENGTH) {
       res.status(409).json({ code: 409, message: "Queue is full." });
     } else {
-      await collection.updateOne(
-        { id: roomId },
+      // Cap enforced in the filter so concurrent adds can't overshoot it
+      // between the length check above and the write.
+      const result = await collection.updateOne(
+        { id: roomId, $expr: { $lt: [{ $size: "$queue" }, MAX_QUEUE_LENGTH] } },
         {
           $push: { queue: entry },
           $set: { lastActivity: new Date() },
         }
       );
+      if (result.matchedCount === 0) {
+        res.status(409).json({ code: 409, message: "Queue is full." });
+        return;
+      }
       trackEvent(req, "song_added", { roomId: roomId as string, userName, songTitle, videoId, via: "search" });
       res.status(200).json({ code: 200, message: "Song added." });
     }

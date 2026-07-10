@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { trackEvent } from "../../../lib/analytics";
+import { MAX_ENTRY_ID_LENGTH, MAX_TITLE_LENGTH, rateLimit } from "../../../lib/limits";
 
 export default async function handler(
   req: NextApiRequest,
@@ -28,8 +29,11 @@ export default async function handler(
 
   const { roomId, suggestionSource, sectionId, categoryId, songTitle, songArtist } = body;
 
+  // Length caps + rate limit: analytics docs never expire (only heartbeats
+  // do), so unbounded ingestion is free-tier storage exhaustion.
   if (
     typeof roomId !== "string" ||
+    roomId.length > MAX_ENTRY_ID_LENGTH ||
     typeof suggestionSource !== "string" ||
     !["random", "song_pick", "genre_chip", "trending"].includes(suggestionSource)
   ) {
@@ -37,13 +41,21 @@ export default async function handler(
     return;
   }
 
+  if (!rateLimit(req, "analytics-suggestion", 30, 60_000)) {
+    res.status(429).json({ code: 429, message: "Too fast, slow down." });
+    return;
+  }
+
+  const capped = (value: unknown, max: number) =>
+    typeof value === "string" && value.length <= max ? value : undefined;
+
   await trackEvent(req, "suggestion_used", {
     roomId,
     suggestionSource: suggestionSource as "random" | "song_pick" | "genre_chip" | "trending",
-    sectionId: typeof sectionId === "string" ? sectionId : undefined,
-    categoryId: typeof categoryId === "string" ? categoryId : undefined,
-    songTitle: typeof songTitle === "string" ? songTitle : undefined,
-    songArtist: typeof songArtist === "string" ? songArtist : undefined,
+    sectionId: capped(sectionId, MAX_ENTRY_ID_LENGTH),
+    categoryId: capped(categoryId, MAX_ENTRY_ID_LENGTH),
+    songTitle: capped(songTitle, MAX_TITLE_LENGTH),
+    songArtist: capped(songArtist, MAX_TITLE_LENGTH),
   });
 
   res.status(200).json({ ok: true });

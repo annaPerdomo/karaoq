@@ -30,8 +30,13 @@ export default async function handler(
 
   try {
     const collection = await getRoomsCollection();
+    // displayLastSeen is shared between displays, so with two open this
+    // signal from the closing one would cut playback on the survivor for up
+    // to a heartbeat interval. A heartbeat in the last few seconds wins over
+    // the teardown; a truly lone display still self-heals via the TTL even
+    // when its own final beat was recent enough to block the backdate.
     await collection.updateOne(
-      { id: roomId },
+      { id: roomId, displayLastSeen: { $lt: new Date(Date.now() - 5000) } },
       { $set: { displayLastSeen: new Date(0) } }
     );
     res.status(200).json({ code: 200, message: "Display gone." });

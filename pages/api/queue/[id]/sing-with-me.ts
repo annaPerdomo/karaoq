@@ -72,10 +72,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return;
     }
 
-    await collection.updateOne(
-      { id: roomId },
+    // Cap enforced in the filter so concurrent adds can't overshoot it
+    // between the length check above and the write.
+    const result = await collection.updateOne(
+      {
+        id: roomId,
+        $expr: { $lt: [{ $size: { $ifNull: ["$singWithMe", []] } }, MAX_SING_WITH_ME] },
+      },
       { $push: { singWithMe: post }, $set: { lastActivity: new Date() } }
     );
+    if (result.matchedCount === 0) {
+      res.status(409).json({ code: 409, message: "Too many active posts." });
+      return;
+    }
     trackEvent(req, "singwithme_posted", {
       roomId,
       userName: createdBy || undefined,

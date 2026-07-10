@@ -38,11 +38,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return;
     }
 
-    const next = posts.filter((p) => p.id !== postId);
-
+    // Atomic $pull — a $set of the filtered snapshot would delete any post
+    // created between the read above and this write.
     await collection.updateOne(
       { id: roomId },
-      { $set: { singWithMe: next, lastActivity: new Date() } }
+      { $pull: { singWithMe: { id: postId } }, $set: { lastActivity: new Date() } }
     );
     res.status(200).json({ code: 200, message: "Removed." });
   } catch (e) {
