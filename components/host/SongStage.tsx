@@ -120,14 +120,16 @@ export function SongStage({
             {t('host.status.noDisplay')}
           </p>
         )}
-        <button
-          className={styles.switchModeLink}
-          onClick={onOpenTvDisplay}
-        >
-          {displayConnected
-            ? t('host.status.reopenDisplay')
-            : t('host.status.openDisplay')}
-        </button>
+        {/* Only offer to (re)open while no display is live — opening a
+            second one on top of a connected display double-plays the song. */}
+        {!displayConnected && (
+          <button
+            className={styles.switchModeLink}
+            onClick={onOpenTvDisplay}
+          >
+            {t('host.status.openDisplay')}
+          </button>
+        )}
       </div>
     ) : /* All-in-one mode: video plays here. */
     playsVideoHere ? (
