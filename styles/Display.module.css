@@ -302,6 +302,120 @@
   line-height: 1.5;
 }
 
+/* ─── Attract mode (idle promo screen) ─── */
+.attractWrap {
+  flex: 1;
+  position: relative;
+}
+
+.attractPanel {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 2rem;
+  animation: attractFade 20s ease-in-out infinite;
+}
+
+.attractPanelJoin {
+  animation-delay: 0s;
+}
+
+.attractPanelTonight {
+  animation-delay: -10s;
+}
+
+@keyframes attractFade {
+  0%, 45% { opacity: 1; }
+  50%, 95% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .attractPanel {
+    animation: none;
+    opacity: 0;
+  }
+
+  .attractPanelJoin {
+    opacity: 1;
+  }
+}
+
+.attractHeadline {
+  font-family: var(--font-brand);
+  font-weight: 400;
+  font-size: 2rem;
+  background: linear-gradient(135deg, var(--acc-a), var(--acc-b));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.attractCode {
+  font-family: var(--font-mono);
+  font-size: 2.5rem;
+  font-weight: 700;
+  letter-spacing: 6px;
+  color: #ffd700;
+  text-shadow: 0 0 16px rgba(255, 215, 0, 0.4);
+}
+
+.attractWelcome {
+  max-width: 34rem;
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+  text-align: center;
+  line-height: 1.5;
+}
+
+.attractStats {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.attractStat {
+  font-family: var(--font-headline);
+  font-size: clamp(1.5rem, 3.5vw, 2.5rem);
+  font-weight: 700;
+  color: var(--text-primary);
+  text-align: center;
+}
+
+.attractBeFirst {
+  max-width: 34rem;
+  color: var(--text-muted);
+  font-size: 1.3rem;
+  text-align: center;
+  line-height: 1.5;
+}
+
+.attractUpSoon {
+  margin-top: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.attractUpSoonLabel {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--acc-a);
+}
+
+.attractUpSoonName {
+  font-size: 1rem;
+  color: var(--text-secondary);
+}
+
 /* ─── Footer ─── */
 .footer {
   position: fixed;

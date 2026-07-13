@@ -20,6 +20,7 @@ import FullscreenToggle from './FullscreenToggle';
 import formatSongTitle from '../lib/songTitle';
 import DisplaySidebar from './display/DisplaySidebar';
 import NowPlayingBar from './display/NowPlayingBar';
+import AttractPanel from './display/AttractPanel';
 
 const POLL_INTERVAL = 1500;
 // Liveness heartbeat cadence; the server treats a display as gone after ~75s
@@ -481,6 +482,15 @@ const Display = (): React.ReactElement => {
               {formatSongTitle(currentSong.songTitle)}
             </p>
           </div>
+        ) : displayConfig.attractMode ? (
+          <AttractPanel
+            joinUrl={joinUrl}
+            joinCode={joinCode || ''}
+            origin={origin}
+            welcomeLine={displayConfig.welcomeLine}
+            queue={queue}
+            activeIndex={activeIndex}
+          />
         ) : (
           <div className={styles.centerState}>
             <div className={styles.waitingIcon}>
