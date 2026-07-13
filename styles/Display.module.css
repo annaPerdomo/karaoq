@@ -1,4 +1,6 @@
 .main {
+  --acc-a: #ff2d78;
+  --acc-b: #00f0ff;
   height: 100dvh;
   height: 100vh; /* fallback for older browsers */
   display: flex;
@@ -9,6 +11,59 @@
 
   @supports (height: 100dvh) {
     height: 100dvh;
+  }
+}
+
+/* ─── Theme presets (host-selected; classic = these vars, no class) ─── */
+.themeMinimal {
+  --acc-a: #aab0c0;
+  --acc-b: #d7dae2;
+}
+
+.themeMinimal .nowGlow {
+  background: var(--acc-a);
+  animation: none;
+}
+
+.themeMinimal .waitingTitle {
+  background: none;
+  -webkit-text-fill-color: var(--text-primary);
+  color: var(--text-primary);
+}
+
+.themeMinimal .readyTag {
+  text-shadow: none;
+}
+
+.themeMinimal .nowDot {
+  box-shadow: 0 0 4px var(--acc-a);
+  animation: none;
+}
+
+.themeMinimal .tapPlayIcon {
+  animation: none;
+}
+
+.themeNeon .brand {
+  text-shadow: 0 0 16px rgba(255, 45, 120, 0.55), 0 0 32px rgba(0, 240, 255, 0.35);
+}
+
+.themeNeon .readySinger,
+.themeNeon .nowSinger {
+  text-shadow: 0 0 20px rgba(0, 240, 255, 0.6);
+}
+
+.themeNeon .upNextTitle {
+  text-shadow: 0 0 10px rgba(255, 45, 120, 0.6);
+}
+
+.themeNeon .nowGlow {
+  box-shadow: 0 0 12px var(--acc-a), 0 0 20px var(--acc-b);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .themeNeon .nowGlow {
+    animation: none;
   }
 }
 
@@ -58,7 +113,7 @@
   font-weight: 400;
   font-size: 1.4rem;
   letter-spacing: 2px;
-  background: linear-gradient(135deg, #ff2d78, #00f0ff);
+  background: linear-gradient(135deg, var(--acc-a), var(--acc-b));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -141,7 +196,7 @@
   width: 72px;
   height: 72px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #ff2d78, #00f0ff);
+  background: linear-gradient(135deg, var(--acc-a), var(--acc-b));
   color: #fff;
   animation: tapPulse 2s ease-in-out infinite;
 }
@@ -188,7 +243,7 @@
   font-family: var(--font-brand);
   font-weight: 400;
   font-size: 3rem;
-  background: linear-gradient(135deg, #ff2d78, #00f0ff);
+  background: linear-gradient(135deg, var(--acc-a), var(--acc-b));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -221,7 +276,7 @@
 .readyTag {
   font-size: 0.8rem;
   letter-spacing: 4px;
-  color: #ff2d78;
+  color: var(--acc-a);
   font-weight: 700;
   text-transform: uppercase;
   text-shadow: 0 0 12px rgba(255, 45, 120, 0.5);
@@ -231,7 +286,7 @@
   font-family: var(--font-headline);
   font-size: clamp(2.5rem, 6vw, 4.5rem);
   font-weight: 700;
-  color: #00f0ff;
+  color: var(--acc-b);
   text-align: center;
   letter-spacing: -0.02em;
   line-height: 1.2;
@@ -311,7 +366,7 @@
   left: 0;
   width: 100%;
   height: 2px;
-  background: linear-gradient(90deg, #ff2d78, #ff6b35, #00f0ff, #ff2d78);
+  background: linear-gradient(90deg, var(--acc-a), #ff6b35, var(--acc-b), var(--acc-a));
   background-size: 200% 100%;
   animation: glowSlide 4s linear infinite;
 }
@@ -337,8 +392,8 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #ff2d78;
-  box-shadow: 0 0 8px #ff2d78, 0 0 20px rgba(255, 45, 120, 0.3);
+  background: var(--acc-a);
+  box-shadow: 0 0 8px var(--acc-a), 0 0 20px rgba(255, 45, 120, 0.3);
   animation: pulse 1.5s ease-in-out infinite;
   flex-shrink: 0;
 }
@@ -351,7 +406,7 @@
 .nowLabel {
   font-size: 0.65rem;
   letter-spacing: 3px;
-  color: #ff2d78;
+  color: var(--acc-a);
   text-transform: uppercase;
   font-weight: 700;
 }
@@ -360,7 +415,7 @@
   font-family: var(--font-headline);
   font-size: clamp(1.6rem, 3vw, 2.4rem);
   font-weight: 700;
-  color: #00f0ff;
+  color: var(--acc-b);
   letter-spacing: -0.02em;
 }
 
@@ -511,7 +566,7 @@
   font-weight: 600;
   letter-spacing: 1.2px;
   text-transform: uppercase;
-  color: #ff2d78;
+  color: var(--acc-a);
   display: flex;
   align-items: center;
   gap: 0.4rem;
@@ -524,7 +579,7 @@
   font-size: 0.6rem;
   font-weight: 700;
   background: rgba(255, 45, 120, 0.2);
-  color: #ff2d78;
+  color: var(--acc-a);
   padding: 0.1rem 0.4rem;
   border-radius: 10px;
   letter-spacing: 0;
@@ -551,7 +606,7 @@
 .upNextNum {
   font-size: 0.62rem;
   font-weight: 700;
-  color: #ff2d78;
+  color: var(--acc-a);
   width: 1.4rem;
   height: 1.4rem;
   display: flex;
@@ -574,7 +629,7 @@
 .upNextItemSinger {
   font-size: 0.85rem;
   font-weight: 600;
-  color: #00f0ff;
+  color: var(--acc-b);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -627,7 +682,7 @@
   width: 32px;
   height: 32px;
   border: 3px solid rgba(255, 255, 255, 0.1);
-  border-top-color: #ff2d78;
+  border-top-color: var(--acc-a);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }

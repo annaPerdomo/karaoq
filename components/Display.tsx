@@ -441,8 +441,12 @@ const Display = (): React.ReactElement => {
     );
   }
 
+  const themeClass =
+    displayConfig.theme === 'minimal' ? styles.themeMinimal :
+    displayConfig.theme === 'neon' ? styles.themeNeon : '';
+
   return (
-    <main className={styles.main}>
+    <main className={`${styles.main} ${themeClass}`}>
       <header className={`${styles.header} ${sidebarCollapsed ? styles.headerNoSidebar : ''}`}>
         <div className={styles.brand}>KaraoQ</div>
         <FullscreenToggle className={styles.headerFullscreen} />
@@ -483,8 +487,8 @@ const Display = (): React.ReactElement => {
               <svg width="80" height="80" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <defs>
                   <linearGradient id="noteGrad" x1="0" y1="0" x2="1" y2="1">
-                    <stop offset="0%" stopColor="#ff2d78" />
-                    <stop offset="100%" stopColor="#00f0ff" />
+                    <stop offset="0%" style={{ stopColor: 'var(--acc-a)' }} />
+                    <stop offset="100%" style={{ stopColor: 'var(--acc-b)' }} />
                   </linearGradient>
                 </defs>
                 <circle cx="18" cy="48" r="8" fill="url(#noteGrad)" />
