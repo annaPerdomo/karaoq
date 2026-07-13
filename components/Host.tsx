@@ -22,11 +22,14 @@ import {
 } from "../app/queue/roomChannel";
 import setReactionsEnabled from "../app/queue/setReactionsEnabled";
 import setBoardsOnDisplay from "../app/queue/setBoardsOnDisplay";
+import setDisplayConfig from "../app/queue/setDisplayConfig";
 import postReaction from "../app/queue/postReaction";
 import { REACTION_COOLDOWN_MS } from "../app/queue/cheerConstants";
 import { startSessionTracking } from "../app/queue/trackSession";
 import { startVisiblePolling } from "../app/queue/pollWhileVisible";
 import {
+  DEFAULT_DISPLAY_CONFIG,
+  DisplayConfig,
   PlayMode,
   QueueEntry,
   Reaction,
@@ -47,6 +50,7 @@ import {
 import { ReactionOverlay } from "./host/ReactionOverlay";
 import { MobileFooter } from "./host/MobileFooter";
 import { CohostInviteModal } from "./host/CohostInviteModal";
+import { DisplaySettingsPanel } from "./host/DisplaySettingsPanel";
 import { QrModal } from "./host/QrModal";
 import { ConfirmRemoveModal } from "./host/ConfirmRemoveModal";
 import { WelcomePrompt } from "./host/WelcomePrompt";
@@ -87,6 +91,8 @@ const Host = ({
   const [confirmRemove, setConfirmRemove] = React.useState<string | null>(null);
   const [reactionsOn, setReactionsOn] = React.useState(true);
   const [boardsOnDisplay, setBoardsOnDisplayState] = React.useState(true);
+  const [displayConfig, setDisplayConfigState] = React.useState<DisplayConfig>(DEFAULT_DISPLAY_CONFIG);
+  const [displayPanelOpen, setDisplayPanelOpen] = React.useState(false);
   const [reactionCooldown, setReactionCooldown] = React.useState(false);
   const [lastSentEmoji, setLastSentEmoji] = React.useState<string | null>(null);
   const [visibleReactions, setVisibleReactions] = React.useState<
@@ -385,6 +391,7 @@ const Host = ({
     setDisplayConnected(room.displayConnected ?? false);
     setReactionsOn(room.reactionsEnabled ?? true);
     setBoardsOnDisplayState(room.boardsOnDisplay ?? true);
+    setDisplayConfigState(room.displayConfig ?? DEFAULT_DISPLAY_CONFIG);
     if (!remote && room.playMode) setPlayMode(room.playMode);
   }
 
@@ -563,6 +570,7 @@ const Host = ({
       activeVideoIndex: idx,
       isPlaying: playing,
       reactionsEnabled: reactionsOn,
+      displayConfig,
     });
   }
 
@@ -708,9 +716,27 @@ const Host = ({
         activeVideoIndex: activeIndex,
         isPlaying,
         reactionsEnabled: next,
+        displayConfig,
       });
       showToast(next ? t('host.toast.reactionsOn') : t('host.toast.reactionsOff'));
     }
+  }
+
+  // Every control in the panel applies immediately (no Save/Cancel): optimistic
+  // write, broadcast for same-browser displays, resync if the write fails.
+  async function saveDisplayConfig(next: DisplayConfig) {
+    if (!joinCode) return;
+    pausePolling();
+    setDisplayConfigState(next);
+    broadcastRoomState(joinCode, {
+      queue,
+      activeVideoIndex: activeIndex,
+      isPlaying,
+      reactionsEnabled: reactionsOn,
+      displayConfig: next,
+    });
+    const ok = await setDisplayConfig(joinCode, next);
+    if (!ok) await resyncAfterFailedWrite();
   }
 
   // The display picks this up on its next poll (~1.5s) — no broadcast needed.
@@ -1050,6 +1076,10 @@ const Host = ({
           setSettingsOpen(false);
           setCohostOpen(true);
         }}
+        onOpenDisplayPanel={() => {
+          setSettingsOpen(false);
+          setDisplayPanelOpen(true);
+        }}
         onBrandClick={() => router.push("/")}
       />
 
@@ -1155,6 +1185,15 @@ const Host = ({
           cohostDisplayUrl={cohostDisplayUrl}
           onClose={() => setCohostOpen(false)}
           onCopyLink={copyCohostLink}
+        />
+      )}
+
+      {displayPanelOpen && (
+        <DisplaySettingsPanel
+          isOpen={displayPanelOpen}
+          onClose={() => setDisplayPanelOpen(false)}
+          config={displayConfig}
+          onSave={saveDisplayConfig}
         />
       )}
 

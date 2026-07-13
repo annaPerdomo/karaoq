@@ -2196,3 +2196,91 @@
     display: none;
   }
 }
+
+/* ─── Display settings panel (modal) ─── */
+.displayPanel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  background: var(--bg-secondary);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 1.75rem 1.75rem 1.5rem;
+  max-width: 420px;
+  width: 90%;
+  max-height: 85vh;
+  overflow-y: auto;
+  animation: slideUp 0.2s ease;
+}
+
+.dpSection {
+  margin-bottom: 1.1rem;
+}
+
+.dpSection:last-child {
+  margin-bottom: 0;
+}
+
+.dpSubLabel {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  margin: 0.6rem 0 0.5rem;
+}
+
+.dpSegmented {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.dpSegmentBtn {
+  flex: 1;
+  padding: 0.5rem 0.4rem;
+  font-size: 0.78rem;
+  font-weight: 500;
+  text-align: center;
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.dpSegmentBtn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.dpSegmentBtnActive {
+  color: var(--text-primary);
+  background: rgba(255, 45, 120, 0.18);
+  border-color: #ff2d78;
+  box-shadow: 0 0 0 1px rgba(255, 45, 120, 0.4) inset;
+}
+
+.dpWelcomeInput {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  font-size: 16px;
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+}
+
+.dpWelcomeInput::placeholder {
+  color: var(--text-muted);
+}
+
+.dpWelcomeInput:focus {
+  outline: none;
+  border-color: #00f0ff;
+}
+
+@media (pointer: coarse) {
+  .displayPanel .spToggleRow,
+  .displayPanel .dpSegmentBtn,
+  .displayPanel .dpWelcomeInput {
+    min-height: 44px;
+  }
+}

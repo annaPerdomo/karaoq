@@ -24,6 +24,7 @@ export function HostHeader({
   hostName,
   onChangeName,
   onInviteCohost,
+  onOpenDisplayPanel,
   onBrandClick,
 }: {
   remote: boolean;
@@ -43,6 +44,7 @@ export function HostHeader({
   hostName: string;
   onChangeName: () => void;
   onInviteCohost: () => void;
+  onOpenDisplayPanel: () => void;
   onBrandClick: () => void;
 }) {
   const { t } = useT();
@@ -132,6 +134,7 @@ export function HostHeader({
         hostName={hostName}
         onChangeName={onChangeName}
         onInviteCohost={onInviteCohost}
+        onOpenDisplayPanel={onOpenDisplayPanel}
       />
     </header>
   );
