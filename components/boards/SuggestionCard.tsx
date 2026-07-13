@@ -4,16 +4,18 @@ import styles from '../../styles/SocialBoards.module.css';
 import { SuggestedSong } from '../../pages/api/types';
 import { useT } from '../../lib/i18n/I18nProvider';
 import decodeHtml from '../../lib/decodeHtml';
+import { pencil } from './icons';
 
 interface SuggestionCardProps {
   suggestion: SuggestedSong;
-  /** Hosts can remove anyone's request (moderation), not just their own. */
+  /** Hosts can edit and remove anyone's request, not just their own. */
   isHost: boolean;
   isOwn: boolean;
   /** The viewer's display name; empty until they've entered one. */
   name: string;
   busy: boolean;
   onClaim: () => void;
+  onEdit: () => void;
   onRemove: () => void;
   onPreview: () => void;
 }
@@ -25,6 +27,7 @@ const SuggestionCard: React.FC<SuggestionCardProps> = ({
   name,
   busy,
   onClaim,
+  onEdit,
   onRemove,
   onPreview,
 }) => {
@@ -46,15 +49,26 @@ const SuggestionCard: React.FC<SuggestionCardProps> = ({
           </span>
         </div>
         {canRemove && (
-          <button
-            className={styles.removeBtn}
-            onClick={onRemove}
-            disabled={busy}
-            aria-label={isHost ? t('boards.removeRequest') : t('boards.removeYourRequest')}
-            title={isHost ? t('boards.removeRequest') : t('boards.removeYourRequest')}
-          >
-            ×
-          </button>
+          <div className={styles.cardTools}>
+            <button
+              className={styles.editBtn}
+              onClick={onEdit}
+              disabled={busy}
+              aria-label={isHost ? t('boards.editRequest') : t('boards.editYourRequest')}
+              title={isHost ? t('boards.editRequest') : t('boards.editYourRequest')}
+            >
+              {pencil}
+            </button>
+            <button
+              className={styles.removeBtn}
+              onClick={onRemove}
+              disabled={busy}
+              aria-label={isHost ? t('boards.removeRequest') : t('boards.removeYourRequest')}
+              title={isHost ? t('boards.removeRequest') : t('boards.removeYourRequest')}
+            >
+              ×
+            </button>
+          </div>
         )}
       </div>
       <div className={styles.cardActions}>

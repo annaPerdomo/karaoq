@@ -199,6 +199,32 @@
   border-color: rgba(255, 90, 90, 0.5);
 }
 
+.cardTools {
+  flex-shrink: 0;
+  display: flex;
+  gap: 0.35rem;
+}
+
+.editBtn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.8rem;
+  height: 1.8rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.editBtn:hover:not(:disabled) {
+  color: #00f0ff;
+  border-color: rgba(0, 240, 255, 0.5);
+}
+
 .previewBtn {
   flex: 1;
   display: inline-flex;

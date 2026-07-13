@@ -4,16 +4,18 @@ import styles from '../../styles/SocialBoards.module.css';
 import { SingWithMePost } from '../../pages/api/types';
 import { useT } from '../../lib/i18n/I18nProvider';
 import decodeHtml from '../../lib/decodeHtml';
+import { pencil } from './icons';
 
 interface SingWithMeCardProps {
   post: SingWithMePost;
-  /** Hosts can remove anyone's post (moderation), not just their own. */
+  /** Hosts can edit and remove anyone's post, not just their own. */
   isHost: boolean;
   isOwn: boolean;
   /** The viewer's display name; empty until they've entered one. */
   name: string;
   busy: boolean;
   onJoin: () => void;
+  onEdit: () => void;
   onRemove: () => void;
   onPreview: () => void;
 }
@@ -25,6 +27,7 @@ const SingWithMeCard: React.FC<SingWithMeCardProps> = ({
   name,
   busy,
   onJoin,
+  onEdit,
   onRemove,
   onPreview,
 }) => {
@@ -33,6 +36,9 @@ const SingWithMeCard: React.FC<SingWithMeCardProps> = ({
   const alreadyIn = !!name && post.joinedSingers.includes(name);
   const full = joined >= post.maxSingers;
   const canRemove = isHost || isOwn;
+  // Editing a queued post would leave the board and the queue pointing at
+  // different videos; once it's queued, the queue is where it's managed.
+  const canEdit = canRemove && !post.queued;
 
   return (
     <div className={styles.card}>
@@ -61,15 +67,28 @@ const SingWithMeCard: React.FC<SingWithMeCardProps> = ({
           )}
         </div>
         {canRemove && (
-          <button
-            className={styles.removeBtn}
-            onClick={onRemove}
-            disabled={busy}
-            aria-label={isHost ? t('boards.removePost') : t('boards.removeYourPost')}
-            title={isHost ? t('boards.removePost') : t('boards.removeYourPost')}
-          >
-            ×
-          </button>
+          <div className={styles.cardTools}>
+            {canEdit && (
+              <button
+                className={styles.editBtn}
+                onClick={onEdit}
+                disabled={busy}
+                aria-label={isHost ? t('boards.editPost') : t('boards.editYourPost')}
+                title={isHost ? t('boards.editPost') : t('boards.editYourPost')}
+              >
+                {pencil}
+              </button>
+            )}
+            <button
+              className={styles.removeBtn}
+              onClick={onRemove}
+              disabled={busy}
+              aria-label={isHost ? t('boards.removePost') : t('boards.removeYourPost')}
+              title={isHost ? t('boards.removePost') : t('boards.removeYourPost')}
+            >
+              ×
+            </button>
+          </div>
         )}
       </div>
       <div className={styles.cardActions}>

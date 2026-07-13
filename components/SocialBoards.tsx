@@ -9,9 +9,11 @@ import { BoardTab, PreviewTarget } from './boards/types';
 import postSingWithMe from '../app/queue/postSingWithMe';
 import joinSingWithMe from '../app/queue/joinSingWithMe';
 import removeSingWithMe from '../app/queue/removeSingWithMe';
+import editSingWithMe from '../app/queue/editSingWithMe';
 import postSuggestion from '../app/queue/postSuggestion';
 import claimSuggestion from '../app/queue/claimSuggestion';
 import removeSuggestion from '../app/queue/removeSuggestion';
+import editSuggestion from '../app/queue/editSuggestion';
 import { SingWithMePost, SuggestedSong } from '../pages/api/types';
 import { useT } from '../lib/i18n/I18nProvider';
 
@@ -20,7 +22,7 @@ interface SocialBoardsProps {
   userName: string;
   singWithMe: SingWithMePost[];
   suggestions: SuggestedSong[];
-  /** Host mode adds moderation — removing anyone's post, not just your own. */
+  /** Host mode adds moderation — editing and removing anyone's post. */
   mode?: 'singer' | 'host';
   /** Called after a successful write so the parent can re-poll immediately. */
   onChange?: () => void;
@@ -40,6 +42,7 @@ const SocialBoards: React.FC<SocialBoardsProps> = ({
   const { t } = useT();
   const [tab, setTab] = React.useState<BoardTab>('singwithme');
   const [posting, setPosting] = React.useState<BoardTab | null>(null);
+  const [editing, setEditing] = React.useState<PreviewTarget | null>(null);
   const [preview, setPreview] = React.useState<PreviewTarget | null>(null);
   const [busy, setBusy] = React.useState(false);
 
@@ -88,6 +91,44 @@ const SocialBoards: React.FC<SocialBoardsProps> = ({
     );
   }
 
+  function submitEdit(draft: BoardDraft) {
+    if (!editing) return;
+    const target = editing;
+    run(
+      () =>
+        target.kind === 'singwithme'
+          ? editSingWithMe(roomId, target.post.id, {
+              songTitle: draft.song.title,
+              videoId: draft.song.videoId,
+              minSingers: draft.minSingers,
+              maxSingers: draft.maxSingers,
+              userName: isHost ? undefined : name,
+            })
+          : editSuggestion(roomId, target.post.id, {
+              songTitle: draft.song.title,
+              videoId: draft.song.videoId,
+              userName: isHost ? undefined : name,
+            }),
+      () => setEditing(null)
+    );
+  }
+
+  // Only the video id is stored, so rebuild YouTube's thumbnail URL rather than
+  // re-running a search just to show the preview frame.
+  function editDraft(target: PreviewTarget): BoardDraft {
+    const swm = target.kind === 'singwithme' ? target.post : null;
+    return {
+      song: {
+        title: target.post.songTitle,
+        videoId: target.post.videoId,
+        thumbnailUrl: `https://i.ytimg.com/vi/${target.post.videoId}/mqdefault.jpg`,
+      },
+      anonymous: target.post.anonymous,
+      minSingers: swm?.minSingers ?? 2,
+      maxSingers: swm?.maxSingers ?? 4,
+    };
+  }
+
   function handleJoin(post: SingWithMePost) {
     if (!name) return;
     return run(() => joinSingWithMe(roomId, post.id, name));
@@ -98,7 +139,8 @@ const SocialBoards: React.FC<SocialBoardsProps> = ({
     return run(() => claimSuggestion(roomId, s.id, name));
   }
 
-  // Host moderation removes with no name; a singer must prove they're the poster.
+  // Host moderation acts with no name; anyone else must prove they're the poster
+  // (the server enforces it). Same split on the edit routes above.
   function handleRemoveSwm(post: SingWithMePost) {
     run(() => removeSingWithMe(roomId, post.id, isHost ? undefined : name));
   }
@@ -156,6 +198,7 @@ const SocialBoards: React.FC<SocialBoardsProps> = ({
                 name={name}
                 busy={busy}
                 onJoin={() => handleJoin(post)}
+                onEdit={() => setEditing({ kind: 'singwithme', post })}
                 onRemove={() => handleRemoveSwm(post)}
                 onPreview={() => setPreview({ kind: 'singwithme', post })}
               />
@@ -182,6 +225,7 @@ const SocialBoards: React.FC<SocialBoardsProps> = ({
                 name={name}
                 busy={busy}
                 onClaim={() => handleClaim(s)}
+                onEdit={() => setEditing({ kind: 'suggestion', post: s })}
                 onRemove={() => handleRemoveSuggestion(s)}
                 onPreview={() => setPreview({ kind: 'suggestion', post: s })}
               />
@@ -198,6 +242,18 @@ const SocialBoards: React.FC<SocialBoardsProps> = ({
           busy={busy}
           onSubmit={submitPost}
           onClose={() => setPosting(null)}
+        />
+      )}
+
+      {editing && (
+        <BoardPostModal
+          tab={editing.kind === 'singwithme' ? 'singwithme' : 'suggestions'}
+          roomId={roomId}
+          name={name}
+          busy={busy}
+          initial={editDraft(editing)}
+          onSubmit={submitEdit}
+          onClose={() => setEditing(null)}
         />
       )}
 

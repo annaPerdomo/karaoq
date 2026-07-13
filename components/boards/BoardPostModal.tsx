@@ -21,28 +21,33 @@ interface BoardPostModalProps {
   /** The poster's display name; empty when they haven't entered one. */
   name: string;
   busy: boolean;
+  /**
+   * Seeds the draft when editing an existing post rather than making a new one.
+   * Identity isn't editable — a host fixing someone else's song must not be able
+   * to rewrite who they are — so the anonymity toggle is hidden in this mode.
+   */
+  initial?: BoardDraft;
   onSubmit: (draft: BoardDraft) => void;
   onClose: () => void;
 }
 
-// "Post a song to sing together" / "Request a song": search for a song, confirm
-// it's the right cover, set the singer counts, then post.
-//
-// The draft lives here rather than in SocialBoards because it exists only
-// while this modal is open — closing it is what discards the draft.
+// Search for a song, confirm it's the right cover, set the singer counts, then
+// post. Doubles as the edit modal — same fields, seeded from the post.
 const BoardPostModal: React.FC<BoardPostModalProps> = ({
   tab,
   roomId,
   name,
   busy,
+  initial,
   onSubmit,
   onClose,
 }) => {
   const { t } = useT();
-  const [picked, setPicked] = React.useState<YoutubeResult | null>(null);
-  const [anonymous, setAnonymous] = React.useState(false);
-  const [minSingers, setMinSingers] = React.useState(2);
-  const [maxSingers, setMaxSingers] = React.useState(4);
+  const isEdit = !!initial;
+  const [picked, setPicked] = React.useState<YoutubeResult | null>(initial?.song ?? null);
+  const [anonymous, setAnonymous] = React.useState(initial?.anonymous ?? false);
+  const [minSingers, setMinSingers] = React.useState(initial?.minSingers ?? 2);
+  const [maxSingers, setMaxSingers] = React.useState(initial?.maxSingers ?? 4);
   const [playing, setPlaying] = React.useState(false);
 
   function pickSong(song: YoutubeResult | null) {
@@ -67,7 +72,13 @@ const BoardPostModal: React.FC<BoardPostModalProps> = ({
       <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
         <div className={styles.modalHeader}>
           <h3 className={styles.modalTitle}>
-            {isSingWithMe ? t('boards.modal.singTogether') : t('boards.modal.request')}
+            {isEdit
+              ? isSingWithMe
+                ? t('boards.modal.editSingTogether')
+                : t('boards.modal.editRequest')
+              : isSingWithMe
+                ? t('boards.modal.singTogether')
+                : t('boards.modal.request')}
           </h3>
           <button className={styles.modalClose} onClick={onClose} aria-label={t('common.close')}>
             ×
@@ -132,17 +143,23 @@ const BoardPostModal: React.FC<BoardPostModalProps> = ({
               </div>
             )}
 
-            <label className={styles.anonRow}>
-              <input
-                type="checkbox"
-                checked={anonymous}
-                onChange={(e) => setAnonymous(e.target.checked)}
-              />
-              {t('boards.postAnon')}
-            </label>
+            {!isEdit && (
+              <label className={styles.anonRow}>
+                <input
+                  type="checkbox"
+                  checked={anonymous}
+                  onChange={(e) => setAnonymous(e.target.checked)}
+                />
+                {t('boards.postAnon')}
+              </label>
+            )}
 
             <button className={styles.submitBtn} onClick={submit} disabled={busy}>
-              {isSingWithMe ? t('boards.postIt') : t('boards.requestIt')}
+              {isEdit
+                ? t('boards.saveChanges')
+                : isSingWithMe
+                  ? t('boards.postIt')
+                  : t('boards.requestIt')}
             </button>
           </div>
         )}
