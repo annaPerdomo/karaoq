@@ -1,5 +1,5 @@
 import type { NextApiRequest } from "next";
-import type { QueueEntry, SingWithMePost, SuggestedSong } from "../pages/api/types";
+import type { DisplayConfig, QueueEntry, SingWithMePost, SuggestedSong } from "../pages/api/types";
 
 // Server-side caps on anonymous writes. The UI enforces friendlier limits
 // (30-char name input, 8 search results); these exist so curl can't balloon
@@ -13,6 +13,7 @@ export const MAX_SING_WITH_ME = 30;
 export const MAX_SUGGESTIONS = 50;
 // Sanity bound on singer counts for a "Sing with me" post ("One Day More" et al).
 export const MAX_SINGERS = 20;
+export const MAX_WELCOME_LENGTH = 80;
 
 // YouTube video IDs are exactly 11 URL-safe base64 characters.
 const VIDEO_ID_RE = /^[A-Za-z0-9_-]{11}$/;
@@ -80,6 +81,40 @@ export function isValidSuggestedSong(song: unknown): song is SuggestedSong {
   if (typeof e.anonymous !== "boolean") return false;
   if (typeof e.suggestedBy !== "string" || e.suggestedBy.length > MAX_NAME_LENGTH) return false;
   return true;
+}
+
+const QR_SIZES = new Set(["large", "normal", "small", "hidden"]);
+const DISPLAY_THEMES = new Set(["classic", "minimal", "neon"]);
+const UP_NEXT_COUNTS = new Set([4, 8, 12, 16]);
+const DISPLAY_CONFIG_KEYS = new Set([
+  "qrSize",
+  "showUpNext",
+  "upNextCount",
+  "showNowPlaying",
+  "showReactions",
+  "theme",
+  "welcomeLine",
+  "attractMode",
+]);
+
+export function isValidDisplayConfig(value: unknown): value is DisplayConfig {
+  if (!value || typeof value !== "object") return false;
+  const e = value as Record<string, unknown>;
+  if (Object.keys(e).some((k) => !DISPLAY_CONFIG_KEYS.has(k))) return false;
+  return (
+    typeof e.qrSize === "string" &&
+    QR_SIZES.has(e.qrSize) &&
+    typeof e.showUpNext === "boolean" &&
+    typeof e.upNextCount === "number" &&
+    UP_NEXT_COUNTS.has(e.upNextCount) &&
+    typeof e.showNowPlaying === "boolean" &&
+    typeof e.showReactions === "boolean" &&
+    typeof e.theme === "string" &&
+    DISPLAY_THEMES.has(e.theme) &&
+    typeof e.welcomeLine === "string" &&
+    e.welcomeLine.length <= MAX_WELCOME_LENGTH &&
+    typeof e.attractMode === "boolean"
+  );
 }
 
 // Minimal in-memory rate limiter. Per serverless instance, so the effective

@@ -1,4 +1,4 @@
-import { QueueEntry, Reaction } from "../../pages/api/types";
+import { DisplayConfig, QueueEntry, Reaction } from "../../pages/api/types";
 
 export interface RoomStateMessage {
   queue: QueueEntry[];
@@ -6,6 +6,7 @@ export interface RoomStateMessage {
   isPlaying: boolean;
   reactionsEnabled: boolean;
   reactions?: Reaction[];
+  displayConfig?: DisplayConfig;
 }
 
 function channelName(roomId: string): string {

@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from "next";
-import { ApiError, Room } from "../../types";
+import { ApiError, DEFAULT_DISPLAY_CONFIG, Room } from "../../types";
 import { trackEvent } from "../../../../lib/analytics";
 import { rateLimit } from "../../../../lib/limits";
 import { getRoomsCollection } from "../../../../lib/mongodb";
@@ -85,6 +85,7 @@ export default async function handler(
           // Matches the host UI default; switching to a separate screen
           // updates it via the mode endpoint.
           playMode: "here",
+          displayConfig: DEFAULT_DISPLAY_CONFIG,
           createdAt: now,
           lastActivity: now,
         };
@@ -161,6 +162,7 @@ export default async function handler(
           isPlaying,
           displayConnected,
           reactionsEnabled: room.reactionsEnabled ?? true,
+          displayConfig: room.displayConfig ?? DEFAULT_DISPLAY_CONFIG,
           reactions,
         });
       } else {

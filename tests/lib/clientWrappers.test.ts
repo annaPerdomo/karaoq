@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { QueueEntry } from "../../pages/api/types";
+import { DEFAULT_DISPLAY_CONFIG, QueueEntry } from "../../pages/api/types";
 
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
@@ -173,6 +173,7 @@ describe("Client API wrappers", () => {
       ["claimSuggestion", (m) => (m.default as (r: string, s: string, u: string) => Promise<boolean>)("R", "s", "A")],
       ["removeSingWithMe", (m) => (m.default as (r: string, p: string) => Promise<boolean>)("R", "p")],
       ["removeSuggestion", (m) => (m.default as (r: string, s: string) => Promise<boolean>)("R", "s")],
+      ["setDisplayConfig", (m) => (m.default as (r: string, c: typeof DEFAULT_DISPLAY_CONFIG) => Promise<boolean>)("R", DEFAULT_DISPLAY_CONFIG)],
     ];
 
     it.each(wrappers)("%s resolves false", async (name, call) => {
@@ -199,6 +200,31 @@ describe("Client API wrappers", () => {
       expect(options.method).toBe("POST");
       expect(options.headers).toEqual({ "Content-Type": "application/json" });
       expect(JSON.parse(options.body)).toEqual({ queue, activeVideoIndex: 1 });
+    });
+  });
+
+  describe("setDisplayConfig", () => {
+    it("sends the full config as a JSON body", async () => {
+      mockFetch.mockResolvedValue({ ok: true });
+      const { default: setDisplayConfig } = await import("../../app/queue/setDisplayConfig");
+
+      const result = await setDisplayConfig("ROOM1", DEFAULT_DISPLAY_CONFIG);
+
+      expect(result).toBe(true);
+      const [url, options] = mockFetch.mock.calls[0];
+      expect(url).toBe("/api/queue/ROOM1/display-config");
+      expect(options.method).toBe("POST");
+      expect(options.headers).toEqual({ "Content-Type": "application/json" });
+      expect(JSON.parse(options.body)).toEqual(DEFAULT_DISPLAY_CONFIG);
+    });
+
+    it("returns false on failure", async () => {
+      mockFetch.mockResolvedValue({ ok: false });
+      const { default: setDisplayConfig } = await import("../../app/queue/setDisplayConfig");
+
+      const result = await setDisplayConfig("ROOM1", DEFAULT_DISPLAY_CONFIG);
+
+      expect(result).toBe(false);
     });
   });
 });

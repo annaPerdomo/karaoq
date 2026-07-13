@@ -54,6 +54,36 @@ export interface SuggestedSong {
  */
 export type PlayMode = "here" | "tv";
 
+export type QrSize = "large" | "normal" | "small" | "hidden";
+export type DisplayTheme = "classic" | "minimal" | "neon";
+
+export interface DisplayConfig {
+  qrSize: QrSize;
+  showUpNext: boolean;
+  /** How many upcoming songs the sidebar lists. */
+  upNextCount: 4 | 8 | 12 | 16;
+  showNowPlaying: boolean;
+  /** Whether the display renders the cheer overlay. Independent of the room-wide
+   * reactionsEnabled flag (which controls whether the audience can SEND cheers). */
+  showReactions: boolean;
+  theme: DisplayTheme;
+  /** Venue/host welcome line shown under the QR card and in attract mode. "" = none. */
+  welcomeLine: string;
+  /** Rotating promo panels when the room is idle (no current song). */
+  attractMode: boolean;
+}
+
+export const DEFAULT_DISPLAY_CONFIG: DisplayConfig = {
+  qrSize: "normal",
+  showUpNext: true,
+  upNextCount: 8,
+  showNowPlaying: true,
+  showReactions: true,
+  theme: "classic",
+  welcomeLine: "",
+  attractMode: false,
+};
+
 export interface Room {
   id: string;
   queue: QueueEntry[];
@@ -91,6 +121,7 @@ export interface Room {
   suggestions?: SuggestedSong[];
   /** Unset (legacy rooms) means shown — the display treats it as true. */
   boardsOnDisplay?: boolean;
+  displayConfig?: DisplayConfig;
   /** Set on insert; rooms created before expiry shipped lack these. */
   createdAt?: Date;
   /** Bumped on every write; drives the TTL index that expires stale rooms. */

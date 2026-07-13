@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextApiResponse } from "next";
-import { Room } from "../../pages/api/types";
+import { DEFAULT_DISPLAY_CONFIG, Room } from "../../pages/api/types";
 import { createMockReq } from "../helpers/mockRequest";
 
 const mockCollection = {
@@ -68,6 +68,7 @@ describe("POST /api/queue/[id] - Room creation", () => {
       isPlaying: false,
       reactionsEnabled: true,
       playMode: "here",
+      displayConfig: DEFAULT_DISPLAY_CONFIG,
       createdAt: expect.any(Date),
       lastActivity: expect.any(Date),
     });
@@ -78,6 +79,7 @@ describe("POST /api/queue/[id] - Room creation", () => {
       isPlaying: false,
       reactionsEnabled: true,
       playMode: "here",
+      displayConfig: DEFAULT_DISPLAY_CONFIG,
       createdAt: expect.any(Date),
       lastActivity: expect.any(Date),
     });
@@ -231,6 +233,7 @@ describe("GET /api/queue/[id] - Room retrieval", () => {
       isPlaying: true,
       displayConnected: true,
       reactionsEnabled: true,
+      displayConfig: DEFAULT_DISPLAY_CONFIG,
       reactions: [],
     });
     expect(mockCollection.updateOne).not.toHaveBeenCalled();
@@ -368,6 +371,29 @@ describe("GET /api/queue/[id] - Room retrieval", () => {
 
     expect(res.getStatus()).toBe(200);
     expect((res.getBody() as Room).isPlaying).toBe(false);
+  });
+
+  it("back-fills displayConfig with the default for a legacy room doc", async () => {
+    const legacyRoom = { id: "OLD01", queue: [], activeVideoIndex: 0 };
+    mockCollection.findOne.mockResolvedValue(legacyRoom);
+
+    const req = createMockReq({ method: "GET", query: { id: "OLD01" } });
+    const res = createRes();
+    await handler(req, res);
+
+    expect((res.getBody() as Room).displayConfig).toEqual(DEFAULT_DISPLAY_CONFIG);
+  });
+
+  it("returns a room's stored displayConfig unchanged on GET", async () => {
+    const custom = { ...DEFAULT_DISPLAY_CONFIG, qrSize: "small" as const, theme: "neon" as const };
+    const room = { id: "NEW01", queue: [], activeVideoIndex: 0, displayConfig: custom };
+    mockCollection.findOne.mockResolvedValue(room);
+
+    const req = createMockReq({ method: "GET", query: { id: "NEW01" } });
+    const res = createRes();
+    await handler(req, res);
+
+    expect((res.getBody() as Room).displayConfig).toEqual(custom);
   });
 
   it("returns 404 for non-existent room", async () => {
