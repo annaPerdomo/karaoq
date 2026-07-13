@@ -23,7 +23,7 @@ import { QueueEntry } from "../../pages/api/types";
 import { Boards } from "../../app/queue/useBoards";
 import { useT } from "../../lib/i18n/I18nProvider";
 import { Icons } from "./icons";
-import { decodeHtml } from "./utils";
+import { formatSongTitle } from "./utils";
 import { SortableQueueItem } from "./SortableQueueItem";
 
 // The right-hand rail: the Up Next / History tabs, the add-song button and
@@ -249,9 +249,9 @@ export function QueueSidebar({
                       </div>
                       <div
                         className={styles.queueSong}
-                        title={decodeHtml(item.songTitle)}
+                        title={formatSongTitle(item.songTitle)}
                       >
-                        {decodeHtml(item.songTitle)}
+                        {formatSongTitle(item.songTitle)}
                       </div>
                     </div>
                     <button

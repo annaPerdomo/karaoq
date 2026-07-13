@@ -4,7 +4,7 @@ import styles from "../../styles/Host.module.css";
 import { QueueEntry } from "../../pages/api/types";
 import { useT } from "../../lib/i18n/I18nProvider";
 import { Icons } from "./icons";
-import { decodeHtml } from "./utils";
+import { formatSongTitle } from "./utils";
 
 // The main stage: loading spinner, the current song's player/status panel (which
 // varies by co-host / TV / here / other-device), and the empty-room states.
@@ -68,7 +68,7 @@ export function SongStage({
         )}
         <h1 className={styles.controlSinger}>{currentSong.userName}</h1>
         <p className={styles.controlSong}>
-          {decodeHtml(currentSong.songTitle)}
+          {formatSongTitle(currentSong.songTitle)}
         </p>
         <p className={styles.cohostNote}>
           {t('host.cohost.playbackNote')}
@@ -85,7 +85,7 @@ export function SongStage({
               {currentSong.userName}
             </p>
             <h2 className={styles.controlSong}>
-              {decodeHtml(currentSong.songTitle)}
+              {formatSongTitle(currentSong.songTitle)}
             </h2>
             <p className={styles.cohostNote}>
               {t('host.status.pausedDisplayNote')}
@@ -101,7 +101,7 @@ export function SongStage({
               {currentSong.userName}
             </p>
             <h2 className={styles.controlSong}>
-              {decodeHtml(currentSong.songTitle)}
+              {formatSongTitle(currentSong.songTitle)}
             </h2>
           </>
         ) : (
@@ -111,7 +111,7 @@ export function SongStage({
               {currentSong.userName}
             </h1>
             <p className={styles.controlSong}>
-              {decodeHtml(currentSong.songTitle)}
+              {formatSongTitle(currentSong.songTitle)}
             </p>
           </>
         )}
@@ -153,7 +153,7 @@ export function SongStage({
         </div>
         <p className={styles.controlSinger}>{currentSong.userName}</p>
         <h2 className={styles.controlSong}>
-          {decodeHtml(currentSong.songTitle)}
+          {formatSongTitle(currentSong.songTitle)}
         </h2>
         <button className={styles.switchModeLink} onClick={onStartSong}>
           {t('host.status.playHereInstead')}
@@ -164,7 +164,7 @@ export function SongStage({
         <div className={styles.readyLabel}>{t('host.status.upNext')}</div>
         <h1 className={styles.controlSinger}>{currentSong.userName}</h1>
         <p className={styles.controlSong}>
-          {decodeHtml(currentSong.songTitle)}
+          {formatSongTitle(currentSong.songTitle)}
         </p>
       </div>
     )

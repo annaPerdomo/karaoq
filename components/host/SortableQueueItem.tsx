@@ -5,7 +5,7 @@ import styles from "../../styles/Host.module.css";
 import { QueueEntry } from "../../pages/api/types";
 import { useT } from "../../lib/i18n/I18nProvider";
 import { Icons } from "./icons";
-import { decodeHtml } from "./utils";
+import { formatSongTitle } from "./utils";
 
 export function SortableQueueItem({
   item,
@@ -90,8 +90,8 @@ export function SortableQueueItem({
             </span>
           )}
         </div>
-        <div className={styles.queueSong} title={decodeHtml(item.songTitle)}>
-          {decodeHtml(item.songTitle)}
+        <div className={styles.queueSong} title={formatSongTitle(item.songTitle)}>
+          {formatSongTitle(item.songTitle)}
         </div>
       </div>
       <div className={styles.queueActions}>

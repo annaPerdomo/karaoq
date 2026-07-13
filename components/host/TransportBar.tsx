@@ -4,7 +4,7 @@ import { useT } from "../../lib/i18n/I18nProvider";
 import { renderWithHeart } from "../../lib/i18n/renderWithHeart";
 import FullscreenToggle from "../FullscreenToggle";
 import { Icons } from "./icons";
-import { decodeHtml } from "./utils";
+import { formatSongTitle } from "./utils";
 
 // Transport bar — host only; co-hosts don't control playback. The control
 // cluster branches by where the video plays: TV display (pause/stop), here
@@ -63,7 +63,7 @@ export function TransportBar({
                 {currentSong.userName}
               </div>
               <div className={styles.tSong}>
-                {decodeHtml(currentSong.songTitle)}
+                {formatSongTitle(currentSong.songTitle)}
               </div>
             </div>
           ) : (

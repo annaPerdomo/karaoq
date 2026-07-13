@@ -545,12 +545,12 @@
   min-width: 0;
 }
 
+/* Never truncated — the tail of the title is the version. */
 .queueSong {
   font-size: 0.82rem;
   color: var(--text-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  line-height: 1.35;
+  word-break: break-word;
 }
 
 .queueSinger {

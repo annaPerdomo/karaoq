@@ -1,7 +1,7 @@
 import styles from "../../styles/Host.module.css";
 import { QueueEntry } from "../../pages/api/types";
 import { useT } from "../../lib/i18n/I18nProvider";
-import { decodeHtml } from "./utils";
+import { formatSongTitle } from "./utils";
 
 export function ConfirmRemoveModal({
   entryId,
@@ -23,7 +23,7 @@ export function ConfirmRemoveModal({
           {(() => {
             const entry = queue.find((e) => e.id === entryId);
             if (!entry) return t('host.confirm.fallback');
-            return t('host.confirm.body', { title: decodeHtml(entry.songTitle), name: entry.userName });
+            return t('host.confirm.body', { title: formatSongTitle(entry.songTitle), name: entry.userName });
           })()}
         </p>
         <div className={styles.modalActions}>

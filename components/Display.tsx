@@ -19,7 +19,7 @@ import { useT } from '../lib/i18n/I18nProvider';
 import { renderWithHeart } from '../lib/i18n/renderWithHeart';
 import LanguageSwitcher from './LanguageSwitcher';
 import FullscreenToggle from './FullscreenToggle';
-import decodeHtml from '../lib/decodeHtml';
+import formatSongTitle from '../lib/songTitle';
 
 const POLL_INTERVAL = 1500;
 // Liveness heartbeat cadence; the server treats a display as gone after ~75s
@@ -468,7 +468,7 @@ const Display = (): React.ReactElement => {
             </div>
             <h1 className={styles.readySinger}>{currentSong.userName}</h1>
             <p className={styles.readySong}>
-              {decodeHtml(currentSong.songTitle)}
+              {formatSongTitle(currentSong.songTitle)}
             </p>
           </div>
         ) : (
@@ -545,7 +545,7 @@ const Display = (): React.ReactElement => {
             </div>
             <div className={styles.nowSinger}>{currentSong.userName}</div>
             <div className={styles.nowSong}>
-              {decodeHtml(currentSong.songTitle)}
+              {formatSongTitle(currentSong.songTitle)}
             </div>
           </div>
         </div>
@@ -586,9 +586,9 @@ const Display = (): React.ReactElement => {
                     </span>
                     <span
                       className={styles.upNextItemSong}
-                      title={decodeHtml(item.songTitle)}
+                      title={formatSongTitle(item.songTitle)}
                     >
-                      {decodeHtml(item.songTitle)}
+                      {formatSongTitle(item.songTitle)}
                     </span>
                   </div>
                 </div>

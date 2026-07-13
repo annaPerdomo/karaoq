@@ -35,7 +35,7 @@ import {
 import { v4 as uuidv4 } from "uuid";
 import { useT } from "../lib/i18n/I18nProvider";
 import { POLL_INTERVAL, DISPLAY_GONE_CONFIRM_MS } from "./host/constants";
-import { decodeHtml } from "./host/utils";
+import { formatSongTitle } from "./host/utils";
 import {
   playModeStorageKey,
   readStoredPlayToken,
@@ -729,7 +729,7 @@ const Host = ({
     const newQueue = [...queue, entry];
     setQueue(newQueue);
     broadcast(newQueue, activeIndex, isPlaying);
-    showToast(t('host.toast.added', { title: decodeHtml(entry.songTitle) }));
+    showToast(t('host.toast.added', { title: formatSongTitle(entry.songTitle) }));
     setSearchOpen(false);
   }
 
@@ -883,7 +883,7 @@ const Host = ({
       return;
     }
     broadcast(newQueue, newActiveIndex, isPlaying);
-    showToast(t('host.toast.restored', { title: decodeHtml(entry.songTitle) }));
+    showToast(t('host.toast.restored', { title: formatSongTitle(entry.songTitle) }));
   }
 
   async function removeSong(entryId: string) {
@@ -909,7 +909,7 @@ const Host = ({
       await resyncAfterFailedWrite();
       return;
     }
-    if (entry) showToast(t('host.toast.removed', { title: decodeHtml(entry.songTitle) }));
+    if (entry) showToast(t('host.toast.removed', { title: formatSongTitle(entry.songTitle) }));
   }
 
   async function editSave(id: string, newName: string) {

@@ -8,7 +8,7 @@ import SongSearch from './SongSearch';
 import BoardsPanel from './BoardsPanel';
 import getRoom from '../app/queue/getRoom';
 import useBoards from '../app/queue/useBoards';
-import decodeHtml from '../lib/decodeHtml';
+import formatSongTitle from '../lib/songTitle';
 import { normalizeRoomId } from '../lib/roomCode';
 import postReaction from '../app/queue/postReaction';
 import { CHEER_EMOJIS, REACTION_COOLDOWN_MS, isTextReaction } from '../app/queue/cheerConstants';
@@ -399,7 +399,7 @@ const Sing = (): React.ReactElement => {
               </div>
               <p className={styles.nowSinger}>{currentSong.userName}</p>
               <p className={styles.nowSong}>
-                {decodeHtml(currentSong.songTitle)}
+                {formatSongTitle(currentSong.songTitle)}
               </p>
             </div>
           )}
@@ -440,7 +440,7 @@ const Sing = (): React.ReactElement => {
                         {item.userName}
                       </span>
                       <span className={styles.queueSong}>
-                        {decodeHtml(item.songTitle)}
+                        {formatSongTitle(item.songTitle)}
                       </span>
                     </div>
                   </div>
@@ -481,7 +481,7 @@ const Sing = (): React.ReactElement => {
                 <div className={styles.drawerNowPlaying}>
                   <span className={styles.drawerSinger}>{currentSong.userName}</span>
                   <span className={styles.drawerSongTitle}>
-                    {decodeHtml(currentSong.songTitle)}
+                    {formatSongTitle(currentSong.songTitle)}
                   </span>
                 </div>
               </>
@@ -560,7 +560,7 @@ const Sing = (): React.ReactElement => {
                         {item.userName}
                       </span>
                       <span className={styles.queueSong}>
-                        {decodeHtml(item.songTitle)}
+                        {formatSongTitle(item.songTitle)}
                       </span>
                     </div>
                   </div>

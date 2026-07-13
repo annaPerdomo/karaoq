@@ -108,12 +108,10 @@
   font-size: 0.9rem;
   font-weight: 600;
   color: var(--text-primary);
-  /* Two lines then clamp — song titles are long and a hard single-line cut
-     hides the part people recognize. */
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  /* Never clamped — choosing whether to join means reading which version it is,
+     and that's the tail of the title. */
+  line-height: 1.3;
+  word-break: break-word;
 }
 
 .cardMeta {

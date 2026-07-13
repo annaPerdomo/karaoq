@@ -3,7 +3,7 @@ import * as React from 'react';
 import styles from '../../styles/SocialBoards.module.css';
 import { SuggestedSong } from '../../pages/api/types';
 import { useT } from '../../lib/i18n/I18nProvider';
-import decodeHtml from '../../lib/decodeHtml';
+import formatSongTitle from '../../lib/songTitle';
 import { pencil } from './icons';
 
 interface SuggestionCardProps {
@@ -38,7 +38,7 @@ const SuggestionCard: React.FC<SuggestionCardProps> = ({
     <div className={styles.card}>
       <div className={styles.cardTop}>
         <div className={styles.cardMain}>
-          <span className={styles.cardSong}>{decodeHtml(suggestion.songTitle)}</span>
+          <span className={styles.cardSong}>{formatSongTitle(suggestion.songTitle)}</span>
           <span className={styles.cardMeta}>
             {t('boards.requestedBy', {
               name:

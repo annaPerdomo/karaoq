@@ -3,7 +3,7 @@ import * as React from 'react';
 import styles from '../../styles/BoardsSummary.module.css';
 import { SingWithMePost, SuggestedSong } from '../../pages/api/types';
 import { useT } from '../../lib/i18n/I18nProvider';
-import decodeHtml from '../../lib/decodeHtml';
+import formatSongTitle from '../../lib/songTitle';
 
 // Neither surface scrolls this list, so show a handful and count the rest.
 const MAX_ITEMS = 4;
@@ -47,7 +47,7 @@ const BoardsSummary: React.FC<BoardsSummaryProps> = ({
         const joined = post.joinedSingers.length;
         return (
           <div key={post.id} className={styles.item}>
-            <span className={styles.song}>{decodeHtml(post.songTitle)}</span>
+            <span className={styles.song}>{formatSongTitle(post.songTitle)}</span>
             <span className={styles.metaRow}>
               <span className={styles.tag}>{t('boards.tab.singTogether')}</span>
               <span className={styles.meta}>
@@ -69,7 +69,7 @@ const BoardsSummary: React.FC<BoardsSummaryProps> = ({
       })}
       {shownSuggestions.map((s) => (
         <div key={s.id} className={styles.item}>
-          <span className={styles.song}>{decodeHtml(s.songTitle)}</span>
+          <span className={styles.song}>{formatSongTitle(s.songTitle)}</span>
           <span className={styles.metaRow}>
             <span className={`${styles.tag} ${styles.tagRequest}`}>
               {t('boards.tab.requests')}
