@@ -8,6 +8,24 @@
   position: relative;
 }
 
+.cardSmall {
+  gap: 0.5rem;
+  padding: 0.75rem;
+}
+
+.cardLarge {
+  gap: 1.1rem;
+  padding: 2rem;
+}
+
+.cardLarge .label {
+  font-size: 0.85rem;
+}
+
+.cardLarge .alt {
+  font-size: 1rem;
+}
+
 .top {
   display: flex;
   align-items: center;

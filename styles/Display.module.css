@@ -41,6 +41,12 @@
   z-index: 15;
 }
 
+/* No sidebar: QR hidden, up-next off, no welcome line — let the header and
+   video area reclaim the 280px the sidebar would have reserved. */
+.headerNoSidebar {
+  right: 0;
+}
+
 .headerLang {
   /* The fullscreen button ahead of it carries margin-left:auto; this just adds
      a small gap between the two right-aligned controls. */
@@ -71,6 +77,10 @@
   padding-top: 56px; /* space for fixed header */
   padding-bottom: 120px; /* space for fixed nowBar + footer */
   box-sizing: border-box;
+}
+
+.videoAreaNoSidebar {
+  margin-right: 0;
 }
 
 .video {
@@ -477,6 +487,15 @@
   letter-spacing: 4px;
   color: #ffd700;
   text-shadow: 0 0 12px rgba(255, 215, 0, 0.4);
+}
+
+.welcomeLine {
+  padding: 0.75rem 1.25rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  text-align: center;
+  line-height: 1.4;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 /* ─── Up Next section ─── */

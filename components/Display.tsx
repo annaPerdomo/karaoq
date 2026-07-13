@@ -12,7 +12,7 @@ import { onRoomState, onDisplayPause, broadcastVideoEnded } from '../app/queue/r
 import { startSessionTracking } from '../app/queue/trackSession';
 import { startVisiblePolling } from '../app/queue/pollWhileVisible';
 import { isTextReaction } from '../app/queue/cheerConstants';
-import { PlayMode, QueueEntry, Reaction, Room, SingWithMePost, SuggestedSong } from '../pages/api/types';
+import { DEFAULT_DISPLAY_CONFIG, DisplayConfig, PlayMode, QueueEntry, Reaction, Room, SingWithMePost, SuggestedSong } from '../pages/api/types';
 import { useT } from '../lib/i18n/I18nProvider';
 import { renderWithHeart } from '../lib/i18n/renderWithHeart';
 import LanguageSwitcher from './LanguageSwitcher';
@@ -56,6 +56,7 @@ const Display = (): React.ReactElement => {
   const notFoundPollsRef = React.useRef(0);
   const [origin, setOrigin] = React.useState('');
   const [reactionsOn, setReactionsOn] = React.useState(true);
+  const [displayConfig, setDisplayConfig] = React.useState<DisplayConfig>(DEFAULT_DISPLAY_CONFIG);
   const [visibleReactions, setVisibleReactions] = React.useState<(Reaction & { key: string; left: number; sway: number })[]>([]);
   const seenReactionIds = React.useRef(new Set<string>());
   const reactionTimers = React.useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -183,6 +184,7 @@ const Display = (): React.ReactElement => {
     setDisplayPaused(paused);
     setPlayMode(room.playMode ?? null);
     setReactionsOn(room.reactionsEnabled ?? true);
+    setDisplayConfig(room.displayConfig ?? DEFAULT_DISPLAY_CONFIG);
     processReactions(room.reactions, animateReactions);
   }
 
@@ -234,6 +236,7 @@ const Display = (): React.ReactElement => {
       setActiveIndex(state.activeVideoIndex);
       setIsPlaying(state.isPlaying);
       setReactionsOn(state.reactionsEnabled);
+      if (state.displayConfig) setDisplayConfig(state.displayConfig);
       processReactions(state.reactions);
     });
   }, [joinCode]);
@@ -406,6 +409,9 @@ const Display = (): React.ReactElement => {
     ? queue.slice(activeIndex)
     : queue.slice(activeIndex + 1);
   const joinUrl = `${origin || 'https://karaoq.live'}/sing/${joinCode}`;
+  // Nothing left in the sidebar to show — reclaim its space for the video.
+  const sidebarCollapsed =
+    displayConfig.qrSize === 'hidden' && !displayConfig.showUpNext && !displayConfig.welcomeLine;
 
   if (!joinCode) {
     return <div className={styles.loading}><div className={styles.spinner} /></div>;
@@ -437,13 +443,13 @@ const Display = (): React.ReactElement => {
 
   return (
     <main className={styles.main}>
-      <header className={styles.header}>
+      <header className={`${styles.header} ${sidebarCollapsed ? styles.headerNoSidebar : ''}`}>
         <div className={styles.brand}>KaraoQ</div>
         <FullscreenToggle className={styles.headerFullscreen} />
         <LanguageSwitcher className={styles.headerLang} />
       </header>
 
-      <div className={styles.videoArea}>
+      <div className={`${styles.videoArea} ${sidebarCollapsed ? styles.videoAreaNoSidebar : ''}`}>
         {loading ? (
           <div className={styles.centerState}>
             <div className={styles.spinner} />
@@ -514,7 +520,7 @@ const Display = (): React.ReactElement => {
           </button>
         )}
 
-        {reactionsOn && visibleReactions.length > 0 && (
+        {reactionsOn && displayConfig.showReactions && visibleReactions.length > 0 && (
           <div className={styles.reactionOverlay}>
             {visibleReactions.map((r) => (
               <div
@@ -535,7 +541,7 @@ const Display = (): React.ReactElement => {
 
       {/* Now playing bar (only under the video — the here-mode banner above
           already announces the singer) */}
-      {currentSong && isPlaying && playsVideoHere && (
+      {currentSong && isPlaying && playsVideoHere && displayConfig.showNowPlaying && (
         <NowPlayingBar singerName={currentSong.userName} songTitle={currentSong.songTitle} />
       )}
 
@@ -546,15 +552,18 @@ const Display = (): React.ReactElement => {
         </a>
       </div>
 
-      <DisplaySidebar
-        joinUrl={joinUrl}
-        joinCode={joinCode || ''}
-        origin={origin}
-        upNext={upNext}
-        boardsOn={boardsOn}
-        singWithMe={singWithMe}
-        suggestions={suggestions}
-      />
+      {!sidebarCollapsed && (
+        <DisplaySidebar
+          joinUrl={joinUrl}
+          joinCode={joinCode || ''}
+          origin={origin}
+          upNext={upNext}
+          boardsOn={boardsOn}
+          singWithMe={singWithMe}
+          suggestions={suggestions}
+          displayConfig={displayConfig}
+        />
+      )}
     </main>
   );
 };

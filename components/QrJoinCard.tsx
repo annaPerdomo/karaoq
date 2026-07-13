@@ -9,9 +9,16 @@ interface QrJoinCardProps {
   origin: string;
   onClose?: () => void;
   onPrint?: () => void;
+  size?: "small" | "normal" | "large";
 }
 
-const QrJoinCard = ({ joinUrl, joinCode, origin, onClose, onPrint }: QrJoinCardProps): React.ReactElement => {
+const QR_PIXELS: Record<"small" | "normal" | "large", number> = {
+  small: 48,
+  normal: 80,
+  large: 120,
+};
+
+const QrJoinCard = ({ joinUrl, joinCode, origin, onClose, onPrint, size = "normal" }: QrJoinCardProps): React.ReactElement => {
   const { t } = useT();
   const displayUrl = (origin || 'karaoq.live').replace(/^https?:\/\/(www\.)?/, '');
 
@@ -20,11 +27,11 @@ const QrJoinCard = ({ joinUrl, joinCode, origin, onClose, onPrint }: QrJoinCardP
   const altParts = t('qr.orVisit').split(/(\{url\}|\{code\})/);
 
   return (
-    <div className={styles.card}>
+    <div className={`${styles.card} ${size !== 'normal' ? styles[`card${size === 'small' ? 'Small' : 'Large'}`] : ''}`}>
       <div className={styles.top}>
         <QRCodeSVG
           value={joinUrl}
-          size={80}
+          size={QR_PIXELS[size]}
           bgColor="transparent"
           fgColor="#ffffff"
           level="M"
