@@ -18,18 +18,12 @@ import { useT } from '../lib/i18n/I18nProvider';
 import { renderWithHeart } from '../lib/i18n/renderWithHeart';
 import LanguageSwitcher from './LanguageSwitcher';
 import FullscreenToggle from './FullscreenToggle';
+import decodeHtml from '../lib/decodeHtml';
 
 const POLL_INTERVAL = 1500;
 // Liveness heartbeat cadence; the server treats a display as gone after ~75s
 // without one and clears any playback that display was supposed to be running.
 const HEARTBEAT_INTERVAL = 10_000;
-
-function decodeHtml(html: string): string {
-  if (typeof document === 'undefined') return html;
-  const txt = document.createElement('textarea');
-  txt.innerHTML = html;
-  return txt.value;
-}
 
 const Display = (): React.ReactElement => {
   const router = useRouter();

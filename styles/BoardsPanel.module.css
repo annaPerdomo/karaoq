@@ -1,0 +1,110 @@
+.boardsSection {
+  margin: 0.75rem 0;
+  padding: 0.85rem;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/* Whole header is the collapse toggle — the board is useful but shouldn't
+   monopolize the panel when a singer just wants to browse. Negative margin
+   offsets the extra padding so the row still lines up with the card edges,
+   while giving the tap target (and hover state) room to read as a button. */
+.boardsToggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: calc(100% + 0.7rem);
+  margin: -0.3rem -0.35rem;
+  padding: 0.3rem 0.35rem;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.boardsToggle:hover,
+.boardsToggle:focus-visible {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.boardsTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.65rem;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.boardsCountBadge {
+  min-width: 1.1rem;
+  padding: 0 0.3rem;
+  border-radius: 999px;
+  background: rgba(0, 240, 255, 0.15);
+  color: #00f0ff;
+  font-size: 0.65rem;
+  line-height: 1.1rem;
+  letter-spacing: 0;
+  text-align: center;
+}
+
+.boardsCaret {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  flex-shrink: 0;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-secondary);
+  font-size: 1rem;
+  line-height: 1;
+  transition: transform 0.15s ease, background 0.12s ease, color 0.12s ease;
+  transform: rotate(-90deg);
+}
+
+.boardsToggle:hover .boardsCaret,
+.boardsToggle:focus-visible .boardsCaret {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text-primary);
+}
+
+.boardsCaretOpen {
+  transform: rotate(0deg);
+}
+
+.boardsBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.6rem;
+}
+
+.boardsLiveDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #00f0ff;
+  box-shadow: 0 0 6px #00f0ff;
+  animation: pulse 1.5s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+.boardsSub {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}

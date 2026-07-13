@@ -1,3 +1,5 @@
+import decodeHtml from '../../lib/decodeHtml';
+
 export interface YoutubeResult {
   title: string;
   thumbnailUrl: string;
@@ -10,13 +12,6 @@ export type SortOrder = 'relevance' | 'viewCount' | 'date' | 'rating';
 export interface SearchFilters {
   duration: VideoDuration;
   sortBy: SortOrder;
-}
-
-function decodeHtml(html: string): string {
-  if (typeof document === 'undefined') return html;
-  const txt = document.createElement('textarea');
-  txt.innerHTML = html;
-  return txt.value;
 }
 
 // All searches go through /api/search so the YouTube API key stays

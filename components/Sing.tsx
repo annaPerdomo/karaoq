@@ -5,14 +5,16 @@ import { v4 as uuidv4 } from 'uuid';
 import styles from '../styles/Sing.module.css';
 import CheerBar from './CheerBar';
 import SongSearch from './SongSearch';
-import SocialBoards from './SocialBoards';
+import BoardsPanel from './BoardsPanel';
 import getRoom from '../app/queue/getRoom';
+import useBoards from '../app/queue/useBoards';
+import decodeHtml from '../lib/decodeHtml';
 import { normalizeRoomId } from '../lib/roomCode';
 import postReaction from '../app/queue/postReaction';
 import { CHEER_EMOJIS, REACTION_COOLDOWN_MS, isTextReaction } from '../app/queue/cheerConstants';
 import { startSessionTracking } from '../app/queue/trackSession';
 import { startVisiblePolling } from '../app/queue/pollWhileVisible';
-import { QueueEntry, Reaction, SingWithMePost, SuggestedSong } from '../pages/api/types';
+import { QueueEntry, Reaction } from '../pages/api/types';
 import { useT } from '../lib/i18n/I18nProvider';
 import { getStoredName, setStoredName } from '../lib/username';
 import LanguageSwitcher from './LanguageSwitcher';
@@ -22,21 +24,16 @@ const POLL_INTERVAL = 5000;
 // Global (not per-room) so a returning singer is remembered across any room.
 const NAME_STORAGE_KEY = 'karaoq_username';
 
-function decodeHtml(html: string): string {
-  if (typeof document === 'undefined') return html;
-  const txt = document.createElement('textarea');
-  txt.innerHTML = html;
-  return txt.value;
-}
-
 const Sing = (): React.ReactElement => {
   const router = useRouter();
   const { t } = useT();
   const joinCode = normalizeRoomId(router.query.joinCode) as string | undefined;
 
   const [queue, setQueue] = React.useState<QueueEntry[]>([]);
-  const [singWithMe, setSingWithMe] = React.useState<SingWithMePost[]>([]);
-  const [suggestions, setSuggestions] = React.useState<SuggestedSong[]>([]);
+  // A "sing with me" join can auto-add the song, so re-sync the queue too.
+  const boards = useBoards(joinCode, (room) => setQueue(room.queue));
+  // Stable across renders — safe to depend on from the init/poll effects.
+  const applyBoards = boards.applyRoom;
   const [activeIndex, setActiveIndex] = React.useState(0);
   const [username, setUsername] = React.useState('');
   const [isPlaying, setIsPlaying] = React.useState(false);
@@ -59,7 +56,6 @@ const Sing = (): React.ReactElement => {
   const [drawerDragHeight, setDrawerDragHeight] = React.useState<number | null>(null);
   const drawerRef = React.useRef<HTMLDivElement>(null);
   const drawerDrag = React.useRef({ startY: 0, startHeight: 0, delta: 0, dragging: false });
-  const [boardsOpen, setBoardsOpen] = React.useState(true);
   const [showWelcome, setShowWelcome] = React.useState(true);
   // First-run tips are a non-blocking banner above search (see render) rather
   // than a gate — a new singer can start searching immediately. Returning
@@ -104,27 +100,6 @@ const Sing = (): React.ReactElement => {
       localStorage.setItem('karaoq_seen_tips', '1');
     } catch {
       /* private mode — fine, banner just shows again next visit */
-    }
-  }
-
-  // The "In this room" board starts open (discoverability) but a singer's
-  // collapse choice sticks per room, like the host's cheers/QR shelves.
-  React.useEffect(() => {
-    if (!joinCode) return;
-    try {
-      setBoardsOpen(localStorage.getItem(`karaoq_boards_hidden_${joinCode}`) !== '1');
-    } catch {
-      /* private mode — default stays open */
-    }
-  }, [joinCode]);
-
-  function toggleBoards() {
-    const next = !boardsOpen;
-    setBoardsOpen(next);
-    try {
-      localStorage.setItem(`karaoq_boards_hidden_${joinCode}`, next ? '0' : '1');
-    } catch {
-      /* private mode — just won't be remembered */
     }
   }
 
@@ -198,8 +173,7 @@ const Sing = (): React.ReactElement => {
         setLoadError(true);
       } else {
         setQueue(room.queue);
-        setSingWithMe(room.singWithMe ?? []);
-        setSuggestions(room.suggestions ?? []);
+        applyBoards(room);
         setActiveIndex(room.activeVideoIndex);
         setIsPlaying(room.isPlaying ?? false);
         setReactionsOn(room.reactionsEnabled ?? true);
@@ -210,7 +184,7 @@ const Sing = (): React.ReactElement => {
     }
     init();
     return () => { cancelled = true; };
-  }, [joinCode, processReactions, initNonce]);
+  }, [joinCode, processReactions, initNonce, applyBoards]);
 
   React.useEffect(() => {
     if (!joinCode || error) return;
@@ -226,8 +200,7 @@ const Sing = (): React.ReactElement => {
       }
       notFoundPollsRef.current = 0;
       setQueue(room.queue);
-      setSingWithMe(room.singWithMe ?? []);
-      setSuggestions(room.suggestions ?? []);
+      applyBoards(room);
       setActiveIndex(room.activeVideoIndex);
       setIsPlaying(room.isPlaying ?? false);
       setReactionsOn(room.reactionsEnabled ?? true);
@@ -236,19 +209,7 @@ const Sing = (): React.ReactElement => {
       setLoadError(false);
       setLoading(false);
     }, POLL_INTERVAL);
-  }, [joinCode, error, processReactions]);
-
-  // Pull the latest room immediately after a board action so the singer sees
-  // their post / join land without waiting for the next poll tick.
-  const refreshBoards = React.useCallback(async () => {
-    if (!joinCode) return;
-    const room = await getRoom(joinCode);
-    if (typeof room !== "string") {
-      setQueue(room.queue);
-      setSingWithMe(room.singWithMe ?? []);
-      setSuggestions(room.suggestions ?? []);
-    }
-  }, [joinCode]);
+  }, [joinCode, error, processReactions, applyBoards]);
 
   function handleSongAdded(entry: QueueEntry) {
     // Functional update: the click-closure `queue` can predate a poll that
@@ -418,42 +379,11 @@ const Sing = (): React.ReactElement => {
               requireName={true}
               role="singer"
               belowSearch={
-                <div className={styles.boardsSection}>
-                  <button
-                    className={styles.boardsToggle}
-                    onClick={toggleBoards}
-                    aria-expanded={boardsOpen}
-                  >
-                    <span className={styles.boardsTitle}>
-                      <span className={styles.boardsLiveDot} />
-                      {t('sing.boards.toggle')}
-                      {singWithMe.length + suggestions.length > 0 && (
-                        <span className={styles.boardsCountBadge}>
-                          {singWithMe.length + suggestions.length}
-                        </span>
-                      )}
-                    </span>
-                    <span
-                      className={`${styles.boardsCaret} ${boardsOpen ? styles.boardsCaretOpen : ''}`}
-                    >
-                      &#x25BE;
-                    </span>
-                  </button>
-                  {boardsOpen && (
-                    <div className={styles.boardsBody}>
-                      <span className={styles.boardsSub}>
-                        {t('sing.boards.sub', { code: joinCode?.toUpperCase() ?? '' })}
-                      </span>
-                      <SocialBoards
-                        roomId={joinCode}
-                        userName={username}
-                        singWithMe={singWithMe}
-                        suggestions={suggestions}
-                        onChange={refreshBoards}
-                      />
-                    </div>
-                  )}
-                </div>
+                <BoardsPanel
+                  roomId={joinCode}
+                  userName={username}
+                  boards={boards}
+                />
               }
             />
           )}

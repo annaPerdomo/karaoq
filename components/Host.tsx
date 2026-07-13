@@ -6,6 +6,7 @@ import styles from "../styles/Host.module.css";
 import { rememberLastHostedRoom } from "../lib/lastRoom";
 import { normalizeRoomId } from "../lib/roomCode";
 import getRoom from "../app/queue/getRoom";
+import useBoards from "../app/queue/useBoards";
 import createRoom from "../app/queue/createRoom";
 import updatePosition from "../app/queue/updatePosition";
 import reorderQueue from "../app/queue/reorderQueue";
@@ -29,8 +30,6 @@ import {
   QueueEntry,
   Reaction,
   Room,
-  SingWithMePost,
-  SuggestedSong,
 } from "../pages/api/types";
 import { v4 as uuidv4 } from "uuid";
 import { useT } from "../lib/i18n/I18nProvider";
@@ -67,9 +66,9 @@ const Host = ({
   const joinCode = normalizeRoomId(router.query.joinCode) as string | undefined;
 
   const [queue, setQueue] = React.useState<QueueEntry[]>([]);
-  const [singWithMe, setSingWithMe] = React.useState<SingWithMePost[]>([]);
-  const [suggestions, setSuggestions] = React.useState<SuggestedSong[]>([]);
-  const [boardsOpen, setBoardsOpen] = React.useState(false);
+  const boards = useBoards(joinCode);
+  // Stable across renders — safe to depend on from the poll/init effects.
+  const applyBoards = boards.applyRoom;
   const [activeIndex, setActiveIndex] = React.useState(0);
   const [isPlaying, setIsPlaying] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
@@ -376,8 +375,7 @@ const Host = ({
   // TV-mode room acts as a remote instead of defaulting to playing locally.
   function applyRoomState(room: Room) {
     setQueue(room.queue);
-    setSingWithMe(room.singWithMe ?? []);
-    setSuggestions(room.suggestions ?? []);
+    applyBoards(room);
     setActiveIndex(room.activeVideoIndex);
     setIsPlaying(room.isPlaying ?? false);
     setServerPlayToken(room.playToken ?? null);
@@ -534,16 +532,6 @@ const Host = ({
       runDisplayFallback();
     }, DISPLAY_GONE_CONFIRM_MS);
   }, [remote, tvMode, playModeRestored, displayConnected]);
-
-  // Immediately re-pull after a host moderation action on the boards.
-  const refreshBoards = React.useCallback(async () => {
-    if (!joinCode) return;
-    const room = await getRoom(joinCode);
-    if (typeof room !== "string") {
-      setSingWithMe(room.singWithMe ?? []);
-      setSuggestions(room.suggestions ?? []);
-    }
-  }, [joinCode]);
 
   function pausePolling() {
     setIsPaused(true);
@@ -1131,12 +1119,8 @@ const Host = ({
           reactionCooldown={reactionCooldown}
           lastSentEmoji={lastSentEmoji}
           joinCode={joinCode}
-          singWithMe={singWithMe}
-          suggestions={suggestions}
-          boardsOpen={boardsOpen}
-          onToggleBoards={() => setBoardsOpen((o) => !o)}
+          boards={boards}
           hostName={hostName}
-          onRefreshBoards={refreshBoards}
           joinUrl={joinUrl}
           displayUrl={displayUrl}
           qrShelfOpen={qrShelfOpen}

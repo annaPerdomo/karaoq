@@ -16,13 +16,10 @@ import {
 import { QRCodeSVG } from "qrcode.react";
 import styles from "../../styles/Host.module.css";
 import CheerBar from "../CheerBar";
-import SocialBoards from "../SocialBoards";
+import BoardsPanel from "../BoardsPanel";
 import SongSearch from "../SongSearch";
-import {
-  QueueEntry,
-  SingWithMePost,
-  SuggestedSong,
-} from "../../pages/api/types";
+import { QueueEntry } from "../../pages/api/types";
+import { Boards } from "../../app/queue/useBoards";
 import { useT } from "../../lib/i18n/I18nProvider";
 import { Icons } from "./icons";
 import { decodeHtml } from "./utils";
@@ -30,8 +27,9 @@ import { SortableQueueItem } from "./SortableQueueItem";
 
 // The right-hand rail: the Up Next / History tabs, the add-song button and
 // search overlay, the drag-reorderable queue, the history list, and the bottom
-// drawers (cheers, singer boards, join QR shelf). Rendered for host and co-host
-// alike; the drawers guard their host-only bits with `remote`.
+// cluster (cheers, the Sing-together/requests BoardsPanel the singers also see,
+// and the join QR shelf). Rendered for host and co-host alike; the bottom
+// cluster guards its host-only bits with `remote`.
 export function QueueSidebar({
   remote,
   roomEmpty,
@@ -63,12 +61,8 @@ export function QueueSidebar({
   reactionCooldown,
   lastSentEmoji,
   joinCode,
-  singWithMe,
-  suggestions,
-  boardsOpen,
-  onToggleBoards,
+  boards,
   hostName,
-  onRefreshBoards,
   joinUrl,
   displayUrl,
   qrShelfOpen,
@@ -106,12 +100,8 @@ export function QueueSidebar({
   reactionCooldown: boolean;
   lastSentEmoji: string | null;
   joinCode: string | undefined;
-  singWithMe: SingWithMePost[];
-  suggestions: SuggestedSong[];
-  boardsOpen: boolean;
-  onToggleBoards: () => void;
+  boards: Boards;
   hostName: string;
-  onRefreshBoards: () => void;
   joinUrl: string;
   displayUrl: string;
   qrShelfOpen: boolean;
@@ -277,13 +267,10 @@ export function QueueSidebar({
             </div>
           )}
 
-          {/* Bottom cluster, pinned below the queue:
-              - Cheers, contextual (only while a song is on stage).
-              - The "Scan to join" QR card (same component/wording as the
-                Display screen) so guests can scan all night, with its own
-                print + hide controls. A host can tuck it away (remembered
-                per-room) and restore it from the slim "Show join code"
-                button. */}
+          {/* Bottom cluster, pinned below the queue: contextual cheers, the
+              singer boards (always mounted, so a host can post and join without
+              hunting for them), and the "Scan to join" QR card, which a host can
+              tuck away (remembered per-room). */}
           <div className={styles.sidebarBottom}>
             {!remote && reactionsOn && isPlaying && currentSong && (
               <>
@@ -315,40 +302,15 @@ export function QueueSidebar({
                 )}
               </>
             )}
-            {joinCode && (singWithMe.length > 0 || suggestions.length > 0) && (
-              <>
-                <button
-                  className={`${styles.drawerToggle} ${boardsOpen ? styles.drawerToggleOpen : ""}`}
-                  onClick={onToggleBoards}
-                  aria-expanded={boardsOpen}
-                >
-                  <svg
-                    className={styles.drawerCaret}
-                    width="10"
-                    height="6"
-                    viewBox="0 0 10 6"
-                    fill="currentColor"
-                  >
-                    <path d="M0 0l5 6 5-6z" />
-                  </svg>
-                  {t('host.singerBoards')}
-                  <span className={styles.boardsCount}>
-                    {singWithMe.length + suggestions.length}
-                  </span>
-                </button>
-                {boardsOpen && (
-                  <div className={styles.boardsShelf}>
-                    <SocialBoards
-                      roomId={joinCode}
-                      userName={hostName || "Host"}
-                      singWithMe={singWithMe}
-                      suggestions={suggestions}
-                      mode="host"
-                      onChange={onRefreshBoards}
-                    />
-                  </div>
-                )}
-              </>
+            {joinCode && (
+              <div className={styles.boardsShelf}>
+                <BoardsPanel
+                  roomId={joinCode}
+                  userName={hostName || "Host"}
+                  boards={boards}
+                  mode="host"
+                />
+              </div>
             )}
             {!remote && joinUrl && (
               <>
