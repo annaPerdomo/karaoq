@@ -1,7 +1,6 @@
 import * as React from 'react';
 import { useRouter } from 'next/router';
 import styles from '../styles/Display.module.css';
-import QrJoinCard from './QrJoinCard';
 import getRoom from '../app/queue/getRoom';
 import postVideoEnded from '../app/queue/postVideoEnded';
 import postDisplaySeen from '../app/queue/postDisplaySeen';
@@ -13,13 +12,14 @@ import { onRoomState, onDisplayPause, broadcastVideoEnded } from '../app/queue/r
 import { startSessionTracking } from '../app/queue/trackSession';
 import { startVisiblePolling } from '../app/queue/pollWhileVisible';
 import { isTextReaction } from '../app/queue/cheerConstants';
-import BoardsSummary from './boards/BoardsSummary';
 import { PlayMode, QueueEntry, Reaction, Room, SingWithMePost, SuggestedSong } from '../pages/api/types';
 import { useT } from '../lib/i18n/I18nProvider';
 import { renderWithHeart } from '../lib/i18n/renderWithHeart';
 import LanguageSwitcher from './LanguageSwitcher';
 import FullscreenToggle from './FullscreenToggle';
 import formatSongTitle from '../lib/songTitle';
+import DisplaySidebar from './display/DisplaySidebar';
+import NowPlayingBar from './display/NowPlayingBar';
 
 const POLL_INTERVAL = 1500;
 // Liveness heartbeat cadence; the server treats a display as gone after ~75s
@@ -536,19 +536,7 @@ const Display = (): React.ReactElement => {
       {/* Now playing bar (only under the video — the here-mode banner above
           already announces the singer) */}
       {currentSong && isPlaying && playsVideoHere && (
-        <div className={styles.nowBar}>
-          <div className={styles.nowGlow} />
-          <div className={styles.nowContent}>
-            <div className={styles.nowTop}>
-              <span className={styles.nowDot} />
-              <span className={styles.nowLabel}>{t('display.tag.onStage')}</span>
-            </div>
-            <div className={styles.nowSinger}>{currentSong.userName}</div>
-            <div className={styles.nowSong}>
-              {formatSongTitle(currentSong.songTitle)}
-            </div>
-          </div>
-        </div>
+        <NowPlayingBar singerName={currentSong.userName} songTitle={currentSong.songTitle} />
       )}
 
       <div className={styles.footer}>
@@ -558,62 +546,15 @@ const Display = (): React.ReactElement => {
         </a>
       </div>
 
-      <div className={styles.sidebar}>
-        <QrJoinCard
-          joinUrl={joinUrl}
-          joinCode={joinCode || ''}
-          origin={origin}
-        />
-
-        <div className={styles.upNextSection}>
-          <h3 className={styles.upNextTitle}>
-            {t('display.upNextTitle')}
-            {upNext.length > 0 && (
-              <span className={styles.upNextCount}>{upNext.length}</span>
-            )}
-          </h3>
-          {upNext.length > 0 ? (
-            <div className={styles.upNextList}>
-              {upNext.slice(0, 8).map((item, i) => (
-                <div key={item.id} className={styles.upNextItem}>
-                  <span className={styles.upNextNum}>{i + 1}</span>
-                  <div className={styles.upNextInfo}>
-                    <span
-                      className={styles.upNextItemSinger}
-                      title={item.userName}
-                    >
-                      {item.userName}
-                    </span>
-                    <span
-                      className={styles.upNextItemSong}
-                      title={formatSongTitle(item.songTitle)}
-                    >
-                      {formatSongTitle(item.songTitle)}
-                    </span>
-                  </div>
-                </div>
-              ))}
-              {upNext.length > 8 && (
-                <div className={styles.moreCount}>
-                  {t('display.moreCount', { count: upNext.length - 8 })}
-                </div>
-              )}
-            </div>
-          ) : (
-            <p className={styles.emptyQueue}>
-              {t('display.emptyQueue')}
-            </p>
-          )}
-        </div>
-
-        {boardsOn && (
-          <BoardsSummary
-            singWithMe={singWithMe}
-            suggestions={suggestions}
-            cta={t('display.boards.cta')}
-          />
-        )}
-      </div>
+      <DisplaySidebar
+        joinUrl={joinUrl}
+        joinCode={joinCode || ''}
+        origin={origin}
+        upNext={upNext}
+        boardsOn={boardsOn}
+        singWithMe={singWithMe}
+        suggestions={suggestions}
+      />
     </main>
   );
 };
