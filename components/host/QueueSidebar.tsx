@@ -17,6 +17,7 @@ import { QRCodeSVG } from "qrcode.react";
 import styles from "../../styles/Host.module.css";
 import CheerBar from "../CheerBar";
 import BoardsPanel from "../BoardsPanel";
+import BoardsSummary from "../boards/BoardsSummary";
 import SongSearch from "../SongSearch";
 import { QueueEntry } from "../../pages/api/types";
 import { Boards } from "../../app/queue/useBoards";
@@ -27,9 +28,9 @@ import { SortableQueueItem } from "./SortableQueueItem";
 
 // The right-hand rail: the Up Next / History tabs, the add-song button and
 // search overlay, the drag-reorderable queue, the history list, and the bottom
-// cluster (cheers, the Sing-together/requests BoardsPanel the singers also see,
-// and the join QR shelf). Rendered for host and co-host alike; the bottom
-// cluster guards its host-only bits with `remote`.
+// cluster (cheers, a read-only roll-up of the singer boards, and the join QR
+// shelf). Rendered for host and co-host alike; the bottom cluster guards its
+// host-only bits with `remote`.
 export function QueueSidebar({
   remote,
   roomEmpty,
@@ -41,6 +42,7 @@ export function QueueSidebar({
   searchOpen,
   onToggleSearch,
   onCloseSearch,
+  onOpenBoards,
   upNext,
   historyItems,
   uniqueSingers,
@@ -80,6 +82,8 @@ export function QueueSidebar({
   searchOpen: boolean;
   onToggleSearch: () => void;
   onCloseSearch: () => void;
+  /** Opens the search panel, which is where the interactive boards live. */
+  onOpenBoards: () => void;
   upNext: QueueEntry[];
   historyItems: QueueEntry[];
   uniqueSingers: number;
@@ -268,9 +272,9 @@ export function QueueSidebar({
           )}
 
           {/* Bottom cluster, pinned below the queue: contextual cheers, the
-              singer boards (always mounted, so a host can post and join without
-              hunting for them), and the "Scan to join" QR card, which a host can
-              tuck away (remembered per-room). */}
+              read-only boards roll-up (tapping it opens the search panel, where
+              the interactive boards live), and the "Scan to join" QR card, which
+              a host can tuck away (remembered per-room). */}
           <div className={styles.sidebarBottom}>
             {!remote && reactionsOn && isPlaying && currentSong && (
               <>
@@ -304,11 +308,10 @@ export function QueueSidebar({
             )}
             {joinCode && (
               <div className={styles.boardsShelf}>
-                <BoardsPanel
-                  roomId={joinCode}
-                  userName={hostName || "Host"}
-                  boards={boards}
-                  mode="host"
+                <BoardsSummary
+                  singWithMe={boards.singWithMe}
+                  suggestions={boards.suggestions}
+                  onOpen={onOpenBoards}
                 />
               </div>
             )}
@@ -385,6 +388,14 @@ export function QueueSidebar({
                 showFilters={false}
                 requireName={false}
                 role="host"
+                belowSearch={
+                  <BoardsPanel
+                    roomId={joinCode}
+                    userName={hostName || "Host"}
+                    boards={boards}
+                    mode="host"
+                  />
+                }
               />
             </div>
           )}

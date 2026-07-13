@@ -89,6 +89,8 @@ export interface Room {
   reactions?: Reaction[];
   singWithMe?: SingWithMePost[];
   suggestions?: SuggestedSong[];
+  /** Unset (legacy rooms) means shown — the display treats it as true. */
+  boardsOnDisplay?: boolean;
   /** Set on insert; rooms created before expiry shipped lack these. */
   createdAt?: Date;
   /** Bumped on every write; drives the TTL index that expires stale rooms. */

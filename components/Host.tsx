@@ -21,6 +21,7 @@ import {
   onVideoEnded,
 } from "../app/queue/roomChannel";
 import setReactionsEnabled from "../app/queue/setReactionsEnabled";
+import setBoardsOnDisplay from "../app/queue/setBoardsOnDisplay";
 import postReaction from "../app/queue/postReaction";
 import { REACTION_COOLDOWN_MS } from "../app/queue/cheerConstants";
 import { startSessionTracking } from "../app/queue/trackSession";
@@ -85,6 +86,7 @@ const Host = ({
   const [origin, setOrigin] = React.useState("");
   const [confirmRemove, setConfirmRemove] = React.useState<string | null>(null);
   const [reactionsOn, setReactionsOn] = React.useState(true);
+  const [boardsOnDisplay, setBoardsOnDisplayState] = React.useState(true);
   const [reactionCooldown, setReactionCooldown] = React.useState(false);
   const [lastSentEmoji, setLastSentEmoji] = React.useState<string | null>(null);
   const [visibleReactions, setVisibleReactions] = React.useState<
@@ -382,6 +384,7 @@ const Host = ({
     setDisplayPaused(room.displayPaused ?? false);
     setDisplayConnected(room.displayConnected ?? false);
     setReactionsOn(room.reactionsEnabled ?? true);
+    setBoardsOnDisplayState(room.boardsOnDisplay ?? true);
     if (!remote && room.playMode) setPlayMode(room.playMode);
   }
 
@@ -710,6 +713,17 @@ const Host = ({
     }
   }
 
+  // The display picks this up on its next poll (~1.5s) — no broadcast needed.
+  async function toggleBoardsOnDisplay() {
+    if (!joinCode) return;
+    const next = !boardsOnDisplay;
+    const ok = await setBoardsOnDisplay(joinCode, next);
+    if (ok) {
+      setBoardsOnDisplayState(next);
+      showToast(next ? t('host.toast.boardsOn') : t('host.toast.boardsOff'));
+    }
+  }
+
   function handleSongAdded(entry: QueueEntry) {
     pausePolling();
     const newQueue = [...queue, entry];
@@ -1024,6 +1038,8 @@ const Host = ({
         onSettingsClose={() => setSettingsOpen(false)}
         reactionsOn={reactionsOn}
         onToggleReactions={toggleReactions}
+        boardsOnDisplay={boardsOnDisplay}
+        onToggleBoardsOnDisplay={toggleBoardsOnDisplay}
         hostName={hostName}
         onChangeName={() => {
           setSettingsOpen(false);
@@ -1099,6 +1115,7 @@ const Host = ({
           searchOpen={searchOpen}
           onToggleSearch={() => setSearchOpen(!searchOpen)}
           onCloseSearch={() => setSearchOpen(false)}
+          onOpenBoards={() => setSearchOpen(true)}
           upNext={upNext}
           historyItems={historyItems}
           uniqueSingers={uniqueSingers}

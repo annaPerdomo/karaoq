@@ -12,6 +12,8 @@ export function SettingsPopover({
   remote,
   reactionsOn,
   onToggleReactions,
+  boardsOnDisplay,
+  onToggleBoardsOnDisplay,
   hostName,
   onChangeName,
   onInviteCohost,
@@ -21,6 +23,8 @@ export function SettingsPopover({
   remote: boolean;
   reactionsOn: boolean;
   onToggleReactions: () => void;
+  boardsOnDisplay: boolean;
+  onToggleBoardsOnDisplay: () => void;
   hostName: string;
   onChangeName: () => void;
   onInviteCohost: () => void;
@@ -68,6 +72,21 @@ export function SettingsPopover({
               </div>
               <div
                 className={`${styles.toggle} ${reactionsOn ? styles.toggleOn : ""}`}
+              >
+                <div className={styles.toggleThumb} />
+              </div>
+            </button>
+            <button className={styles.spToggleRow} onClick={onToggleBoardsOnDisplay}>
+              <div>
+                <div className={styles.spBtnTitle}>{t('host.settings.boards')}</div>
+                <div className={styles.spBtnDesc}>
+                  {boardsOnDisplay
+                    ? t('host.settings.boardsOn')
+                    : t('host.settings.boardsOff')}
+                </div>
+              </div>
+              <div
+                className={`${styles.toggle} ${boardsOnDisplay ? styles.toggleOn : ""}`}
               >
                 <div className={styles.toggleThumb} />
               </div>

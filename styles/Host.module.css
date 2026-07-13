@@ -1782,17 +1782,11 @@
 }
 
 /* ─── Singer boards ─── */
-/* Holds the shared BoardsPanel (same card the singers see). It sits in the
-   pinned bottom cluster, which never shrinks, so cap its height and let it
-   scroll internally — an open board with a dozen posts must not push the
-   transport bar or the join code off-screen. */
+/* Holds the read-only BoardsSummary, which caps its own item count — so this
+   shelf never grows enough to push the join code off-screen. */
 .boardsShelf {
   flex-shrink: 0;
-  padding: 0 0.75rem;
-  max-height: 45vh;
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+  padding: 0.5rem 0.75rem;
 }
 
 /* ─── Contextual cheers (only while a song is on stage) ─── */

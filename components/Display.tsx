@@ -13,7 +13,8 @@ import { onRoomState, onDisplayPause, broadcastVideoEnded } from '../app/queue/r
 import { startSessionTracking } from '../app/queue/trackSession';
 import { startVisiblePolling } from '../app/queue/pollWhileVisible';
 import { isTextReaction } from '../app/queue/cheerConstants';
-import { PlayMode, QueueEntry, Reaction, Room } from '../pages/api/types';
+import BoardsSummary from './boards/BoardsSummary';
+import { PlayMode, QueueEntry, Reaction, Room, SingWithMePost, SuggestedSong } from '../pages/api/types';
 import { useT } from '../lib/i18n/I18nProvider';
 import { renderWithHeart } from '../lib/i18n/renderWithHeart';
 import LanguageSwitcher from './LanguageSwitcher';
@@ -31,6 +32,9 @@ const Display = (): React.ReactElement => {
   const joinCode = normalizeRoomId(router.query.joinCode) as string | undefined;
 
   const [queue, setQueue] = React.useState<QueueEntry[]>([]);
+  const [singWithMe, setSingWithMe] = React.useState<SingWithMePost[]>([]);
+  const [suggestions, setSuggestions] = React.useState<SuggestedSong[]>([]);
+  const [boardsOn, setBoardsOn] = React.useState(true);
   const [activeIndex, setActiveIndex] = React.useState(0);
   const [isPlaying, setIsPlaying] = React.useState(false);
   // The room's shared pause flag. Set when the video is paused on this screen
@@ -164,6 +168,9 @@ const Display = (): React.ReactElement => {
 
   function applyRoom(room: Room, animateReactions = true) {
     setQueue(room.queue);
+    setSingWithMe(room.singWithMe ?? []);
+    setSuggestions(room.suggestions ?? []);
+    setBoardsOn(room.boardsOnDisplay ?? true);
     setActiveIndex(room.activeVideoIndex);
     setIsPlaying(room.isPlaying ?? false);
     // Trust a just-issued local pause/resume over a lagging poll that predates
@@ -598,6 +605,14 @@ const Display = (): React.ReactElement => {
             </p>
           )}
         </div>
+
+        {boardsOn && (
+          <BoardsSummary
+            singWithMe={singWithMe}
+            suggestions={suggestions}
+            cta={t('display.boards.cta')}
+          />
+        )}
       </div>
     </main>
   );
