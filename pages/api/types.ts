@@ -56,17 +56,55 @@ export type PlayMode = "here" | "tv";
 
 export type QrSize = "large" | "normal" | "small" | "hidden";
 export type DisplayTheme = "classic" | "minimal" | "neon";
+export type SidebarPosition = "left" | "right";
+export type SidebarSection = "qr" | "welcome" | "upNext";
+
+/** Pixel size each coarse QR bucket renders at (also the qrPx fallback for
+ * configs written before fine-grained sizing existed). */
+export const QR_SIZE_PX: Record<Exclude<QrSize, "hidden">, number> = {
+  small: 48,
+  normal: 80,
+  large: 120,
+};
+
+/** Coarse bucket a dragged QR size lands in — kept alongside qrPx so displays
+ * that predate fine-grained sizing still approximate the host's intent. */
+export function nearestQrSize(px: number): Exclude<QrSize, "hidden"> {
+  return px <= 60 ? "small" : px <= 100 ? "normal" : "large";
+}
+
+/** Fill a stored config's missing fields with defaults. Configs written before
+ * a field existed lack it; qrPx in particular must follow the stored qrSize
+ * bucket, not the default, or an old "large" QR would render at normal size. */
+export function normalizeDisplayConfig(stored: DisplayConfig | undefined): DisplayConfig {
+  const merged = { ...DEFAULT_DISPLAY_CONFIG, ...stored };
+  if (stored && stored.qrPx === undefined && stored.qrSize && stored.qrSize !== "hidden") {
+    merged.qrPx = QR_SIZE_PX[stored.qrSize];
+  }
+  return merged;
+}
 
 export interface DisplayConfig {
+  /** "hidden" hides the card; the size buckets are a coarse fallback for
+   * displays that predate the fine-grained qrPx below. */
   qrSize: QrSize;
+  /** Exact QR pixel size the host dragged to (48–140). Kept in sync with the
+   * nearest qrSize bucket so stale displays still approximate it. */
+  qrPx: number;
   showUpNext: boolean;
-  /** How many upcoming songs the sidebar lists. */
-  upNextCount: 4 | 8 | 12 | 16;
+  /** How many upcoming songs the sidebar lists (1–20). */
+  upNextCount: number;
   showNowPlaying: boolean;
   /** Whether the display renders the cheer overlay. Independent of the room-wide
    * reactionsEnabled flag (which controls whether the audience can SEND cheers). */
   showReactions: boolean;
   theme: DisplayTheme;
+  /** Which edge of the TV the QR/up-next sidebar sits on. */
+  sidebarPosition: SidebarPosition;
+  /** Sidebar width in px (220–460); the host drags the sidebar's inner edge. */
+  sidebarWidth: number;
+  /** Top-to-bottom order of the sidebar sections; always all three. */
+  sidebarOrder: SidebarSection[];
   /** Venue/host welcome line shown under the QR card and in attract mode. "" = none. */
   welcomeLine: string;
   /** Rotating promo panels when the room is idle (no current song). */
@@ -75,11 +113,15 @@ export interface DisplayConfig {
 
 export const DEFAULT_DISPLAY_CONFIG: DisplayConfig = {
   qrSize: "normal",
+  qrPx: 80,
   showUpNext: true,
   upNextCount: 8,
   showNowPlaying: true,
   showReactions: true,
   theme: "classic",
+  sidebarPosition: "right",
+  sidebarWidth: 280,
+  sidebarOrder: ["qr", "welcome", "upNext"],
   welcomeLine: "",
   attractMode: false,
 };

@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from "next";
-import { DisplayConfig } from "../../types";
+import { DisplayConfig, normalizeDisplayConfig } from "../../types";
 import { isValidDisplayConfig } from "../../../../lib/limits";
 import { getRoomsCollection } from "../../../../lib/mongodb";
 import { normalizeRoomId } from "../../../../lib/roomCode";
@@ -33,7 +33,12 @@ export default async function handler(
     return;
   }
 
-  const config: DisplayConfig = { ...body, welcomeLine: body.welcomeLine.trim() };
+  // Older host clients POST configs without the drag-era fields — store them
+  // complete so every stored config is fully-populated.
+  const config: DisplayConfig = {
+    ...normalizeDisplayConfig(body),
+    welcomeLine: body.welcomeLine.trim(),
+  };
 
   try {
     const collection = await getRoomsCollection();

@@ -85,17 +85,32 @@ export function isValidSuggestedSong(song: unknown): song is SuggestedSong {
 
 const QR_SIZES = new Set(["large", "normal", "small", "hidden"]);
 const DISPLAY_THEMES = new Set(["classic", "minimal", "neon"]);
-const UP_NEXT_COUNTS = new Set([4, 8, 12, 16]);
+const SIDEBAR_POSITIONS = new Set(["left", "right"]);
+const SIDEBAR_SECTIONS = new Set(["qr", "welcome", "upNext"]);
+// Drag-handle bounds for the freely-resizable display sections.
+export const QR_PX_MIN = 48;
+export const QR_PX_MAX = 140;
+export const SIDEBAR_WIDTH_MIN = 220;
+export const SIDEBAR_WIDTH_MAX = 460;
+export const UP_NEXT_COUNT_MAX = 20;
 const DISPLAY_CONFIG_KEYS = new Set([
   "qrSize",
+  "qrPx",
   "showUpNext",
   "upNextCount",
   "showNowPlaying",
   "showReactions",
   "theme",
+  "sidebarPosition",
+  "sidebarWidth",
+  "sidebarOrder",
   "welcomeLine",
   "attractMode",
 ]);
+
+function isIntInRange(value: unknown, min: number, max: number): boolean {
+  return typeof value === "number" && Number.isInteger(value) && value >= min && value <= max;
+}
 
 export function isValidDisplayConfig(value: unknown): value is DisplayConfig {
   if (!value || typeof value !== "object") return false;
@@ -105,15 +120,32 @@ export function isValidDisplayConfig(value: unknown): value is DisplayConfig {
     typeof e.qrSize === "string" &&
     QR_SIZES.has(e.qrSize) &&
     typeof e.showUpNext === "boolean" &&
-    typeof e.upNextCount === "number" &&
-    UP_NEXT_COUNTS.has(e.upNextCount) &&
+    isIntInRange(e.upNextCount, 1, UP_NEXT_COUNT_MAX) &&
     typeof e.showNowPlaying === "boolean" &&
     typeof e.showReactions === "boolean" &&
     typeof e.theme === "string" &&
     DISPLAY_THEMES.has(e.theme) &&
+    // The drag-era fields are absent on configs saved by older clients;
+    // readers (and the write endpoint) default them.
+    (e.qrPx === undefined || isIntInRange(e.qrPx, QR_PX_MIN, QR_PX_MAX)) &&
+    (e.sidebarPosition === undefined ||
+      (typeof e.sidebarPosition === "string" && SIDEBAR_POSITIONS.has(e.sidebarPosition))) &&
+    (e.sidebarWidth === undefined ||
+      isIntInRange(e.sidebarWidth, SIDEBAR_WIDTH_MIN, SIDEBAR_WIDTH_MAX)) &&
+    (e.sidebarOrder === undefined || isValidSidebarOrder(e.sidebarOrder)) &&
     typeof e.welcomeLine === "string" &&
     e.welcomeLine.length <= MAX_WELCOME_LENGTH &&
     typeof e.attractMode === "boolean"
+  );
+}
+
+/** Every section exactly once — a partial order would silently drop sections. */
+function isValidSidebarOrder(value: unknown): boolean {
+  return (
+    Array.isArray(value) &&
+    value.length === SIDEBAR_SECTIONS.size &&
+    new Set(value).size === value.length &&
+    value.every((s) => typeof s === "string" && SIDEBAR_SECTIONS.has(s))
   );
 }
 

@@ -30,6 +30,7 @@ import { startVisiblePolling } from "../app/queue/pollWhileVisible";
 import {
   DEFAULT_DISPLAY_CONFIG,
   DisplayConfig,
+  normalizeDisplayConfig,
   PlayMode,
   QueueEntry,
   Reaction,
@@ -50,7 +51,7 @@ import {
 import { ReactionOverlay } from "./host/ReactionOverlay";
 import { MobileFooter } from "./host/MobileFooter";
 import { CohostInviteModal } from "./host/CohostInviteModal";
-import { DisplaySettingsPanel } from "./host/DisplaySettingsPanel";
+import { DisplayDesigner } from "./host/display/DisplayDesigner";
 import { QrModal } from "./host/QrModal";
 import { ConfirmRemoveModal } from "./host/ConfirmRemoveModal";
 import { WelcomePrompt } from "./host/WelcomePrompt";
@@ -395,7 +396,7 @@ const Host = ({
     setDisplayConnected(room.displayConnected ?? false);
     setReactionsOn(room.reactionsEnabled ?? true);
     setBoardsOnDisplayState(room.boardsOnDisplay ?? true);
-    setDisplayConfigState(room.displayConfig ?? DEFAULT_DISPLAY_CONFIG);
+    setDisplayConfigState(normalizeDisplayConfig(room.displayConfig));
     if (!remote && room.playMode) setPlayMode(room.playMode);
   }
 
@@ -1192,12 +1193,16 @@ const Host = ({
         />
       )}
 
-      {displayPanelOpen && (
-        <DisplaySettingsPanel
-          isOpen={displayPanelOpen}
+      {displayPanelOpen && joinCode && (
+        <DisplayDesigner
           onClose={() => setDisplayPanelOpen(false)}
           config={displayConfig}
           onSave={saveDisplayConfig}
+          joinUrl={joinUrl}
+          joinCode={joinCode}
+          origin={origin}
+          queue={queue}
+          activeIndex={activeIndex}
         />
       )}
 

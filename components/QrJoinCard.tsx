@@ -2,6 +2,7 @@ import * as React from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import styles from '../styles/QrJoinCard.module.css';
 import { useT } from '../lib/i18n/I18nProvider';
+import { QR_SIZE_PX } from '../pages/api/types';
 
 interface QrJoinCardProps {
   joinUrl: string;
@@ -10,15 +11,11 @@ interface QrJoinCardProps {
   onClose?: () => void;
   onPrint?: () => void;
   size?: "small" | "normal" | "large";
+  /** Exact QR pixel size (host-dragged); overrides the coarse size bucket. */
+  sizePx?: number;
 }
 
-const QR_PIXELS: Record<"small" | "normal" | "large", number> = {
-  small: 48,
-  normal: 80,
-  large: 120,
-};
-
-const QrJoinCard = ({ joinUrl, joinCode, origin, onClose, onPrint, size = "normal" }: QrJoinCardProps): React.ReactElement => {
+const QrJoinCard = ({ joinUrl, joinCode, origin, onClose, onPrint, size = "normal", sizePx }: QrJoinCardProps): React.ReactElement => {
   const { t } = useT();
   const displayUrl = (origin || 'karaoq.live').replace(/^https?:\/\/(www\.)?/, '');
 
@@ -31,7 +28,7 @@ const QrJoinCard = ({ joinUrl, joinCode, origin, onClose, onPrint, size = "norma
       <div className={styles.top}>
         <QRCodeSVG
           value={joinUrl}
-          size={QR_PIXELS[size]}
+          size={sizePx ?? QR_SIZE_PX[size]}
           bgColor="transparent"
           fgColor="#ffffff"
           level="M"

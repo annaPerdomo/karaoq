@@ -2197,31 +2197,7 @@
   }
 }
 
-/* ─── Display settings panel (modal) ─── */
-.displayPanel {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  background: var(--bg-secondary);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 16px;
-  padding: 1.75rem 1.75rem 1.5rem;
-  max-width: 420px;
-  width: 90%;
-  max-height: 85vh;
-  overflow-y: auto;
-  animation: slideUp 0.2s ease;
-}
-
-.dpSection {
-  margin-bottom: 1.1rem;
-}
-
-.dpSection:last-child {
-  margin-bottom: 0;
-}
-
+/* ─── Display designer controls (shared with components/host/display/) ─── */
 .dpSubLabel {
   font-size: 0.68rem;
   color: var(--text-muted);
@@ -2277,10 +2253,3 @@
   border-color: #00f0ff;
 }
 
-@media (pointer: coarse) {
-  .displayPanel .spToggleRow,
-  .displayPanel .dpSegmentBtn,
-  .displayPanel .dpWelcomeInput {
-    min-height: 44px;
-  }
-}

@@ -12,7 +12,7 @@ import { onRoomState, onDisplayPause, broadcastVideoEnded } from '../app/queue/r
 import { startSessionTracking } from '../app/queue/trackSession';
 import { startVisiblePolling } from '../app/queue/pollWhileVisible';
 import { isTextReaction } from '../app/queue/cheerConstants';
-import { DEFAULT_DISPLAY_CONFIG, DisplayConfig, PlayMode, QueueEntry, Reaction, Room, SingWithMePost, SuggestedSong } from '../pages/api/types';
+import { DEFAULT_DISPLAY_CONFIG, DisplayConfig, normalizeDisplayConfig, PlayMode, QueueEntry, Reaction, Room, SingWithMePost, SuggestedSong } from '../pages/api/types';
 import { useT } from '../lib/i18n/I18nProvider';
 import { renderWithHeart } from '../lib/i18n/renderWithHeart';
 import LanguageSwitcher from './LanguageSwitcher';
@@ -185,7 +185,7 @@ const Display = (): React.ReactElement => {
     setDisplayPaused(paused);
     setPlayMode(room.playMode ?? null);
     setReactionsOn(room.reactionsEnabled ?? true);
-    setDisplayConfig(room.displayConfig ?? DEFAULT_DISPLAY_CONFIG);
+    setDisplayConfig(normalizeDisplayConfig(room.displayConfig));
     processReactions(room.reactions, animateReactions);
   }
 
@@ -237,7 +237,7 @@ const Display = (): React.ReactElement => {
       setActiveIndex(state.activeVideoIndex);
       setIsPlaying(state.isPlaying);
       setReactionsOn(state.reactionsEnabled);
-      if (state.displayConfig) setDisplayConfig(state.displayConfig);
+      if (state.displayConfig) setDisplayConfig(normalizeDisplayConfig(state.displayConfig));
       processReactions(state.reactions);
     });
   }, [joinCode]);
@@ -445,9 +445,16 @@ const Display = (): React.ReactElement => {
   const themeClass =
     displayConfig.theme === 'minimal' ? styles.themeMinimal :
     displayConfig.theme === 'neon' ? styles.themeNeon : '';
+  // Only meaningful while the sidebar exists — a collapsed sidebar leaves the
+  // default (right-anchored) offsets on the fixed bars.
+  const sideClass =
+    !sidebarCollapsed && displayConfig.sidebarPosition === 'left' ? styles.sidebarLeft : '';
 
   return (
-    <main className={`${styles.main} ${themeClass}`}>
+    <main
+      className={`${styles.main} ${themeClass} ${sideClass}`}
+      style={{ '--sb-w': `${displayConfig.sidebarWidth}px` } as React.CSSProperties}
+    >
       <header className={`${styles.header} ${sidebarCollapsed ? styles.headerNoSidebar : ''}`}>
         <div className={styles.brand}>KaraoQ</div>
         <FullscreenToggle className={styles.headerFullscreen} />

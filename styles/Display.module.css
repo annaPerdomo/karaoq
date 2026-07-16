@@ -67,6 +67,28 @@
   }
 }
 
+/* ─── Sidebar on the left (host-selected) ─── The fixed bars (header, footer,
+   now-playing) reserve the sidebar's width on its edge; flip every offset.
+   --sb-w is set inline on .main from displayConfig.sidebarWidth. */
+.sidebarLeft .sidebar {
+  right: auto;
+  left: 0;
+  border-left: none;
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.sidebarLeft .header,
+.sidebarLeft .footer,
+.sidebarLeft .nowBar {
+  right: 0;
+  left: var(--sb-w, 280px);
+}
+
+.sidebarLeft .videoArea {
+  margin-right: 0;
+  margin-left: var(--sb-w, 280px);
+}
+
 .loading {
   min-height: 100dvh;
   min-height: 100vh;
@@ -85,7 +107,7 @@
   position: fixed;
   top: 0;
   left: 0;
-  right: 280px;
+  right: var(--sb-w, 280px);
   height: 56px;
   display: flex;
   align-items: center;
@@ -127,7 +149,7 @@
   flex-direction: column;
   height: 100dvh;
   height: 100vh;
-  margin-right: 280px;
+  margin-right: var(--sb-w, 280px);
   position: relative;
   padding-top: 56px; /* space for fixed header */
   padding-bottom: 120px; /* space for fixed nowBar + footer */
@@ -421,7 +443,7 @@
   position: fixed;
   bottom: 0;
   left: 0;
-  right: 280px;
+  right: var(--sb-w, 280px);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -466,7 +488,7 @@
   position: fixed;
   bottom: 0;
   left: 0;
-  right: 280px;
+  right: var(--sb-w, 280px);
   padding: 1.25rem 2rem 1.5rem;
   background: rgba(10, 10, 25, 0.97);
   border-top: 1px solid rgba(255, 45, 120, 0.15);
@@ -603,7 +625,7 @@
 
 /* ─── Sidebar (QR + queue) ─── */
 .sidebar {
-  width: 280px;
+  width: var(--sb-w, 280px);
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -811,23 +833,35 @@
     flex-direction: column;
   }
 
-  .videoArea {
+  .videoArea,
+  .sidebarLeft .videoArea {
     min-height: 50vh;
     height: 50vh;
     margin-right: 0;
+    margin-left: 0;
   }
 
-  .sidebar {
+  .sidebar,
+  .sidebarLeft .sidebar {
     width: 100%;
     height: auto;
     position: relative;
     border-left: none;
+    border-right: none;
     border-top: 1px solid rgba(255, 255, 255, 0.06);
     max-height: 50vh;
   }
 
-  .nowBar {
+  .nowBar,
+  .sidebarLeft .nowBar {
     right: 0;
+    left: 0;
+  }
+
+  /* Stacked layout has no side rail — undo the left-mode offsets. */
+  .sidebarLeft .header,
+  .sidebarLeft .footer {
+    left: 0;
   }
 
   .reactionOverlay {

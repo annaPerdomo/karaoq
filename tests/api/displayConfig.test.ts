@@ -37,11 +37,15 @@ function createRes() {
 
 const validConfig: DisplayConfig = {
   qrSize: "large",
+  qrPx: 118,
   showUpNext: true,
-  upNextCount: 4,
+  upNextCount: 7,
   showNowPlaying: false,
   showReactions: true,
   theme: "neon",
+  sidebarPosition: "left",
+  sidebarWidth: 340,
+  sidebarOrder: ["upNext", "qr", "welcome"],
   welcomeLine: "  Karaoke Tuesdays  ",
   attractMode: true,
 };
@@ -70,6 +74,67 @@ describe("POST /api/queue/[id]/display-config - Save display config", () => {
         },
       }
     );
+  });
+
+  it("fills defaults when a pre-drag-era client omits the layout fields", async () => {
+    mockCollection.updateOne.mockResolvedValue({ matchedCount: 1 });
+
+    const {
+      sidebarPosition: _p,
+      sidebarWidth: _w,
+      sidebarOrder: _o,
+      qrPx: _q,
+      ...legacyConfig
+    } = validConfig;
+    const req = createMockReq({
+      method: "POST",
+      query: { id: "ROOM1" },
+      body: legacyConfig,
+    });
+    const res = createRes();
+    await handler(req, res);
+
+    expect(res.getStatus()).toBe(200);
+    expect(mockCollection.updateOne).toHaveBeenCalledWith(
+      { id: "ROOM1" },
+      {
+        $set: {
+          displayConfig: {
+            ...validConfig,
+            sidebarPosition: "right",
+            sidebarWidth: 280,
+            sidebarOrder: ["qr", "welcome", "upNext"],
+            // Derived from the coarse qrSize bucket ("large").
+            qrPx: 120,
+            welcomeLine: "Karaoke Tuesdays",
+          },
+          lastActivity: expect.any(Date),
+        },
+      }
+    );
+  });
+
+  it.each([
+    ["sidebarPosition", "top"],
+    ["sidebarWidth", 100],
+    ["sidebarWidth", 500],
+    ["qrPx", 20],
+    ["upNextCount", 0],
+    ["upNextCount", 21],
+    ["sidebarOrder", ["qr", "welcome"]],
+    ["sidebarOrder", ["qr", "qr", "welcome"]],
+    ["sidebarOrder", ["qr", "welcome", "nope"]],
+  ])("rejects invalid %s %j with 400", async (key, value) => {
+    const req = createMockReq({
+      method: "POST",
+      query: { id: "ROOM1" },
+      body: { ...validConfig, [key]: value },
+    });
+    const res = createRes();
+    await handler(req, res);
+
+    expect(res.getStatus()).toBe(400);
+    expect(mockCollection.updateOne).not.toHaveBeenCalled();
   });
 
   it("rejects an invalid enum value with 400", async () => {

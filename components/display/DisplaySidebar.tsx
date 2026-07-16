@@ -2,9 +2,9 @@ import * as React from 'react';
 import styles from '../../styles/Display.module.css';
 import QrJoinCard from '../QrJoinCard';
 import BoardsSummary from '../boards/BoardsSummary';
-import { DisplayConfig, QueueEntry, SingWithMePost, SuggestedSong } from '../../pages/api/types';
+import UpNextList from './UpNextList';
+import { DisplayConfig, QueueEntry, SidebarSection, SingWithMePost, SuggestedSong } from '../../pages/api/types';
 import { useT } from '../../lib/i18n/I18nProvider';
-import formatSongTitle from '../../lib/songTitle';
 
 interface DisplaySidebarProps {
   joinUrl: string;
@@ -28,65 +28,31 @@ const DisplaySidebar = ({
   displayConfig,
 }: DisplaySidebarProps): React.ReactElement => {
   const { t } = useT();
-  const { qrSize, showUpNext, upNextCount, welcomeLine } = displayConfig;
+  const { qrSize, qrPx, showUpNext, upNextCount, welcomeLine, sidebarOrder } = displayConfig;
+
+  // Host-dragged section order; hidden sections simply render nothing.
+  const sections: Record<SidebarSection, React.ReactNode> = {
+    qr: qrSize !== 'hidden' && (
+      <QrJoinCard
+        key="qr"
+        joinUrl={joinUrl}
+        joinCode={joinCode || ''}
+        origin={origin}
+        size={qrSize}
+        sizePx={qrPx}
+      />
+    ),
+    welcome: welcomeLine && (
+      <p key="welcome" className={styles.welcomeLine}>{welcomeLine}</p>
+    ),
+    upNext: showUpNext && (
+      <UpNextList key="upNext" upNext={upNext} upNextCount={upNextCount} />
+    ),
+  };
 
   return (
     <div className={styles.sidebar}>
-      {qrSize !== 'hidden' && (
-        <QrJoinCard
-          joinUrl={joinUrl}
-          joinCode={joinCode || ''}
-          origin={origin}
-          size={qrSize}
-        />
-      )}
-
-      {welcomeLine && (
-        <p className={styles.welcomeLine}>{welcomeLine}</p>
-      )}
-
-      {showUpNext && (
-        <div className={styles.upNextSection}>
-          <h3 className={styles.upNextTitle}>
-            {t('display.upNextTitle')}
-            {upNext.length > 0 && (
-              <span className={styles.upNextCount}>{upNext.length}</span>
-            )}
-          </h3>
-          {upNext.length > 0 ? (
-            <div className={styles.upNextList}>
-              {upNext.slice(0, upNextCount).map((item, i) => (
-                <div key={item.id} className={styles.upNextItem}>
-                  <span className={styles.upNextNum}>{i + 1}</span>
-                  <div className={styles.upNextInfo}>
-                    <span
-                      className={styles.upNextItemSinger}
-                      title={item.userName}
-                    >
-                      {item.userName}
-                    </span>
-                    <span
-                      className={styles.upNextItemSong}
-                      title={formatSongTitle(item.songTitle)}
-                    >
-                      {formatSongTitle(item.songTitle)}
-                    </span>
-                  </div>
-                </div>
-              ))}
-              {upNext.length > upNextCount && (
-                <div className={styles.moreCount}>
-                  {t('display.moreCount', { count: upNext.length - upNextCount })}
-                </div>
-              )}
-            </div>
-          ) : (
-            <p className={styles.emptyQueue}>
-              {t('display.emptyQueue')}
-            </p>
-          )}
-        </div>
-      )}
+      {sidebarOrder.map((section) => sections[section])}
 
       {boardsOn && (
         <BoardsSummary
