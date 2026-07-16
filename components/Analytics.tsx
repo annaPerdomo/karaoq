@@ -1,5 +1,6 @@
 import * as React from 'react';
 import styles from '../styles/Analytics.module.css';
+import RoomDetail from './analytics/RoomDetail';
 
 interface DayCount {
   _id: string;
@@ -272,6 +273,7 @@ const Analytics = (): React.ReactElement => {
   const [roomsLoaded, setRoomsLoaded] = React.useState(false);
   const [roomsError, setRoomsError] = React.useState(false);
   const [mergeSource, setMergeSource] = React.useState<string | null>(null);
+  const [detailRoom, setDetailRoom] = React.useState<string | null>(null);
   const sentinelRef = React.useRef<HTMLDivElement | null>(null);
 
   const fetchData = React.useCallback(async (s: string) => {
@@ -370,6 +372,7 @@ const Analytics = (): React.ReactElement => {
     setRoomsLoaded(false);
     setRoomsError(false);
     setMergeSource(null);
+    setDetailRoom(null);
   }
 
   async function handleDeleteRoom(roomId: string) {
@@ -883,14 +886,14 @@ const Analytics = (): React.ReactElement => {
                       key={`${r.roomId}-${i}`}
                       className={`${styles.roomRow} ${mergeSource === r.roomId ? styles.roomRowMerging : ''}`}
                     >
-                      <a
+                      <button
+                        type="button"
                         className={styles.roomCode}
-                        href={`/host/${r.roomId}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                        onClick={() => setDetailRoom(r.roomId)}
+                        title="View who joined, songs, requests & more"
                       >
                         {r.roomId}
-                      </a>
+                      </button>
                       <span data-label="Created">{formatTimestamp(r.timestamp)}</span>
                       <span data-label="Location">
                         {r.city ? `${safeDecode(r.city)}, ${r.country}` : r.country || '—'}
@@ -946,6 +949,14 @@ const Analytics = (): React.ReactElement => {
             )}
           </section>
         </div>
+      )}
+
+      {detailRoom && (
+        <RoomDetail
+          roomId={detailRoom}
+          secret={secret}
+          onClose={() => setDetailRoom(null)}
+        />
       )}
     </main>
   );

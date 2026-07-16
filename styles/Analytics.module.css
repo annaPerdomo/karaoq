@@ -506,9 +506,16 @@
   color: #a78bfa;
   font-weight: 600;
   text-decoration: none;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font-size: inherit;
+  text-align: left;
+  cursor: pointer;
 }
 
-a.roomCode:hover {
+.roomCode:hover {
   text-decoration: underline;
 }
 
@@ -706,4 +713,200 @@ a.roomCode:hover {
     flex-direction: column;
     gap: 0.5rem;
   }
+
+  .detailModal {
+    max-height: 92vh;
+  }
+
+  .detailTab {
+    font-size: 0.72rem;
+    padding: 0.4rem 0.5rem;
+  }
+}
+
+/* ─── Room detail modal ─── */
+.detailOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  z-index: 100;
+}
+
+.detailModal {
+  background: var(--bg-primary);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  width: 100%;
+  max-width: 560px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.detailHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.detailTitle {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 1.2rem;
+  color: #a78bfa;
+  margin: 0;
+}
+
+.detailHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.detailOpenBtn {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  background: rgba(167, 139, 250, 0.14);
+  border: 1px solid rgba(167, 139, 250, 0.4);
+  border-radius: 6px;
+  padding: 0.35rem 0.65rem;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+
+.detailOpenBtn:hover {
+  background: rgba(167, 139, 250, 0.26);
+}
+
+.detailClose {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 1.5rem;
+  line-height: 1;
+  padding: 0 0.2rem;
+}
+
+.detailClose:hover {
+  color: var(--text-primary);
+}
+
+.detailTabs {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.6rem 1rem 0;
+  flex-wrap: wrap;
+}
+
+.detailTab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.5rem 0.6rem;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.detailTab:hover {
+  color: var(--text-secondary);
+}
+
+.detailTabActive {
+  color: var(--text-primary);
+  border-bottom-color: #a78bfa;
+}
+
+.detailBody {
+  overflow-y: auto;
+  padding: 0.5rem 1rem 1rem;
+  flex: 1;
+}
+
+.detailList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.detailItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.55rem 0.7rem;
+  background: var(--bg-secondary);
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.detailItemMain {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.detailName {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+}
+
+.detailItemMeta {
+  display: flex;
+  gap: 0.75rem;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.roleBadge,
+.viaBadge {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+}
+
+.roleBadge {
+  color: #a78bfa;
+  background: rgba(167, 139, 250, 0.14);
+}
+
+.viaBadge {
+  color: #f472b6;
+  background: rgba(244, 114, 182, 0.14);
+}
+
+.detailEmpty {
+  color: var(--text-muted);
+  text-align: center;
+  padding: 2rem 1rem;
+  font-size: 0.85rem;
+}
+
+.detailFooter {
+  padding: 0.7rem 1.25rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  text-align: center;
 }

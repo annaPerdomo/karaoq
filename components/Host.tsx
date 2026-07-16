@@ -69,6 +69,10 @@ const Host = ({
   const router = useRouter();
   const { t, tn } = useT();
   const joinCode = normalizeRoomId(router.query.joinCode) as string | undefined;
+  // Entering from the analytics dashboard's "Open as admin" link. We skip
+  // session tracking so an operator peeking at a room isn't counted as a
+  // participant that joined it.
+  const adminPeek = router.query.admin === "1";
 
   const [queue, setQueue] = React.useState<QueueEntry[]>([]);
   const boards = useBoards(joinCode);
@@ -431,9 +435,9 @@ const Host = ({
   }, [joinCode, remote, initNonce]);
 
   React.useEffect(() => {
-    if (!joinCode) return;
+    if (!joinCode || adminPeek) return;
     return startSessionTracking(joinCode, hostName || "Host", "host");
-  }, [joinCode, hostName]);
+  }, [joinCode, hostName, adminPeek]);
 
   // Poll for queue updates (pauses during drag operations)
   React.useEffect(() => {
