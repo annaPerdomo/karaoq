@@ -9,8 +9,12 @@ import { QueueEntry } from "../pages/api/types";
 // singer: everyone's first upcoming song is round 0, their second is round 1,
 // and so on. Round-robin order = ascending round, arrival order within a round.
 //
-// Both helpers operate on `upcoming = queue.slice(activeVideoIndex + 1)` ONLY —
-// callers must never move the entry at or before activeVideoIndex.
+// Both helpers operate on `upcoming = queue.slice(activeVideoIndex)` — the
+// CURRENT song is included so its singer's next song counts as round 1 (A on
+// stage must not also own the next slot), but it can never move: it is the
+// first round-0 entry, so the stable sort keeps it at index 0, and
+// fairInsertIndex can only return 0 for an empty list. History
+// (queue.slice(0, activeVideoIndex)) never participates — past turns are done.
 
 function roundsOf(upcoming: QueueEntry[]): number[] {
   const counts = new Map<string, number>();

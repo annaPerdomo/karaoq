@@ -86,10 +86,11 @@ export default async function handler(
 
           // Fairness only places NEW songs (plus the one-time re-sort when the
           // host enables the mode) — manual host reordering always wins and is
-          // never re-sorted. Never touch the current song or history.
-          const upcoming = fresh.queue.slice(fresh.activeVideoIndex + 1);
+          // never re-sorted. The current song counts toward rounds but never
+          // moves; history is untouched (see lib/fairQueue).
+          const upcoming = fresh.queue.slice(fresh.activeVideoIndex);
           const absIdx =
-            fresh.activeVideoIndex + 1 + fairInsertIndex(upcoming, entry.userName);
+            fresh.activeVideoIndex + fairInsertIndex(upcoming, entry.userName);
           const insert = await collection.updateOne(
             { id: roomId, queue: fresh.queue, $expr: cap },
             {

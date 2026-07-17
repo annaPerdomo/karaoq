@@ -97,6 +97,34 @@ describe("POST /api/queue/[id]/fair-mode - Toggle fair rotation", () => {
     );
   });
 
+  it("counts the current song toward rounds without moving it (acceptance case)", async () => {
+    // Fresh room: pointer on A's first song. A's later songs are rounds 1-2,
+    // so B and C leapfrog them — but A1 itself must stay at the pointer.
+    const [a1, a2, b1, c1, a3] = [
+      entry("a1", "A"), entry("a2", "A"), entry("b1", "B"), entry("c1", "C"), entry("a3", "A"),
+    ];
+    const room: Room = {
+      id: "ROOM1",
+      queue: [a1, a2, b1, c1, a3],
+      activeVideoIndex: 0,
+      isPlaying: false,
+      reactionsEnabled: true,
+    };
+    mockCollection.findOne.mockResolvedValue(room);
+    mockCollection.updateOne.mockResolvedValue({ matchedCount: 1, modifiedCount: 1 });
+
+    const req = createMockReq({
+      method: "POST",
+      query: { id: "ROOM1", enabled: "true" },
+    });
+    const res = createRes();
+    await handler(req, res);
+
+    expect(res.getStatus()).toBe(200);
+    const [, update] = mockCollection.updateOne.mock.calls[0];
+    expect(update.$set.queue).toEqual([a1, b1, c1, a2, a3]);
+  });
+
   it("retries the enable three times, then 409s", async () => {
     const room: Room = {
       id: "ROOM1",

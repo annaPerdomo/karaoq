@@ -132,6 +132,41 @@ describe("POST /api/queue/[id]/videos - Add song to queue", () => {
     );
   });
 
+  it("counts the current song toward the new song's round (acceptance case)", async () => {
+    const entry = (id: string, userName: string) => ({
+      id, userName, songTitle: `Song ${id}`, videoId: "dQw4w9WgXcQ",
+    });
+    // Fair-sorted queue with the pointer on A1: [A1, B1, C1, A2, A3]. A new B
+    // is round 1 (B1 counts even though it follows the current song), so it
+    // lands before the round-2 A3 — absolute index 4.
+    const room: Room = {
+      id: "ROOM1",
+      queue: [
+        entry("a1", "A"), entry("b1", "B"), entry("c1", "C"),
+        entry("a2", "A"), entry("a3", "A"),
+      ],
+      activeVideoIndex: 0,
+      isPlaying: false,
+      fairMode: true,
+    } as Room;
+    mockCollection.findOne.mockResolvedValue(room);
+    mockCollection.updateOne
+      .mockResolvedValueOnce({ matchedCount: 0, modifiedCount: 0 })
+      .mockResolvedValueOnce({ matchedCount: 1, modifiedCount: 1 });
+
+    const req = createMockReq({
+      method: "POST",
+      query: { id: "ROOM1" },
+      body: { entryId: "b2", userName: "B", videoId: "dQw4w9WgXcQ", songTitle: "Song b2" },
+    });
+    const res = createRes();
+    await handler(req, res);
+
+    expect(res.getStatus()).toBe(200);
+    const [, update] = mockCollection.updateOne.mock.calls[1];
+    expect(update.$push.queue.$position).toBe(4);
+  });
+
   it("falls back to a plain append after fair-insert CAS exhaustion", async () => {
     const room: Room = {
       id: "ROOM1",

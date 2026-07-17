@@ -50,8 +50,9 @@ export default async function handler(
         return;
       }
 
-      // Never move the current song (or history) — only what's still upcoming.
-      const split = room.activeVideoIndex + 1;
+      // History never moves or counts; the current song joins the round
+      // counting but stays put (see lib/fairQueue for why that's guaranteed).
+      const split = room.activeVideoIndex;
       const newQueue = room.queue
         .slice(0, split)
         .concat(fairOrder(room.queue.slice(split)));
