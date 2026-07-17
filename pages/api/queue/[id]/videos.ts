@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { trackEvent } from "../../../../lib/analytics";
+import { fairInsertIndex } from "../../../../lib/fairQueue";
 import { isValidQueueEntry, MAX_QUEUE_LENGTH, rateLimit } from "../../../../lib/limits";
 import { getRoomsCollection } from "../../../../lib/mongodb";
 import { normalizeRoomId } from "../../../../lib/roomCode";
@@ -53,17 +54,64 @@ export default async function handler(
       res.status(409).json({ code: 409, message: "Queue is full." });
     } else {
       // Cap enforced in the filter so concurrent adds can't overshoot it
-      // between the length check above and the write.
+      // between the length check above and the write. Excluding fair-mode
+      // rooms in the same filter keeps this single write the whole cost of
+      // the common (non-fair) path.
+      const cap = { $lt: [{ $size: "$queue" }, MAX_QUEUE_LENGTH] };
+      const plainAppend = {
+        $push: { queue: entry },
+        $set: { lastActivity: new Date() },
+      };
       const result = await collection.updateOne(
-        { id: roomId, $expr: { $lt: [{ $size: "$queue" }, MAX_QUEUE_LENGTH] } },
-        {
-          $push: { queue: entry },
-          $set: { lastActivity: new Date() },
-        }
+        { id: roomId, fairMode: { $ne: true }, $expr: cap },
+        plainAppend
       );
+
       if (result.matchedCount === 0) {
-        res.status(409).json({ code: 409, message: "Queue is full." });
-        return;
+        // The room is in fair mode (or filled up concurrently) — insert at the
+        // singer's round-robin slot instead. CAS on the queue snapshot, since
+        // $position is only right for the exact array we computed it against.
+        let inserted = false;
+        for (let attempt = 0; attempt < 3 && !inserted; attempt++) {
+          const fresh = await collection.findOne({ id: roomId });
+          if (!fresh) {
+            res.status(404).json({ code: 404, message: "Room not found." });
+            return;
+          }
+          if (fresh.queue.length >= MAX_QUEUE_LENGTH) {
+            res.status(409).json({ code: 409, message: "Queue is full." });
+            return;
+          }
+          if (!fresh.fairMode) break; // toggled off mid-flight — plain append below
+
+          // Fairness only places NEW songs (plus the one-time re-sort when the
+          // host enables the mode) — manual host reordering always wins and is
+          // never re-sorted. Never touch the current song or history.
+          const upcoming = fresh.queue.slice(fresh.activeVideoIndex + 1);
+          const absIdx =
+            fresh.activeVideoIndex + 1 + fairInsertIndex(upcoming, entry.userName);
+          const insert = await collection.updateOne(
+            { id: roomId, queue: fresh.queue, $expr: cap },
+            {
+              $push: { queue: { $each: [entry], $position: absIdx } },
+              $set: { lastActivity: new Date() },
+            }
+          );
+          inserted = insert.matchedCount > 0;
+        }
+
+        if (!inserted) {
+          // A song must never be lost to fairness: after CAS exhaustion (or a
+          // mid-flight toggle-off), fall back to the plain capped append.
+          const fallback = await collection.updateOne(
+            { id: roomId, $expr: cap },
+            plainAppend
+          );
+          if (fallback.matchedCount === 0) {
+            res.status(409).json({ code: 409, message: "Queue is full." });
+            return;
+          }
+        }
       }
       trackEvent(req, "song_added", { roomId: roomId as string, userName, songTitle, videoId, via: "search" });
       res.status(200).json({ code: 200, message: "Song added." });

@@ -67,6 +67,7 @@ describe("POST /api/queue/[id] - Room creation", () => {
       activeVideoIndex: 0,
       isPlaying: false,
       reactionsEnabled: true,
+      fairMode: false,
       playMode: "here",
       displayConfig: DEFAULT_DISPLAY_CONFIG,
       createdAt: expect.any(Date),
@@ -78,6 +79,7 @@ describe("POST /api/queue/[id] - Room creation", () => {
       activeVideoIndex: 0,
       isPlaying: false,
       reactionsEnabled: true,
+      fairMode: false,
       playMode: "here",
       displayConfig: DEFAULT_DISPLAY_CONFIG,
       createdAt: expect.any(Date),
@@ -233,6 +235,7 @@ describe("GET /api/queue/[id] - Room retrieval", () => {
       isPlaying: true,
       displayConnected: true,
       reactionsEnabled: true,
+      fairMode: false,
       displayConfig: DEFAULT_DISPLAY_CONFIG,
       reactions: [],
     });

@@ -82,6 +82,7 @@ export default async function handler(
           activeVideoIndex: 0,
           isPlaying: false,
           reactionsEnabled: true,
+          fairMode: false,
           // Matches the host UI default; switching to a separate screen
           // updates it via the mode endpoint.
           playMode: "here",
@@ -162,6 +163,7 @@ export default async function handler(
           isPlaying,
           displayConnected,
           reactionsEnabled: room.reactionsEnabled ?? true,
+          fairMode: room.fairMode ?? false,
           displayConfig: room.displayConfig ?? DEFAULT_DISPLAY_CONFIG,
           reactions,
         });

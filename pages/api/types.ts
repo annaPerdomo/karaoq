@@ -280,6 +280,9 @@ export interface Room {
   suggestions?: SuggestedSong[];
   /** Unset (legacy rooms) means shown — the display treats it as true. */
   boardsOnDisplay?: boolean;
+  /** Fair rotation: while on, new songs are inserted at their round-robin
+   * position instead of appended (lib/fairQueue). Absent/false = off. */
+  fairMode?: boolean;
   displayConfig?: DisplayConfig;
   /** Per-room customization of the host control surface. Unset rooms use
    * DEFAULT_HOST_CONFIG. */

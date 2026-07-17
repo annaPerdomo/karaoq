@@ -58,9 +58,15 @@ describe("POST /api/queue/[id]/videos - Add song to queue", () => {
     await handler(req, res);
 
     expect(res.getStatus()).toBe(200);
+    // Non-fair rooms keep the single append write; the fair-mode exclusion and
+    // the queue cap both ride in the filter so concurrent writes can't race it.
+    expect(mockCollection.updateOne).toHaveBeenCalledTimes(1);
     expect(mockCollection.updateOne).toHaveBeenCalledWith(
-      // The queue cap rides in the filter so concurrent adds can't overshoot it.
-      { id: "ROOM1", $expr: { $lt: [{ $size: "$queue" }, MAX_QUEUE_LENGTH] } },
+      {
+        id: "ROOM1",
+        fairMode: { $ne: true },
+        $expr: { $lt: [{ $size: "$queue" }, MAX_QUEUE_LENGTH] },
+      },
       {
         $push: {
           queue: {
@@ -70,6 +76,94 @@ describe("POST /api/queue/[id]/videos - Add song to queue", () => {
             songTitle: "Never Gonna Give You Up",
           },
         },
+        $set: { lastActivity: expect.any(Date) },
+      }
+    );
+  });
+
+  it("inserts at the fair index when the room is in fair mode", async () => {
+    const entry = (id: string, userName: string) => ({
+      id, userName, songTitle: `Song ${id}`, videoId: "dQw4w9WgXcQ",
+    });
+    // Upcoming (after the current song at index 0) is already fair-sorted:
+    // A, B, C, A, A. A new B is round 1 → before the round-2 A at upcoming
+    // index 4 → absolute index 0 + 1 + 4 = 5.
+    const room: Room = {
+      id: "ROOM1",
+      queue: [
+        entry("cur", "X"),
+        entry("a1", "A"), entry("b1", "B"), entry("c1", "C"),
+        entry("a2", "A"), entry("a3", "A"),
+      ],
+      activeVideoIndex: 0,
+      isPlaying: true,
+      fairMode: true,
+    } as Room;
+    mockCollection.findOne.mockResolvedValue(room);
+    mockCollection.updateOne
+      .mockResolvedValueOnce({ matchedCount: 0, modifiedCount: 0 }) // fair room: append filter can't match
+      .mockResolvedValueOnce({ matchedCount: 1, modifiedCount: 1 }); // positional insert lands
+
+    const req = createMockReq({
+      method: "POST",
+      query: { id: "ROOM1" },
+      body: { entryId: "b2", userName: "B", videoId: "dQw4w9WgXcQ", songTitle: "Song b2" },
+    });
+    const res = createRes();
+    await handler(req, res);
+
+    expect(res.getStatus()).toBe(200);
+    expect(mockCollection.updateOne).toHaveBeenLastCalledWith(
+      // CAS on the exact queue snapshot the index was computed against.
+      {
+        id: "ROOM1",
+        queue: room.queue,
+        $expr: { $lt: [{ $size: "$queue" }, MAX_QUEUE_LENGTH] },
+      },
+      {
+        $push: {
+          queue: {
+            $each: [{ id: "b2", userName: "B", videoId: "dQw4w9WgXcQ", songTitle: "Song b2" }],
+            $position: 5,
+          },
+        },
+        $set: { lastActivity: expect.any(Date) },
+      }
+    );
+  });
+
+  it("falls back to a plain append after fair-insert CAS exhaustion", async () => {
+    const room: Room = {
+      id: "ROOM1",
+      queue: [],
+      activeVideoIndex: 0,
+      isPlaying: false,
+      fairMode: true,
+    } as Room;
+    mockCollection.findOne.mockResolvedValue(room);
+    mockCollection.updateOne
+      .mockResolvedValueOnce({ matchedCount: 0, modifiedCount: 0 }) // append (fair room)
+      .mockResolvedValueOnce({ matchedCount: 0, modifiedCount: 0 }) // insert attempt 1
+      .mockResolvedValueOnce({ matchedCount: 0, modifiedCount: 0 }) // insert attempt 2
+      .mockResolvedValueOnce({ matchedCount: 0, modifiedCount: 0 }) // insert attempt 3
+      .mockResolvedValueOnce({ matchedCount: 1, modifiedCount: 1 }); // fallback append
+
+    const req = createMockReq({
+      method: "POST",
+      query: { id: "ROOM1" },
+      body: { entryId: "e1", userName: "A", videoId: "dQw4w9WgXcQ", songTitle: "Song" },
+    });
+    const res = createRes();
+    await handler(req, res);
+
+    // A song must never be lost to fairness — the fallback drops the fairMode
+    // condition and appends plainly.
+    expect(res.getStatus()).toBe(200);
+    expect(mockCollection.updateOne).toHaveBeenCalledTimes(5);
+    expect(mockCollection.updateOne).toHaveBeenLastCalledWith(
+      { id: "ROOM1", $expr: { $lt: [{ $size: "$queue" }, MAX_QUEUE_LENGTH] } },
+      {
+        $push: { queue: { id: "e1", userName: "A", videoId: "dQw4w9WgXcQ", songTitle: "Song" } },
         $set: { lastActivity: expect.any(Date) },
       }
     );

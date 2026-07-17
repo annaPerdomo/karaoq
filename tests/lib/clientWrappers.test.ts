@@ -145,6 +145,20 @@ describe("Client API wrappers", () => {
     });
   });
 
+  describe("setFairMode", () => {
+    it("sends enabled as query param", async () => {
+      mockFetch.mockResolvedValue({ ok: true });
+      const { default: setFairMode } = await import("../../app/queue/setFairMode");
+
+      const result = await setFairMode("ROOM1", true);
+
+      expect(result).toBe(true);
+      const [url, options] = mockFetch.mock.calls[0];
+      expect(url).toBe("/api/queue/ROOM1/fair-mode?enabled=true");
+      expect(options.method).toBe("POST");
+    });
+  });
+
   describe("removeFromQueue", () => {
     it("sends entryId as query param", async () => {
       mockFetch.mockResolvedValue({ ok: true });
@@ -174,6 +188,7 @@ describe("Client API wrappers", () => {
       ["removeSingWithMe", (m) => (m.default as (r: string, p: string) => Promise<boolean>)("R", "p")],
       ["removeSuggestion", (m) => (m.default as (r: string, s: string) => Promise<boolean>)("R", "s")],
       ["setDisplayConfig", (m) => (m.default as (r: string, c: typeof DEFAULT_DISPLAY_CONFIG) => Promise<boolean>)("R", DEFAULT_DISPLAY_CONFIG)],
+      ["setFairMode", (m) => (m.default as (r: string, e: boolean) => Promise<boolean>)("R", true)],
     ];
 
     it.each(wrappers)("%s resolves false", async (name, call) => {
