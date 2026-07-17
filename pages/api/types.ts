@@ -55,7 +55,16 @@ export interface SuggestedSong {
 export type PlayMode = "here" | "tv";
 
 export type QrSize = "large" | "normal" | "small" | "hidden";
-export type DisplayTheme = "classic" | "minimal" | "neon";
+export type DisplayTheme =
+  | "classic"
+  | "minimal"
+  | "neon"
+  | "sunset"
+  | "ocean"
+  | "gold"
+  | "forest"
+  | "pastel"
+  | "party";
 export type SidebarPosition = "left" | "right";
 export type SidebarSection = "qr" | "welcome" | "upNext";
 

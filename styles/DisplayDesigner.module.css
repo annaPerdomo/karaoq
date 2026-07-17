@@ -563,11 +563,12 @@
 /* Theme swatches */
 .swatches {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.4rem;
 }
 
 .swatch {
-  flex: 1;
+  flex: 1 1 calc(33.333% - 0.27rem);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -604,6 +605,15 @@
 .swatchNeon {
   background: linear-gradient(135deg, #ff2d78, #00f0ff);
   box-shadow: 0 0 10px rgba(255, 45, 120, 0.8), 0 0 16px rgba(0, 240, 255, 0.6);
+}
+.swatchSunset { background: linear-gradient(135deg, #ff7a45, #ffd23f); }
+.swatchOcean { background: linear-gradient(135deg, #00b4d8, #48cae4); }
+.swatchGold { background: linear-gradient(135deg, #d4af37, #f4e5b2); }
+.swatchForest { background: linear-gradient(135deg, #2f9e44, #d9a441); }
+.swatchPastel { background: linear-gradient(135deg, #ff9ecb, #9ecbff); }
+.swatchParty {
+  background: linear-gradient(135deg, #ff2d78, #7c3aed);
+  box-shadow: 0 0 10px rgba(255, 45, 120, 0.7), 0 0 16px rgba(124, 58, 237, 0.6);
 }
 
 /* ─── Responsive: stack the rail under the preview ─── */

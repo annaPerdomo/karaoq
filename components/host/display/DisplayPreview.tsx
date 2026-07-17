@@ -3,7 +3,7 @@ import p from '../../../styles/DisplayDesigner.module.css';
 import d from '../../../styles/Display.module.css';
 import NowPlayingBar from '../../display/NowPlayingBar';
 import AttractPanel from '../../display/AttractPanel';
-import { DisplayConfig, QueueEntry, SidebarPosition } from '../../../pages/api/types';
+import { DisplayConfig, DisplayTheme, QueueEntry, SidebarPosition } from '../../../pages/api/types';
 import { useT } from '../../../lib/i18n/I18nProvider';
 import { renderWithHeart } from '../../../lib/i18n/renderWithHeart';
 import { Spot, HideButton, SectionId, PreviewMode } from './PreviewSpot';
@@ -20,6 +20,18 @@ const PREVIEW_REACTIONS = [
   { emoji: '👏', left: 48, sway: 24, delay: 1.6 },
   { emoji: '💜', left: 72, sway: -12, delay: 3.1 },
 ];
+
+const THEME_CLASS: Record<DisplayTheme, string> = {
+  classic: '',
+  minimal: d.themeMinimal,
+  neon: d.themeNeon,
+  sunset: d.themeSunset,
+  ocean: d.themeOcean,
+  gold: d.themeGold,
+  forest: d.themeForest,
+  pastel: d.themePastel,
+  party: d.themeParty,
+};
 
 interface DisplayPreviewProps {
   config: DisplayConfig;
@@ -105,8 +117,7 @@ const DisplayPreview = ({
 
   const hiddenTap = (section: string) => t('host.display.hiddenTap', { section });
 
-  const themeClass =
-    view.theme === 'minimal' ? d.themeMinimal : view.theme === 'neon' ? d.themeNeon : '';
+  const themeClass = THEME_CLASS[view.theme];
   const left = view.sidebarPosition === 'left';
 
   return (

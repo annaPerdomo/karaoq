@@ -84,7 +84,17 @@ export function isValidSuggestedSong(song: unknown): song is SuggestedSong {
 }
 
 const QR_SIZES = new Set(["large", "normal", "small", "hidden"]);
-const DISPLAY_THEMES = new Set(["classic", "minimal", "neon"]);
+const DISPLAY_THEMES = new Set([
+  "classic",
+  "minimal",
+  "neon",
+  "sunset",
+  "ocean",
+  "gold",
+  "forest",
+  "pastel",
+  "party",
+]);
 const SIDEBAR_POSITIONS = new Set(["left", "right"]);
 const SIDEBAR_SECTIONS = new Set(["qr", "welcome", "upNext"]);
 // Drag-handle bounds for the freely-resizable display sections.

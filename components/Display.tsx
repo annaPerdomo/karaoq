@@ -12,7 +12,7 @@ import { onRoomState, onDisplayPause, broadcastVideoEnded } from '../app/queue/r
 import { startSessionTracking } from '../app/queue/trackSession';
 import { startVisiblePolling } from '../app/queue/pollWhileVisible';
 import { isTextReaction } from '../app/queue/cheerConstants';
-import { DEFAULT_DISPLAY_CONFIG, DisplayConfig, normalizeDisplayConfig, PlayMode, QueueEntry, Reaction, Room, SingWithMePost, SuggestedSong } from '../pages/api/types';
+import { DEFAULT_DISPLAY_CONFIG, DisplayConfig, DisplayTheme, normalizeDisplayConfig, PlayMode, QueueEntry, Reaction, Room, SingWithMePost, SuggestedSong } from '../pages/api/types';
 import { useT } from '../lib/i18n/I18nProvider';
 import { renderWithHeart } from '../lib/i18n/renderWithHeart';
 import LanguageSwitcher from './LanguageSwitcher';
@@ -26,6 +26,18 @@ const POLL_INTERVAL = 1500;
 // Liveness heartbeat cadence; the server treats a display as gone after ~75s
 // without one and clears any playback that display was supposed to be running.
 const HEARTBEAT_INTERVAL = 10_000;
+
+const THEME_CLASS: Record<DisplayTheme, string> = {
+  classic: '',
+  minimal: styles.themeMinimal,
+  neon: styles.themeNeon,
+  sunset: styles.themeSunset,
+  ocean: styles.themeOcean,
+  gold: styles.themeGold,
+  forest: styles.themeForest,
+  pastel: styles.themePastel,
+  party: styles.themeParty,
+};
 
 const Display = (): React.ReactElement => {
   const router = useRouter();
@@ -442,9 +454,7 @@ const Display = (): React.ReactElement => {
     );
   }
 
-  const themeClass =
-    displayConfig.theme === 'minimal' ? styles.themeMinimal :
-    displayConfig.theme === 'neon' ? styles.themeNeon : '';
+  const themeClass = THEME_CLASS[displayConfig.theme];
   // Only meaningful while the sidebar exists — a collapsed sidebar leaves the
   // default (right-anchored) offsets on the fixed bars.
   const sideClass =

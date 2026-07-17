@@ -49,6 +49,26 @@ function headerString(value: string | string[] | undefined): string | undefined 
   return value || undefined;
 }
 
+// Demo tooling (screenshot harnesses, promo-video capture scripts) sends this
+// header on every request so the rooms it creates never reach analytics, even
+// if a script is ever pointed at production instead of a local dev server.
+export const DEMO_EXEMPT_HEADER = "x-karaoq-demo";
+
+// localhost, loopback, and private-LAN hosts — matches a dev server reached as
+// localhost:3000 as well as a phone on the same network hitting 192.168.x.x.
+const LOCAL_HOST_PATTERN =
+  /^(localhost|127(\.\d{1,3}){3}|\[::1\]|0\.0\.0\.0|10(\.\d{1,3}){3}|192\.168(\.\d{1,3}){2}|172\.(1[6-9]|2\d|3[01])(\.\d{1,3}){2})(:\d+)?$/i;
+
+// Rooms used from local development or by demo tooling must not pollute
+// production analytics. Checked at the write choke points below so every
+// event type and session heartbeat is covered without touching call sites.
+export function isAnalyticsExempt(req: NextApiRequest): boolean {
+  if (headerString(req.headers[DEMO_EXEMPT_HEADER]) === "1") return true;
+  const host = headerString(req.headers.host) ?? "";
+  const forwardedHost = headerString(req.headers["x-forwarded-host"]) ?? "";
+  return LOCAL_HOST_PATTERN.test(host) || LOCAL_HOST_PATTERN.test(forwardedHost);
+}
+
 function extractGeo(req: NextApiRequest) {
   return {
     country: headerString(req.headers["x-vercel-ip-country"]),
@@ -62,6 +82,7 @@ export async function trackEvent(
   type: EventType,
   data: Omit<AnalyticsEvent, "type" | "timestamp" | "country" | "region" | "city" | "userAgent">
 ): Promise<void> {
+  if (isAnalyticsExempt(req)) return;
   try {
     const db = await getAnalyticsDb();
     const geo = extractGeo(req);
@@ -86,6 +107,7 @@ export async function trackSessionHeartbeat(
   role: "host" | "singer" | "display",
   clientId?: string
 ): Promise<void> {
+  if (isAnalyticsExempt(req)) return;
   try {
     const db = await getAnalyticsDb();
     const geo = extractGeo(req);

@@ -10,6 +10,12 @@ const THEMES: { id: DisplayTheme; dot: string }[] = [
   { id: 'classic', dot: p.swatchClassic },
   { id: 'minimal', dot: p.swatchMinimal },
   { id: 'neon', dot: p.swatchNeon },
+  { id: 'sunset', dot: p.swatchSunset },
+  { id: 'ocean', dot: p.swatchOcean },
+  { id: 'gold', dot: p.swatchGold },
+  { id: 'forest', dot: p.swatchForest },
+  { id: 'pastel', dot: p.swatchPastel },
+  { id: 'party', dot: p.swatchParty },
 ];
 
 interface DesignerRailProps {
