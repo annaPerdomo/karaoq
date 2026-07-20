@@ -21,16 +21,18 @@ import {
   onVideoEnded,
 } from "../app/queue/roomChannel";
 import setReactionsEnabled from "../app/queue/setReactionsEnabled";
-import setBoardsOnDisplay from "../app/queue/setBoardsOnDisplay";
-import setDisplayConfig from "../app/queue/setDisplayConfig";
 import postReaction from "../app/queue/postReaction";
 import { REACTION_COOLDOWN_MS } from "../app/queue/cheerConstants";
 import { startSessionTracking } from "../app/queue/trackSession";
 import { startVisiblePolling } from "../app/queue/pollWhileVisible";
 import {
   DEFAULT_DISPLAY_CONFIG,
+  DEFAULT_HOST_CONFIG,
   DisplayConfig,
+  DisplayTheme,
+  HostConfig,
   normalizeDisplayConfig,
+  normalizeHostConfig,
   PlayMode,
   QueueEntry,
   Reaction,
@@ -51,7 +53,6 @@ import {
 import { ReactionOverlay } from "./host/ReactionOverlay";
 import { MobileFooter } from "./host/MobileFooter";
 import { CohostInviteModal } from "./host/CohostInviteModal";
-import { DisplayDesigner } from "./host/display/DisplayDesigner";
 import { QrModal } from "./host/QrModal";
 import { ConfirmRemoveModal } from "./host/ConfirmRemoveModal";
 import { WelcomePrompt } from "./host/WelcomePrompt";
@@ -59,6 +60,16 @@ import { HostHeader } from "./host/HostHeader";
 import { SongStage } from "./host/SongStage";
 import { TransportBar } from "./host/TransportBar";
 import { QueueSidebar } from "./host/QueueSidebar";
+import { useHostEdit } from "./host/edit/useHostEdit";
+import { HostEditRail } from "./host/edit/HostEditRail";
+import { EditOverlay } from "./edit/EditOverlay";
+
+// Each theme repaints the host surface's CSS vars; classic is the default look.
+const HOST_THEME_CLASS: Record<DisplayTheme, string> = {
+  classic: "",
+  minimal: styles.themeMinimal,
+  neon: styles.themeNeon,
+};
 
 // `remote` renders a co-host control surface: it manages the queue (add /
 // remove / reorder / restore) but never embeds the player, never controls
@@ -97,7 +108,7 @@ const Host = ({
   const [reactionsOn, setReactionsOn] = React.useState(true);
   const [boardsOnDisplay, setBoardsOnDisplayState] = React.useState(true);
   const [displayConfig, setDisplayConfigState] = React.useState<DisplayConfig>(DEFAULT_DISPLAY_CONFIG);
-  const [displayPanelOpen, setDisplayPanelOpen] = React.useState(false);
+  const [hostConfig, setHostConfigState] = React.useState<HostConfig>(DEFAULT_HOST_CONFIG);
   const [reactionCooldown, setReactionCooldown] = React.useState(false);
   const [lastSentEmoji, setLastSentEmoji] = React.useState<string | null>(null);
   const [visibleReactions, setVisibleReactions] = React.useState<
@@ -397,8 +408,20 @@ const Host = ({
     setReactionsOn(room.reactionsEnabled ?? true);
     setBoardsOnDisplayState(room.boardsOnDisplay ?? true);
     setDisplayConfigState(normalizeDisplayConfig(room.displayConfig));
+    setHostConfigState(normalizeHostConfig(room.hostConfig));
     if (!remote && room.playMode) setPlayMode(room.playMode);
   }
+
+  // Customize mode: the host page keeps running exactly as-is while the REAL
+  // control-surface elements grow drag handles and render from a staged draft.
+  // Nothing reaches the room until Save. Co-hosts see the shared layout but
+  // never enter edit (the Customize button is host-only).
+  const hostEdit = useHostEdit({
+    joinCode,
+    config: hostConfig,
+    onSaved: setHostConfigState,
+  });
+  const hostView = hostEdit.view;
 
   React.useEffect(() => {
     if (!joinCode) return;
@@ -727,34 +750,6 @@ const Host = ({
     }
   }
 
-  // Every control in the panel applies immediately (no Save/Cancel): optimistic
-  // write, broadcast for same-browser displays, resync if the write fails.
-  async function saveDisplayConfig(next: DisplayConfig) {
-    if (!joinCode) return;
-    pausePolling();
-    setDisplayConfigState(next);
-    broadcastRoomState(joinCode, {
-      queue,
-      activeVideoIndex: activeIndex,
-      isPlaying,
-      reactionsEnabled: reactionsOn,
-      displayConfig: next,
-    });
-    const ok = await setDisplayConfig(joinCode, next);
-    if (!ok) await resyncAfterFailedWrite();
-  }
-
-  // The display picks this up on its next poll (~1.5s) — no broadcast needed.
-  async function toggleBoardsOnDisplay() {
-    if (!joinCode) return;
-    const next = !boardsOnDisplay;
-    const ok = await setBoardsOnDisplay(joinCode, next);
-    if (ok) {
-      setBoardsOnDisplayState(next);
-      showToast(next ? t('host.toast.boardsOn') : t('host.toast.boardsOff'));
-    }
-  }
-
   function handleSongAdded(entry: QueueEntry) {
     pausePolling();
     const newQueue = [...queue, entry];
@@ -992,6 +987,33 @@ const Host = ({
 
   const uniqueSingers = new Set(upNext.map((s) => s.userName)).size;
 
+  // Everything below renders from hostView: the staged draft while customizing,
+  // the room's config otherwise. A hidden History tab can't be the active tab.
+  const effectiveSidebarTab = hostView.showHistory ? sidebarTab : "queue";
+  const customizing = !remote && hostEdit.editing;
+
+  // The transport bar, reused by both the plain and the Customize-wrapped render.
+  const transportBar = (
+    <TransportBar
+      roomEmpty={roomEmpty}
+      currentSong={currentSong}
+      isPlaying={isPlaying}
+      tvMode={tvMode}
+      displayConnected={displayConnected}
+      displayPaused={displayPaused}
+      playsVideoHere={playsVideoHere}
+      hereVideoPlaying={hereVideoPlaying}
+      activeIndex={activeIndex}
+      queueLength={queue.length}
+      onPrevious={playPrevious}
+      onToggleDisplayPause={toggleDisplayPause}
+      onStop={stopSong}
+      onToggleHereVideo={toggleHereVideo}
+      onStart={startSong}
+      onNext={playNext}
+    />
+  );
+
   const joinUrl = origin ? `${origin}/sing/${joinCode}` : "";
   const cohostUrl = origin ? `${origin}/remote/${joinCode}` : "";
   const displayUrl = (origin || "karaoq.live").replace(
@@ -1049,10 +1071,21 @@ const Host = ({
   }
 
   return (
-    <main className={styles.main}>
+    <main
+      className={`${styles.main} ${HOST_THEME_CLASS[hostView.theme]} ${customizing ? styles.mainCustomizing : ""}`}
+      style={{ "--host-sb-w": `${hostView.sidebarWidth}px` } as React.CSSProperties}
+      onClick={customizing ? () => hostEdit.setSelected(null) : undefined}
+    >
       <HostHeader
         remote={remote}
         tvMode={tvMode}
+        customizing={customizing}
+        canCustomize={!remote && !loading}
+        onCustomize={() => {
+          setSettingsOpen(false);
+          setModeMenuOpen(false);
+          hostEdit.enter();
+        }}
         modeMenuOpen={modeMenuOpen}
         onModePillClick={() => {
           setModeMenuOpen((o) => !o);
@@ -1069,8 +1102,6 @@ const Host = ({
         onSettingsClose={() => setSettingsOpen(false)}
         reactionsOn={reactionsOn}
         onToggleReactions={toggleReactions}
-        boardsOnDisplay={boardsOnDisplay}
-        onToggleBoardsOnDisplay={toggleBoardsOnDisplay}
         hostName={hostName}
         onChangeName={() => {
           setSettingsOpen(false);
@@ -1081,14 +1112,12 @@ const Host = ({
           setSettingsOpen(false);
           setCohostOpen(true);
         }}
-        onOpenDisplayPanel={() => {
-          setSettingsOpen(false);
-          setDisplayPanelOpen(true);
-        }}
         onBrandClick={() => router.push("/")}
       />
 
-      <div className={styles.content}>
+      <div
+        className={`${styles.content} ${hostView.sidebarPosition === "left" ? styles.contentSidebarLeft : ""}`}
+      >
         <div className={tvMode ? styles.controlPanel : styles.playerArea}>
           <SongStage
             loading={loading}
@@ -1116,27 +1145,9 @@ const Host = ({
             <ReactionOverlay reactions={visibleReactions} />
           )}
 
-          {/* Transport bar — host only; co-hosts don't control playback. */}
-          {!remote && (
-            <TransportBar
-              roomEmpty={roomEmpty}
-              currentSong={currentSong}
-              isPlaying={isPlaying}
-              tvMode={tvMode}
-              displayConnected={displayConnected}
-              displayPaused={displayPaused}
-              playsVideoHere={playsVideoHere}
-              hereVideoPlaying={hereVideoPlaying}
-              activeIndex={activeIndex}
-              queueLength={queue.length}
-              onPrevious={playPrevious}
-              onToggleDisplayPause={toggleDisplayPause}
-              onStop={stopSong}
-              onToggleHereVideo={toggleHereVideo}
-              onStart={startSong}
-              onNext={playNext}
-            />
-          )}
+          {/* Transport bar — host only; co-hosts don't control playback. Never
+              hideable: without it the host can't run the room. */}
+          {!remote && transportBar}
         </div>
 
         <QueueSidebar
@@ -1145,7 +1156,7 @@ const Host = ({
           sidebarCollapsed={sidebarCollapsed}
           onExpandSidebar={() => setSidebarCollapsed(false)}
           onCollapseSidebar={() => setSidebarCollapsed(true)}
-          sidebarTab={sidebarTab}
+          sidebarTab={effectiveSidebarTab}
           onSelectTab={setSidebarTab}
           searchOpen={searchOpen}
           onToggleSearch={() => setSearchOpen(!searchOpen)}
@@ -1179,10 +1190,47 @@ const Host = ({
           onToggleQrShelf={toggleQrShelf}
           onOpenQrModal={() => setQrModalOpen(true)}
           onSongAdded={handleSongAdded}
+          showHistory={hostView.showHistory}
+          hostConfig={hostView}
+          hostEdit={
+            customizing
+              ? {
+                  selected: hostEdit.selected,
+                  onSelect: hostEdit.setSelected,
+                  onChange: hostEdit.change,
+                }
+              : undefined
+          }
+          hostEditing={customizing}
+          sideDragProps={hostEdit.sideDragProps}
+          widthDragProps={hostEdit.widthDragProps}
+          sideDragging={hostEdit.sideDragTarget !== null}
         />
       </div>
 
-      {!remote && <MobileFooter />}
+      {/* Customize-mode chrome: theme/toggle rail on the free edge, floating
+          save bar, and side drop-zones while the sidebar is dragged across. */}
+      {customizing && (
+        <EditOverlay
+          rail={
+            <HostEditRail
+              config={hostView}
+              side={hostView.sidebarPosition === "right" ? "left" : "right"}
+              selected={hostEdit.selected}
+              onSelect={hostEdit.setSelected}
+              onChange={hostEdit.change}
+            />
+          }
+          dirty={hostEdit.dirty}
+          saving={hostEdit.saving}
+          saveFailed={hostEdit.saveFailed}
+          onDiscard={hostEdit.discard}
+          onSave={hostEdit.save}
+          sideDragTarget={hostEdit.sideDragTarget}
+        />
+      )}
+
+      {!remote && !customizing && <MobileFooter />}
 
       {cohostOpen && (
         <CohostInviteModal
@@ -1190,19 +1238,6 @@ const Host = ({
           cohostDisplayUrl={cohostDisplayUrl}
           onClose={() => setCohostOpen(false)}
           onCopyLink={copyCohostLink}
-        />
-      )}
-
-      {displayPanelOpen && joinCode && (
-        <DisplayDesigner
-          onClose={() => setDisplayPanelOpen(false)}
-          config={displayConfig}
-          onSave={saveDisplayConfig}
-          joinUrl={joinUrl}
-          joinCode={joinCode}
-          origin={origin}
-          queue={queue}
-          activeIndex={activeIndex}
         />
       )}
 

@@ -38,7 +38,7 @@
   font-weight: 400;
   font-size: 1.4rem;
   letter-spacing: 2px;
-  background: linear-gradient(135deg, #ff2d78, #00f0ff);
+  background: linear-gradient(135deg, var(--acc-a, #ff2d78), var(--acc-b, #00f0ff));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -149,6 +149,11 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  /* Keeps a wrapped description off the switch instead of running into it. */
+  gap: 0.85rem;
+  /* Buttons centre their text by default; these are left-aligned label rows,
+     which also stops a wrapped line reaching toward the switch. */
+  text-align: left;
   width: 100%;
   padding: 0.6rem 0.75rem;
   border-radius: 8px;
@@ -370,7 +375,7 @@
 
 /* ─── Sidebar ─── */
 .sidebar {
-  width: 360px;
+  width: var(--host-sb-w, 360px);
   flex-shrink: 0;
   border-left: 1px solid rgba(255, 255, 255, 0.06);
   display: flex;
@@ -2253,3 +2258,95 @@
   border-color: #00f0ff;
 }
 
+
+/* ═══ Customize mode ═══════════════════════════════════════════════════════
+   The host control surface's in-place editor: a left/right dockable, resizable
+   sidebar and the header Customize button. The host surface is deliberately
+   un-themed — themes are a display-only feature. The drag chrome itself is
+   shared CSS in DisplayDesigner.module.css. */
+
+/* Curb accidental text selection while dragging handles across the page. */
+.mainCustomizing {
+  user-select: none;
+}
+
+/* Arrangeable sidebar sections. Only the queue grows, so whatever the host
+   orders after it is pushed to the bottom and whatever precedes it sits on
+   top — every permutation lays out correctly without per-order rules. */
+.sectionBlock {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.sectionGrow {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Host theme palettes — the same set the display offers. Classic is the
+   default (no class); these repaint the surface vars. */
+.main {
+  --acc-a: #ff2d78;
+  --acc-b: #00f0ff;
+}
+
+.themeMinimal {
+  --acc-a: #aab0c0;
+  --acc-b: #d7dae2;
+  --bg-primary: #0a0a0c;
+  --bg-secondary: #151517;
+}
+
+.themeNeon {
+  --bg-primary: #050505;
+  --bg-secondary: #0d0d14;
+}
+
+/* Dock the sidebar on the left — only in the side-by-side desktop layout; the
+   stacked mobile layout keeps its natural order. Flip the divider to match. */
+@media (min-width: 769px) {
+  .contentSidebarLeft {
+    flex-direction: row-reverse;
+  }
+  .contentSidebarLeft .sidebar {
+    border-left: none;
+    border-right: 1px solid rgba(255, 255, 255, 0.06);
+  }
+}
+
+/* Header Customize button — mirrors the display's headerEdit affordance. */
+.headerCustomize {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  height: 36px;
+  padding: 0 0.7rem;
+  border-radius: 10px;
+  color: var(--text-muted);
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s, color 0.15s;
+}
+
+.headerCustomize:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+}
+
+.headerCustomize > svg {
+  width: 15px;
+  height: 15px;
+}
+
+@media (max-width: 560px) {
+  .headerCustomizeLabel {
+    display: none;
+  }
+}
