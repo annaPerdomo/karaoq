@@ -1,4 +1,5 @@
 import type { NextApiRequest } from "next";
+import type { DisplayConfig, HostConfig } from "../pages/api/types";
 import { getAnalyticsDb } from "./mongodb";
 
 export type EventType =
@@ -13,7 +14,9 @@ export type EventType =
   | "singwithme_joined"
   | "singwithme_queued"
   | "song_suggested"
-  | "suggestion_claimed";
+  | "suggestion_claimed"
+  | "display_config_saved"
+  | "host_config_saved";
 
 export interface AnalyticsEvent {
   type: EventType;
@@ -35,6 +38,12 @@ export interface AnalyticsEvent {
   // How a song_added event reached the queue. Absent on events from before
   // this field existed, which were all search adds.
   via?: "search" | "board_claim" | "singwithme";
+  // display_config_saved: which fields differ from DEFAULT_DISPLAY_CONFIG,
+  // plus the full saved config so theme/size popularity can be aggregated.
+  changedFields?: string[];
+  displayConfig?: DisplayConfig;
+  // host_config_saved: same idea for the host control surface's layout.
+  hostConfig?: HostConfig;
 }
 
 // A heartbeat fires every 60s while a tab is open. If more than this elapses

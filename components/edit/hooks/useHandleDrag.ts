@@ -1,17 +1,17 @@
 import * as React from 'react';
 
-interface CanvasDragCallbacks {
+interface HandleDragCallbacks {
   onStart?: () => void;
-  /** Deltas are in canvas (pre-scale) pixels; the raw event is included for
-   * interactions that need absolute pointer coordinates (e.g. reordering). */
+  /** Deltas are viewport pixels — the handles sit on the real, unscaled page.
+   * The raw event is included for interactions that need absolute pointer
+   * coordinates (e.g. reordering). */
   onMove: (dx: number, dy: number, e: React.PointerEvent) => void;
   onEnd: () => void;
 }
 
-/** Pointer-capture drag for handles inside the scaled TV canvas. Deltas are
- * divided by the canvas scale so a 1px on-screen move maps to the real pixels
- * the display will use. Spread the returned props onto the handle element. */
-export function useCanvasDrag(scale: number, cb: CanvasDragCallbacks) {
+/** Pointer-capture drag for the edit-mode handles on a live page.
+ * Spread the returned props onto the handle element. */
+export function useHandleDrag(cb: HandleDragCallbacks) {
   const start = React.useRef<{ x: number; y: number } | null>(null);
 
   return {
@@ -24,7 +24,7 @@ export function useCanvasDrag(scale: number, cb: CanvasDragCallbacks) {
     },
     onPointerMove: (e: React.PointerEvent) => {
       if (!start.current) return;
-      cb.onMove((e.clientX - start.current.x) / scale, (e.clientY - start.current.y) / scale, e);
+      cb.onMove(e.clientX - start.current.x, e.clientY - start.current.y, e);
     },
     onPointerUp: (e: React.PointerEvent) => {
       if (!start.current) return;

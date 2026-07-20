@@ -1,201 +1,20 @@
-/* ─── Display designer: live TV preview + controls rail ─── */
-
-.designer {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  background: var(--bg-secondary);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 16px;
-  padding: 1.25rem 1.25rem 1rem;
-  width: min(1060px, 96vw);
-  max-height: 92vh;
-  animation: designerUp 0.2s ease;
-}
-
-@keyframes designerUp {
-  from { opacity: 0; transform: translateY(12px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.header {
-  display: flex;
-  align-items: baseline;
-  gap: 0.75rem;
-  margin-bottom: 0.9rem;
-  padding-right: 2.5rem; /* clear the absolute close button */
-}
-
-.title {
-  font-size: 1.15rem;
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-.hint {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-}
-
-.body {
-  display: flex;
-  gap: 1rem;
-  min-height: 0; /* let children scroll instead of overflowing the modal */
-}
-
-.previewCol {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: center; /* the rail is usually taller — keep the TV centered */
-  gap: 0.6rem;
-}
-
-/* ─── Mode tabs (while singing / between songs) ─── */
-.tabs {
-  display: flex;
-  gap: 0.4rem;
-  align-items: center;
-}
-
-.tab {
-  padding: 0.35rem 0.8rem;
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: var(--text-secondary);
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 999px;
-  cursor: pointer;
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
-}
-
-.tab:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.tabActive {
-  color: var(--text-primary);
-  background: rgba(255, 45, 120, 0.18);
-  border-color: #ff2d78;
-}
+/* ─── Display edit mode ───
+   Chrome for editing the live display page IN PLACE: the page's real
+   elements grow outlines, drag handles, and ghosts, a settings rail floats
+   on the free edge, and a save bar floats at the bottom. There is no canvas
+   and no copy — every class here decorates components the audience is
+   actually looking at, so everything is authored at natural UI size. */
 
 .sampleBadge {
-  margin-left: auto;
   font-size: 0.68rem;
   color: var(--text-muted);
   border: 1px dashed rgba(255, 255, 255, 0.2);
   border-radius: 999px;
   padding: 0.15rem 0.6rem;
+  white-space: nowrap;
 }
 
-/* ─── Scaled TV frame ─── */
-.frame {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 10px;
-  overflow: hidden;
-  background: #000;
-}
-
-/* Composed onto the real Display .main; double class beats its 100vh height. */
-.canvas.canvas {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 1280px;
-  height: 720px;
-  transform-origin: top left;
-}
-
-/* The real sidebar/videoArea size themselves with 100vh; inside the scaled
-   canvas their containing block is the canvas itself, so 100% is correct.
-   These also re-assert the TV layout wholesale: the display's stacked
-   phone styles key off the VIEWPORT width, so on a phone they'd otherwise
-   leak into the canvas — but the canvas is always a 1280×720 TV. */
-.sidebarBox.sidebarBox.sidebarBox {
-  position: fixed;
-  top: 0;
-  right: 0;
-  left: auto;
-  width: var(--sb-w, 280px);
-  height: 100%;
-  max-height: none;
-  border-top: none;
-  border-right: none;
-  border-left: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-.canvasLeft .sidebarBox.sidebarBox {
-  right: auto;
-  left: 0;
-  border-left: none;
-  border-right: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-.videoBox.videoBox.videoBox {
-  height: 100%;
-  min-height: 0;
-  margin: 0 var(--sb-w, 280px) 0 0;
-}
-
-.canvasLeft .videoBox.videoBox {
-  margin: 0 0 0 var(--sb-w, 280px);
-}
-
-.headerBar.headerBar {
-  left: 0;
-  right: var(--sb-w, 280px);
-}
-
-.canvasLeft .headerBar.headerBar {
-  left: var(--sb-w, 280px);
-  right: 0;
-}
-
-.footerBar.footerBar {
-  left: 0;
-  right: var(--sb-w, 280px);
-}
-
-.canvasLeft .footerBar.footerBar {
-  left: var(--sb-w, 280px);
-  right: 0;
-}
-
-/* ─── Fake video (stands in for the YouTube iframe) ─── */
-.fakeVideo {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1.25rem;
-  background:
-    radial-gradient(ellipse at center, rgba(255, 255, 255, 0.06), transparent 70%),
-    #000;
-}
-
-.fakePlay {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 110px;
-  height: 110px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.75);
-}
-
-.fakeVideoLabel {
-  font-size: 22px;
-  color: rgba(255, 255, 255, 0.45);
-}
-
-/* ─── Editing affordances (drawn at TV scale — they shrink with the canvas) ─── */
+/* ─── Editing affordances on the real sections ─── */
 .spot {
   cursor: pointer;
 }
@@ -204,8 +23,8 @@
   content: '';
   position: absolute;
   inset: 0;
-  border: 4px dashed transparent;
-  border-radius: 12px;
+  border: 2px dashed transparent;
+  border-radius: 10px;
   pointer-events: none;
   transition: border-color 0.15s, background 0.15s;
   z-index: 5;
@@ -227,15 +46,15 @@
 
 .spotTag {
   position: absolute;
-  top: 8px;
-  right: 8px;
+  top: 6px;
+  right: 6px;
   z-index: 6;
-  font-size: 20px;
+  font-size: 11px;
   font-weight: 700;
   color: #0a0a19;
   background: #00f0ff;
-  border-radius: 8px;
-  padding: 4px 12px;
+  border-radius: 6px;
+  padding: 2px 8px;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.15s;
@@ -252,13 +71,13 @@
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  margin: 12px;
-  padding: 20px 16px;
-  font-size: 21px;
+  margin: 8px;
+  padding: 12px 10px;
+  font-size: 0.8rem;
   text-align: center;
   color: rgba(255, 255, 255, 0.45);
-  border: 3px dashed rgba(255, 255, 255, 0.25);
-  border-radius: 12px;
+  border: 2px dashed rgba(255, 255, 255, 0.25);
+  border-radius: 10px;
   background: none;
   cursor: pointer;
   transition: border-color 0.15s, color 0.15s;
@@ -269,29 +88,30 @@
   color: rgba(255, 255, 255, 0.75);
 }
 
-/* Bottom strip ghost for the hidden now-playing bar. */
+/* Bottom strip ghost for the hidden now-playing bar. Sits where the real bar
+   would, clear of the page footer. */
 .ghostStrip {
   position: fixed;
-  bottom: 40px;
-  left: 24px;
-  right: calc(var(--sb-w, 280px) + 24px); /* sidebar + gutter */
+  bottom: 48px;
+  left: 16px;
+  right: calc(var(--sb-w, 280px) + 16px); /* sidebar + gutter */
   z-index: 10;
   margin: 0;
 }
 
-.canvasLeft .ghostStrip {
-  right: 24px;
-  left: calc(var(--sb-w, 280px) + 24px);
+.edLeft .ghostStrip {
+  right: 16px;
+  left: calc(var(--sb-w, 280px) + 16px);
 }
 
 /* Floating chip ghost for hidden cheers. */
 .ghostChip {
   position: absolute;
-  top: 80px;
+  top: 64px;
   right: 24px;
   z-index: 9;
   margin: 0;
-  padding: 12px 18px;
+  padding: 8px 12px;
 }
 
 /* ─── Now-playing slot: carries the fixed placement so the real bar inside
@@ -308,29 +128,20 @@
   position: static;
 }
 
-.canvasLeft .nowSlot {
+.edLeft .nowSlot {
   right: 0;
   left: var(--sb-w, 280px);
 }
 
-/* Reactions overlay is click-through on the real TV; here it's a target.
-   (Insets re-asserted against the display's phone media rules.) */
-.reactSpot.reactSpot {
-  pointer-events: auto;
-  cursor: pointer;
-  top: 56px;
-  bottom: 130px;
-}
-
 /* ─── Per-section editing chrome: grip + eye cluster (top-left), shown on
-   hover/selection. Sized at TV scale like all canvas chrome. ─── */
+   hover/selection. ─── */
 .chrome {
   position: absolute;
-  top: 8px;
-  left: 8px;
+  top: 6px;
+  left: 6px;
   z-index: 6;
   display: flex;
-  gap: 8px;
+  gap: 6px;
   opacity: 0;
   transition: opacity 0.15s;
 }
@@ -344,13 +155,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
-  font-size: 22px;
+  width: 28px;
+  height: 28px;
+  font-size: 13px;
   color: #fff;
   background: rgba(10, 10, 25, 0.85);
   border: 1px solid rgba(0, 240, 255, 0.5);
-  border-radius: 10px;
+  border-radius: 8px;
   cursor: pointer;
   pointer-events: auto;
 }
@@ -381,14 +192,14 @@
 /* Corner handle: drag to resize the QR. */
 .qrHandle {
   position: absolute;
-  right: 10px;
-  bottom: 10px;
+  right: 6px;
+  bottom: 6px;
   z-index: 6;
-  width: 34px;
-  height: 34px;
-  border-right: 7px solid #00f0ff;
-  border-bottom: 7px solid #00f0ff;
-  border-radius: 0 0 8px 0;
+  width: 22px;
+  height: 22px;
+  border-right: 4px solid #00f0ff;
+  border-bottom: 4px solid #00f0ff;
+  border-radius: 0 0 6px 0;
   background: none;
   cursor: nwse-resize;
   touch-action: none;
@@ -404,15 +215,15 @@
 /* Bottom pill: drag to show more/fewer up-next songs. */
 .countHandle {
   position: absolute;
-  bottom: 12px;
+  bottom: 8px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 6;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 24px;
-  font-size: 22px;
+  gap: 6px;
+  padding: 5px 14px;
+  font-size: 13px;
   font-weight: 700;
   color: #0a0a19;
   background: #00f0ff;
@@ -435,7 +246,7 @@
   position: absolute;
   top: 0;
   bottom: 0;
-  width: 18px;
+  width: 14px;
   z-index: 7;
   background: none;
   border: none;
@@ -450,7 +261,7 @@
   top: 0;
   bottom: 0;
   left: 50%;
-  width: 4px;
+  width: 3px;
   transform: translateX(-50%);
   background: rgba(0, 240, 255, 0.25);
   transition: background 0.15s;
@@ -461,8 +272,8 @@
   background: #00f0ff;
 }
 
-.widthHandleL { left: -9px; }
-.widthHandleR { right: -9px; }
+.widthHandleL { left: -7px; }
+.widthHandleR { right: -7px; }
 
 /* Layout utilities for hotspot wrappers around flex-sized display sections. */
 .grow {
@@ -483,9 +294,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  padding: 10px 0;
-  font-size: 19px;
+  gap: 8px;
+  padding: 8px 0;
+  font-size: 12px;
   letter-spacing: 0.5px;
   color: rgba(255, 255, 255, 0.4);
   background: rgba(255, 255, 255, 0.04);
@@ -504,13 +315,13 @@
   opacity: 0.45;
 }
 
-/* Drop zones live on the unscaled frame so their borders stay crisp. */
+/* Viewport-edge drop zones while the sidebar is dragged across the page. */
 .dropZone {
-  position: absolute;
+  position: fixed;
   top: 0;
   bottom: 0;
-  width: 26%;
-  z-index: 30;
+  width: 22%;
+  z-index: 60;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -519,6 +330,7 @@
   color: rgba(255, 255, 255, 0.8);
   font-size: 0.8rem;
   font-weight: 700;
+  pointer-events: none;
 }
 
 .dropZoneL { left: 0; border-radius: 10px 0 0 10px; }
@@ -529,15 +341,37 @@
   background: rgba(0, 240, 255, 0.18);
 }
 
-/* ─── Controls rail ─── */
+/* ─── Controls rail: floats over the edge OPPOSITE the sidebar, so the
+   sections being dragged stay unobstructed. ─── */
 .rail {
-  width: 300px;
-  flex-shrink: 0;
+  position: fixed;
+  top: 64px;
+  /* Height follows the cards, so a short rail (the host's) doesn't leave a tall
+     empty panel. The cap is where `bottom: 150px` used to pin it — clear of the
+     save bar AND the real now-playing bar below — and a rail with more cards
+     than that scrolls inside itself instead of overflowing. */
+  max-height: calc(100vh - 214px);
+  max-height: calc(100dvh - 214px);
+  width: 280px;
+  z-index: 50;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  padding-right: 2px;
+  padding: 0.6rem;
+  background: rgba(10, 10, 25, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+}
+
+.railLeft {
+  left: 14px;
+}
+
+.railRight {
+  right: 14px;
 }
 
 .railHint {
@@ -606,39 +440,133 @@
   background: linear-gradient(135deg, #ff2d78, #00f0ff);
   box-shadow: 0 0 10px rgba(255, 45, 120, 0.8), 0 0 16px rgba(0, 240, 255, 0.6);
 }
-.swatchSunset { background: linear-gradient(135deg, #ff7a45, #ffd23f); }
-.swatchOcean { background: linear-gradient(135deg, #00b4d8, #48cae4); }
-.swatchGold { background: linear-gradient(135deg, #d4af37, #f4e5b2); }
-.swatchForest { background: linear-gradient(135deg, #2f9e44, #d9a441); }
-.swatchPastel { background: linear-gradient(135deg, #ff9ecb, #9ecbff); }
-.swatchParty {
-  background: linear-gradient(135deg, #ff2d78, #7c3aed);
-  box-shadow: 0 0 10px rgba(255, 45, 120, 0.7), 0 0 16px rgba(124, 58, 237, 0.6);
+
+/* ─── Save bar ─── Floats bottom-center of the live page, lifted clear of the
+   footer and drawn as a solid raised toolbar so the confirm button is
+   unmistakable. Edits stage in place; these buttons land them on the room. */
+.bar {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 55;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  max-width: min(94vw, 680px);
+  padding: 0.55rem 0.6rem 0.55rem 1.1rem;
+  background: #14142a;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(0, 0, 0, 0.4);
 }
 
-/* ─── Responsive: stack the rail under the preview ─── */
+.actionsHint {
+  min-width: 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.actionsHintError {
+  color: #ff6b6b;
+}
+
+.discardBtn {
+  height: 40px;
+  padding: 0 1.1rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.discardBtn:hover:enabled {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: var(--text-primary);
+}
+
+/* Save (dirty) and Done (clean) are the primary exit — big, bright, filled. */
+.applyBtn,
+.doneBtn {
+  height: 40px;
+  padding: 0 1.5rem;
+  border-radius: 999px;
+  border: none;
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  cursor: pointer;
+  transition: filter 0.15s, transform 0.05s;
+}
+
+.applyBtn {
+  background: linear-gradient(135deg, #ff2d78, #ff6b35);
+  box-shadow: 0 4px 16px rgba(255, 45, 120, 0.5);
+}
+
+/* Green so "leave edit mode" reads as a safe finish, distinct from a
+   destructive action. */
+.doneBtn {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  box-shadow: 0 4px 16px rgba(34, 197, 94, 0.45);
+}
+
+.applyBtn:hover:enabled,
+.doneBtn:hover:enabled {
+  filter: brightness(1.08);
+}
+
+.applyBtn:active:enabled,
+.doneBtn:active:enabled {
+  transform: translateY(1px);
+}
+
+.discardBtn:disabled,
+.applyBtn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* Placeholder shown for an enabled-but-empty boards section while editing, so
+   it can still be arranged before any guest has posted. */
+.boardsPlaceholder {
+  padding: 1.1rem 0.75rem;
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  border: 1px dashed rgba(255, 255, 255, 0.18);
+  border-radius: 10px;
+}
+
+/* ─── Responsive: on narrow screens the floating rail hugs the bottom edge
+   as a short sheet above the save bar instead of a tall side panel. ─── */
 @media (max-width: 860px) {
-  .designer {
-    padding: 1rem 0.9rem 0.9rem;
-    max-height: 94vh;
-    overflow-y: auto;
-  }
-
-  .body {
-    flex-direction: column;
-  }
-
   .rail {
-    width: 100%;
-    overflow-y: visible;
+    top: auto;
+    bottom: 64px;
+    left: 10px;
+    right: 10px;
+    width: auto;
+    max-height: 42vh;
   }
 }
 
 @media (pointer: coarse) {
-  .tab,
   .swatch,
   .railCard button,
-  .railCard input {
+  .railCard input,
+  .discardBtn,
+  .applyBtn,
+  .doneBtn {
     min-height: 44px;
   }
 }

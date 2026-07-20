@@ -6,6 +6,8 @@ import { createMockReq } from "../helpers/mockRequest";
 const mockCollection = {
   findOne: vi.fn(),
   updateOne: vi.fn(),
+  // The analytics event write lands here too — same mocked client.
+  insertOne: vi.fn(),
 };
 
 vi.mock("mongodb", () => ({
@@ -41,11 +43,10 @@ const validConfig: DisplayConfig = {
   showUpNext: true,
   upNextCount: 7,
   showNowPlaying: false,
-  showReactions: true,
   theme: "neon",
   sidebarPosition: "left",
   sidebarWidth: 340,
-  sidebarOrder: ["upNext", "qr", "welcome"],
+  sidebarOrder: ["upNext", "qr", "welcome", "boards"],
   welcomeLine: "  Karaoke Tuesdays  ",
   attractMode: true,
 };
@@ -76,6 +77,39 @@ describe("POST /api/queue/[id]/display-config - Save display config", () => {
     );
   });
 
+  it("records which fields differ from the defaults in analytics", async () => {
+    mockCollection.updateOne.mockResolvedValue({ matchedCount: 1 });
+    mockCollection.insertOne.mockResolvedValue({});
+
+    const req = createMockReq({
+      method: "POST",
+      query: { id: "ROOM1" },
+      // A production host — localhost would be analytics-exempt.
+      headers: { host: "karaoq.live" },
+      body: { ...validConfig, welcomeLine: "" },
+    });
+    const res = createRes();
+    await handler(req, res);
+
+    expect(res.getStatus()).toBe(200);
+    expect(mockCollection.insertOne).toHaveBeenCalledOnce();
+    const event = mockCollection.insertOne.mock.calls[0][0];
+    expect(event.type).toBe("display_config_saved");
+    expect(event.roomId).toBe("ROOM1");
+    expect(event.changedFields.sort()).toEqual([
+      "attractMode",
+      "qrPx",
+      "qrSize",
+      "showNowPlaying",
+      "sidebarOrder",
+      "sidebarPosition",
+      "sidebarWidth",
+      "theme",
+      "upNextCount",
+    ]);
+    expect(event.displayConfig).toEqual({ ...validConfig, welcomeLine: "" });
+  });
+
   it("fills defaults when a pre-drag-era client omits the layout fields", async () => {
     mockCollection.updateOne.mockResolvedValue({ matchedCount: 1 });
 
@@ -103,7 +137,7 @@ describe("POST /api/queue/[id]/display-config - Save display config", () => {
             ...validConfig,
             sidebarPosition: "right",
             sidebarWidth: 280,
-            sidebarOrder: ["qr", "welcome", "upNext"],
+            sidebarOrder: ["qr", "welcome", "upNext", "boards"],
             // Derived from the coarse qrSize bucket ("large").
             qrPx: 120,
             welcomeLine: "Karaoke Tuesdays",

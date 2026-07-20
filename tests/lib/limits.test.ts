@@ -14,11 +14,10 @@ describe("isValidDisplayConfig", () => {
       showUpNext: false,
       upNextCount: 16,
       showNowPlaying: false,
-      showReactions: false,
       theme: "neon",
       sidebarPosition: "left",
       sidebarWidth: 460,
-      sidebarOrder: ["welcome", "upNext", "qr"],
+      sidebarOrder: ["welcome", "upNext", "qr", "boards"],
       welcomeLine: "x".repeat(MAX_WELCOME_LENGTH),
       attractMode: true,
     };
@@ -79,8 +78,10 @@ describe("isValidDisplayConfig", () => {
     expect(isValidDisplayConfig({ ...DEFAULT_DISPLAY_CONFIG, showNowPlaying: 1 })).toBe(false);
   });
 
-  it("rejects a non-boolean showReactions", () => {
-    expect(isValidDisplayConfig({ ...DEFAULT_DISPLAY_CONFIG, showReactions: 1 })).toBe(false);
+  // The cheer overlay is governed by the room's reactions setting, not the
+  // display config — a config still carrying the retired field is rejected.
+  it("rejects the retired showReactions field", () => {
+    expect(isValidDisplayConfig({ ...DEFAULT_DISPLAY_CONFIG, showReactions: true })).toBe(false);
   });
 
   it("rejects an invalid theme", () => {

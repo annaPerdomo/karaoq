@@ -1,5 +1,6 @@
 import type { NextApiRequest } from "next";
-import type { DisplayConfig, QueueEntry, SingWithMePost, SuggestedSong } from "../pages/api/types";
+import type { DisplayConfig, HostConfig, QueueEntry, SingWithMePost, SuggestedSong } from "../pages/api/types";
+import { DISPLAY_THEMES as DISPLAY_THEME_LIST } from "../pages/api/types";
 
 // Server-side caps on anonymous writes. The UI enforces friendlier limits
 // (30-char name input, 8 search results); these exist so curl can't balloon
@@ -84,19 +85,9 @@ export function isValidSuggestedSong(song: unknown): song is SuggestedSong {
 }
 
 const QR_SIZES = new Set(["large", "normal", "small", "hidden"]);
-const DISPLAY_THEMES = new Set([
-  "classic",
-  "minimal",
-  "neon",
-  "sunset",
-  "ocean",
-  "gold",
-  "forest",
-  "pastel",
-  "party",
-]);
+const DISPLAY_THEMES = new Set<string>(DISPLAY_THEME_LIST);
 const SIDEBAR_POSITIONS = new Set(["left", "right"]);
-const SIDEBAR_SECTIONS = new Set(["qr", "welcome", "upNext"]);
+const SIDEBAR_SECTIONS = new Set(["qr", "welcome", "upNext", "boards"]);
 // Drag-handle bounds for the freely-resizable display sections.
 export const QR_PX_MIN = 48;
 export const QR_PX_MAX = 140;
@@ -109,7 +100,6 @@ const DISPLAY_CONFIG_KEYS = new Set([
   "showUpNext",
   "upNextCount",
   "showNowPlaying",
-  "showReactions",
   "theme",
   "sidebarPosition",
   "sidebarWidth",
@@ -132,7 +122,6 @@ export function isValidDisplayConfig(value: unknown): value is DisplayConfig {
     typeof e.showUpNext === "boolean" &&
     isIntInRange(e.upNextCount, 1, UP_NEXT_COUNT_MAX) &&
     typeof e.showNowPlaying === "boolean" &&
-    typeof e.showReactions === "boolean" &&
     typeof e.theme === "string" &&
     DISPLAY_THEMES.has(e.theme) &&
     // The drag-era fields are absent on configs saved by older clients;
@@ -156,6 +145,46 @@ function isValidSidebarOrder(value: unknown): boolean {
     value.length === SIDEBAR_SECTIONS.size &&
     new Set(value).size === value.length &&
     value.every((s) => typeof s === "string" && SIDEBAR_SECTIONS.has(s))
+  );
+}
+
+const HOST_SECTIONS = new Set(["queue", "boards", "qr"]);
+const HOST_CONFIG_KEYS = new Set([
+  "theme",
+  "sidebarPosition",
+  "sidebarWidth",
+  "showHistory",
+  "showBoards",
+  "showQr",
+  "qrPx",
+  "sectionOrder",
+]);
+
+/** Every host section exactly once — same contract as isValidSidebarOrder. */
+function isValidHostSectionOrder(value: unknown): boolean {
+  return (
+    Array.isArray(value) &&
+    value.length === HOST_SECTIONS.size &&
+    new Set(value).size === value.length &&
+    value.every((s) => typeof s === "string" && HOST_SECTIONS.has(s))
+  );
+}
+
+export function isValidHostConfig(value: unknown): value is HostConfig {
+  if (!value || typeof value !== "object") return false;
+  const e = value as Record<string, unknown>;
+  if (Object.keys(e).some((k) => !HOST_CONFIG_KEYS.has(k))) return false;
+  return (
+    typeof e.theme === "string" &&
+    DISPLAY_THEMES.has(e.theme) &&
+    typeof e.sidebarPosition === "string" &&
+    SIDEBAR_POSITIONS.has(e.sidebarPosition) &&
+    isIntInRange(e.sidebarWidth, SIDEBAR_WIDTH_MIN, SIDEBAR_WIDTH_MAX) &&
+    typeof e.showHistory === "boolean" &&
+    typeof e.showBoards === "boolean" &&
+    typeof e.showQr === "boolean" &&
+    isIntInRange(e.qrPx, QR_PX_MIN, QR_PX_MAX) &&
+    isValidHostSectionOrder(e.sectionOrder)
   );
 }
 

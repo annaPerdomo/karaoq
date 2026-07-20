@@ -1,5 +1,10 @@
 import { NextApiRequest, NextApiResponse } from "next";
-import { DisplayConfig, normalizeDisplayConfig } from "../../types";
+import {
+  DisplayConfig,
+  displayConfigChangedFields,
+  normalizeDisplayConfig,
+} from "../../types";
+import { trackEvent } from "../../../../lib/analytics";
 import { isValidDisplayConfig } from "../../../../lib/limits";
 import { getRoomsCollection } from "../../../../lib/mongodb";
 import { normalizeRoomId } from "../../../../lib/roomCode";
@@ -50,6 +55,14 @@ export default async function handler(
       res.status(404).json({ code: 404, message: "Room not found." });
       return;
     }
+    // With the designer's explicit Apply button, one event per save — low
+    // volume, and the changed-vs-default fields show which defaults hosts
+    // actually override.
+    await trackEvent(req, "display_config_saved", {
+      roomId,
+      changedFields: displayConfigChangedFields(config),
+      displayConfig: config,
+    });
     res.status(200).json({ code: 200, message: "Display config updated." });
   } catch (e) {
     console.error(e);

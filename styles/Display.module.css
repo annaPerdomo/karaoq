@@ -87,190 +87,6 @@
   }
 }
 
-/* Warm, energetic dusk — keeps classic's baseline glow/animation, recolored
-   into a deep wine background with a coral/gold accent pair. */
-.themeSunset {
-  --acc-a: #ff7a45;
-  --acc-b: #ffd23f;
-  --bg-primary: #2b1220;
-  --bg-secondary: #3a1a2c;
-  --disp-surface-rgb: 43, 18, 32;
-}
-
-/* Cool and calm — same restraint as minimal (no glow/animation), deep
-   blue-teal background. */
-.themeOcean {
-  --acc-a: #00b4d8;
-  --acc-b: #48cae4;
-  --bg-primary: #041c2c;
-  --bg-secondary: #06283a;
-  --disp-surface-rgb: 4, 28, 44;
-}
-
-.themeOcean .nowGlow {
-  background: var(--acc-a);
-  animation: none;
-}
-
-.themeOcean .waitingTitle {
-  background: none;
-  -webkit-text-fill-color: var(--text-primary);
-  color: var(--text-primary);
-}
-
-.themeOcean .readyTag {
-  text-shadow: none;
-}
-
-.themeOcean .nowDot {
-  box-shadow: 0 0 4px var(--acc-a);
-  animation: none;
-}
-
-.themeOcean .tapPlayIcon {
-  animation: none;
-}
-
-/* Elegant black + gold lounge — no glow, an espresso-brown background lets
-   the metallic accent carry the vibe. */
-.themeGold {
-  --acc-a: #d4af37;
-  --acc-b: #f4e5b2;
-  --bg-primary: #1a1410;
-  --bg-secondary: #241c15;
-  --disp-surface-rgb: 26, 20, 16;
-}
-
-.themeGold .nowGlow {
-  background: var(--acc-a);
-  animation: none;
-}
-
-.themeGold .waitingTitle {
-  background: none;
-  -webkit-text-fill-color: var(--text-primary);
-  color: var(--text-primary);
-}
-
-.themeGold .readyTag {
-  text-shadow: none;
-}
-
-.themeGold .nowDot {
-  box-shadow: 0 0 4px var(--acc-a);
-  animation: none;
-}
-
-.themeGold .tapPlayIcon {
-  animation: none;
-}
-
-/* Earthy green + amber — calm, no glow, deep pine background. */
-.themeForest {
-  --acc-a: #2f9e44;
-  --acc-b: #d9a441;
-  --bg-primary: #0d1f17;
-  --bg-secondary: #142a1f;
-  --disp-surface-rgb: 13, 31, 23;
-}
-
-.themeForest .nowGlow {
-  background: var(--acc-a);
-  animation: none;
-}
-
-.themeForest .waitingTitle {
-  background: none;
-  -webkit-text-fill-color: var(--text-primary);
-  color: var(--text-primary);
-}
-
-.themeForest .readyTag {
-  text-shadow: none;
-}
-
-.themeForest .nowDot {
-  box-shadow: 0 0 4px var(--acc-a);
-  animation: none;
-}
-
-.themeForest .tapPlayIcon {
-  animation: none;
-}
-
-/* Soft pink + baby blue — gentle, no glow, a lighter dusty-plum background
-   (rather than near-black like the others) so it actually reads as softer. */
-.themePastel {
-  --acc-a: #ff9ecb;
-  --acc-b: #9ecbff;
-  --bg-primary: #241b28;
-  --bg-secondary: #302336;
-  --disp-surface-rgb: 36, 27, 40;
-}
-
-.themePastel .nowGlow {
-  background: var(--acc-a);
-  animation: none;
-}
-
-.themePastel .waitingTitle {
-  background: none;
-  -webkit-text-fill-color: var(--text-primary);
-  color: var(--text-primary);
-}
-
-.themePastel .readyTag {
-  text-shadow: none;
-}
-
-.themePastel .nowDot {
-  box-shadow: 0 0 4px var(--acc-a);
-  animation: none;
-}
-
-.themePastel .tapPlayIcon {
-  animation: none;
-}
-
-/* Party — hot pink + violet on a near-black purple background, plus a slow
-   hue-cycle on the glow accents for a disco feel. Most energetic option;
-   respects reduced-motion like neon does. */
-.themeParty {
-  --acc-a: #ff2d78;
-  --acc-b: #7c3aed;
-  --bg-primary: #120b1f;
-  --bg-secondary: #1c1130;
-  --disp-surface-rgb: 18, 11, 31;
-}
-
-.themeParty .brand,
-.themeParty .waitingTitle {
-  animation: partyHue 6s linear infinite;
-}
-
-.themeParty .nowGlow {
-  animation: glowSlide 4s linear infinite, partyHue 6s linear infinite;
-}
-
-.themeParty .tapPlayIcon {
-  animation: tapPulse 2s ease-in-out infinite, partyHue 6s linear infinite;
-}
-
-@keyframes partyHue {
-  to {
-    filter: hue-rotate(360deg);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .themeParty .brand,
-  .themeParty .waitingTitle,
-  .themeParty .nowGlow,
-  .themeParty .tapPlayIcon {
-    animation: none;
-  }
-}
-
 /* ─── Sidebar on the left (host-selected) ─── The fixed bars (header, footer,
    now-playing) reserve the sidebar's width on its edge; flip every offset.
    --sb-w is set inline on .main from displayConfig.sidebarWidth. */
@@ -328,10 +144,18 @@
   right: 0;
 }
 
+/* Right-aligned control cluster: Customize + language, sitting together with a
+   small gap. Kept as a group so the header reads as brand-left, controls-right. */
+.headerActions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
 .headerLang {
-  /* The fullscreen button ahead of it carries margin-left:auto; this just adds
-     a small gap between the two right-aligned controls. */
-  margin-left: 0.5rem;
+  flex-shrink: 0;
 }
 
 .brand {
@@ -364,6 +188,40 @@
   margin-right: 0;
 }
 
+/* Fullscreen control — shown only while a video plays, in the lower corner of
+   the video (the player convention). Below the iframe's own bottom controls so
+   it never clashes with YouTube's chrome; quiet until hovered. */
+.videoFullscreen {
+  position: fixed;
+  bottom: 40px;
+  right: calc(var(--sb-w, 280px) + 20px);
+  z-index: 11;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  color: rgba(255, 255, 255, 0.6);
+  background: rgba(var(--disp-surface-rgb), 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(6px);
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.15s, color 0.15s, background 0.15s;
+}
+
+.videoFullscreen:hover {
+  opacity: 1;
+  color: #fff;
+  background: rgba(var(--disp-surface-rgb), 0.9);
+}
+
+/* Sidebar on the left (or absent): the video's free corner is the far right. */
+.videoFullscreenFarSide {
+  right: 20px;
+}
+
 .video {
   width: 100%;
   height: 100%;
@@ -371,29 +229,34 @@
   background: #000;
 }
 
-/* Fullscreen toggle in the header, sitting just before the language pill. Same
-   icon-button look as the app's other header controls (matches Host's .gearBtn);
-   margin-left:auto pushes it — and the language switcher after it — to the right
-   edge of the header bar. */
-.headerFullscreen {
-  margin-left: auto;
+/* Entry into edit mode — a quiet bordered pill in the header's control cluster.
+   Muted so it never competes with the show. */
+.headerEdit {
   display: flex;
   align-items: center;
-  justify-content: center;
-  width: 42px;
-  height: 42px;
+  gap: 0.4rem;
+  height: 36px;
+  padding: 0 0.7rem;
   border-radius: 10px;
   color: var(--text-muted);
   background: none;
-  border: none;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 0.78rem;
+  font-weight: 600;
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
 }
 
-.headerFullscreen:hover {
+.headerEdit:hover {
   background: rgba(255, 255, 255, 0.08);
   color: var(--text-primary);
 }
+
+.headerEdit > svg {
+  width: 15px;
+  height: 15px;
+}
+
 
 /* ─── Autoplay-blocked overlay (one tap unlocks playback) ─── */
 .tapOverlay {

@@ -21,6 +21,13 @@ import formatSongTitle from '../lib/songTitle';
 import DisplaySidebar from './display/DisplaySidebar';
 import NowPlayingBar from './display/NowPlayingBar';
 import AttractPanel from './display/AttractPanel';
+import p from '../styles/DisplayDesigner.module.css';
+import { useDisplayEdit } from './display/edit/useDisplayEdit';
+import { Spot, HideButton } from './display/edit/EditChrome';
+import { EditRail } from './display/edit/EditRail';
+import { EditOverlay } from './edit/EditOverlay';
+import { SAMPLE_QUEUE } from './display/edit/sampleContent';
+import { Icons } from './host/icons';
 
 const POLL_INTERVAL = 1500;
 // Liveness heartbeat cadence; the server treats a display as gone after ~75s
@@ -31,12 +38,6 @@ const THEME_CLASS: Record<DisplayTheme, string> = {
   classic: '',
   minimal: styles.themeMinimal,
   neon: styles.themeNeon,
-  sunset: styles.themeSunset,
-  ocean: styles.themeOcean,
-  gold: styles.themeGold,
-  forest: styles.themeForest,
-  pastel: styles.themePastel,
-  party: styles.themeParty,
 };
 
 const Display = (): React.ReactElement => {
@@ -203,6 +204,19 @@ const Display = (): React.ReactElement => {
 
   // Whether this screen is the room's playback surface right now.
   const playsVideoHere = playMode !== 'here';
+
+  // Edit mode: the page keeps running exactly as-is (video, polls, heartbeat)
+  // while the REAL elements grow drag handles and render from a staged draft.
+  // Nothing reaches the room until Save.
+  const edit = useDisplayEdit({
+    joinCode,
+    config: displayConfig,
+    boardsOn,
+    onSaved: (nextConfig, nextBoards) => {
+      setDisplayConfig(nextConfig);
+      setBoardsOn(nextBoards);
+    },
+  });
 
   React.useEffect(() => {
     if (!joinCode) return;
@@ -422,9 +436,15 @@ const Display = (): React.ReactElement => {
     ? queue.slice(activeIndex)
     : queue.slice(activeIndex + 1);
   const joinUrl = `${origin || 'https://karaoq.live'}/sing/${joinCode}`;
+  // Everything below renders from `view`: the staged draft while editing, the
+  // room's config otherwise. This is what makes edits appear on the real
+  // elements in place.
+  const view = edit.view;
   // Nothing left in the sidebar to show — reclaim its space for the video.
+  // While editing the sidebar always renders (its ghosts bring sections back).
   const sidebarCollapsed =
-    displayConfig.qrSize === 'hidden' && !displayConfig.showUpNext && !displayConfig.welcomeLine;
+    !edit.editing &&
+    view.qrSize === 'hidden' && !view.showUpNext && !view.welcomeLine && !boardsOn;
 
   if (!joinCode) {
     return <div className={styles.loading}><div className={styles.spinner} /></div>;
@@ -454,21 +474,35 @@ const Display = (): React.ReactElement => {
     );
   }
 
-  const themeClass = THEME_CLASS[displayConfig.theme];
+  const themeClass = THEME_CLASS[view.theme];
   // Only meaningful while the sidebar exists — a collapsed sidebar leaves the
   // default (right-anchored) offsets on the fixed bars.
   const sideClass =
-    !sidebarCollapsed && displayConfig.sidebarPosition === 'left' ? styles.sidebarLeft : '';
+    !sidebarCollapsed && view.sidebarPosition === 'left' ? styles.sidebarLeft : '';
+  // Flips the fixed edit chrome (now-bar slot, ghost strip) with the sidebar.
+  const editSideClass = edit.editing && view.sidebarPosition === 'left' ? p.edLeft : '';
 
   return (
     <main
-      className={`${styles.main} ${themeClass} ${sideClass}`}
-      style={{ '--sb-w': `${displayConfig.sidebarWidth}px` } as React.CSSProperties}
+      className={`${styles.main} ${themeClass} ${sideClass} ${editSideClass}`}
+      style={{ '--sb-w': `${view.sidebarWidth}px` } as React.CSSProperties}
+      onClick={edit.editing ? () => edit.setSelected(null) : undefined}
     >
       <header className={`${styles.header} ${sidebarCollapsed ? styles.headerNoSidebar : ''}`}>
         <div className={styles.brand}>KaraoQ</div>
-        <FullscreenToggle className={styles.headerFullscreen} />
-        <LanguageSwitcher className={styles.headerLang} />
+        <div className={styles.headerActions}>
+          {!edit.editing && !loading && (
+            <button
+              className={styles.headerEdit}
+              onClick={edit.enter}
+              title={t('display.customize')}
+            >
+              {Icons.brush}
+              <span>{t('display.customize')}</span>
+            </button>
+          )}
+          <LanguageSwitcher className={styles.headerLang} />
+        </div>
       </header>
 
       <div className={`${styles.videoArea} ${sidebarCollapsed ? styles.videoAreaNoSidebar : ''}`}>
@@ -499,15 +533,34 @@ const Display = (): React.ReactElement => {
               {formatSongTitle(currentSong.songTitle)}
             </p>
           </div>
-        ) : displayConfig.attractMode ? (
-          <AttractPanel
-            joinUrl={joinUrl}
-            joinCode={joinCode || ''}
-            origin={origin}
-            welcomeLine={displayConfig.welcomeLine}
-            queue={queue}
-            activeIndex={activeIndex}
-          />
+        ) : view.attractMode ? (
+          edit.editing ? (
+            <Spot
+              id="attract"
+              selected={edit.selected}
+              onSelect={edit.setSelected}
+              label={t('host.display.attract')}
+              className={p.fill}
+            >
+              <AttractPanel
+                joinUrl={joinUrl}
+                joinCode={joinCode || ''}
+                origin={origin}
+                welcomeLine={view.welcomeLine}
+                queue={queue}
+                activeIndex={activeIndex}
+              />
+            </Spot>
+          ) : (
+            <AttractPanel
+              joinUrl={joinUrl}
+              joinCode={joinCode || ''}
+              origin={origin}
+              welcomeLine={view.welcomeLine}
+              queue={queue}
+              activeIndex={activeIndex}
+            />
+          )
         ) : (
           <div className={styles.centerState}>
             <div className={styles.waitingIcon}>
@@ -551,7 +604,7 @@ const Display = (): React.ReactElement => {
           </button>
         )}
 
-        {reactionsOn && displayConfig.showReactions && visibleReactions.length > 0 && (
+        {reactionsOn && visibleReactions.length > 0 && (
           <div className={styles.reactionOverlay}>
             {visibleReactions.map((r) => (
               <div
@@ -568,12 +621,51 @@ const Display = (): React.ReactElement => {
             ))}
           </div>
         )}
+
       </div>
 
       {/* Now playing bar (only under the video — the here-mode banner above
-          already announces the singer) */}
-      {currentSong && isPlaying && playsVideoHere && displayConfig.showNowPlaying && (
-        <NowPlayingBar singerName={currentSong.userName} songTitle={currentSong.songTitle} />
+          already announces the singer). In edit mode it's force-shown with a
+          stand-in singer when nothing is playing, so it can be arranged. */}
+      {edit.editing ? (
+        view.showNowPlaying ? (
+          <Spot
+            id="nowPlaying"
+            selected={edit.selected}
+            onSelect={edit.setSelected}
+            label={t('host.display.nowPlaying')}
+            className={p.nowSlot}
+            positioned
+            chrome={
+              <div className={p.chrome}>
+                <HideButton
+                  title={t('host.display.hide')}
+                  onHide={() => edit.change({ showNowPlaying: false })}
+                />
+              </div>
+            }
+          >
+            <NowPlayingBar
+              singerName={currentSong?.userName ?? SAMPLE_QUEUE[0].userName}
+              songTitle={currentSong?.songTitle ?? SAMPLE_QUEUE[0].songTitle}
+            />
+          </Spot>
+        ) : (
+          <button
+            className={`${p.ghost} ${p.ghostStrip}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              edit.change({ showNowPlaying: true });
+              edit.setSelected('nowPlaying');
+            }}
+          >
+            {t('host.display.hiddenTap', { section: t('host.display.nowPlaying') })}
+          </button>
+        )
+      ) : (
+        currentSong && isPlaying && playsVideoHere && view.showNowPlaying && (
+          <NowPlayingBar singerName={currentSong.userName} songTitle={currentSong.songTitle} />
+        )
       )}
 
       <div className={styles.footer}>
@@ -583,16 +675,67 @@ const Display = (): React.ReactElement => {
         </a>
       </div>
 
+      {/* Fullscreen — a quiet control pinned to the lower corner of the screen
+          (the player convention), available whether or not a video is playing
+          so a freshly-cast display can go fullscreen before the first song.
+          Hidden only while editing, where it would fight the edit chrome. */}
+      {!edit.editing && (
+        <FullscreenToggle
+          className={`${styles.videoFullscreen} ${
+            sidebarCollapsed || view.sidebarPosition === 'left'
+              ? styles.videoFullscreenFarSide
+              : ''
+          }`}
+        />
+      )}
+
       {!sidebarCollapsed && (
         <DisplaySidebar
           joinUrl={joinUrl}
           joinCode={joinCode || ''}
           origin={origin}
           upNext={upNext}
-          boardsOn={boardsOn}
+          boardsOn={edit.boardsView}
           singWithMe={singWithMe}
           suggestions={suggestions}
-          displayConfig={displayConfig}
+          displayConfig={view}
+          edit={
+            edit.editing
+              ? {
+                  selected: edit.selected,
+                  onSelect: edit.setSelected,
+                  onChange: edit.change,
+                  onToggleBoards: edit.toggleBoards,
+                  dragging: edit.sideDragTarget !== null,
+                  dragHandleProps: edit.sideDragProps,
+                  widthDragProps: edit.widthDragProps,
+                }
+              : undefined
+          }
+        />
+      )}
+
+      {/* Edit-mode chrome: settings rail on the free edge, floating save bar,
+          and side drop-zones while the sidebar is being dragged across. */}
+      {edit.editing && (
+        <EditOverlay
+          rail={
+            <EditRail
+              config={view}
+              side={view.sidebarPosition === 'right' ? 'left' : 'right'}
+              boardsOn={edit.boardsView}
+              onToggleBoards={edit.toggleBoards}
+              selected={edit.selected}
+              onSelect={edit.setSelected}
+              onChange={edit.change}
+            />
+          }
+          dirty={edit.dirty}
+          saving={edit.saving}
+          saveFailed={edit.saveFailed}
+          onDiscard={edit.discard}
+          onSave={edit.save}
+          sideDragTarget={edit.sideDragTarget}
         />
       )}
     </main>
