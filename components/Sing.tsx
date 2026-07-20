@@ -14,7 +14,7 @@ import postReaction from '../app/queue/postReaction';
 import { CHEER_EMOJIS, REACTION_COOLDOWN_MS, isTextReaction } from '../app/queue/cheerConstants';
 import { startSessionTracking } from '../app/queue/trackSession';
 import { startVisiblePolling } from '../app/queue/pollWhileVisible';
-import { QueueEntry, Reaction } from '../pages/api/types';
+import { DisplayTheme, QueueEntry, Reaction, normalizeDisplayConfig } from '../pages/api/types';
 import { useT } from '../lib/i18n/I18nProvider';
 import { getStoredName, setStoredName } from '../lib/username';
 import LanguageSwitcher from './LanguageSwitcher';
@@ -23,6 +23,14 @@ import LanguageSwitcher from './LanguageSwitcher';
 const POLL_INTERVAL = 5000;
 // Global (not per-room) so a returning singer is remembered across any room.
 const NAME_STORAGE_KEY = 'karaoq_username';
+
+// Singer phones follow the display's host-selected theme (classic = base vars,
+// no class) so the room looks like one product, not three.
+const THEME_CLASS: Record<DisplayTheme, string> = {
+  classic: '',
+  minimal: styles.themeMinimal,
+  neon: styles.themeNeon,
+};
 
 const Sing = (): React.ReactElement => {
   const router = useRouter();
@@ -38,6 +46,7 @@ const Sing = (): React.ReactElement => {
   const [username, setUsername] = React.useState('');
   const [isPlaying, setIsPlaying] = React.useState(false);
   const [reactionsOn, setReactionsOn] = React.useState(true);
+  const [theme, setTheme] = React.useState<DisplayTheme>('classic');
   const [loading, setLoading] = React.useState(true);
   // Definitive "room doesn't exist" — terminal, stops polling.
   const [error, setError] = React.useState<string | null>(null);
@@ -177,6 +186,7 @@ const Sing = (): React.ReactElement => {
         setActiveIndex(room.activeVideoIndex);
         setIsPlaying(room.isPlaying ?? false);
         setReactionsOn(room.reactionsEnabled ?? true);
+        setTheme(normalizeDisplayConfig(room.displayConfig).theme);
         processReactions(room.reactions, false);
         setLoadError(false);
       }
@@ -204,6 +214,7 @@ const Sing = (): React.ReactElement => {
       setActiveIndex(room.activeVideoIndex);
       setIsPlaying(room.isPlaying ?? false);
       setReactionsOn(room.reactionsEnabled ?? true);
+      setTheme(normalizeDisplayConfig(room.displayConfig).theme);
       processReactions(room.reactions);
       // A successful poll also recovers a failed initial load.
       setLoadError(false);
@@ -279,6 +290,7 @@ const Sing = (): React.ReactElement => {
 
   const upcomingSongs = queue.slice(activeIndex);
   const currentSong = queue[activeIndex];
+  const mainClass = `${styles.main} ${THEME_CLASS[theme]}`;
 
   if (!joinCode) {
     return <div className={styles.loadingScreen}><div className={styles.spinner} /></div>;
@@ -286,7 +298,7 @@ const Sing = (): React.ReactElement => {
 
   if (error) {
     return (
-      <main className={styles.main}>
+      <main className={mainClass}>
         <div className={styles.errorCard}>
           <div className={styles.errorIcon}>😕</div>
           <h2>{t('sing.error.title')}</h2>
@@ -303,7 +315,7 @@ const Sing = (): React.ReactElement => {
   // by itself the moment the connection comes back.
   if (loadError) {
     return (
-      <main className={styles.main}>
+      <main className={mainClass}>
         <div className={styles.errorCard}>
           <div className={styles.errorIcon}>📶</div>
           <h2>{t('common.connectionErrorTitle')}</h2>
@@ -331,7 +343,7 @@ const Sing = (): React.ReactElement => {
   const quickCheerVisible = showingNowPlaying && reactionsOn && !mobileQueueOpen;
 
   return (
-    <main className={styles.main}>
+    <main className={mainClass}>
       <header className={styles.header}>
         <div className={styles.brand} onClick={() => router.push('/')}>
           KaraoQ

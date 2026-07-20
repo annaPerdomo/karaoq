@@ -1,4 +1,6 @@
 .main {
+  --acc-a: #ff2d78;
+  --acc-b: #00f0ff;
   height: 100dvh;
   height: 100vh; /* fallback for older browsers */
   display: flex;
@@ -9,6 +11,54 @@
   @supports (height: 100dvh) {
     height: 100dvh;
   }
+}
+
+/* ─── Theme presets — the display's palettes mirrored onto the singer's phone
+   (classic = the vars above, no class), same pure-CSS-custom-property approach
+   as Display.module.css / Host.module.css. Only this page's own chrome retints;
+   action buttons stay branded, matching the themed host page. */
+.themeMinimal {
+  --acc-a: #aab0c0;
+  --acc-b: #d7dae2;
+  --bg-primary: #0a0a0c;
+  --bg-secondary: #151517;
+}
+
+.themeMinimal .nowDot {
+  box-shadow: 0 0 4px var(--acc-a);
+  animation: none;
+}
+
+.themeMinimal .nowPlaying {
+  background: rgba(255, 255, 255, 0.04);
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+.themeMinimal .queueBadge,
+.themeMinimal .drawerBadge {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--acc-b);
+}
+
+/* Deepens to near-pure black so the pink/cyan accents read as brighter by
+   contrast — same trick as the display's neon theme. */
+.themeNeon {
+  --bg-primary: #050505;
+  --bg-secondary: #0d0d14;
+}
+
+.themeNeon .brand,
+.themeNeon .welcomeLogo {
+  text-shadow: 0 0 16px rgba(255, 45, 120, 0.55), 0 0 32px rgba(0, 240, 255, 0.35);
+}
+
+.themeNeon .nowSinger,
+.themeNeon .drawerSinger {
+  text-shadow: 0 0 14px rgba(0, 240, 255, 0.5);
+}
+
+.themeNeon .queueTitle {
+  text-shadow: 0 0 10px rgba(255, 45, 120, 0.6);
 }
 
 .loadingScreen {
@@ -39,7 +89,7 @@
   font-weight: 400;
   font-size: 1.4rem;
   letter-spacing: 2px;
-  background: linear-gradient(135deg, #ff2d78, #00f0ff);
+  background: linear-gradient(135deg, var(--acc-a, #ff2d78), var(--acc-b, #00f0ff));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -442,8 +492,8 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #ff2d78;
-  box-shadow: 0 0 8px #ff2d78;
+  background: var(--acc-a, #ff2d78);
+  box-shadow: 0 0 8px var(--acc-a, #ff2d78);
   animation: pulse 1.5s ease-in-out infinite;
   flex-shrink: 0;
 }
@@ -457,7 +507,7 @@
   font-size: 0.65rem;
   letter-spacing: 2px;
   text-transform: uppercase;
-  color: #ff2d78;
+  color: var(--acc-a, #ff2d78);
   font-weight: 700;
 }
 
@@ -474,7 +524,7 @@
 .nowSinger {
   font-size: 0.95rem;
   font-weight: 600;
-  color: #00f0ff;
+  color: var(--acc-b, #00f0ff);
 }
 
 /* Queue */
@@ -498,7 +548,7 @@
   font-size: 0.72rem;
   letter-spacing: 2px;
   text-transform: uppercase;
-  color: #ff2d78;
+  color: var(--acc-a, #ff2d78);
   font-weight: 600;
 }
 
@@ -506,7 +556,7 @@
   font-size: 0.65rem;
   font-weight: 700;
   background: rgba(255, 45, 120, 0.2);
-  color: #ff2d78;
+  color: var(--acc-a, #ff2d78);
   padding: 0.15rem 0.5rem;
   border-radius: 10px;
 }
@@ -555,7 +605,7 @@
 
 .queueSinger {
   font-size: 0.72rem;
-  color: #00f0ff;
+  color: var(--acc-b, #00f0ff);
 }
 
 .emptyQueue {
@@ -589,7 +639,7 @@
   width: 28px;
   height: 28px;
   border: 3px solid rgba(255, 255, 255, 0.1);
-  border-top-color: #ff2d78;
+  border-top-color: var(--acc-a, #ff2d78);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -919,7 +969,7 @@
   .drawerSinger {
     font-size: 0.85rem;
     font-weight: 600;
-    color: #00f0ff;
+    color: var(--acc-b, #00f0ff);
     flex-shrink: 0;
   }
 
@@ -934,7 +984,7 @@
     font-size: 0.68rem;
     font-weight: 600;
     background: rgba(255, 45, 120, 0.2);
-    color: #ff2d78;
+    color: var(--acc-a, #ff2d78);
     padding: 0.15rem 0.5rem;
     border-radius: 10px;
     flex-shrink: 0;
@@ -1082,7 +1132,7 @@
   font-weight: 400;
   font-size: 2.2rem;
   letter-spacing: 2px;
-  background: linear-gradient(135deg, #ff2d78, #00f0ff);
+  background: linear-gradient(135deg, var(--acc-a, #ff2d78), var(--acc-b, #00f0ff));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -1124,7 +1174,7 @@
 }
 
 .welcomeInput:focus {
-  border-color: #00f0ff;
+  border-color: var(--acc-b, #00f0ff);
   box-shadow: 0 0 0 3px rgba(0, 240, 255, 0.12);
 }
 
