@@ -83,6 +83,10 @@ export default async function handler(
       boardClaimed,
       boardSuggestedByDay,
       addsByVia,
+      displaySaves,
+      displayRoomsCustomized,
+      displayFieldCounts,
+      displayThemeCounts,
     ] = await Promise.all([
       events.countDocuments({ type: "room_created" }),
 
@@ -432,6 +436,37 @@ export default async function handler(
           { $sort: { count: -1 } },
         ])
         .toArray(),
+
+      // Display customization: total applies, rooms that moved anything off
+      // the defaults, then which settings they move (by unique rooms, so one
+      // fiddly host can't skew it).
+      events.countDocuments({ type: "display_config_saved" }),
+      events
+        .distinct("roomId", {
+          type: "display_config_saved",
+          "changedFields.0": { $exists: true },
+        })
+        .then((rooms) => rooms.length),
+      events
+        .aggregate([
+          { $match: { type: "display_config_saved" } },
+          { $unwind: "$changedFields" },
+          { $group: { _id: { field: "$changedFields", room: "$roomId" } } },
+          { $group: { _id: "$_id.field", count: { $sum: 1 } } },
+          { $sort: { count: -1 } },
+        ])
+        .toArray(),
+
+      // The theme each customizing room last applied.
+      events
+        .aggregate([
+          { $match: { type: "display_config_saved", "displayConfig.theme": { $exists: true } } },
+          { $sort: { timestamp: -1 } },
+          { $group: { _id: "$roomId", theme: { $first: "$displayConfig.theme" } } },
+          { $group: { _id: "$theme", count: { $sum: 1 } } },
+          { $sort: { count: -1 } },
+        ])
+        .toArray(),
     ]);
 
     const sessionStats = sessionData[0] || {
@@ -530,6 +565,12 @@ export default async function handler(
         reactionsByEmoji,
         hosts: retention.hosts,
         repeatHosts: retention.repeatHosts,
+      },
+      display: {
+        saves: displaySaves,
+        roomsCustomized: displayRoomsCustomized,
+        changedFields: displayFieldCounts,
+        themes: displayThemeCounts,
       },
       meta: {
         timezone: tz,

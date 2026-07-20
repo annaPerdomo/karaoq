@@ -1,4 +1,5 @@
 import { NextApiRequest, NextApiResponse } from "next";
+import { trackEvent } from "../../../../lib/analytics";
 import { getRoomsCollection } from "../../../../lib/mongodb";
 import { normalizeRoomId } from "../../../../lib/roomCode";
 
@@ -32,6 +33,12 @@ export default async function handler(
         { id: roomId },
         { $set: { boardsOnDisplay: enabled } }
       );
+      // boardsOnDisplay lives outside DisplayConfig but is still a display
+      // default hosts override — only enabling counts as a change.
+      await trackEvent(req, "display_config_saved", {
+        roomId,
+        changedFields: enabled ? ["boardsOnDisplay"] : [],
+      });
       res.status(200).json({ code: 200, message: "Boards on display toggled." });
     }
   } catch (e) {

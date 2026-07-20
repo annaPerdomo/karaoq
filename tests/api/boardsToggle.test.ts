@@ -5,6 +5,8 @@ import { createMockReq } from "../helpers/mockRequest";
 const mockCollection = {
   findOne: vi.fn(),
   updateOne: vi.fn(),
+  // The analytics event write lands here too — same mocked client.
+  insertOne: vi.fn(),
 };
 
 vi.mock("mongodb", () => ({

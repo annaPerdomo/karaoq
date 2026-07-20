@@ -5,12 +5,12 @@
   display: block;
   width: 100%;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(255, 215, 0, 0.03);
+  background: rgba(0, 240, 255, 0.03);
   text-align: left;
 }
 
 .summaryBtn {
-  border: 1px solid rgba(255, 215, 0, 0.14);
+  border: 1px solid rgba(0, 240, 255, 0.14);
   border-radius: 10px;
   padding: 0;
   cursor: pointer;
@@ -20,8 +20,8 @@
 }
 
 .summaryBtn:hover {
-  background: rgba(255, 215, 0, 0.07);
-  border-color: rgba(255, 215, 0, 0.3);
+  background: rgba(0, 240, 255, 0.07);
+  border-color: rgba(0, 240, 255, 0.3);
 }
 
 .title {
@@ -29,7 +29,7 @@
   font-weight: 600;
   letter-spacing: 1.2px;
   text-transform: uppercase;
-  color: #ffd700;
+  color: #00f0ff;
   display: flex;
   align-items: center;
   gap: 0.4rem;
@@ -40,8 +40,8 @@
 .count {
   font-size: 0.6rem;
   font-weight: 700;
-  background: rgba(255, 215, 0, 0.18);
-  color: #ffd700;
+  background: rgba(0, 240, 255, 0.18);
+  color: #00f0ff;
   padding: 0.1rem 0.4rem;
   border-radius: 10px;
   letter-spacing: 0;
@@ -91,7 +91,7 @@
 
 .meta {
   font-size: 0.72rem;
-  color: #ffd700;
+  color: #00f0ff;
 }
 
 .names {
@@ -121,6 +121,6 @@
   padding: 0.5rem 1rem 0.6rem;
   font-size: 0.7rem;
   font-weight: 600;
-  color: #ffd700;
+  color: #00f0ff;
   text-align: center;
 }

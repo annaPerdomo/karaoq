@@ -78,6 +78,12 @@ interface AnalyticsData {
       byDay: DayCount[];
     };
   };
+  display?: {
+    saves: number;
+    roomsCustomized: number;
+    changedFields: { _id: string; count: number }[];
+    themes: { _id: string; count: number }[];
+  };
   meta?: {
     timezone: string;
     generatedAt: string;
@@ -117,6 +123,23 @@ const VIA_LABELS: Record<string, string> = {
 
 // Mongo's $dayOfWeek: 1 = Sunday … 7 = Saturday
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+// qrSize is the coarse bucket kept in sync with qrPx, so it's dropped from the
+// chart rather than double-counting QR resizes.
+const DISPLAY_FIELD_LABELS: Record<string, string> = {
+  theme: 'Theme',
+  qrPx: 'QR size',
+  showUpNext: 'Up-next list on/off',
+  upNextCount: 'Up-next depth',
+  showNowPlaying: 'Now-playing bar',
+  showReactions: 'Cheer overlay',
+  sidebarPosition: 'Sidebar side',
+  sidebarWidth: 'Sidebar width',
+  sidebarOrder: 'Sidebar order',
+  welcomeLine: 'Welcome message',
+  attractMode: 'Idle promo screen',
+  boardsOnDisplay: 'Boards on TV',
+};
 
 // Vercel geo headers are URL-encoded, but stray '%' sequences in raw values
 // would make decodeURIComponent throw and take down the whole dashboard.
@@ -266,7 +289,7 @@ const Analytics = (): React.ReactElement => {
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [data, setData] = React.useState<AnalyticsData | null>(null);
-  const [activeTab, setActiveTab] = React.useState<'overview' | 'geo' | 'songs' | 'suggestions' | 'social' | 'rooms'>('overview');
+  const [activeTab, setActiveTab] = React.useState<'overview' | 'geo' | 'songs' | 'suggestions' | 'social' | 'display' | 'rooms'>('overview');
   const [rooms, setRooms] = React.useState<RoomRow[]>([]);
   const [roomsHasMore, setRoomsHasMore] = React.useState(false);
   const [roomsLoading, setRoomsLoading] = React.useState(false);
@@ -461,7 +484,7 @@ const Analytics = (): React.ReactElement => {
     );
   }
 
-  const { overview, charts, geo, rankings, devices, suggestions, funnel, engagement, social } = data;
+  const { overview, charts, geo, rankings, devices, suggestions, funnel, engagement, social, display } = data;
 
   const mobileCount = devices.find((d) => d._id === 'Mobile')?.count || 0;
   const desktopCount = devices.find((d) => d._id === 'Desktop')?.count || 0;
@@ -495,7 +518,7 @@ const Analytics = (): React.ReactElement => {
       )}
 
       <nav className={styles.tabs}>
-        {(['overview', 'geo', 'songs', 'suggestions', 'social', 'rooms'] as const).map((tab) => (
+        {(['overview', 'geo', 'songs', 'suggestions', 'social', 'display', 'rooms'] as const).map((tab) => (
           <button
             key={tab}
             className={`${styles.tab} ${activeTab === tab ? styles.tabActive : ''}`}
@@ -838,6 +861,48 @@ const Analytics = (): React.ReactElement => {
             </div>
             <h3 className={styles.sectionTitle}>Songs Requested (Last 30 Days)</h3>
             <BarChart data={fillDays(social.board.byDay, 30)} color="#a78bfa" />
+          </section>
+        </div>
+      )}
+
+      {activeTab === 'display' && display && (
+        <div className={styles.tabContent}>
+          <div className={styles.statGrid}>
+            <StatCard label="Display Applies" value={display.saves} />
+            <StatCard
+              label="Rooms That Customized"
+              value={display.roomsCustomized}
+              sub="changed anything from the defaults"
+            />
+          </div>
+
+          <section className={styles.section}>
+            <h2 className={styles.sectionTitle}>Settings Changed From Default (by rooms)</h2>
+            {display.changedFields.length === 0 ? (
+              <p className={styles.empty}>No display customizations yet</p>
+            ) : (
+              <BarChart
+                data={display.changedFields
+                  .filter((f) => f._id !== 'qrSize')
+                  .map((f) => ({
+                    label: DISPLAY_FIELD_LABELS[f._id] ?? f._id,
+                    value: f.count,
+                  }))}
+                color="#f472b6"
+              />
+            )}
+          </section>
+
+          <section className={styles.section}>
+            <h2 className={styles.sectionTitle}>Theme Rooms Ended On</h2>
+            {display.themes.length === 0 ? (
+              <p className={styles.empty}>No themes applied yet</p>
+            ) : (
+              <BarChart
+                data={display.themes.map((d) => ({ label: d._id, value: d.count }))}
+                color="#60a5fa"
+              />
+            )}
           </section>
         </div>
       )}
