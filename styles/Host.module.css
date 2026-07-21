@@ -510,6 +510,38 @@
   color: #40dca0;
 }
 
+/* Miniature of the gear panel's .toggle so the pill states the mode rather
+   than just tinting itself. Same box in both states — no layout shift. */
+.fairSwitch {
+  width: 20px;
+  height: 11px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.22);
+  transition: background 0.15s ease;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.fairSwitchOn {
+  background: #40dca0;
+}
+
+.fairSwitchThumb {
+  position: absolute;
+  top: 1.5px;
+  left: 1.5px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  transition: transform 0.15s ease;
+}
+
+.fairSwitchOn .fairSwitchThumb {
+  transform: translateX(9px);
+}
+
 /* ─── Queue stats ─── */
 .queueStats {
   display: flex;

@@ -212,6 +212,14 @@ export function QueueSidebar({
             >
               {Icons.shuffle}
               {t('host.settings.fair')}
+              {/* A switch, not a colour change: the label reads the same either
+                  way, so without this an OFF pill looks like a badge saying the
+                  queue IS fair. Mirrors the gear panel's toggle. */}
+              <span
+                className={`${styles.fairSwitch} ${fairMode ? styles.fairSwitchOn : ""}`}
+              >
+                <span className={styles.fairSwitchThumb} />
+              </span>
             </button>
           </div>
 
