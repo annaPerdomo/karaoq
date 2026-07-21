@@ -1,3 +1,5 @@
+import { getActiveLocale } from "../../lib/i18n/activeLocale";
+
 const HEARTBEAT_INTERVAL = 60000; // 60 seconds
 
 function randomId(): string {
@@ -39,10 +41,16 @@ export function startSessionTracking(
   const clientId = getClientId();
 
   const send = () => {
+    // Read the locale per beat, not once at start: detection resolves in a
+    // post-mount effect (after this tracker starts) and the switcher can change
+    // it mid-room, so each beat overwrites the session doc with what's on
+    // screen now. The last write wins, which is what "the language this room
+    // was run in" means.
+    const { locale, source } = getActiveLocale();
     fetch("/api/analytics/session", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ roomId, userName, role, clientId }),
+      body: JSON.stringify({ roomId, userName, role, clientId, locale, localeSource: source }),
     }).catch(() => {});
   };
 

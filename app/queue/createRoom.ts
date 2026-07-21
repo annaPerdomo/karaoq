@@ -1,3 +1,5 @@
+import { getActiveLocale, LOCALE_HEADER } from "../../lib/i18n/activeLocale";
+
 export default async function createRoom(
   roomId: string,
   // The play token this device stored the last time it started a song here.
@@ -6,10 +8,14 @@ export default async function createRoom(
   priorPlayToken?: string | null
 ): Promise<boolean> {
   try {
-    const resp = await fetch(`/api/queue/${roomId}`, {
-      method: "POST",
-      headers: priorPlayToken ? { "x-play-token": priorPlayToken } : undefined,
-    });
+    // Tag the create with the UI language so room_created records the language
+    // the host set the room up in — the one metric sessions can't give us for
+    // rooms nobody ever sings in.
+    const headers: Record<string, string> = {
+      [LOCALE_HEADER]: getActiveLocale().locale,
+    };
+    if (priorPlayToken) headers["x-play-token"] = priorPlayToken;
+    const resp = await fetch(`/api/queue/${roomId}`, { method: "POST", headers });
     return resp.ok;
   } catch {
     return false;

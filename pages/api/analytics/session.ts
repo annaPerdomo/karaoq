@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { trackSessionHeartbeat } from "../../../lib/analytics";
+import { asLocale, isLocaleSource } from "../../../lib/i18n/activeLocale";
 import { MAX_ENTRY_ID_LENGTH, MAX_NAME_LENGTH, rateLimit } from "../../../lib/limits";
 
 export default async function handler(
@@ -11,7 +12,14 @@ export default async function handler(
     return;
   }
 
-  let body: { roomId?: string; userName?: string; role?: string; clientId?: string };
+  let body: {
+    roomId?: string;
+    userName?: string;
+    role?: string;
+    clientId?: string;
+    locale?: string;
+    localeSource?: string;
+  };
   try {
     body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
     if (!body || typeof body !== "object") throw new Error();
@@ -21,6 +29,13 @@ export default async function handler(
   }
 
   const { roomId, userName, role, clientId } = body;
+
+  // Language fields are dropped rather than rejected when unrecognized: an
+  // unknown locale is a client we no longer ship, not a reason to lose the
+  // heartbeat. Narrowing to the supported set also keeps the free-text value
+  // out of the session doc.
+  const locale = asLocale(body.locale) ?? undefined;
+  const localeSource = isLocaleSource(body.localeSource) ? body.localeSource : undefined;
 
   // Length caps + rate limit: session docs key on roomId:clientId:role, so
   // uncapped ids let a script mint unlimited MB-scale docs on the free tier.
@@ -50,7 +65,9 @@ export default async function handler(
     roomId,
     userName,
     role as "host" | "singer" | "display",
-    typeof clientId === "string" ? clientId : undefined
+    typeof clientId === "string" ? clientId : undefined,
+    locale,
+    localeSource
   );
   res.status(200).json({ ok: true });
 }

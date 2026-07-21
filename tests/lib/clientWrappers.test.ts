@@ -22,7 +22,12 @@ describe("Client API wrappers", () => {
       const result = await createRoom("ABC12");
 
       expect(result).toBe(true);
-      expect(mockFetch).toHaveBeenCalledWith("/api/queue/ABC12", { method: "POST" });
+      // The locale header tags room_created with the language the host set the
+      // room up in.
+      expect(mockFetch).toHaveBeenCalledWith("/api/queue/ABC12", {
+        method: "POST",
+        headers: { "x-karaoq-locale": "en" },
+      });
     });
 
     it("returns false on failure", async () => {

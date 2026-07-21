@@ -1,6 +1,8 @@
 import type { NextApiRequest } from "next";
 import type { DisplayConfig, HostConfig } from "../pages/api/types";
 import { getAnalyticsDb } from "./mongodb";
+import type { Locale } from "./i18n/config";
+import { asLocale, LOCALE_HEADER, type LocaleSource } from "./i18n/activeLocale";
 
 export type EventType =
   | "room_created"
@@ -44,6 +46,10 @@ export interface AnalyticsEvent {
   displayConfig?: DisplayConfig;
   // host_config_saved: same idea for the host control surface's layout.
   hostConfig?: HostConfig;
+  // UI language the client was in when the event fired, from the
+  // x-karaoq-locale header. Absent on events sent before this existed and on
+  // call sites that don't set the header.
+  locale?: Locale;
 }
 
 // A heartbeat fires every 60s while a tab is open. If more than this elapses
@@ -78,6 +84,14 @@ export function isAnalyticsExempt(req: NextApiRequest): boolean {
   return LOCAL_HOST_PATTERN.test(host) || LOCAL_HOST_PATTERN.test(forwardedHost);
 }
 
+// Clients tag requests with the UI language they're rendering in (LOCALE_HEADER
+// lives in lib/i18n/activeLocale so client bundles can set it without pulling
+// this server-only module in). Read at the write choke point below so any call
+// site that sets the header gets the language recorded for free.
+export function localeFromRequest(req: NextApiRequest): Locale | null {
+  return asLocale(headerString(req.headers[LOCALE_HEADER]));
+}
+
 function extractGeo(req: NextApiRequest) {
   return {
     country: headerString(req.headers["x-vercel-ip-country"]),
@@ -95,11 +109,13 @@ export async function trackEvent(
   try {
     const db = await getAnalyticsDb();
     const geo = extractGeo(req);
+    const locale = localeFromRequest(req);
     const event: AnalyticsEvent = {
       type,
       timestamp: new Date(),
       userAgent: headerString(req.headers["user-agent"]),
       ...geo,
+      ...(locale ? { locale } : {}),
       ...data,
     };
     await db.collection("analytics_events").insertOne(event);
@@ -114,7 +130,11 @@ export async function trackSessionHeartbeat(
   roomId: string,
   userName: string,
   role: "host" | "singer" | "display",
-  clientId?: string
+  clientId?: string,
+  // The UI language this tab is rendering in, and how it got there. Written on
+  // every beat so a mid-room switch is reflected — see trackSession.ts.
+  locale?: Locale,
+  localeSource?: LocaleSource
 ): Promise<void> {
   if (isAnalyticsExempt(req)) return;
   try {
@@ -152,6 +172,8 @@ export async function trackSessionHeartbeat(
       },
     };
     if (clientId !== undefined) set.clientId = { $literal: clientId };
+    if (locale) set.locale = { $literal: locale };
+    if (localeSource) set.localeSource = { $literal: localeSource };
     if (geo.country) set.country = { $literal: geo.country };
     if (geo.region) set.region = { $literal: geo.region };
     if (geo.city) set.city = { $literal: geo.city };

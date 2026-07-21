@@ -9,6 +9,7 @@ import {
   localeForCountry,
 } from './config';
 import { readCachedCountry } from '../../app/queue/useCountry';
+import { setActiveLocale, LocaleSource } from './activeLocale';
 
 const STORAGE_KEY = 'karaoq_lang';
 
@@ -49,20 +50,26 @@ function interpolate(
  * override and a stored pick from the language switcher. Unlike the browser
  * language or a geo guess, these must win even on a server-localized route.
  */
-function readExplicitLocale(): Locale | null {
+/**
+ * A resolved locale plus the signal it came from, so analytics can tell a
+ * deliberate pick apart from a guess.
+ */
+type Resolved = { locale: Locale; source: LocaleSource };
+
+function readExplicitLocale(): Resolved | null {
   if (typeof window === 'undefined') return null;
   try {
     const override = new URLSearchParams(window.location.search).get('lang');
-    if (isLocale(override)) return override;
+    if (isLocale(override)) return { locale: override, source: 'url' };
   } catch {}
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (isLocale(stored)) return stored;
+    if (isLocale(stored)) return { locale: stored, source: 'stored' };
   } catch {}
   return null;
 }
 
-function readInitialLocale(): Locale | null {
+function readInitialLocale(): Resolved | null {
   if (typeof window === 'undefined') return null;
   const explicit = readExplicitLocale();
   if (explicit) return explicit;
@@ -71,11 +78,11 @@ function readInitialLocale(): Locale | null {
   const nav = matchNavigatorLocale(
     navigator.languages ?? (navigator.language ? [navigator.language] : [])
   );
-  if (nav) return nav;
+  if (nav) return { locale: nav, source: 'browser' };
   // Cached geo country from a prior visit (useCountry writes this; the shared
   // reader applies its 7-day TTL so a stale guess can't pick the language).
   const geo = localeForCountry(readCachedCountry() ?? undefined);
-  if (geo) return geo;
+  if (geo) return { locale: geo, source: 'geo' };
   return null;
 }
 
@@ -120,8 +127,27 @@ export function I18nProvider({
     (initialLocale && initialCatalog) || en
   );
 
-  const applyLocale = React.useCallback((next: Locale) => {
+  // Seed the analytics mirror on the first client render rather than waiting for
+  // the effect below: a page that creates its room from a mount effect runs
+  // *before* this parent's effect (children go first), and would otherwise tag
+  // the room with the default language. Only touches a module variable, never
+  // React state, so it can't affect what this render outputs — and it's skipped
+  // on the server, whose module state is shared across requests.
+  const mirrorSeeded = React.useRef(false);
+  if (typeof window !== 'undefined' && !mirrorSeeded.current) {
+    mirrorSeeded.current = true;
+    if (initialLocale) setActiveLocale(initialLocale, 'route');
+    else {
+      const early = readInitialLocale();
+      if (early) setActiveLocale(early.locale, early.source);
+    }
+  }
+
+  const applyLocale = React.useCallback((next: Locale, source: LocaleSource) => {
     setLocaleState(next);
+    // Keep the module-level mirror in step so the session heartbeat reports the
+    // language actually on screen, including after a mid-session switch.
+    setActiveLocale(next, source);
     if (typeof document !== 'undefined') document.documentElement.lang = next;
     if (next === 'en') {
       setCatalog(en);
@@ -144,18 +170,21 @@ export function I18nProvider({
   React.useEffect(() => {
     if (seeded) {
       if (typeof document !== 'undefined') document.documentElement.lang = initialLocale!;
+      setActiveLocale(initialLocale!, 'route');
       // A seeded (SEO) route renders in its server locale, but the visitor's
       // explicit choice — ?lang= or a stored switcher pick — still wins:
       // someone who landed on /cs and switched to English must not be Czech
       // again next visit. Applied post-mount so SSR and hydration both stay
       // in the server locale (no mismatch), same as the detection below.
       const explicit = readExplicitLocale();
-      if (explicit && explicit !== initialLocale) applyLocale(explicit);
+      if (explicit && explicit.locale !== initialLocale) {
+        applyLocale(explicit.locale, explicit.source);
+      }
       return;
     }
     const resolved = readInitialLocale();
     if (resolved) {
-      applyLocale(resolved);
+      applyLocale(resolved.locale, resolved.source);
       return;
     }
     // No explicit/browser signal — try geo once as a last resort.
@@ -165,7 +194,7 @@ export function I18nProvider({
       .then((d: { country: string | null }) => {
         if (cancelled) return;
         const geo = localeForCountry(d.country);
-        if (geo) applyLocale(geo);
+        if (geo) applyLocale(geo, 'geo');
       })
       .catch(() => {});
     return () => {
@@ -178,7 +207,7 @@ export function I18nProvider({
       try {
         localStorage.setItem(STORAGE_KEY, next);
       } catch {}
-      applyLocale(next);
+      applyLocale(next, 'switch');
     },
     [applyLocale]
   );

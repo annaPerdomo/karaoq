@@ -103,3 +103,55 @@ describe("exempt requests skip analytics writes", () => {
     expect(mockUpdateOne).toHaveBeenCalledOnce();
   });
 });
+
+describe("language capture", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("records the locale header on events", async () => {
+    mockInsertOne.mockResolvedValue({});
+    const req = createMockReq({
+      headers: { host: "karaoq.live", "x-karaoq-locale": "ja" },
+    });
+    await trackEvent(req, "room_created", { roomId: "ROOM1" });
+    expect(mockInsertOne.mock.calls[0][0]).toMatchObject({
+      type: "room_created",
+      locale: "ja",
+    });
+  });
+
+  it("omits locale entirely when the header is missing", async () => {
+    mockInsertOne.mockResolvedValue({});
+    const req = createMockReq({ headers: { host: "karaoq.live" } });
+    await trackEvent(req, "room_created", { roomId: "ROOM1" });
+    expect(mockInsertOne.mock.calls[0][0]).not.toHaveProperty("locale");
+  });
+
+  it("ignores a locale header we don't ship a catalog for", async () => {
+    mockInsertOne.mockResolvedValue({});
+    const req = createMockReq({
+      headers: { host: "karaoq.live", "x-karaoq-locale": "xx" },
+    });
+    await trackEvent(req, "room_created", { roomId: "ROOM1" });
+    expect(mockInsertOne.mock.calls[0][0]).not.toHaveProperty("locale");
+  });
+
+  it("stores the session's locale and how it was picked", async () => {
+    mockUpdateOne.mockResolvedValue({});
+    const req = createMockReq({ headers: { host: "karaoq.live" } });
+    await trackSessionHeartbeat(req, "ROOM1", "Anna", "host", "c1", "ko", "switch");
+    const [, pipeline] = mockUpdateOne.mock.calls[0];
+    expect(pipeline[0].$set).toMatchObject({
+      locale: { $literal: "ko" },
+      localeSource: { $literal: "switch" },
+    });
+  });
+
+  it("leaves session language fields unset when the client sends none", async () => {
+    mockUpdateOne.mockResolvedValue({});
+    const req = createMockReq({ headers: { host: "karaoq.live" } });
+    await trackSessionHeartbeat(req, "ROOM1", "Anna", "host", "c1");
+    const [, pipeline] = mockUpdateOne.mock.calls[0];
+    expect(pipeline[0].$set).not.toHaveProperty("locale");
+    expect(pipeline[0].$set).not.toHaveProperty("localeSource");
+  });
+});
