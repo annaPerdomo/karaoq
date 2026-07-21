@@ -1,6 +1,27 @@
 import * as React from 'react';
 import { useHandleDrag } from './useHandleDrag';
 
+/** Drop `id` into the visible run after `above` (the visible sections the
+ * pointer has already cleared), leaving hidden sections in the slots they
+ * already hold. Appending hidden ones instead would make a ghost — an unset
+ * welcome line, say — teleport to the bottom on any drag, and that rewritten
+ * order is what Save persists. Always a permutation of `order`, which the
+ * endpoint's exactly-once check requires. */
+export function reorderSections<S extends string>(
+  order: S[],
+  visible: Record<S, boolean>,
+  id: S,
+  above: S[]
+): S[] {
+  const others = order.filter((s) => s !== id && visible[s]);
+  // Normalise `above` to real, visible, non-lifted sections so the result is a
+  // permutation whatever the caller passes.
+  const cleared = others.filter((s) => above.includes(s));
+  const run = [...cleared, id, ...others.filter((s) => !cleared.includes(s))];
+  let i = 0;
+  return order.map((s) => (visible[s] || s === id ? run[i++] : s));
+}
+
 /** Drag-to-reorder for a vertical stack of named sections — the display
  * sidebar's QR/welcome/up-next/boards and the host sidebar's queue/boards/QR.
  *
@@ -21,17 +42,12 @@ export function useSectionReorder<S extends string>(opts: {
     onMove: (_dx, _dy, e) => {
       const id = liftedRef.current;
       if (!id) return;
-      const others = order.filter((s) => s !== id && visible[s]);
-      const above = others.filter((s) => {
+      const above = order.filter((s) => {
+        if (s === id || !visible[s]) return false;
         const rect = els.current[s]?.getBoundingClientRect();
-        return rect && e.clientY > rect.top + rect.height / 2;
+        return !!rect && e.clientY > rect.top + rect.height / 2;
       });
-      const next: S[] = [
-        ...above,
-        id,
-        ...others.filter((s) => !above.includes(s)),
-        ...order.filter((s) => !visible[s]),
-      ];
+      const next = reorderSections(order, visible, id, above);
       if (next.join() !== order.join()) onReorder(next);
     },
     onEnd: () => {
