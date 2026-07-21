@@ -4,6 +4,7 @@ import {
   arrivalOrder,
   fairOrder,
   fairInsertIndex,
+  singerKey,
   withArrivalTimes,
 } from "../../lib/fairQueue";
 
@@ -59,16 +60,64 @@ describe("fairOrder", () => {
     expect(fairOrder([a1b, b1b, b2b, a2b])).toEqual([a1b, b1b, b2b, a2b]);
   });
 
-  it("treats names differing only by case as different singers", () => {
-    const [anna1, ANNA, anna2] = [entry("anna"), entry("ANNA"), entry("anna")];
-    // "ANNA" is its own singer: round 0, so it stays ahead of anna's round-1 song.
-    expect(fairOrder([anna1, anna2, ANNA])).toEqual([anna1, ANNA, anna2]);
+  it("does not let a case change buy a fresh turn", () => {
+    // Requeueing as "ANNA" is the same singer, so it stays a round-1 song and
+    // Bob's first still goes ahead of it.
+    const [anna1, ANNA, bob] = [entry("anna"), entry("ANNA"), entry("Bob")];
+    expect(fairOrder([anna1, ANNA, bob])).toEqual([anna1, bob, ANNA]);
   });
 
   it("groups by trimmed name", () => {
     const [a1, a2, b1] = [entry("Anna"), entry(" Anna "), entry("Bob")];
     // " Anna " is round 1 of Anna, so Bob's round-0 song moves ahead of it.
     expect(fairOrder([a1, a2, b1])).toEqual([a1, b1, a2]);
+  });
+});
+
+describe("singerKey — the anti-gaming fold", () => {
+  const same = (a: string, b: string) => singerKey(a) === singerKey(b);
+
+  it("folds the near-miss names a singer would retype to skip a turn", () => {
+    expect(same("Anna", "anna")).toBe(true);
+    expect(same("Anna", "ANNA")).toBe(true);
+    expect(same("Anna", "A n n a")).toBe(true);
+    expect(same("Anna", "  Anna  ")).toBe(true);
+    expect(same("Anna", "Anna.")).toBe(true);
+    expect(same("Anna", "*Anna*")).toBe(true);
+    expect(same("Anna", "A-n-n-a")).toBe(true);
+    expect(same("José", "Jose")).toBe(true);
+  });
+
+  it("keeps genuinely different singers apart", () => {
+    expect(same("Anna", "Anne")).toBe(false);
+    expect(same("Anna", "Bob")).toBe(false);
+    expect(same("Anna1", "Anna2")).toBe(false);
+  });
+
+  it("does not collapse non-Latin names into one singer", () => {
+    // A naive [^a-z0-9] strip would fold every one of these to "" and put the
+    // whole room on a single rotation slot.
+    expect(singerKey("ゆき")).not.toBe("");
+    expect(singerKey("현우")).not.toBe("");
+    expect(singerKey("Дмитрий")).not.toBe("");
+    expect(same("ゆき", "現")).toBe(false);
+    expect(same("현우", "지민")).toBe(false);
+    expect(same("Дмитрий", "Ольга")).toBe(false);
+    // ...and they still fold their own spacing/punctuation.
+    expect(same("ゆき", " ゆき!")).toBe(true);
+  });
+
+  it("keeps symbol-only names distinct instead of bucketing them", () => {
+    expect(same("🎤", "🎸")).toBe(false);
+    expect(same("🎤", " 🎤 ")).toBe(true);
+  });
+
+  it("counts a renamed singer as one singer in the rotation", () => {
+    // The whole point: three spellings, one turn each round.
+    const songs = [entry("Anna"), entry("anna"), entry("A n n a"), entry("Bob")];
+    expect(fairOrder(songs).map((e) => e.userName)).toEqual([
+      "Anna", "Bob", "anna", "A n n a",
+    ]);
   });
 });
 
@@ -204,9 +253,16 @@ describe("fairInsertIndex", () => {
     expect(fairInsertIndex(sorted, " A ")).toBe(2);
   });
 
-  it("treats case-different names as new singers", () => {
-    const sorted = [entry("a"), entry("a")];
-    // "A" has no songs yet → round 0 → before a's round-1 song at index 1.
-    expect(fairInsertIndex(sorted, "A")).toBe(1);
+  it("gives a case-changed name the same slot as the original", () => {
+    const sorted = [entry("a"), entry("b"), entry("a")];
+    // "A" is just "a", who already has two upcoming songs → round 2 → tail,
+    // not a free round-0 slot near the front.
+    expect(fairInsertIndex(sorted, "A")).toBe(3);
+  });
+
+  it("ignores punctuation and spacing when matching the singer", () => {
+    const sorted = [entry("Anna"), entry("Bob")];
+    // "A.n n.a" folds to Anna, who already has one song → round 1 → tail.
+    expect(fairInsertIndex(sorted, "A.n n.a")).toBe(2);
   });
 });

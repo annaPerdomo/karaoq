@@ -15,18 +15,56 @@ import { QueueEntry } from "../pages/api/types";
 // queued when. Reading the order back out of `addedAt` means off→on→off lands
 // on exactly the two arrangements every time, however often the host flips it.
 //
-// Identity is the exact trimmed userName — renaming a singer changes their
-// grouping, which is accepted; nothing re-sorts on rename. An entry's "round"
-// is how many of that singer's songs were queued earlier: everyone's first is
-// round 0, their second is round 1. Round-robin order = ascending round, queue
-// time within a round. That is what spaces a singer out — queue two in a row
-// and the second becomes round 1, which sits behind the round 0 of everyone
-// who joins before it plays.
+// Identity is the singer's name folded through singerKey (below) — renaming a
+// singer changes their grouping, which is accepted; nothing re-sorts on
+// rename. An entry's "round" is how many of that singer's songs were queued
+// earlier: everyone's first is round 0, their second is round 1. Round-robin
+// order = ascending round, queue time within a round. That is what spaces a
+// singer out — queue two in a row and the second becomes round 1, which sits
+// behind the round 0 of everyone who joins before it plays.
 //
 // Both helpers operate on `upcoming = queue.slice(activeVideoIndex)`. The
 // entry at index 0 is the song on stage: it counts toward its singer's rounds
 // (so whoever is singing can't also own the next slot) but it never moves.
 // History (queue.slice(0, activeVideoIndex)) never participates — turns are done.
+
+// Built with `new RegExp` rather than literals: tsconfig targets es5, which
+// rejects the `u` flag at compile time even though every runtime this ships
+// to (Node, and browsers since 2018) supports Unicode property escapes.
+const COMBINING_MARKS = new RegExp("\\p{M}+", "gu");
+const NOT_LETTER_OR_DIGIT = new RegExp("[^\\p{L}\\p{N}]+", "gu");
+
+/**
+ * The identity two queue entries are compared on: same key, same singer.
+ *
+ * Singers have no accounts — the name is free text they can retype between
+ * songs — so the cheapest way to skip the rotation is to queue again as
+ * "anna", "Anna." or "A n n a" and land back at round 0. Folding case,
+ * accents, punctuation and spacing away closes off that whole family of
+ * near-miss names without needing an identity model.
+ *
+ * The fold is deliberately Unicode-aware: a plain [^a-z0-9] strip would erase
+ * Japanese, Korean and Cyrillic names down to the empty string and collapse
+ * every one of them into a single singer. Only marks, punctuation and spacing
+ * are removed; letters and digits of every script survive.
+ *
+ * This is a grouping key only — the displayed name is never touched. Two real
+ * people whose names differ only by spacing or case (rare) will share a
+ * rotation slot; the host's inline rename is the escape hatch.
+ */
+export function singerKey(userName: string): string {
+  const folded = userName
+    // Split accents off their base letters so José and Jose fold together.
+    .normalize("NFKD")
+    .replace(COMBINING_MARKS, "")
+    .toLowerCase()
+    // Anything that is not a letter or digit goes, spacing included: the
+    // spaces in "A n n a" are exactly the trick this is here to defeat.
+    .replace(NOT_LETTER_OR_DIGIT, "");
+  // A name made entirely of symbols ("🎤") folds to nothing. Keep those
+  // distinct from each other rather than bucketing every one together.
+  return folded || userName.trim();
+}
 
 /** Stable sort by a numeric key. The index tiebreak makes stability explicit
  * rather than relying on the engine's sort. */
@@ -55,7 +93,7 @@ function arrivalKeys(list: QueueEntry[]): number[] {
 function roundsOf(upcoming: QueueEntry[]): number[] {
   const counts = new Map<string, number>();
   return upcoming.map((e) => {
-    const name = e.userName.trim();
+    const name = singerKey(e.userName);
     const round = counts.get(name) ?? 0;
     counts.set(name, round + 1);
     return round;
@@ -103,9 +141,9 @@ export function fairOrder(upcoming: QueueEntry[]): QueueEntry[] {
 
   // The song on stage is its singer's round 0, so their next song starts at
   // round 1 and falls in behind everyone else's first.
-  const counts = new Map<string, number>([[current.userName.trim(), 1]]);
+  const counts = new Map<string, number>([[singerKey(current.userName), 1]]);
   const rounds = byArrival.map((e) => {
-    const name = e.userName.trim();
+    const name = singerKey(e.userName);
     const round = counts.get(name) ?? 0;
     counts.set(name, round + 1);
     return round;
@@ -120,8 +158,8 @@ export function fairOrder(upcoming: QueueEntry[]): QueueEntry[] {
  * of its round, behind same-round entries that were queued earlier. Never
  * returns 0 for a non-empty list, so the song on stage is never displaced. */
 export function fairInsertIndex(upcoming: QueueEntry[], userName: string): number {
-  const name = userName.trim();
-  const k = upcoming.filter((e) => e.userName.trim() === name).length;
+  const name = singerKey(userName);
+  const k = upcoming.filter((e) => singerKey(e.userName) === name).length;
   const rounds = roundsOf(upcoming);
   for (let i = 0; i < upcoming.length; i++) {
     if (rounds[i] > k) return i;
