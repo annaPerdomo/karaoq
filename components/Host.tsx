@@ -22,6 +22,7 @@ import {
 } from "../app/queue/roomChannel";
 import setReactionsEnabled from "../app/queue/setReactionsEnabled";
 import setFairMode from "../app/queue/setFairMode";
+import { fairInsertIndex } from "../lib/fairQueue";
 import postReaction from "../app/queue/postReaction";
 import { REACTION_COOLDOWN_MS } from "../app/queue/cheerConstants";
 import { startSessionTracking } from "../app/queue/trackSession";
@@ -753,28 +754,46 @@ const Host = ({
     }
   }
 
-  // Write-first like toggleReactions — but a successful ENABLE means the
-  // server just re-sorted the upcoming queue, so refetch and adopt its order
-  // (never re-sort locally) and broadcast the fresh state to displays.
+  // Write-first like toggleReactions — but either direction re-sorts the
+  // upcoming queue server-side (on = round-robin, off = back to queue time),
+  // so always refetch and adopt the server's order rather than re-sorting
+  // locally, then broadcast the fresh state to displays.
   async function toggleFairMode() {
     if (!joinCode) return;
     const next = !fairMode;
+    pausePolling();
     const ok = await setFairMode(joinCode, next);
-    if (!ok) return;
+    if (!ok) {
+      await resyncAfterFailedWrite();
+      return;
+    }
     setFairModeState(next);
     showToast(next ? t('host.toast.fairOn') : t('host.toast.fairOff'));
-    if (next) {
-      const room = await getRoom(joinCode);
-      if (typeof room !== "string") {
-        applyRoomState(room);
-        broadcast(room.queue, room.activeVideoIndex, room.isPlaying ?? false);
-      }
+    const room = await getRoom(joinCode);
+    if (typeof room !== "string") {
+      applyRoomState(room);
+      broadcast(room.queue, room.activeVideoIndex, room.isPlaying ?? false);
     }
   }
 
   function handleSongAdded(entry: QueueEntry) {
     pausePolling();
-    const newQueue = [...queue, entry];
+    // Mirror where the server just put it. In fair mode the song lands at the
+    // singer's round-robin slot, so appending here would show the host a
+    // bottom-of-queue song that silently jumps once polling resumes.
+    let newQueue: QueueEntry[];
+    if (fairMode) {
+      const upcoming = queue.slice(activeIndex);
+      const at = fairInsertIndex(upcoming, entry.userName);
+      newQueue = [
+        ...queue.slice(0, activeIndex),
+        ...upcoming.slice(0, at),
+        entry,
+        ...upcoming.slice(at),
+      ];
+    } else {
+      newQueue = [...queue, entry];
+    }
     setQueue(newQueue);
     broadcast(newQueue, activeIndex, isPlaying);
     showToast(t('host.toast.added', { title: formatSongTitle(entry.songTitle) }));
@@ -1190,6 +1209,7 @@ const Host = ({
           historyItems={historyItems}
           uniqueSingers={uniqueSingers}
           fairMode={fairMode}
+          onToggleFairMode={toggleFairMode}
           editingId={editingId}
           onDragStart={pausePolling}
           onDragEnd={handleDragEnd}

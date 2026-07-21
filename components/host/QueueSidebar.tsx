@@ -46,6 +46,7 @@ export function QueueSidebar({
   historyItems,
   uniqueSingers,
   fairMode,
+  onToggleFairMode,
   editingId,
   onDragStart,
   onDragEnd,
@@ -94,8 +95,9 @@ export function QueueSidebar({
   upNext: QueueEntry[];
   historyItems: QueueEntry[];
   uniqueSingers: number;
-  /** Fair rotation is on — show the badge next to the Queue tab. */
+  /** Fair rotation is on — drives the queue-header toggle's state. */
   fairMode: boolean;
+  onToggleFairMode: () => void;
   editingId: string | null;
   onDragStart: () => void;
   onDragEnd: (event: DragEndEvent) => void;
@@ -159,11 +161,6 @@ export function QueueSidebar({
             {upNext.length > 0 && (
               <span className={styles.sidebarBadge}>{upNext.length}</span>
             )}
-            {fairMode && (
-              <span className={styles.fairBadge}>
-                {t('host.queue.fairBadge')}
-              </span>
-            )}
           </button>
           {showHistory && (
             <button
@@ -196,13 +193,27 @@ export function QueueSidebar({
 
       {sidebarTab === "queue" && (
         <>
-          {upNext.length > 0 && (
-            <div className={styles.queueStats}>
-              <span>{tn('host.stats.songs', upNext.length)}</span>
-              <span className={styles.statDot} />
-              <span>{tn('host.stats.singers', uniqueSingers)}</span>
-            </div>
-          )}
+          {/* The fair-rotation switch lives with the queue it reorders, not
+              behind the gear: it is a run-time control the host flips while
+              reading the room, so it has to be one tap from the list. */}
+          <div className={styles.queueStats}>
+            {upNext.length > 0 && (
+              <>
+                <span>{tn('host.stats.songs', upNext.length)}</span>
+                <span className={styles.statDot} />
+                <span>{tn('host.stats.singers', uniqueSingers)}</span>
+              </>
+            )}
+            <button
+              className={`${styles.fairToggle} ${fairMode ? styles.fairToggleOn : ""}`}
+              onClick={onToggleFairMode}
+              aria-pressed={fairMode}
+              title={fairMode ? t('host.settings.fairOn') : t('host.settings.fairOff')}
+            >
+              {Icons.shuffle}
+              {t('host.settings.fair')}
+            </button>
+          </div>
 
           {upNext.length > 0 ? (
             <DndContext

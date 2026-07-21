@@ -298,4 +298,12 @@ export interface QueueEntry {
   userName: string;
   songTitle: string;
   videoId: string;
+  /**
+   * When the song was queued, as epoch ms. This is what "sorted by queue
+   * time" means: fair rotation reorders the array, so array position stops
+   * being a record of arrival and turning the mode back off would have
+   * nothing to restore. Optional because entries queued before this field
+   * existed don't have it — see lib/fairQueue for how those are ordered.
+   */
+  addedAt?: number;
 }

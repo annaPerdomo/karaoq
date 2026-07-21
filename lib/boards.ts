@@ -3,6 +3,7 @@ import type { NextApiRequest } from "next";
 import { v4 as uuidv4 } from "uuid";
 
 import { trackEvent } from "./analytics";
+import { fairPushSpec } from "./fairQueue";
 import { MAX_NAME_LENGTH, MAX_QUEUE_LENGTH } from "./limits";
 import type { QueueEntry, Room } from "../pages/api/types";
 
@@ -44,18 +45,36 @@ export async function queueSingWithMeIfReady(
       userName: creditNames(post.joinedSingers),
       songTitle: `🎤 ${post.songTitle}`,
       videoId: post.videoId,
+      addedAt: Date.now(),
     };
-    const queueResult = await collection.updateOne(
-      {
-        id: roomId,
-        singWithMe: { $elemMatch: { id: postId, queued: { $ne: true } } },
-        $expr: { $lt: [{ $size: "$queue" }, MAX_QUEUE_LENGTH] },
-      },
-      {
-        $set: { "singWithMe.$.queued": true, lastActivity: new Date() },
+    const graduate = {
+      id: roomId,
+      singWithMe: { $elemMatch: { id: postId, queued: { $ne: true } } },
+      $expr: { $lt: [{ $size: "$queue" }, MAX_QUEUE_LENGTH] },
+    };
+    const markQueued = {
+      $set: { "singWithMe.$.queued": true, lastActivity: new Date() },
+    };
+    // A group song lands in the rotation under its combined credit name, so
+    // it takes a turn like any singer. Falls back to a plain append if the
+    // CAS loses — never drop the song on the floor.
+    let queueResult = fresh.fairMode
+      ? await collection.updateOne(
+          { ...graduate, queue: fresh.queue },
+          {
+            ...markQueued,
+            $push: {
+              queue: fairPushSpec(fresh.queue, fresh.activeVideoIndex, queuedEntry),
+            },
+          }
+        )
+      : { matchedCount: 0 };
+    if (queueResult.matchedCount === 0) {
+      queueResult = await collection.updateOne(graduate, {
+        ...markQueued,
         $push: { queue: queuedEntry },
-      }
-    );
+      });
+    }
     if (queueResult.matchedCount > 0) {
       queued = true;
       trackEvent(req, "singwithme_queued", {

@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { trackEvent } from "../../../../lib/analytics";
-import { fairInsertIndex } from "../../../../lib/fairQueue";
+import { fairPushSpec } from "../../../../lib/fairQueue";
 import { isValidQueueEntry, MAX_QUEUE_LENGTH, rateLimit } from "../../../../lib/limits";
 import { getRoomsCollection } from "../../../../lib/mongodb";
 import { normalizeRoomId } from "../../../../lib/roomCode";
@@ -32,12 +32,17 @@ export default async function handler(
   }
 
   const { entryId, userName, videoId, songTitle } = body;
-  const entry = { id: entryId, userName, videoId, songTitle };
+  const base = { id: entryId, userName, videoId, songTitle };
 
-  if (!isValidQueueEntry(entry)) {
+  if (!isValidQueueEntry(base)) {
     res.status(400).json({ code: 400, message: "Invalid request." });
     return;
   }
+
+  // Stamped here, never taken from the body: queue time decides the running
+  // order (and the order restored when fair mode is turned off), so a client
+  // must not be able to backdate itself to the front of the queue.
+  const entry = { ...base, addedAt: Date.now() };
 
   if (!rateLimit(req, "song-add", 15, 30_000)) {
     res.status(429).json({ code: 429, message: "Too many songs added, slow down." });
@@ -88,13 +93,12 @@ export default async function handler(
           // host enables the mode) — manual host reordering always wins and is
           // never re-sorted. The current song counts toward rounds but never
           // moves; history is untouched (see lib/fairQueue).
-          const upcoming = fresh.queue.slice(fresh.activeVideoIndex);
-          const absIdx =
-            fresh.activeVideoIndex + fairInsertIndex(upcoming, entry.userName);
           const insert = await collection.updateOne(
             { id: roomId, queue: fresh.queue, $expr: cap },
             {
-              $push: { queue: { $each: [entry], $position: absIdx } },
+              $push: {
+                queue: fairPushSpec(fresh.queue, fresh.activeVideoIndex, entry),
+              },
               $set: { lastActivity: new Date() },
             }
           );

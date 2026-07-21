@@ -192,6 +192,24 @@ export const Icons = {
       <path d="M5 15.5h8" />
     </svg>
   ),
+  shuffle: (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 18 18"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M12.5 3.5h3v3" />
+      <path d="M12.5 14.5h3v-3" />
+      <path d="M2.5 4h2.2c1 0 1.9.5 2.5 1.3l3.6 5.4c.6.8 1.5 1.3 2.5 1.3h2.2" />
+      <path d="M2.5 14h2.2c1 0 1.9-.5 2.5-1.3l.9-1.3" />
+      <path d="M10.4 6.6l.4-.6c.6-.8 1.5-1.3 2.5-1.3h2.2" />
+    </svg>
+  ),
   users: (
     <svg
       width="16"

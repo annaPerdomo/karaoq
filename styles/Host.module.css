@@ -464,18 +464,50 @@
   letter-spacing: 0;
 }
 
-/* Static "fair rotation" tag next to the Queue tab while the mode is on.
-   Sized like the count badge so toggling it causes no layout shift. */
-.fairBadge {
-  font-size: 0.55rem;
+/* One-tap fair-rotation switch, sitting on the right of the queue stats row.
+   Both states keep the same box so flipping it never shifts the row. */
+.fairToggle {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.62rem;
   font-weight: 700;
-  background: rgba(64, 220, 160, 0.16);
-  color: #40dca0;
-  padding: 0.1rem 0.4rem;
-  border-radius: 10px;
+  font-family: inherit;
   letter-spacing: 0.02em;
   text-transform: uppercase;
   white-space: nowrap;
+  cursor: pointer;
+  padding: 0.22rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.55);
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.fairToggle svg {
+  width: 12px;
+  height: 12px;
+}
+
+.fairToggle:hover {
+  border-color: rgba(255, 255, 255, 0.28);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.fairToggleOn {
+  background: rgba(64, 220, 160, 0.16);
+  border-color: rgba(64, 220, 160, 0.45);
+  color: #40dca0;
+}
+
+.fairToggleOn:hover {
+  border-color: rgba(64, 220, 160, 0.7);
+  color: #40dca0;
 }
 
 /* ─── Queue stats ─── */

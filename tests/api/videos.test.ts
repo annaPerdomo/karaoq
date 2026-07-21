@@ -74,6 +74,8 @@ describe("POST /api/queue/[id]/videos - Add song to queue", () => {
             userName: "Anna",
             videoId: "dQw4w9WgXcQ",
             songTitle: "Never Gonna Give You Up",
+            // Server-stamped queue time, never taken from the body.
+            addedAt: expect.any(Number),
           },
         },
         $set: { lastActivity: expect.any(Date) },
@@ -123,7 +125,15 @@ describe("POST /api/queue/[id]/videos - Add song to queue", () => {
       {
         $push: {
           queue: {
-            $each: [{ id: "b2", userName: "B", videoId: "dQw4w9WgXcQ", songTitle: "Song b2" }],
+            $each: [
+              {
+                id: "b2",
+                userName: "B",
+                videoId: "dQw4w9WgXcQ",
+                songTitle: "Song b2",
+                addedAt: expect.any(Number),
+              },
+            ],
             $position: 5,
           },
         },
@@ -198,7 +208,15 @@ describe("POST /api/queue/[id]/videos - Add song to queue", () => {
     expect(mockCollection.updateOne).toHaveBeenLastCalledWith(
       { id: "ROOM1", $expr: { $lt: [{ $size: "$queue" }, MAX_QUEUE_LENGTH] } },
       {
-        $push: { queue: { id: "e1", userName: "A", videoId: "dQw4w9WgXcQ", songTitle: "Song" } },
+        $push: {
+          queue: {
+            id: "e1",
+            userName: "A",
+            videoId: "dQw4w9WgXcQ",
+            songTitle: "Song",
+            addedAt: expect.any(Number),
+          },
+        },
         $set: { lastActivity: expect.any(Date) },
       }
     );

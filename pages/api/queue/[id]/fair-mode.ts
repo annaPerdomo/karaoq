@@ -1,13 +1,13 @@
 import { NextApiRequest, NextApiResponse } from "next";
-import { fairOrder } from "../../../../lib/fairQueue";
+import { arrivalOrder, fairOrder, withArrivalTimes } from "../../../../lib/fairQueue";
 import { getRoomsCollection } from "../../../../lib/mongodb";
 import { normalizeRoomId } from "../../../../lib/roomCode";
 
-// Toggle fair rotation. Turning it OFF just clears the flag — the current
-// order stays as-is. Turning it ON also re-sorts the upcoming songs once,
-// atomically: the queue-equality filter makes the write optimistic (same CAS
-// style as reorder.ts), so a concurrent add/remove just retries the sort on
-// a fresh snapshot instead of clobbering it.
+// Toggle fair rotation. Both directions re-sort the upcoming songs once,
+// atomically: ON spaces singers out round-robin, OFF restores the order they
+// were queued in. The queue-equality filter makes the write optimistic (same
+// CAS style as reorder.ts), so a concurrent add/remove just retries the sort
+// on a fresh snapshot instead of clobbering it.
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -30,19 +30,6 @@ export default async function handler(
   try {
     const collection = await getRoomsCollection();
 
-    if (!enabled) {
-      const result = await collection.updateOne(
-        { id: roomId },
-        { $set: { fairMode: false, lastActivity: new Date() } }
-      );
-      if (result.matchedCount === 0) {
-        res.status(404).json({ code: 404, message: "Room not found." });
-        return;
-      }
-      res.status(200).json({ code: 200, message: "Fair rotation toggled." });
-      return;
-    }
-
     for (let attempt = 0; attempt < 3; attempt++) {
       const room = await collection.findOne({ id: roomId });
       if (!room) {
@@ -50,16 +37,22 @@ export default async function handler(
         return;
       }
 
+      // Both directions re-sort, so the toggle is a true undo: ON spaces the
+      // singers out, OFF puts the room back in the order songs were queued.
       // History never moves or counts; the current song joins the round
       // counting but stays put (see lib/fairQueue for why that's guaranteed).
       const split = room.activeVideoIndex;
+      // Record arrival times first: for a room queued before `addedAt`
+      // existed, the array order IS the arrival order right up until the
+      // line below reorders it, and then it is gone for good.
+      const upcoming = withArrivalTimes(room.queue.slice(split));
       const newQueue = room.queue
         .slice(0, split)
-        .concat(fairOrder(room.queue.slice(split)));
+        .concat(enabled ? fairOrder(upcoming) : arrivalOrder(upcoming));
 
       const result = await collection.updateOne(
         { id: roomId, queue: room.queue },
-        { $set: { queue: newQueue, fairMode: true, lastActivity: new Date() } }
+        { $set: { queue: newQueue, fairMode: enabled, lastActivity: new Date() } }
       );
       if (result.matchedCount > 0) {
         res.status(200).json({ code: 200, message: "Fair rotation toggled." });
