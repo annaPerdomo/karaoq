@@ -11,6 +11,10 @@ interface SidebarLayout {
   sidebarWidth: number;
 }
 
+/** How long a fresh save outranks the server, covering the slowest poll
+ * (the host's 3s) plus the write's own round trip. */
+export const SAVE_SETTLE_MS = 5000;
+
 /**
  * Edit-mode state for a live, customizable page — the engine behind both the
  * display's and the host's Customize modes.
@@ -44,6 +48,8 @@ export function useConfigEdit<C extends SidebarLayout, Id extends string>(opts: 
   const [selected, setSelected] = React.useState<Id | null>(null);
   const [saving, setSaving] = React.useState(false);
   const [saveFailed, setSaveFailed] = React.useState(false);
+  // What we last wrote, held until the server echoes it back. See `settled`.
+  const [justSaved, setJustSaved] = React.useState<C | null>(null);
   // In-flight sidebar side-flip: where the sidebar would land if the drag
   // ended now (drop zones render while non-null).
   const [sideDragTarget, setSideDragTarget] = React.useState<SidebarPosition | null>(null);
@@ -55,16 +61,39 @@ export function useConfigEdit<C extends SidebarLayout, Id extends string>(opts: 
     []
   );
 
-  const dirty = editing && (!same(draft, config) || extraDirty);
+  // A poll already in flight when we save resolves with the PRE-save config, so
+  // for one poll interval the server would tell us to revert. Trust what we just
+  // wrote until the server echoes it back — the same bargain Display makes for
+  // play/pause via localPauseRef. Without this the page visibly reverts after
+  // Save, and the draft re-syncs to the stale config, so re-entering Customize
+  // and saving again silently undoes the edit.
+  const settled = justSaved ?? config;
+
+  React.useEffect(() => {
+    if (!justSaved) return;
+    if (same(config, justSaved)) {
+      setJustSaved(null);
+      return;
+    }
+    // Never shield forever: if the echo never comes, the server wins again.
+    const id = setTimeout(() => setJustSaved(null), SAVE_SETTLE_MS);
+    return () => clearTimeout(id);
+  }, [config, justSaved, same]);
+
+  const dirty = editing && (!same(draft, settled) || extraDirty);
 
   // A poll can refresh the room config mid-edit (e.g. a co-host change).
   // Follow it while the draft is untouched; otherwise the in-progress edits
   // win and save() overwrites.
-  const lastConfig = React.useRef(config);
+  const lastConfig = React.useRef(settled);
   React.useEffect(() => {
-    setDraft((prev) => (same(prev, lastConfig.current) ? config : prev));
-    lastConfig.current = config;
-  }, [config, same]);
+    // Read the previous value into a local BEFORE updating the ref: the updater
+    // below can run during a later render, by which point the ref already holds
+    // the new config and every draft would look pristine.
+    const prev = lastConfig.current;
+    lastConfig.current = settled;
+    setDraft((d) => (same(d, prev) ? settled : d));
+  }, [settled, same]);
 
   // Closing the tab would silently drop staged edits.
   React.useEffect(() => {
@@ -75,7 +104,7 @@ export function useConfigEdit<C extends SidebarLayout, Id extends string>(opts: 
   }, [dirty]);
 
   function reset() {
-    setDraft(config);
+    setDraft(settled);
     setSelected(null);
     setSaveFailed(false);
     onReset?.();
@@ -102,6 +131,7 @@ export function useConfigEdit<C extends SidebarLayout, Id extends string>(opts: 
     const ok = await persist(joinCode, draft);
     setSaving(false);
     if (ok) {
+      setJustSaved(draft);
       onSaved(draft);
       setSelected(null);
       setEditing(false);
@@ -115,7 +145,7 @@ export function useConfigEdit<C extends SidebarLayout, Id extends string>(opts: 
   const sideDragProps: React.ComponentProps<'button'> = {
     onPointerDown: (e) => {
       e.preventDefault();
-      (e.target as HTMLElement).setPointerCapture(e.pointerId);
+      e.currentTarget.setPointerCapture(e.pointerId);
       setSideDragTarget(draft.sidebarPosition);
     },
     onPointerMove: (e) => {
@@ -144,8 +174,9 @@ export function useConfigEdit<C extends SidebarLayout, Id extends string>(opts: 
 
   return {
     editing,
-    /** What the page should render from: the draft while editing. */
-    view: editing ? draft : config,
+    /** What the page should render from: the draft while editing, and our own
+     * just-saved values until the server catches up. */
+    view: editing ? draft : settled,
     draft,
     dirty,
     saving,

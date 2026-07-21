@@ -1,8 +1,7 @@
 import * as React from 'react';
 import setDisplayConfig from '../../../app/queue/setDisplayConfig';
-import setBoardsOnDisplay from '../../../app/queue/setBoardsOnDisplay';
 import { DEFAULT_DISPLAY_CONFIG, DisplayConfig } from '../../../pages/api/types';
-import { useConfigEdit } from '../../edit/useConfigEdit';
+import { SAVE_SETTLE_MS, useConfigEdit } from '../../edit/useConfigEdit';
 import { SectionId } from './EditChrome';
 
 const CONFIG_KEYS = Object.keys(DEFAULT_DISPLAY_CONFIG) as (keyof DisplayConfig)[];
@@ -21,34 +20,59 @@ export function useDisplayEdit(opts: {
 }) {
   const { joinCode, config, boardsOn, onSaved } = opts;
   const [boardsDraft, setBoardsDraft] = React.useState(boardsOn);
+  // Mirrors useConfigEdit's justSaved for the one field living outside the
+  // config, so a poll predating our write can't revert it either.
+  const savedBoards = React.useRef(boardsOn);
+  const [settling, setSettling] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!settling) return;
+    if (boardsOn === savedBoards.current) {
+      setSettling(false);
+      return;
+    }
+    const id = setTimeout(() => setSettling(false), SAVE_SETTLE_MS);
+    return () => clearTimeout(id);
+  }, [boardsOn, settling]);
+
+  const settledBoards = settling ? savedBoards.current : boardsOn;
 
   const edit = useConfigEdit<DisplayConfig, SectionId>({
     joinCode,
     config,
     keys: CONFIG_KEYS,
-    extraDirty: boardsDraft !== boardsOn,
-    onReset: () => setBoardsDraft(boardsOn),
-    save: async (code, draft) => {
-      const configOk = await setDisplayConfig(code, draft);
-      // Only write boards when it actually changed — one fewer round trip.
-      const boardsOk =
-        boardsDraft === boardsOn || (await setBoardsOnDisplay(code, boardsDraft));
-      return configOk && boardsOk;
+    extraDirty: boardsDraft !== settledBoards,
+    onReset: () => setBoardsDraft(settledBoards),
+    // One save = one write = one analytics event. Sending boards along only
+    // when it changed keeps untouched rooms out of the boardsOnDisplay stat.
+    save: (code, draft) =>
+      setDisplayConfig(
+        code,
+        draft,
+        boardsDraft === settledBoards ? undefined : boardsDraft
+      ),
+    onSaved: (draft) => {
+      savedBoards.current = boardsDraft;
+      setSettling(true);
+      onSaved(draft, boardsDraft);
     },
-    onSaved: (draft) => onSaved(draft, boardsDraft),
   });
 
   // A poll can refresh boardsOn mid-edit; follow it while the draft is
   // untouched, mirroring how the config draft follows the server.
   const lastBoards = React.useRef(boardsOn);
   React.useEffect(() => {
-    setBoardsDraft((prev) => (prev === lastBoards.current ? boardsOn : prev));
+    // Capture the previous value before updating the ref — the updater can run
+    // during a later render, when the ref already holds the new value and a
+    // pristine check would wrongly pass (and quietly drop a staged edit).
+    const prev = lastBoards.current;
     lastBoards.current = boardsOn;
+    setBoardsDraft((d) => (d === prev ? boardsOn : d));
   }, [boardsOn]);
 
   return {
     ...edit,
-    boardsView: edit.editing ? boardsDraft : boardsOn,
+    boardsView: edit.editing ? boardsDraft : settledBoards,
     toggleBoards: () => setBoardsDraft((v) => !v),
   };
 }
