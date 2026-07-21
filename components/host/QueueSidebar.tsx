@@ -45,6 +45,7 @@ export function QueueSidebar({
   upNext,
   historyItems,
   uniqueSingers,
+  fairMode,
   editingId,
   onDragStart,
   onDragEnd,
@@ -93,6 +94,8 @@ export function QueueSidebar({
   upNext: QueueEntry[];
   historyItems: QueueEntry[];
   uniqueSingers: number;
+  /** Fair rotation is on — show the badge next to the Queue tab. */
+  fairMode: boolean;
   editingId: string | null;
   onDragStart: () => void;
   onDragEnd: (event: DragEndEvent) => void;
@@ -155,6 +158,11 @@ export function QueueSidebar({
             {t('host.sidebar.upNext')}
             {upNext.length > 0 && (
               <span className={styles.sidebarBadge}>{upNext.length}</span>
+            )}
+            {fairMode && (
+              <span className={styles.fairBadge}>
+                {t('host.queue.fairBadge')}
+              </span>
             )}
           </button>
           {showHistory && (

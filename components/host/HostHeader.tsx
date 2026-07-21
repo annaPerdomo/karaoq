@@ -22,6 +22,8 @@ export function HostHeader({
   onSettingsClose,
   reactionsOn,
   onToggleReactions,
+  fairMode,
+  onToggleFairMode,
   hostName,
   onChangeName,
   onInviteCohost,
@@ -45,6 +47,8 @@ export function HostHeader({
   onSettingsClose: () => void;
   reactionsOn: boolean;
   onToggleReactions: () => void;
+  fairMode: boolean;
+  onToggleFairMode: () => void;
   hostName: string;
   onChangeName: () => void;
   onInviteCohost: () => void;
@@ -144,6 +148,8 @@ export function HostHeader({
         remote={remote}
         reactionsOn={reactionsOn}
         onToggleReactions={onToggleReactions}
+        fairMode={fairMode}
+        onToggleFairMode={onToggleFairMode}
         hostName={hostName}
         onChangeName={onChangeName}
         onInviteCohost={onInviteCohost}

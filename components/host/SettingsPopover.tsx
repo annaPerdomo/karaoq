@@ -12,6 +12,8 @@ export function SettingsPopover({
   remote,
   reactionsOn,
   onToggleReactions,
+  fairMode,
+  onToggleFairMode,
   hostName,
   onChangeName,
   onInviteCohost,
@@ -21,6 +23,8 @@ export function SettingsPopover({
   remote: boolean;
   reactionsOn: boolean;
   onToggleReactions: () => void;
+  fairMode: boolean;
+  onToggleFairMode: () => void;
   hostName: string;
   onChangeName: () => void;
   onInviteCohost: () => void;
@@ -68,6 +72,25 @@ export function SettingsPopover({
               </div>
               <div
                 className={`${styles.toggle} ${reactionsOn ? styles.toggleOn : ""}`}
+              >
+                <div className={styles.toggleThumb} />
+              </div>
+            </button>
+          </div>
+          <div className={styles.spSep} />
+          <div className={styles.spGroup}>
+            <div className={styles.spLabel}>{t('host.settings.queue')}</div>
+            <button className={styles.spToggleRow} onClick={onToggleFairMode}>
+              <div>
+                <div className={styles.spBtnTitle}>{t('host.settings.fair')}</div>
+                <div className={styles.spBtnDesc}>
+                  {fairMode
+                    ? t('host.settings.fairOn')
+                    : t('host.settings.fairOff')}
+                </div>
+              </div>
+              <div
+                className={`${styles.toggle} ${fairMode ? styles.toggleOn : ""}`}
               >
                 <div className={styles.toggleThumb} />
               </div>

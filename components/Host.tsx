@@ -21,6 +21,7 @@ import {
   onVideoEnded,
 } from "../app/queue/roomChannel";
 import setReactionsEnabled from "../app/queue/setReactionsEnabled";
+import setFairMode from "../app/queue/setFairMode";
 import postReaction from "../app/queue/postReaction";
 import { REACTION_COOLDOWN_MS } from "../app/queue/cheerConstants";
 import { startSessionTracking } from "../app/queue/trackSession";
@@ -107,6 +108,7 @@ const Host = ({
   const [confirmRemove, setConfirmRemove] = React.useState<string | null>(null);
   const [reactionsOn, setReactionsOn] = React.useState(true);
   const [boardsOnDisplay, setBoardsOnDisplayState] = React.useState(true);
+  const [fairMode, setFairModeState] = React.useState(false);
   const [displayConfig, setDisplayConfigState] = React.useState<DisplayConfig>(DEFAULT_DISPLAY_CONFIG);
   const [hostConfig, setHostConfigState] = React.useState<HostConfig>(DEFAULT_HOST_CONFIG);
   const [reactionCooldown, setReactionCooldown] = React.useState(false);
@@ -407,6 +409,7 @@ const Host = ({
     setDisplayConnected(room.displayConnected ?? false);
     setReactionsOn(room.reactionsEnabled ?? true);
     setBoardsOnDisplayState(room.boardsOnDisplay ?? true);
+    setFairModeState(room.fairMode ?? false);
     setDisplayConfigState(normalizeDisplayConfig(room.displayConfig));
     setHostConfigState(normalizeHostConfig(room.hostConfig));
     if (!remote && room.playMode) setPlayMode(room.playMode);
@@ -747,6 +750,25 @@ const Host = ({
         displayConfig,
       });
       showToast(next ? t('host.toast.reactionsOn') : t('host.toast.reactionsOff'));
+    }
+  }
+
+  // Write-first like toggleReactions — but a successful ENABLE means the
+  // server just re-sorted the upcoming queue, so refetch and adopt its order
+  // (never re-sort locally) and broadcast the fresh state to displays.
+  async function toggleFairMode() {
+    if (!joinCode) return;
+    const next = !fairMode;
+    const ok = await setFairMode(joinCode, next);
+    if (!ok) return;
+    setFairModeState(next);
+    showToast(next ? t('host.toast.fairOn') : t('host.toast.fairOff'));
+    if (next) {
+      const room = await getRoom(joinCode);
+      if (typeof room !== "string") {
+        applyRoomState(room);
+        broadcast(room.queue, room.activeVideoIndex, room.isPlaying ?? false);
+      }
     }
   }
 
@@ -1102,6 +1124,8 @@ const Host = ({
         onSettingsClose={() => setSettingsOpen(false)}
         reactionsOn={reactionsOn}
         onToggleReactions={toggleReactions}
+        fairMode={fairMode}
+        onToggleFairMode={toggleFairMode}
         hostName={hostName}
         onChangeName={() => {
           setSettingsOpen(false);
@@ -1165,6 +1189,7 @@ const Host = ({
           upNext={upNext}
           historyItems={historyItems}
           uniqueSingers={uniqueSingers}
+          fairMode={fairMode}
           editingId={editingId}
           onDragStart={pausePolling}
           onDragEnd={handleDragEnd}

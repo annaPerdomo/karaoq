@@ -464,6 +464,20 @@
   letter-spacing: 0;
 }
 
+/* Static "fair rotation" tag next to the Queue tab while the mode is on.
+   Sized like the count badge so toggling it causes no layout shift. */
+.fairBadge {
+  font-size: 0.55rem;
+  font-weight: 700;
+  background: rgba(64, 220, 160, 0.16);
+  color: #40dca0;
+  padding: 0.1rem 0.4rem;
+  border-radius: 10px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
 /* ─── Queue stats ─── */
 .queueStats {
   display: flex;
