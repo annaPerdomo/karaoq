@@ -5,6 +5,7 @@ import {
   fairOrder,
   fairInsertIndex,
   singerKey,
+  singerKeys,
   withArrivalTimes,
 } from "../../lib/fairQueue";
 
@@ -264,5 +265,81 @@ describe("fairInsertIndex", () => {
     const sorted = [entry("Anna"), entry("Bob")];
     // "A.n n.a" folds to Anna, who already has one song → round 1 → tail.
     expect(fairInsertIndex(sorted, "A.n n.a")).toBe(2);
+  });
+});
+
+describe("singerKeys — duet names split into members", () => {
+  it("splits the ways people write a pair", () => {
+    expect(singerKeys("Anna & Bob")).toEqual(["anna", "bob"]);
+    expect(singerKeys("anna and bob")).toEqual(["anna", "bob"]);
+    expect(singerKeys("Anna+Bob")).toEqual(["anna", "bob"]);
+    expect(singerKeys("Anna, Bob, Cara")).toEqual(["anna", "bob", "cara"]);
+  });
+
+  it("only splits 'and' as a whole word", () => {
+    expect(singerKeys("Sandy")).toEqual(["sandy"]);
+    expect(singerKeys("Brandy Anderson")).toEqual(["brandyanderson"]);
+    expect(singerKeys("Sandy and Randy")).toEqual(["sandy", "randy"]);
+  });
+
+  it("folds each member like a solo name", () => {
+    // A duet can't dodge the near-miss folding its members get solo.
+    expect(singerKeys("ANNA. & b o b")).toEqual(["anna", "bob"]);
+  });
+
+  it("collapses a self-duet to a solo", () => {
+    expect(singerKeys("Anna & anna")).toEqual(["anna"]);
+    // ...including a trailing separator with nothing after it.
+    expect(singerKeys("Anna &")).toEqual(["anna"]);
+  });
+
+  it("keeps a symbol-only name on its whole-name identity", () => {
+    expect(singerKeys("🎤")).toEqual([singerKey("🎤")]);
+  });
+});
+
+describe("duets in the rotation", () => {
+  it("slots a first-timer's duet where the first-timer's own song would go (acceptance case)", () => {
+    // The room regular has three songs queued; a newcomer joins them on a
+    // duet. The pair takes the NEWCOMER's round-0 slot — right behind the
+    // other first songs — instead of inheriting the regular's long wait.
+    const sorted = [
+      entry("test"), entry("Bob"), entry("Sherry"), entry("test"), entry("test"),
+    ];
+    expect(fairInsertIndex(sorted, "test & t00bers")).toBe(3);
+  });
+
+  it("charges the duet as a turn to BOTH members", () => {
+    // After the duet, Anna's and Bob's next solos are round 1 — behind a
+    // brand-new singer's first song, which still slips in at round 0.
+    const upcoming = [entry("Anna & Bob"), entry("Cara"), entry("Cara")];
+    expect(fairInsertIndex(upcoming, "Anna")).toBe(3);
+    expect(fairInsertIndex(upcoming, "Bob")).toBe(3);
+    expect(fairInsertIndex(upcoming, "Eve")).toBe(2);
+  });
+
+  it("re-sorts a queued duet into its least-served member's round on toggle", () => {
+    // Arrival: Anna, Anna again, then "Anna & Bob". Bob hasn't sung, so the
+    // duet takes his round-0 turn and plays before Anna's own second song.
+    const cur = at("X", 1);
+    const [a1, a2, d] = [at("Anna", 2), at("Anna", 3), at("Anna & Bob", 4)];
+    expect(fairOrder([cur, a1, a2, d])).toEqual([cur, a1, d, a2]);
+  });
+
+  it("keeps both members of an on-stage duet from owning the next slot", () => {
+    const cur = at("Anna & Bob", 1);
+    const [a2, b2, c1] = [at("Anna", 2), at("Bob", 3), at("Cara", 4)];
+    // Anna AND Bob are singing right now, so each one's solo is round 1 and
+    // Cara's first song goes ahead of both.
+    expect(fairOrder([cur, a2, b2, c1])).toEqual([cur, c1, a2, b2]);
+  });
+
+  it("counts duet members individually when they sing solo later", () => {
+    // Bob's duet was his first turn, so his solo is round 1: it falls behind
+    // Cara's round-0 song but stays ahead of nobody unfairly — arrival order
+    // holds within the round.
+    const cur = at("X", 1);
+    const [d, b1, c1] = [at("Anna & Bob", 2), at("Bob", 3), at("Cara", 4)];
+    expect(fairOrder([cur, d, b1, c1])).toEqual([cur, d, c1, b1]);
   });
 });

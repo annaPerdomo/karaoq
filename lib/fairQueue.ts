@@ -23,6 +23,16 @@ import { QueueEntry } from "../pages/api/types";
 // singer out — queue two in a row and the second becomes round 1, which sits
 // behind the round 0 of everyone who joins before it plays.
 //
+// Duets: a name like "Anna & Bob" is split into members (singerKeys, below)
+// and the entry takes the round of its LEAST-served member — a first-timer's
+// duet lands where the first-timer's own first song would, even when their
+// partner has sung all night. Anna joining Bob's turn must never push Bob
+// behind the regulars. In exchange the duet spends a turn for EVERY member:
+// once it's queued, each member's next song counts one round later. (Yes, a
+// regular could invent a fresh partner to ride round 0 — the same trick a
+// brand-new solo name buys. With no accounts, names on the big screen and the
+// host's remove button are the enforcement.)
+//
 // Both helpers operate on `upcoming = queue.slice(activeVideoIndex)`. The
 // entry at index 0 is the song on stage: it counts toward its singer's rounds
 // (so whoever is singing can't also own the next slot) but it never moves.
@@ -66,6 +76,39 @@ export function singerKey(userName: string): string {
   return folded || userName.trim();
 }
 
+// What reads as "two people on one mic": "Anna & Bob", "anna and bob",
+// "Anna+Bob", "Anna, Bob, Cara". Matched BEFORE the singerKey fold — the fold
+// strips punctuation, so an unsplit duet would collapse into one composite
+// singer ("annabob") that matches neither partner and quietly restarts at
+// round 0. "and" only splits as a whole word (Sandy and Brandy survive), and
+// only in English: localized joiners ("dan", "at", "og") are single letters or
+// short words too likely to sit inside real names, so a non-English pair is
+// treated as one singer — exactly the behavior every pair had before duets.
+const DUET_SEPARATORS = new RegExp("\\s*(?:[&+,]|\\band\\b)\\s*", "iu");
+
+/**
+ * The identities singing a queue entry: one key per member for a duet/group
+ * name, or the singer's own key for everything else.
+ *
+ * Each member is folded through singerKey, so "ANNA. & b o b" is the same
+ * pair as "Anna & Bob" and a duet can't dodge the near-miss folding its
+ * members are subject to solo. Members that fold to nothing are dropped, a
+ * self-duet ("Anna & anna") collapses to a solo, and a name with no usable
+ * split (or none at all) falls back to the whole-name key — a symbol-only
+ * name keeps the identity it always had.
+ */
+export function singerKeys(userName: string): string[] {
+  const members = Array.from(
+    new Set(
+      userName
+        .split(DUET_SEPARATORS)
+        .map(singerKey)
+        .filter((k) => k.length > 0)
+    )
+  );
+  return members.length > 0 ? members : [singerKey(userName)];
+}
+
 /** Stable sort by a numeric key. The index tiebreak makes stability explicit
  * rather than relying on the engine's sort. */
 function sortByKey<T>(items: T[], keys: number[]): T[] {
@@ -89,15 +132,21 @@ function arrivalKeys(list: QueueEntry[]): number[] {
   });
 }
 
-/** How many of the same singer's songs precede each entry, positionally. */
+/** The round an entry by `members` takes given how many turns each member has
+ * had so far, and the tally update that goes with it: the least-served member
+ * sets the round (a duet rides its newcomer's slot), and the turn is charged
+ * to every member (nobody's next song stays cheap because they shared a mic). */
+function takeRound(counts: Map<string, number>, members: string[]): number {
+  let round = Infinity;
+  for (const m of members) round = Math.min(round, counts.get(m) ?? 0);
+  for (const m of members) counts.set(m, (counts.get(m) ?? 0) + 1);
+  return round;
+}
+
+/** Each entry's round, counted positionally over the list as it stands. */
 function roundsOf(upcoming: QueueEntry[]): number[] {
   const counts = new Map<string, number>();
-  return upcoming.map((e) => {
-    const name = singerKey(e.userName);
-    const round = counts.get(name) ?? 0;
-    counts.set(name, round + 1);
-    return round;
-  });
+  return upcoming.map((e) => takeRound(counts, singerKeys(e.userName)));
 }
 
 /** Give every entry a real `addedAt`, invented from its current position for
@@ -139,28 +188,25 @@ export function fairOrder(upcoming: QueueEntry[]): QueueEntry[] {
   // not "their nth song in whatever order the array is in right now".
   const byArrival = sortByKey(rest, arrivalKeys(rest));
 
-  // The song on stage is its singer's round 0, so their next song starts at
-  // round 1 and falls in behind everyone else's first.
-  const counts = new Map<string, number>([[singerKey(current.userName), 1]]);
-  const rounds = byArrival.map((e) => {
-    const name = singerKey(e.userName);
-    const round = counts.get(name) ?? 0;
-    counts.set(name, round + 1);
-    return round;
-  });
+  // The song on stage is its singers' round 0 — every member of it, so
+  // neither half of an on-stage duet can also own the next slot.
+  const counts = new Map<string, number>();
+  for (const m of singerKeys(current.userName)) counts.set(m, 1);
+  const rounds = byArrival.map((e) => takeRound(counts, singerKeys(e.userName)));
 
   return [current, ...sortByKey(byArrival, rounds)];
 }
 
 /** Where a NEW song by `userName` slots into an already-fair `upcoming`: the
- * new song is round k (k = how many songs they already have upcoming), and it
- * goes at the index of the first entry whose round exceeds k — i.e. to the END
- * of its round, behind same-round entries that were queued earlier. Never
- * returns 0 for a non-empty list, so the song on stage is never displaced. */
+ * new song is round k (for a solo, how many songs they already have upcoming;
+ * for a duet, the least-served member's count — see takeRound), and it goes at
+ * the index of the first entry whose round exceeds k — i.e. to the END of its
+ * round, behind same-round entries that were queued earlier. Never returns 0
+ * for a non-empty list, so the song on stage is never displaced. */
 export function fairInsertIndex(upcoming: QueueEntry[], userName: string): number {
-  const name = singerKey(userName);
-  const k = upcoming.filter((e) => singerKey(e.userName) === name).length;
-  const rounds = roundsOf(upcoming);
+  const counts = new Map<string, number>();
+  const rounds = upcoming.map((e) => takeRound(counts, singerKeys(e.userName)));
+  const k = takeRound(counts, singerKeys(userName));
   for (let i = 0; i < upcoming.length; i++) {
     if (rounds[i] > k) return i;
   }

@@ -22,7 +22,7 @@ import {
 } from "../app/queue/roomChannel";
 import setReactionsEnabled from "../app/queue/setReactionsEnabled";
 import setFairMode from "../app/queue/setFairMode";
-import { fairInsertIndex, singerKey } from "../lib/fairQueue";
+import { fairInsertIndex, singerKeys } from "../lib/fairQueue";
 import postReaction from "../app/queue/postReaction";
 import { REACTION_COOLDOWN_MS } from "../app/queue/cheerConstants";
 import { startSessionTracking } from "../app/queue/trackSession";
@@ -1027,8 +1027,9 @@ const Host = ({
   const roomEmpty = queue.length === 0;
 
   // Counted the way the rotation groups people, so "4 singers" never disagrees
-  // with how many turns the queue is actually splitting between.
-  const uniqueSingers = new Set(upNext.map((s) => singerKey(s.userName))).size;
+  // with how many turns the queue is actually splitting between — a duet
+  // entry counts each of its members.
+  const uniqueSingers = new Set(upNext.flatMap((s) => singerKeys(s.userName))).size;
 
   // Everything below renders from hostView: the staged draft while customizing,
   // the room's config otherwise. A hidden History tab can't be the active tab.
