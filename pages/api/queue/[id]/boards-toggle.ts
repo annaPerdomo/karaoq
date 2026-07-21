@@ -34,10 +34,11 @@ export default async function handler(
         { $set: { boardsOnDisplay: enabled } }
       );
       // boardsOnDisplay lives outside DisplayConfig but is still a display
-      // default hosts override — only enabling counts as a change.
+      // default hosts override. It defaults to ON, so turning boards OFF is
+      // the deviation — enabling just restores the default.
       await trackEvent(req, "display_config_saved", {
         roomId,
-        changedFields: enabled ? ["boardsOnDisplay"] : [],
+        changedFields: enabled ? [] : ["boardsOnDisplay"],
       });
       res.status(200).json({ code: 200, message: "Boards on display toggled." });
     }

@@ -110,6 +110,89 @@ describe("POST /api/queue/[id]/display-config - Save display config", () => {
     expect(event.displayConfig).toEqual({ ...validConfig, welcomeLine: "" });
   });
 
+  // The display's Customize mode saves boardsOnDisplay in the same action as
+  // the config, so it rides along here rather than firing a second write and a
+  // second display_config_saved event for one Save.
+  it("writes boardsOnDisplay when the save carries it", async () => {
+    mockCollection.updateOne.mockResolvedValue({ matchedCount: 1 });
+
+    const req = createMockReq({
+      method: "POST",
+      query: { id: "ROOM1", boardsOnDisplay: "false" },
+      body: validConfig,
+    });
+    const res = createRes();
+    await handler(req, res);
+
+    expect(res.getStatus()).toBe(200);
+    expect(mockCollection.updateOne).toHaveBeenCalledWith(
+      { id: "ROOM1" },
+      {
+        $set: {
+          displayConfig: { ...validConfig, welcomeLine: "Karaoke Tuesdays" },
+          lastActivity: expect.any(Date),
+          boardsOnDisplay: false,
+        },
+      }
+    );
+  });
+
+  it("leaves boardsOnDisplay untouched when the save omits it", async () => {
+    mockCollection.updateOne.mockResolvedValue({ matchedCount: 1 });
+
+    const req = createMockReq({
+      method: "POST",
+      query: { id: "ROOM1" },
+      body: validConfig,
+    });
+    const res = createRes();
+    await handler(req, res);
+
+    const update = mockCollection.updateOne.mock.calls[0][1];
+    expect(update.$set).not.toHaveProperty("boardsOnDisplay");
+  });
+
+  // boardsOnDisplay defaults to ON, so hiding boards is the deviation worth
+  // counting — enabling just restores the default.
+  it("counts hiding boards as a changed field, and showing them as not", async () => {
+    mockCollection.updateOne.mockResolvedValue({ matchedCount: 1 });
+    mockCollection.insertOne.mockResolvedValue({});
+
+    for (const [param, expected] of [
+      ["false", true],
+      ["true", false],
+    ] as const) {
+      vi.clearAllMocks();
+      mockCollection.updateOne.mockResolvedValue({ matchedCount: 1 });
+      mockCollection.insertOne.mockResolvedValue({});
+
+      const req = createMockReq({
+        method: "POST",
+        query: { id: "ROOM1", boardsOnDisplay: param },
+        headers: { host: "karaoq.live" },
+        body: validConfig,
+      });
+      await handler(req, createRes());
+
+      const event = mockCollection.insertOne.mock.calls[0][0];
+      expect(mockCollection.insertOne).toHaveBeenCalledOnce();
+      expect(event.changedFields.includes("boardsOnDisplay")).toBe(expected);
+    }
+  });
+
+  it("rejects a malformed boardsOnDisplay param with 400", async () => {
+    const req = createMockReq({
+      method: "POST",
+      query: { id: "ROOM1", boardsOnDisplay: "yes" },
+      body: validConfig,
+    });
+    const res = createRes();
+    await handler(req, res);
+
+    expect(res.getStatus()).toBe(400);
+    expect(mockCollection.updateOne).not.toHaveBeenCalled();
+  });
+
   it("fills defaults when a pre-drag-era client omits the layout fields", async () => {
     mockCollection.updateOne.mockResolvedValue({ matchedCount: 1 });
 

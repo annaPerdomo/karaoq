@@ -75,6 +75,32 @@ describe("POST /api/queue/[id]/boards-toggle - Toggle boards on display", () => 
     );
   });
 
+  // boardsOnDisplay defaults to ON, so turning boards off is the deviation from
+  // the default; turning them back on just restores it.
+  it("records hiding boards as the changed field, not showing them", async () => {
+    for (const [enabled, expected] of [
+      ["false", ["boardsOnDisplay"]],
+      ["true", []],
+    ] as const) {
+      vi.clearAllMocks();
+      mockCollection.findOne.mockResolvedValue({ id: "ROOM1" });
+      mockCollection.updateOne.mockResolvedValue({ matchedCount: 1 });
+      mockCollection.insertOne.mockResolvedValue({});
+
+      const req = createMockReq({
+        method: "POST",
+        query: { id: "ROOM1", enabled },
+        // A production host — localhost would be analytics-exempt.
+        headers: { host: "karaoq.live" },
+      });
+      await handler(req, createRes());
+
+      const event = mockCollection.insertOne.mock.calls[0][0];
+      expect(event.type).toBe("display_config_saved");
+      expect(event.changedFields).toEqual(expected);
+    }
+  });
+
   it("rejects a missing or malformed enabled param with 400", async () => {
     const req = createMockReq({
       method: "POST",

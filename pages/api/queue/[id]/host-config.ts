@@ -5,7 +5,7 @@ import {
   normalizeHostConfig,
 } from "../../types";
 import { trackEvent } from "../../../../lib/analytics";
-import { isValidHostConfig } from "../../../../lib/limits";
+import { isValidHostConfig, rateLimit } from "../../../../lib/limits";
 import { getRoomsCollection } from "../../../../lib/mongodb";
 import { normalizeRoomId } from "../../../../lib/roomCode";
 
@@ -35,6 +35,13 @@ export default async function handler(
 
   if (!isValidHostConfig(body)) {
     res.status(400).json({ code: 400, message: "Invalid host config." });
+    return;
+  }
+
+  // Every accepted save also writes an analytics doc carrying the whole config,
+  // so an unthrottled endpoint grows the events collection without bound.
+  if (!rateLimit(req, "host-config", 20, 60_000)) {
+    res.status(429).json({ code: 429, message: "Too many saves, slow down." });
     return;
   }
 
