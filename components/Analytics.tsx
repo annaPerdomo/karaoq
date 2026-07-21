@@ -1,5 +1,7 @@
 import * as React from 'react';
 import styles from '../styles/Analytics.module.css';
+import BarChart from './analytics/BarChart';
+import LanguagesPanel, { type LanguageData } from './analytics/LanguagesPanel';
 import RoomDetail from './analytics/RoomDetail';
 
 interface DayCount {
@@ -36,6 +38,8 @@ interface AnalyticsData {
     countries: { _id: string; count: number }[];
     cities: { _id: { city: string; country: string; region: string }; count: number }[];
   };
+  // Absent on a dashboard served by an older deploy.
+  languages?: LanguageData;
   rankings: {
     topSongs: { _id: { title: string; videoId: string }; count: number }[];
     topUsers: { _id: string; count: number }[];
@@ -220,30 +224,6 @@ function formatHour(h: number): string {
   return `${h - 12}pm`;
 }
 
-function BarChart({ data, color = '#a78bfa' }: {
-  data: { label: string; value: number }[];
-  color?: string;
-}) {
-  if (data.length === 0) return <p className={styles.empty}>No data yet</p>;
-  const max = Math.max(...data.map((d) => d.value), 1);
-  return (
-    <div className={styles.barChart}>
-      {data.map((d, i) => (
-        <div key={i} className={styles.barRow}>
-          <span className={styles.barLabel}>{d.label}</span>
-          <div className={styles.barTrack}>
-            <div
-              className={styles.barFill}
-              style={{ width: `${(d.value / max) * 100}%`, backgroundColor: color }}
-            />
-          </div>
-          <span className={styles.barValue}>{d.value}</span>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 function FunnelChart({ steps }: { steps: { label: string; value: number }[] }) {
   const max = Math.max(steps[0]?.value ?? 0, 1);
   return (
@@ -289,7 +269,7 @@ const Analytics = (): React.ReactElement => {
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [data, setData] = React.useState<AnalyticsData | null>(null);
-  const [activeTab, setActiveTab] = React.useState<'overview' | 'geo' | 'songs' | 'suggestions' | 'social' | 'display' | 'rooms'>('overview');
+  const [activeTab, setActiveTab] = React.useState<'overview' | 'geo' | 'languages' | 'songs' | 'suggestions' | 'social' | 'display' | 'rooms'>('overview');
   const [rooms, setRooms] = React.useState<RoomRow[]>([]);
   const [roomsHasMore, setRoomsHasMore] = React.useState(false);
   const [roomsLoading, setRoomsLoading] = React.useState(false);
@@ -484,7 +464,7 @@ const Analytics = (): React.ReactElement => {
     );
   }
 
-  const { overview, charts, geo, rankings, devices, suggestions, funnel, engagement, social, display } = data;
+  const { overview, charts, geo, languages, rankings, devices, suggestions, funnel, engagement, social, display } = data;
 
   const mobileCount = devices.find((d) => d._id === 'Mobile')?.count || 0;
   const desktopCount = devices.find((d) => d._id === 'Desktop')?.count || 0;
@@ -518,7 +498,7 @@ const Analytics = (): React.ReactElement => {
       )}
 
       <nav className={styles.tabs}>
-        {(['overview', 'geo', 'songs', 'suggestions', 'social', 'display', 'rooms'] as const).map((tab) => (
+        {(['overview', 'geo', 'languages', 'songs', 'suggestions', 'social', 'display', 'rooms'] as const).map((tab) => (
           <button
             key={tab}
             className={`${styles.tab} ${activeTab === tab ? styles.tabActive : ''}`}
@@ -698,6 +678,18 @@ const Analytics = (): React.ReactElement => {
               color="#f59e0b"
             />
           </section>
+        </div>
+      )}
+
+      {activeTab === 'languages' && (
+        <div className={styles.tabContent}>
+          {languages ? (
+            <LanguagesPanel languages={languages} />
+          ) : (
+            <section className={styles.section}>
+              <p className={styles.empty}>No language data available</p>
+            </section>
+          )}
         </div>
       )}
 

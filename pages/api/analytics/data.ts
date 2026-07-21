@@ -87,6 +87,9 @@ export default async function handler(
       displayRoomsCustomized,
       displayFieldCounts,
       displayThemeCounts,
+      sessionsByLocale,
+      roomsCreatedByLocale,
+      localeByCountry,
     ] = await Promise.all([
       events.countDocuments({ type: "room_created" }),
 
@@ -467,6 +470,78 @@ export default async function handler(
           { $sort: { count: -1 } },
         ])
         .toArray(),
+
+      // Which UI language rooms are actually run in. Ranked by unique rooms so
+      // one long night can't outweigh ten rooms, with sessions and the
+      // host/singer split alongside. `chosen` counts the sessions whose locale
+      // came from a deliberate pick (switcher, stored pick, ?lang=) rather than
+      // a browser/geo guess — the gap between the two is how we tell "they want
+      // this language" from "we assumed it".
+      sessions
+        .aggregate([
+          { $match: { locale: { $type: "string" } } },
+          {
+            $group: {
+              _id: "$locale",
+              sessions: { $sum: 1 },
+              rooms: { $addToSet: "$roomId" },
+              hosts: { $sum: { $cond: [{ $eq: ["$role", "host"] }, 1, 0] } },
+              singers: { $sum: { $cond: [{ $eq: ["$role", "singer"] }, 1, 0] } },
+              chosen: {
+                $sum: {
+                  $cond: [
+                    { $in: ["$localeSource", ["switch", "stored", "url"]] },
+                    1,
+                    0,
+                  ],
+                },
+              },
+            },
+          },
+          {
+            $project: {
+              sessions: 1,
+              hosts: 1,
+              singers: 1,
+              chosen: 1,
+              rooms: { $size: "$rooms" },
+            },
+          },
+          { $sort: { rooms: -1, sessions: -1 } },
+        ])
+        .toArray(),
+
+      // Rooms created per language — covers rooms that never got a heartbeat
+      // worth of use, which is exactly where the activation drop-off lives.
+      events
+        .aggregate([
+          { $match: { type: "room_created", locale: { $type: "string" } } },
+          { $group: { _id: "$locale", count: { $sum: 1 } } },
+          { $sort: { count: -1 } },
+        ])
+        .toArray(),
+
+      // Language within a country, by unique rooms. Shows where the country
+      // guess is wrong — e.g. rooms in Japan being run in English.
+      sessions
+        .aggregate([
+          {
+            $match: {
+              locale: { $type: "string" },
+              country: { $type: "string" },
+            },
+          },
+          {
+            $group: {
+              _id: { country: "$country", locale: "$locale" },
+              rooms: { $addToSet: "$roomId" },
+            },
+          },
+          { $project: { count: { $size: "$rooms" } } },
+          { $sort: { count: -1 } },
+          { $limit: 30 },
+        ])
+        .toArray(),
     ]);
 
     const sessionStats = sessionData[0] || {
@@ -525,6 +600,11 @@ export default async function handler(
       geo: {
         countries: countryCounts,
         cities: cityCounts,
+      },
+      languages: {
+        bySession: sessionsByLocale,
+        roomsCreated: roomsCreatedByLocale,
+        byCountry: localeByCountry,
       },
       rankings: {
         topSongs,
