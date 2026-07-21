@@ -1,4 +1,5 @@
 import { NextApiRequest, NextApiResponse } from "next";
+import { trackEvent } from "../../../../lib/analytics";
 import { arrivalOrder, fairOrder, withArrivalTimes } from "../../../../lib/fairQueue";
 import { getRoomsCollection } from "../../../../lib/mongodb";
 import { normalizeRoomId } from "../../../../lib/roomCode";
@@ -55,6 +56,9 @@ export default async function handler(
         { $set: { queue: newQueue, fairMode: enabled, lastActivity: new Date() } }
       );
       if (result.matchedCount > 0) {
+        // Only after the write lands, so a retried/lost CAS can't log a
+        // toggle that never happened.
+        trackEvent(req, "fair_mode_toggled", { roomId, fairMode: enabled });
         res.status(200).json({ code: 200, message: "Fair rotation toggled." });
         return;
       }

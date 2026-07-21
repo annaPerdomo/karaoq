@@ -101,6 +101,10 @@ interface RoomRow {
   city?: string;
   songs: number;
   participants: number;
+  /** State the room ended in; null where it predates the flag. */
+  fairMode?: boolean | null;
+  /** Whether the host ever changed it, vs running on the default. */
+  fairToggled?: boolean;
 }
 
 const ROOMS_PAGE_SIZE = 25;
@@ -936,6 +940,7 @@ const Analytics = (): React.ReactElement => {
                     <span>Location</span>
                     <span>Songs</span>
                     <span>People</span>
+                    <span>Fair</span>
                     <span></span>
                   </div>
                   {rooms.map((r, i) => (
@@ -957,6 +962,19 @@ const Analytics = (): React.ReactElement => {
                       </span>
                       <span data-label="Songs">{r.songs}</span>
                       <span data-label="People">{r.participants}</span>
+                      <span data-label="Fair">
+                        {r.fairMode === null || r.fairMode === undefined ? (
+                          <span className={styles.fairCell} title="Created before fair rotation was recorded">—</span>
+                        ) : (
+                          <span
+                            className={`${styles.fairCell} ${r.fairMode ? styles.fairCellOn : ''}`}
+                            title={`Fair rotation ${r.fairMode ? 'on' : 'off'}${r.fairToggled ? ' — host changed it' : ' (default)'}`}
+                          >
+                            {r.fairMode ? 'On' : 'Off'}
+                            {r.fairToggled ? '*' : ''}
+                          </span>
+                        )}
+                      </span>
                       <div className={styles.roomActions}>
                         <button
                           className={`${styles.mergeBtn} ${mergeSource === r.roomId ? styles.mergeBtnActive : ''}`}

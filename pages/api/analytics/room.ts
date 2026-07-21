@@ -36,6 +36,10 @@ async function handleGet(
           "singwithme_queued",
           "reaction_sent",
           "search_performed",
+          // Fair rotation's starting value rides on room_created; every
+          // change after that is a fair_mode_toggled.
+          "room_created",
+          "fair_mode_toggled",
         ],
       },
     })
@@ -57,8 +61,11 @@ async function handleGet(
   const songs: unknown[] = [];
   const requests: unknown[] = [];
   const singWithMe: unknown[] = [];
+  const fairToggles: { enabled: boolean; timestamp: Date }[] = [];
   let reactions = 0;
   let searches = 0;
+  // undefined = the room predates the flag, so we genuinely don't know.
+  let fairStarted: boolean | undefined;
 
   for (const e of events) {
     switch (e.type) {
@@ -96,8 +103,22 @@ async function handleGet(
       case "search_performed":
         searches += 1;
         break;
+      case "room_created":
+        if (typeof e.fairMode === "boolean") fairStarted = e.fairMode;
+        break;
+      case "fair_mode_toggled":
+        if (typeof e.fairMode === "boolean") {
+          fairToggles.push({ enabled: e.fairMode, timestamp: e.timestamp });
+        }
+        break;
     }
   }
+
+  // Events are already oldest-first, so the last toggle is the state the room
+  // ended in; with no toggles it ran on whatever it was created with.
+  const fairFinal = fairToggles.length
+    ? fairToggles[fairToggles.length - 1].enabled
+    : fairStarted;
 
   res.status(200).json({
     roomId,
@@ -105,6 +126,11 @@ async function handleGet(
     songs,
     requests,
     singWithMe,
+    fairRotation: {
+      started: fairStarted ?? null,
+      final: fairFinal ?? null,
+      toggles: fairToggles,
+    },
     counts: {
       people: people.length,
       songs: songs.length,

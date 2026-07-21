@@ -469,7 +469,7 @@
 
 .roomHeader {
   display: grid;
-  grid-template-columns: 70px 1fr 1fr 60px 60px 72px;
+  grid-template-columns: 70px 1fr 1fr 60px 60px 54px 72px;
   gap: 0.5rem;
   padding: 0.5rem 0.75rem;
   color: var(--text-muted);
@@ -481,7 +481,7 @@
 
 .roomRow {
   display: grid;
-  grid-template-columns: 70px 1fr 1fr 60px 60px 72px;
+  grid-template-columns: 70px 1fr 1fr 60px 60px 54px 72px;
   gap: 0.5rem;
   padding: 0.6rem 0.75rem;
   background: var(--bg-secondary);
@@ -909,4 +909,33 @@
   color: var(--text-muted);
   font-size: 0.75rem;
   text-align: center;
+}
+
+/* Fair-rotation state in the room detail footer. Muted when off or unknown so
+   the rooms that actually ran a rotation are the ones that stand out. */
+.fairChip {
+  display: inline-block;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  cursor: help;
+}
+
+.fairChipOn {
+  background: rgba(64, 220, 160, 0.14);
+  border-color: rgba(64, 220, 160, 0.4);
+  color: #40dca0;
+}
+
+/* Same idea in the rooms table's Fair column. */
+.fairCell {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: help;
+}
+
+.fairCellOn {
+  color: #40dca0;
 }

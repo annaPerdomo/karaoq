@@ -18,7 +18,8 @@ export type EventType =
   | "song_suggested"
   | "suggestion_claimed"
   | "display_config_saved"
-  | "host_config_saved";
+  | "host_config_saved"
+  | "fair_mode_toggled";
 
 export interface AnalyticsEvent {
   type: EventType;
@@ -46,6 +47,10 @@ export interface AnalyticsEvent {
   displayConfig?: DisplayConfig;
   // host_config_saved: same idea for the host control surface's layout.
   hostConfig?: HostConfig;
+  // Fair rotation's value: the state it was switched TO on fair_mode_toggled,
+  // and the room's starting value on room_created. Absent on rooms created
+  // before the flag existed, which is what "unknown" reads as in the dashboard.
+  fairMode?: boolean;
   // UI language the client was in when the event fired, from the
   // x-karaoq-locale header. Absent on events sent before this existed and on
   // call sites that don't set the header.

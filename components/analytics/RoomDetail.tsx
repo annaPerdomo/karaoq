@@ -33,12 +33,23 @@ interface SingWithMeRow {
   timestamp: string;
 }
 
+interface FairToggle {
+  enabled: boolean;
+  timestamp: string;
+}
+
 interface RoomDetailData {
   roomId: string;
   people: Person[];
   songs: SongRow[];
   requests: RequestRow[];
   singWithMe: SingWithMeRow[];
+  /** null where the room predates the flag and nothing was ever recorded. */
+  fairRotation: {
+    started: boolean | null;
+    final: boolean | null;
+    toggles: FairToggle[];
+  };
   counts: {
     people: number;
     songs: number;
@@ -78,6 +89,27 @@ const SWM_LABELS: Record<string, string> = {
   joined: 'Joined',
   queued: 'Queued',
 };
+
+/** "Fair rotation on", plus how many times the host changed their mind. */
+function fairLabel(f: RoomDetailData['fairRotation']): string {
+  if (f.final === null) return 'Fair rotation: unknown';
+  const state = f.final ? 'on' : 'off';
+  const n = f.toggles.length;
+  return n === 0
+    ? `Fair rotation ${state} (default)`
+    : `Fair rotation ${state} · toggled ${n}${n === 1 ? ' time' : ' times'}`;
+}
+
+function fairTitle(f: RoomDetailData['fairRotation']): string {
+  if (f.final === null) {
+    return 'This room was created before fair rotation was recorded.';
+  }
+  const lines = [`Started ${f.started ? 'on' : 'off'}`];
+  for (const t of f.toggles) {
+    lines.push(`${formatTime(t.timestamp)} — turned ${t.enabled ? 'on' : 'off'}`);
+  }
+  return lines.join('\n');
+}
 
 function locationLabel(p: Person): string {
   if (p.city) return `${safeDecode(p.city)}, ${p.country ?? ''}`.replace(/, $/, '');
@@ -278,6 +310,19 @@ const RoomDetail = ({
             {c && (
               <div className={styles.detailFooter}>
                 {c.reactions} reactions · {c.searches} searches
+                {data.fairRotation && (
+                  <>
+                    {' · '}
+                    <span
+                      className={`${styles.fairChip} ${
+                        data.fairRotation.final === true ? styles.fairChipOn : ''
+                      }`}
+                      title={fairTitle(data.fairRotation)}
+                    >
+                      {fairLabel(data.fairRotation)}
+                    </span>
+                  </>
+                )}
               </div>
             )}
           </>

@@ -82,7 +82,11 @@ export default async function handler(
           activeVideoIndex: 0,
           isPlaying: false,
           reactionsEnabled: true,
-          fairMode: false,
+          // On by default: a room full of strangers is the case fair rotation
+          // exists for, and a host who wants a plain first-come queue can turn
+          // it off in one tap. Rooms created before this defaulted to off and
+          // are left alone — see the GET's `?? false` backfill for why.
+          fairMode: true,
           // Matches the host UI default; switching to a separate screen
           // updates it via the mode endpoint.
           playMode: "here",
@@ -115,7 +119,9 @@ export default async function handler(
           }
           throw e;
         }
-        trackEvent(req, "room_created", { roomId });
+        // Carry the starting value so analytics can tell "never touched it,
+        // so it ran on the default" apart from "explicitly turned it on".
+        trackEvent(req, "room_created", { roomId, fairMode: room.fairMode });
         res.status(201).json(room);
       }
     } else if (req.method === "GET") {
@@ -163,6 +169,10 @@ export default async function handler(
           isPlaying,
           displayConnected,
           reactionsEnabled: room.reactionsEnabled ?? true,
+          // Absent means the room predates the flag. Those stay OFF even
+          // though new rooms default ON: their queue was never sorted, so
+          // reporting "on" would show a fair badge over a first-come order.
+          // The host's toggle re-sorts and fixes it in one tap.
           fairMode: room.fairMode ?? false,
           displayConfig: room.displayConfig ?? DEFAULT_DISPLAY_CONFIG,
           reactions,

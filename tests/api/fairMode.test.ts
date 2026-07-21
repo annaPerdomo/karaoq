@@ -8,6 +8,11 @@ const mockCollection = {
   updateOne: vi.fn(),
 };
 
+const trackEvent = vi.fn();
+vi.mock("../../lib/analytics", () => ({
+  trackEvent: (...args: unknown[]) => trackEvent(...args),
+}));
+
 vi.mock("mongodb", () => ({
   MongoClient: function () {
     return {
@@ -79,6 +84,49 @@ describe("POST /api/queue/[id]/fair-mode - Toggle fair rotation", () => {
         },
       }
     );
+  });
+
+  it("tracks the toggle for analytics, but only once the write lands", async () => {
+    const room: Room = {
+      id: "ROOM1",
+      queue: [entry("a1", "A", 1)],
+      activeVideoIndex: 0,
+      isPlaying: false,
+      reactionsEnabled: true,
+    };
+    mockCollection.findOne.mockResolvedValue(room);
+    mockCollection.updateOne.mockResolvedValue({ matchedCount: 1, modifiedCount: 1 });
+
+    await handler(
+      createMockReq({ method: "POST", query: { id: "ROOM1", enabled: "true" } }),
+      createRes()
+    );
+    expect(trackEvent).toHaveBeenCalledWith(
+      expect.anything(),
+      "fair_mode_toggled",
+      { roomId: "ROOM1", fairMode: true }
+    );
+  });
+
+  it("does not track a toggle whose write never landed", async () => {
+    const room: Room = {
+      id: "ROOM1",
+      queue: [entry("a1", "A", 1)],
+      activeVideoIndex: 0,
+      isPlaying: false,
+      reactionsEnabled: true,
+    };
+    mockCollection.findOne.mockResolvedValue(room);
+    // Every CAS attempt loses, so the handler 409s.
+    mockCollection.updateOne.mockResolvedValue({ matchedCount: 0, modifiedCount: 0 });
+
+    const res = createRes();
+    await handler(
+      createMockReq({ method: "POST", query: { id: "ROOM1", enabled: "true" } }),
+      res
+    );
+    expect(res.getStatus()).toBe(409);
+    expect(trackEvent).not.toHaveBeenCalled();
   });
 
   it("round-trips: on then off returns the queue to its original order", async () => {

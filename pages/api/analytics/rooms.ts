@@ -72,6 +72,30 @@ export default async function handler(
           },
         },
         {
+          // Fair rotation's last recorded change. Newest-first + limit 1 so
+          // this stays a single index hit per room rather than a full scan.
+          $lookup: {
+            from: "analytics_events",
+            let: { rid: "$roomId" },
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $and: [
+                      { $eq: ["$roomId", "$$rid"] },
+                      { $eq: ["$type", "fair_mode_toggled"] },
+                    ],
+                  },
+                },
+              },
+              { $sort: { timestamp: -1 } },
+              { $limit: 1 },
+              { $project: { _id: 0, fairMode: 1 } },
+            ],
+            as: "lastFairToggle",
+          },
+        },
+        {
           $project: {
             _id: 0,
             roomId: 1,
@@ -80,6 +104,16 @@ export default async function handler(
             city: 1,
             songs: { $ifNull: [{ $arrayElemAt: ["$songCount.total", 0] }, 0] },
             participants: { $ifNull: [{ $arrayElemAt: ["$participantCount.total", 0] }, 0] },
+            // The state the room ended in: its last toggle, or the value it
+            // was created with when the host never touched it. Null on rooms
+            // created before either was recorded.
+            fairMode: {
+              $ifNull: [
+                { $arrayElemAt: ["$lastFairToggle.fairMode", 0] },
+                { $ifNull: ["$fairMode", null] },
+              ],
+            },
+            fairToggled: { $gt: [{ $size: "$lastFairToggle" }, 0] },
           },
         },
       ])
