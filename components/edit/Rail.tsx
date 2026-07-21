@@ -18,7 +18,13 @@ export function RailShell({
   children: React.ReactNode;
 }) {
   return (
-    <div className={`${p.rail} ${side === 'left' ? p.railLeft : p.railRight}`}>
+    <div
+      className={`${p.rail} ${side === 'left' ? p.railLeft : p.railRight}`}
+      // The rail renders inside the page's <main>, whose click clears the
+      // section selection. Without this a card would select and immediately
+      // deselect in the same event, and no rail control could hold a selection.
+      onClick={(e) => e.stopPropagation()}
+    >
       <div className={p.railHint}>{hint}</div>
       {children}
     </div>
