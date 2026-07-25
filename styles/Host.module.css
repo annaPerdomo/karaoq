@@ -319,7 +319,9 @@
 .reactionOverlay {
   position: absolute;
   inset: 0;
-  bottom: 110px; /* clear the transport bar at the bottom of the player area */
+  /* Clear the transport bar at the bottom of the player area — its dragged
+     height plus its own footer row. */
+  bottom: calc(var(--host-now-h, 64px) + 46px);
   pointer-events: none;
   z-index: 5;
   overflow: hidden;
@@ -857,7 +859,9 @@
   text-align: center;
 }
 
-/* ─── Transport bar ─── */
+/* ─── Transport bar ─── The host drags its top edge in Customize mode;
+   --host-now-h is that height and --host-now-scale the matching type
+   multiplier, both set inline on .main from hostConfig.nowPlayingHeight. */
 .transport {
   flex-shrink: 0;
   display: flex;
@@ -872,7 +876,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 0 1.5rem;
-  height: 64px;
+  height: var(--host-now-h, 64px);
   gap: 1rem;
 }
 
@@ -935,7 +939,7 @@
 }
 
 .tLabel {
-  font-size: 0.6rem;
+  font-size: calc(0.6rem * var(--host-now-scale, 1));
   letter-spacing: 2px;
   text-transform: uppercase;
   font-weight: 700;
@@ -957,16 +961,17 @@
 }
 
 .tDot {
-  width: 6px;
-  height: 6px;
+  width: calc(6px * var(--host-now-scale, 1));
+  height: calc(6px * var(--host-now-scale, 1));
   border-radius: 50%;
+  flex-shrink: 0;
   background: #ff2d78;
   box-shadow: 0 0 8px rgba(255, 45, 120, 0.8);
   animation: pulse 1.5s ease-in-out infinite;
 }
 
 .tSinger {
-  font-size: 1.1rem;
+  font-size: calc(1.1rem * var(--host-now-scale, 1));
   font-weight: 700;
   color: #00f0ff;
   white-space: nowrap;
@@ -975,7 +980,7 @@
 }
 
 .tSong {
-  font-size: 0.78rem;
+  font-size: calc(0.78rem * var(--host-now-scale, 1));
   color: var(--text-muted);
   white-space: nowrap;
   overflow: hidden;
@@ -1616,7 +1621,6 @@
 
   .transportMain {
     padding: 0 1rem;
-    height: 60px;
     gap: 0.75rem;
   }
 
@@ -1913,6 +1917,24 @@
   transform: rotate(180deg);
 }
 
+/* The announcement banner in the host sidebar — same festive treatment as the
+   display's .bannerLine, sized for a control panel. */
+.bannerLine {
+  margin: 0;
+  padding: 0.7rem 1rem;
+  font-family: var(--font-headline);
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.3;
+  text-align: center;
+  background: linear-gradient(135deg, #ff2d78, #00f0ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  overflow-wrap: break-word;
+}
+
 .qrShelf {
   display: flex;
   gap: 0.75rem;
@@ -1949,8 +1971,10 @@
   min-width: 0;
 }
 
+/* --qr-scale is set inline from the dragged QR size, so the shelf's text grows
+   in step with the code instead of leaving dead space beside it. */
 .qrShelfHint {
-  font-size: 0.62rem;
+  font-size: calc(0.62rem * var(--qr-scale, 1));
   letter-spacing: 1px;
   text-transform: uppercase;
   font-weight: 600;
@@ -1958,7 +1982,7 @@
 }
 
 .qrShelfAlt {
-  font-size: 0.78rem;
+  font-size: calc(0.78rem * var(--qr-scale, 1));
   color: var(--text-secondary);
 }
 
@@ -1969,9 +1993,9 @@
 
 .qrShelfCode {
   font-family: var(--font-mono);
-  font-size: 1.05rem;
+  font-size: calc(1.05rem * var(--qr-scale, 1));
   font-weight: 700;
-  letter-spacing: 3px;
+  letter-spacing: calc(3px * var(--qr-scale, 1));
   color: #ffd700;
   text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
 }

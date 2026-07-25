@@ -1,15 +1,12 @@
 import * as React from 'react';
-import styles from '../../../styles/Host.module.css';
 import { useT } from '../../../lib/i18n/I18nProvider';
-import { MAX_WELCOME_LENGTH } from '../../../lib/limits';
 import { DisplayConfig, nearestQrSize } from '../../../pages/api/types';
 import { SectionId } from './EditChrome';
 import {
+  BannerCard,
   RailShell,
-  RailCard,
   ThemeCard,
   ToggleCard,
-  ToggleRow,
   useRailCardRefs,
 } from '../../edit/Rail';
 
@@ -26,7 +23,7 @@ interface EditRailProps {
   onChange: (patch: Partial<DisplayConfig>) => void;
 }
 
-/** Show/hide toggles plus the non-spatial settings (theme, welcome, attract).
+/** Show/hide toggles plus the non-spatial settings (theme, banner).
  * Everything spatial — order, sizes, width, side — is dragged on the page
  * itself; this panel floats over the edge opposite the sidebar. */
 export function EditRail({
@@ -39,23 +36,13 @@ export function EditRail({
   side,
 }: EditRailProps) {
   const { t } = useT();
-  const [welcomeDraft, setWelcomeDraft] = React.useState(config.welcomeLine);
-  const welcomeInputRef = React.useRef<HTMLInputElement>(null);
+  const bannerInputRef = React.useRef<HTMLInputElement>(null);
 
-  // A stale draft would clobber a config refreshed from the server (poll/resync).
-  React.useEffect(() => setWelcomeDraft(config.welcomeLine), [config.welcomeLine]);
-
-  // Tapping a section on the page reveals its card; the welcome ghost goes
+  // Tapping a section on the page reveals its card; the banner ghost goes
   // straight into typing.
   const cardRef = useRailCardRefs<SectionId>(selected, (id) => {
-    if (id === 'welcome') welcomeInputRef.current?.focus();
+    if (id === 'banner') bannerInputRef.current?.focus();
   });
-
-  function commitWelcome() {
-    const trimmed = welcomeDraft.trim();
-    setWelcomeDraft(trimmed);
-    if (trimmed !== config.welcomeLine) onChange({ welcomeLine: trimmed });
-  }
 
   const toggles: { id: SectionId; title: string; desc?: string; on: boolean; flip: () => void }[] = [
     {
@@ -76,6 +63,14 @@ export function EditRail({
       title: t('host.display.nowPlaying'),
       on: config.showNowPlaying,
       flip: () => onChange({ showNowPlaying: !config.showNowPlaying }),
+    },
+    // boardsOn is room state outside DisplayConfig (see the props note), so its
+    // flip rides its own callback — but to the host it's just another section.
+    {
+      id: 'boards',
+      title: t('host.display.boards'),
+      on: boardsOn,
+      flip: onToggleBoards,
     },
   ];
 
@@ -102,47 +97,15 @@ export function EditRail({
         />
       ))}
 
-      <RailCard id="welcome" selected={selected} onSelect={onSelect} cardRef={cardRef('welcome')}>
-        <div className={styles.spLabel}>{t('host.display.welcome')}</div>
-        <input
-          ref={welcomeInputRef}
-          className={styles.dpWelcomeInput}
-          type="text"
-          value={welcomeDraft}
-          maxLength={MAX_WELCOME_LENGTH}
-          placeholder={t('host.display.welcomePh')}
-          onChange={(e) => setWelcomeDraft(e.target.value)}
-          onBlur={commitWelcome}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              commitWelcome();
-              (e.target as HTMLInputElement).blur();
-            }
-          }}
-        />
-      </RailCard>
-
-      <ToggleCard
-        id="attract"
-        title={t('host.display.attract')}
-        desc={t('host.display.attractDesc')}
-        on={config.attractMode}
-        onFlip={() => onChange({ attractMode: !config.attractMode })}
+      <BannerCard
+        id="banner"
+        value={config.bannerLine}
+        onChange={(bannerLine) => onChange({ bannerLine })}
         selected={selected}
         onSelect={onSelect}
-        cardRef={cardRef('attract')}
+        cardRef={cardRef('banner')}
+        inputRef={bannerInputRef}
       />
-
-      {/* Boards rotate on the TV between songs; they have no preview spot, so
-          the toggle lives here with the other TV-content switches. */}
-      <RailCard selected={selected} onSelect={onSelect}>
-        <ToggleRow
-          title={t('host.settings.boards')}
-          desc={boardsOn ? t('host.settings.boardsOn') : t('host.settings.boardsOff')}
-          on={boardsOn}
-          onFlip={onToggleBoards}
-        />
-      </RailCard>
     </RailShell>
   );
 }

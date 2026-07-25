@@ -59,7 +59,7 @@ export default async function handler(
   // complete so every stored config is fully-populated.
   const config: DisplayConfig = {
     ...normalizeDisplayConfig(body),
-    welcomeLine: body.welcomeLine.trim(),
+    bannerLine: body.bannerLine.trim(),
   };
 
   try {

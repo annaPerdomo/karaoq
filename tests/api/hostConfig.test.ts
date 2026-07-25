@@ -41,11 +41,13 @@ const validConfig: HostConfig = {
   theme: "neon",
   sidebarPosition: "left",
   sidebarWidth: 340,
-  showHistory: false,
   showBoards: true,
   showQr: false,
   qrPx: 118,
-  sectionOrder: ["qr", "boards", "queue"],
+  nowPlayingHeight: 200,
+  bannerLine: "Happy 30th, Sam!",
+  bannerPx: 24,
+  sectionOrder: ["qr", "boards", "queue", "banner"],
 };
 
 describe("POST /api/queue/[id]/host-config - Save host config", () => {
@@ -94,9 +96,11 @@ describe("POST /api/queue/[id]/host-config - Save host config", () => {
     expect(event.type).toBe("host_config_saved");
     expect(event.roomId).toBe("ROOM1");
     expect(event.changedFields.sort()).toEqual([
+      "bannerLine",
+      "bannerPx",
+      "nowPlayingHeight",
       "qrPx",
       "sectionOrder",
-      "showHistory",
       "showQr",
       "sidebarPosition",
       "sidebarWidth",
@@ -111,14 +115,17 @@ describe("POST /api/queue/[id]/host-config - Save host config", () => {
     ["sidebarWidth", 100],
     ["sidebarWidth", 500],
     ["qrPx", 20],
-    ["qrPx", 200],
-    ["showHistory", "yes"],
+    ["qrPx", 301],
+    ["nowPlayingHeight", 63],
+    ["nowPlayingHeight", 261],
     ["sectionOrder", ["boards", "qr"]],
     ["sectionOrder", ["queue", "queue", "qr"]],
     ["sectionOrder", ["queue", "boards", "nope"]],
-    // Retired fields: the cheer bar and playback controls aren't layout fields.
+    // Retired fields: the cheer bar and playback controls aren't layout
+    // fields, and the History tab always shows.
     ["showCheers", true],
     ["showTransport", false],
+    ["showHistory", true],
   ])("rejects invalid %s %j with 400", async (key, value) => {
     const req = createMockReq({
       method: "POST",
@@ -144,6 +151,32 @@ describe("POST /api/queue/[id]/host-config - Save host config", () => {
 
     expect(res.getStatus()).toBe(400);
     expect(mockCollection.updateOne).not.toHaveBeenCalled();
+  });
+
+  // Hosts on a stale bundle still POST configs without the bar-height field;
+  // rejecting them would break Customize for anyone who hadn't reloaded.
+  it("fills the default when a client omits the bar height", async () => {
+    mockCollection.updateOne.mockResolvedValue({ matchedCount: 1 });
+
+    const { nowPlayingHeight: _drop, ...legacyConfig } = validConfig;
+    const req = createMockReq({
+      method: "POST",
+      query: { id: "ROOM1" },
+      body: legacyConfig,
+    });
+    const res = createRes();
+    await handler(req, res);
+
+    expect(res.getStatus()).toBe(200);
+    expect(mockCollection.updateOne).toHaveBeenCalledWith(
+      { id: "ROOM1" },
+      {
+        $set: {
+          hostConfig: { ...validConfig, nowPlayingHeight: 64 },
+          lastActivity: expect.any(Date),
+        },
+      }
+    );
   });
 
   it("rejects unknown extra keys with 400", async () => {

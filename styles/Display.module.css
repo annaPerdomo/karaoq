@@ -138,7 +138,7 @@
   z-index: 15;
 }
 
-/* No sidebar: QR hidden, up-next off, no welcome line — let the header and
+/* No sidebar: QR hidden, up-next off, no banner — let the header and
    video area reclaim the 280px the sidebar would have reserved. */
 .headerNoSidebar {
   right: 0;
@@ -180,7 +180,10 @@
   margin-right: var(--sb-w, 280px);
   position: relative;
   padding-top: 56px; /* space for fixed header */
-  padding-bottom: 120px; /* space for fixed nowBar + footer */
+  /* Space for the fixed nowBar (which covers the footer), so the video clears
+     whatever height the host dragged it to. Capped so a bar sized for a TV
+     can't swallow the whole video area on a small screen. */
+  padding-bottom: min(calc(var(--now-h, 132px) + 8px), 50vh);
   box-sizing: border-box;
 }
 
@@ -391,120 +394,6 @@
   line-height: 1.5;
 }
 
-/* ─── Attract mode (idle promo screen) ─── */
-.attractWrap {
-  flex: 1;
-  position: relative;
-}
-
-.attractPanel {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1rem;
-  padding: 2rem;
-  animation: attractFade 20s ease-in-out infinite;
-}
-
-.attractPanelJoin {
-  animation-delay: 0s;
-}
-
-.attractPanelTonight {
-  animation-delay: -10s;
-}
-
-@keyframes attractFade {
-  0%, 45% { opacity: 1; }
-  50%, 95% { opacity: 0; }
-  100% { opacity: 1; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .attractPanel {
-    animation: none;
-    opacity: 0;
-  }
-
-  .attractPanelJoin {
-    opacity: 1;
-  }
-}
-
-.attractHeadline {
-  font-family: var(--font-brand);
-  font-weight: 400;
-  font-size: 2rem;
-  background: linear-gradient(135deg, var(--acc-a), var(--acc-b));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.attractCode {
-  font-family: var(--font-mono);
-  font-size: 2.5rem;
-  font-weight: 700;
-  letter-spacing: 6px;
-  color: #ffd700;
-  text-shadow: 0 0 16px rgba(255, 215, 0, 0.4);
-}
-
-.attractWelcome {
-  max-width: 34rem;
-  color: var(--text-secondary);
-  font-size: 1.1rem;
-  text-align: center;
-  line-height: 1.5;
-}
-
-.attractStats {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1.25rem;
-}
-
-.attractStat {
-  font-family: var(--font-headline);
-  font-size: clamp(1.5rem, 3.5vw, 2.5rem);
-  font-weight: 700;
-  color: var(--text-primary);
-  text-align: center;
-}
-
-.attractBeFirst {
-  max-width: 34rem;
-  color: var(--text-muted);
-  font-size: 1.3rem;
-  text-align: center;
-  line-height: 1.5;
-}
-
-.attractUpSoon {
-  margin-top: 0.5rem;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.35rem;
-}
-
-.attractUpSoonLabel {
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 1.2px;
-  text-transform: uppercase;
-  color: var(--acc-a);
-}
-
-.attractUpSoonName {
-  font-size: 1rem;
-  color: var(--text-secondary);
-}
-
 /* ─── Footer ─── */
 .footer {
   position: fixed;
@@ -550,13 +439,19 @@
   color: #ec4899;
 }
 
-/* ─── Now playing bar ─── */
+/* ─── Now playing bar ─── The host drags its top edge in Customize mode;
+   --now-h is that height and --now-scale the matching type multiplier, both set
+   inline on .main from displayConfig.nowPlayingHeight. Growing the bar grows
+   the singer's name with it — the whole point on a screen across a room. */
 .nowBar {
   position: fixed;
   bottom: 0;
   left: 0;
   right: var(--sb-w, 280px);
-  padding: 1.25rem 2rem 1.5rem;
+  height: var(--now-h, 132px);
+  display: flex;
+  align-items: center;
+  padding: 0 2rem;
   background: rgba(var(--disp-surface-rgb), 0.97);
   border-top: 1px solid rgba(255, 45, 120, 0.15);
   z-index: 10;
@@ -580,9 +475,11 @@
 }
 
 .nowContent {
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
+  gap: calc(0.3rem * var(--now-scale, 1));
 }
 
 .nowTop {
@@ -592,8 +489,8 @@
 }
 
 .nowDot {
-  width: 8px;
-  height: 8px;
+  width: calc(8px * var(--now-scale, 1));
+  height: calc(8px * var(--now-scale, 1));
   border-radius: 50%;
   background: var(--acc-a);
   box-shadow: 0 0 8px var(--acc-a), 0 0 20px rgba(255, 45, 120, 0.3);
@@ -607,7 +504,7 @@
 }
 
 .nowLabel {
-  font-size: 0.65rem;
+  font-size: calc(0.65rem * var(--now-scale, 1));
   letter-spacing: 3px;
   color: var(--acc-a);
   text-transform: uppercase;
@@ -616,14 +513,20 @@
 
 .nowSinger {
   font-family: var(--font-headline);
-  font-size: clamp(1.6rem, 3vw, 2.4rem);
+  font-size: calc(clamp(1.6rem, 3vw, 2.4rem) * var(--now-scale, 1));
   font-weight: 700;
   color: var(--acc-b);
   letter-spacing: -0.02em;
+  line-height: 1.15;
+  /* At the taller end the name is the biggest thing on the screen; a long one
+     must stay on its line rather than push the song title out of the bar. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .nowSong {
-  font-size: clamp(0.85rem, 1.5vw, 1.05rem);
+  font-size: calc(clamp(0.85rem, 1.5vw, 1.05rem) * var(--now-scale, 1));
   color: var(--text-secondary);
   white-space: nowrap;
   overflow: hidden;
@@ -635,7 +538,7 @@
   position: absolute;
   inset: 0;
   top: 56px; /* below the fixed header */
-  bottom: 130px; /* clear the fixed now-playing bar + footer */
+  bottom: min(calc(var(--now-h, 132px) + 8px), 50vh); /* clear the now-playing bar */
   pointer-events: none;
   z-index: 8;
   overflow: hidden;
@@ -747,13 +650,23 @@
   text-shadow: 0 0 12px rgba(255, 215, 0, 0.4);
 }
 
-.welcomeLine {
-  padding: 0.75rem 1.25rem;
-  font-size: 0.85rem;
-  color: var(--text-secondary);
+/* The announcement banner ("Happy 30th, Sam!", "Last call 1am") — headline
+   type in the accent gradient, so it reads as the reason everyone's here
+   rather than venue boilerplate. */
+.bannerLine {
+  margin: 0;
+  padding: 0.85rem 1.25rem;
+  font-family: var(--font-headline);
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1.3;
   text-align: center;
-  line-height: 1.4;
+  background: linear-gradient(135deg, var(--acc-a), var(--acc-b));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  overflow-wrap: break-word;
 }
 
 /* ─── Up Next section ─── */

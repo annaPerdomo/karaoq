@@ -7,10 +7,21 @@ interface Cfg {
   theme: string;
   sidebarPosition: "left" | "right";
   sidebarWidth: number;
+  nowPlayingHeight: number;
 }
 
-const KEYS: (keyof Cfg)[] = ["theme", "sidebarPosition", "sidebarWidth"];
-const BASE: Cfg = { theme: "classic", sidebarPosition: "right", sidebarWidth: 280 };
+const KEYS: (keyof Cfg)[] = [
+  "theme",
+  "sidebarPosition",
+  "sidebarWidth",
+  "nowPlayingHeight",
+];
+const BASE: Cfg = {
+  theme: "classic",
+  sidebarPosition: "right",
+  sidebarWidth: 280,
+  nowPlayingHeight: 132,
+};
 
 /** Drives the hook the way a page does: `config` is the server-synced value a
  * poll overwrites, and the harness exposes the hook so a test can act on it. */
@@ -23,6 +34,7 @@ function harness() {
       joinCode: "ROOM1",
       config,
       keys: KEYS,
+      nowPlayingBounds: { min: 100, max: 420 },
       save,
       onSaved: () => {},
     });

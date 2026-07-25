@@ -14,7 +14,7 @@ export const MAX_SING_WITH_ME = 30;
 export const MAX_SUGGESTIONS = 50;
 // Sanity bound on singer counts for a "Sing with me" post ("One Day More" et al).
 export const MAX_SINGERS = 20;
-export const MAX_WELCOME_LENGTH = 80;
+export const MAX_BANNER_LENGTH = 80;
 
 // YouTube video IDs are exactly 11 URL-safe base64 characters.
 const VIDEO_ID_RE = /^[A-Za-z0-9_-]{11}$/;
@@ -87,13 +87,27 @@ export function isValidSuggestedSong(song: unknown): song is SuggestedSong {
 const QR_SIZES = new Set(["large", "normal", "small", "hidden"]);
 const DISPLAY_THEMES = new Set<string>(DISPLAY_THEME_LIST);
 const SIDEBAR_POSITIONS = new Set(["left", "right"]);
-const SIDEBAR_SECTIONS = new Set(["qr", "welcome", "upNext", "boards"]);
-// Drag-handle bounds for the freely-resizable display sections.
+const SIDEBAR_SECTIONS = new Set(["qr", "banner", "upNext", "boards"]);
+// Drag-handle bounds for the freely-resizable display sections. The QR ceiling
+// is generous — a code on a TV across a bar needs real size to scan — and the
+// sidebars clamp what they actually render to the width they have, so a stored
+// size bigger than the current sidebar just fills it edge to edge.
 export const QR_PX_MIN = 48;
-export const QR_PX_MAX = 140;
+export const QR_PX_MAX = 300;
 export const SIDEBAR_WIDTH_MIN = 220;
 export const SIDEBAR_WIDTH_MAX = 460;
 export const UP_NEXT_COUNT_MAX = 20;
+// The now-playing strip's height drag. Both surfaces show it, so both bound it,
+// but a TV bar and a laptop control bar don't share a sensible range: the
+// display's starts where a readable stage bar starts, the host's where the
+// transport row already sits.
+export const DISPLAY_NOW_H_MIN = 100;
+export const DISPLAY_NOW_H_MAX = 420;
+export const HOST_NOW_H_MIN = 64;
+export const HOST_NOW_H_MAX = 260;
+// The announcement banner's font-size drag, shared by both surfaces.
+export const BANNER_PX_MIN = 14;
+export const BANNER_PX_MAX = 64;
 const DISPLAY_CONFIG_KEYS = new Set([
   "qrSize",
   "qrPx",
@@ -104,8 +118,9 @@ const DISPLAY_CONFIG_KEYS = new Set([
   "sidebarPosition",
   "sidebarWidth",
   "sidebarOrder",
-  "welcomeLine",
-  "attractMode",
+  "bannerLine",
+  "bannerPx",
+  "nowPlayingHeight",
 ]);
 
 function isIntInRange(value: unknown, min: number, max: number): boolean {
@@ -132,9 +147,14 @@ export function isValidDisplayConfig(value: unknown): value is DisplayConfig {
     (e.sidebarWidth === undefined ||
       isIntInRange(e.sidebarWidth, SIDEBAR_WIDTH_MIN, SIDEBAR_WIDTH_MAX)) &&
     (e.sidebarOrder === undefined || isValidSidebarOrder(e.sidebarOrder)) &&
-    typeof e.welcomeLine === "string" &&
-    e.welcomeLine.length <= MAX_WELCOME_LENGTH &&
-    typeof e.attractMode === "boolean"
+    (e.nowPlayingHeight === undefined ||
+      isIntInRange(e.nowPlayingHeight, DISPLAY_NOW_H_MIN, DISPLAY_NOW_H_MAX)) &&
+    // Clients old enough to omit the banner also send the retired welcomeLine,
+    // which the unknown-key check above already rejects — so it's required.
+    typeof e.bannerLine === "string" &&
+    e.bannerLine.length <= MAX_BANNER_LENGTH &&
+    (e.bannerPx === undefined ||
+      isIntInRange(e.bannerPx, BANNER_PX_MIN, BANNER_PX_MAX))
   );
 }
 
@@ -148,15 +168,17 @@ function isValidSidebarOrder(value: unknown): boolean {
   );
 }
 
-const HOST_SECTIONS = new Set(["queue", "boards", "qr"]);
+const HOST_SECTIONS = new Set(["queue", "boards", "qr", "banner"]);
 const HOST_CONFIG_KEYS = new Set([
   "theme",
   "sidebarPosition",
   "sidebarWidth",
-  "showHistory",
   "showBoards",
   "showQr",
   "qrPx",
+  "nowPlayingHeight",
+  "bannerLine",
+  "bannerPx",
   "sectionOrder",
 ]);
 
@@ -180,10 +202,18 @@ export function isValidHostConfig(value: unknown): value is HostConfig {
     typeof e.sidebarPosition === "string" &&
     SIDEBAR_POSITIONS.has(e.sidebarPosition) &&
     isIntInRange(e.sidebarWidth, SIDEBAR_WIDTH_MIN, SIDEBAR_WIDTH_MAX) &&
-    typeof e.showHistory === "boolean" &&
     typeof e.showBoards === "boolean" &&
     typeof e.showQr === "boolean" &&
     isIntInRange(e.qrPx, QR_PX_MIN, QR_PX_MAX) &&
+    // Absent on configs saved before the bar became resizable; readers (and the
+    // write endpoint, via normalizeHostConfig) default it.
+    (e.nowPlayingHeight === undefined ||
+      isIntInRange(e.nowPlayingHeight, HOST_NOW_H_MIN, HOST_NOW_H_MAX)) &&
+    (e.bannerLine === undefined ||
+      (typeof e.bannerLine === "string" &&
+        e.bannerLine.length <= MAX_BANNER_LENGTH)) &&
+    (e.bannerPx === undefined ||
+      isIntInRange(e.bannerPx, BANNER_PX_MIN, BANNER_PX_MAX)) &&
     isValidHostSectionOrder(e.sectionOrder)
   );
 }

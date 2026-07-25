@@ -189,30 +189,9 @@
   border-color: #00f0ff !important;
 }
 
-/* Corner handle: drag to resize the QR. */
-.qrHandle {
-  position: absolute;
-  right: 6px;
-  bottom: 6px;
-  z-index: 6;
-  width: 22px;
-  height: 22px;
-  border-right: 4px solid #00f0ff;
-  border-bottom: 4px solid #00f0ff;
-  border-radius: 0 0 6px 0;
-  background: none;
-  cursor: nwse-resize;
-  touch-action: none;
-  opacity: 0;
-  transition: opacity 0.15s;
-}
-
-.spot:hover .qrHandle,
-.spotOn .qrHandle {
-  opacity: 1;
-}
-
-/* Bottom pill: drag to show more/fewer up-next songs. */
+/* Bottom pill: drag to show more/fewer up-next songs. Always visible while
+   editing (hover-only affordances made Customize feel undiscoverable); it
+   brightens to full on hover/selection. */
 .countHandle {
   position: absolute;
   bottom: 8px;
@@ -231,13 +210,63 @@
   border-radius: 999px;
   cursor: ns-resize;
   touch-action: none;
-  opacity: 0;
+  opacity: 0.85;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
   transition: opacity 0.15s;
 }
 
 .spot:hover .countHandle,
 .spotOn .countHandle {
   opacity: 1;
+}
+
+/* Wrapper that pins a corner grip to the element it resizes (the QR code):
+   position context only, no visual footprint. */
+.cornerAnchor {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+/* Round grip straddling the QR's bottom-right corner — the classic diagonal
+   resize affordance. It rides the code's own corner, so it grows outward with
+   the drag and stays reachable wherever the section is docked. */
+.cornerHandle {
+  position: absolute;
+  right: -12px;
+  bottom: -12px;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  color: #0a0a19;
+  background: #00f0ff;
+  border: none;
+  border-radius: 50%;
+  cursor: nwse-resize;
+  touch-action: none;
+  /* The QR shelf disables pointer events on its contents while editing; the
+     grip must stay live inside it. */
+  pointer-events: auto;
+  opacity: 0.85;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+  transition: opacity 0.15s;
+}
+
+.cornerHandle:hover,
+.spot:hover .cornerHandle,
+.spotOn .cornerHandle {
+  opacity: 1;
+}
+
+/* Placement for full-width sections (the announcement banner): the default
+   -12px offsets would push the grip past the sidebar's clipped edge, so it
+   tucks inside horizontally and straddles only the bottom edge. */
+.cornerOnEdge {
+  right: 8px;
+  bottom: -12px;
 }
 
 /* Edge rail: drag to set the sidebar width. Straddles the sidebar's inner
@@ -263,7 +292,7 @@
   left: 50%;
   width: 3px;
   transform: translateX(-50%);
-  background: rgba(0, 240, 255, 0.25);
+  background: rgba(0, 240, 255, 0.4);
   transition: background 0.15s;
 }
 
@@ -272,8 +301,81 @@
   background: #00f0ff;
 }
 
+/* A grab pill riding the rail line, so the edge reads as draggable without
+   having to discover it by hovering. */
+.widthHandle::after {
+  content: '↔';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 24px;
+  height: 44px;
+  border-radius: 999px;
+  background: #00f0ff;
+  color: #0a0a19;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 44px;
+  text-align: center;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+}
+
 .widthHandleL { left: -7px; }
 .widthHandleR { right: -7px; }
+
+/* Top-edge rail: drag to set the now-playing strip's height — .widthHandle's
+   sibling on the other axis, and drawn the same way so the two read as one
+   family of resize affordances. The strip is anchored to the bottom of the
+   screen, so pulling this edge upward makes it (and its type) bigger. */
+.heightHandle {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -7px;
+  height: 14px;
+  z-index: 7;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: ns-resize;
+  touch-action: none;
+}
+
+.heightHandle::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 3px;
+  transform: translateY(-50%);
+  background: rgba(0, 240, 255, 0.4);
+  transition: background 0.15s;
+}
+
+.heightHandle:hover::before {
+  background: #00f0ff;
+}
+
+/* Same grab pill as the width rail's, rotated to the vertical axis. */
+.heightHandle::after {
+  content: '↕';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 44px;
+  height: 24px;
+  border-radius: 999px;
+  background: #00f0ff;
+  color: #0a0a19;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 24px;
+  text-align: center;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+}
 
 /* Layout utilities for hotspot wrappers around flex-sized display sections. */
 .grow {
@@ -283,10 +385,11 @@
   flex-direction: column;
 }
 
-.fill {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
+/* For a wrapper around a child that sets its own flex-shrink (the host's
+   playback bar) — the wrapper has to match it, or the bar loses the height the
+   host just dragged it to. */
+.noShrink {
+  flex-shrink: 0;
 }
 
 /* ─── Sidebar drag ─── */

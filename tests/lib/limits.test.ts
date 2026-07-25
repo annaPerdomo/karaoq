@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isValidDisplayConfig, MAX_WELCOME_LENGTH } from "../../lib/limits";
+import { isValidDisplayConfig, MAX_BANNER_LENGTH } from "../../lib/limits";
 import { DEFAULT_DISPLAY_CONFIG, DisplayConfig } from "../../pages/api/types";
 
 describe("isValidDisplayConfig", () => {
@@ -10,16 +10,17 @@ describe("isValidDisplayConfig", () => {
   it("accepts a fully populated valid config", () => {
     const config: DisplayConfig = {
       qrSize: "hidden",
-      qrPx: 140,
+      qrPx: 300,
       showUpNext: false,
       upNextCount: 16,
       showNowPlaying: false,
       theme: "neon",
       sidebarPosition: "left",
       sidebarWidth: 460,
-      sidebarOrder: ["welcome", "upNext", "qr", "boards"],
-      welcomeLine: "x".repeat(MAX_WELCOME_LENGTH),
-      attractMode: true,
+      sidebarOrder: ["banner", "upNext", "qr", "boards"],
+      bannerLine: "x".repeat(MAX_BANNER_LENGTH),
+      bannerPx: 64,
+      nowPlayingHeight: 420,
     };
     expect(isValidDisplayConfig(config)).toBe(true);
   });
@@ -30,6 +31,7 @@ describe("isValidDisplayConfig", () => {
       sidebarPosition: _p,
       sidebarWidth: _w,
       sidebarOrder: _o,
+      nowPlayingHeight: _h,
       ...legacy
     } = DEFAULT_DISPLAY_CONFIG;
     expect(isValidDisplayConfig(legacy)).toBe(true);
@@ -62,15 +64,19 @@ describe("isValidDisplayConfig", () => {
 
   it("rejects out-of-range drag dimensions", () => {
     expect(isValidDisplayConfig({ ...DEFAULT_DISPLAY_CONFIG, qrPx: 47 })).toBe(false);
-    expect(isValidDisplayConfig({ ...DEFAULT_DISPLAY_CONFIG, qrPx: 141 })).toBe(false);
+    expect(isValidDisplayConfig({ ...DEFAULT_DISPLAY_CONFIG, qrPx: 301 })).toBe(false);
     expect(isValidDisplayConfig({ ...DEFAULT_DISPLAY_CONFIG, sidebarWidth: 219 })).toBe(false);
     expect(isValidDisplayConfig({ ...DEFAULT_DISPLAY_CONFIG, sidebarWidth: 461 })).toBe(false);
+    expect(isValidDisplayConfig({ ...DEFAULT_DISPLAY_CONFIG, nowPlayingHeight: 99 })).toBe(false);
+    expect(isValidDisplayConfig({ ...DEFAULT_DISPLAY_CONFIG, nowPlayingHeight: 421 })).toBe(false);
+    expect(isValidDisplayConfig({ ...DEFAULT_DISPLAY_CONFIG, bannerPx: 13 })).toBe(false);
+    expect(isValidDisplayConfig({ ...DEFAULT_DISPLAY_CONFIG, bannerPx: 65 })).toBe(false);
   });
 
   it("rejects a sidebarOrder that is not a permutation of all sections", () => {
     expect(isValidDisplayConfig({ ...DEFAULT_DISPLAY_CONFIG, sidebarOrder: ["qr"] })).toBe(false);
     expect(
-      isValidDisplayConfig({ ...DEFAULT_DISPLAY_CONFIG, sidebarOrder: ["qr", "qr", "welcome"] })
+      isValidDisplayConfig({ ...DEFAULT_DISPLAY_CONFIG, sidebarOrder: ["qr", "qr", "banner"] })
     ).toBe(false);
   });
 
@@ -88,18 +94,26 @@ describe("isValidDisplayConfig", () => {
     expect(isValidDisplayConfig({ ...DEFAULT_DISPLAY_CONFIG, theme: "disco" })).toBe(false);
   });
 
-  it("rejects a non-string welcomeLine", () => {
-    expect(isValidDisplayConfig({ ...DEFAULT_DISPLAY_CONFIG, welcomeLine: 5 })).toBe(false);
+  it("rejects a non-string bannerLine", () => {
+    expect(isValidDisplayConfig({ ...DEFAULT_DISPLAY_CONFIG, bannerLine: 5 })).toBe(false);
   });
 
-  it("rejects a welcomeLine over the max length", () => {
+  it("rejects a missing bannerLine", () => {
+    const { bannerLine: _b, ...rest } = DEFAULT_DISPLAY_CONFIG;
+    expect(isValidDisplayConfig(rest)).toBe(false);
+  });
+
+  it("rejects a bannerLine over the max length", () => {
     expect(
-      isValidDisplayConfig({ ...DEFAULT_DISPLAY_CONFIG, welcomeLine: "x".repeat(MAX_WELCOME_LENGTH + 1) })
+      isValidDisplayConfig({ ...DEFAULT_DISPLAY_CONFIG, bannerLine: "x".repeat(MAX_BANNER_LENGTH + 1) })
     ).toBe(false);
   });
 
-  it("rejects a non-boolean attractMode", () => {
-    expect(isValidDisplayConfig({ ...DEFAULT_DISPLAY_CONFIG, attractMode: 1 })).toBe(false);
+  // The welcome line folded into the banner and the idle promo screen was
+  // retired — configs still carrying either field are rejected.
+  it("rejects the retired welcomeLine and attractMode fields", () => {
+    expect(isValidDisplayConfig({ ...DEFAULT_DISPLAY_CONFIG, welcomeLine: "hi" })).toBe(false);
+    expect(isValidDisplayConfig({ ...DEFAULT_DISPLAY_CONFIG, attractMode: false })).toBe(false);
   });
 
   it("rejects unknown extra keys", () => {

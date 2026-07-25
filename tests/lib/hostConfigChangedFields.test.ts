@@ -45,22 +45,44 @@ describe("normalizeHostConfig", () => {
 
   it("backfills sections added after a config was saved, in default order", () => {
     const stored = { ...DEFAULT_HOST_CONFIG, sectionOrder: ["qr"] as never };
-    expect(normalizeHostConfig(stored).sectionOrder).toEqual(["qr", "queue", "boards"]);
+    expect(normalizeHostConfig(stored).sectionOrder).toEqual([
+      "qr",
+      "queue",
+      "banner",
+      "boards",
+    ]);
   });
 
   it("leaves a complete config untouched", () => {
     const stored = {
       ...DEFAULT_HOST_CONFIG,
       showQr: false,
-      sectionOrder: ["qr", "boards", "queue"] as const,
+      sectionOrder: ["qr", "boards", "queue", "banner"] as const,
     };
     expect(normalizeHostConfig(stored)).toEqual(stored);
+  });
+
+  // A section that was renamed or removed must not survive in a stored order,
+  // or the next save would fail the endpoint's exactly-once check.
+  it("drops retired sections from a stored order", () => {
+    const stored = {
+      ...DEFAULT_HOST_CONFIG,
+      sectionOrder: ["celebration", "qr", "boards", "queue", "banner"] as never,
+    };
+    expect(normalizeHostConfig(stored).sectionOrder).toEqual([
+      "qr",
+      "boards",
+      "queue",
+      "banner",
+    ]);
   });
 
   // Retired fields must not survive a round-trip, or the next save would fail
   // the endpoint's unknown-key check.
   it("drops fields that no longer exist on the config", () => {
-    const stored = { ...DEFAULT_HOST_CONFIG, showTransport: true } as never;
-    expect(normalizeHostConfig(stored)).not.toHaveProperty("showTransport");
+    const stored = { ...DEFAULT_HOST_CONFIG, showTransport: true, showHistory: false } as never;
+    const config = normalizeHostConfig(stored);
+    expect(config).not.toHaveProperty("showTransport");
+    expect(config).not.toHaveProperty("showHistory");
   });
 });

@@ -13,6 +13,8 @@ import {
   nearestQrSize,
 } from '../../pages/api/types';
 import {
+  BANNER_PX_MIN,
+  BANNER_PX_MAX,
   QR_PX_MIN,
   QR_PX_MAX,
   SIDEBAR_WIDTH_MIN,
@@ -21,6 +23,7 @@ import {
 } from '../../lib/limits';
 import { useT } from '../../lib/i18n/I18nProvider';
 import { Spot, SectionId } from './edit/EditChrome';
+import { CornerHandle } from '../edit/EditChrome';
 import { SectionChrome, SectionGhost } from '../edit/SectionChrome';
 import { useSectionReorder } from '../edit/hooks/useSectionReorder';
 import { useScalarDrag } from '../edit/hooks/useScalarDrag';
@@ -74,18 +77,40 @@ const DisplaySidebar = ({
 }: DisplaySidebarProps): React.ReactElement => {
   const { t } = useT();
   const view = displayConfig;
-  const { qrSize, qrPx, showUpNext, upNextCount, welcomeLine, sidebarOrder } = view;
+  const { qrSize, qrPx, showUpNext, upNextCount, bannerLine, bannerPx, sidebarOrder } = view;
 
   // With draft-staged editing every patch is local state, so drag moves and
   // drag ends both flow through the same onChange.
   const change = (patch: Partial<DisplayConfig>) => edit?.onChange(patch);
 
+  // The widest QR the current sidebar can hold: the join card pads 1.25rem a
+  // side (40px), and the "scan to join" label keeps a column beside the code
+  // (96px + the row's 1rem gap) — the text sits to the QR's right at every
+  // size, never squeezed out or dropped underneath. The drag stops there
+  // instead of at the global cap, so pulling the grip never "grows" pixels the
+  // sidebar can't show — widen the sidebar first, then the QR can follow.
+  // Rendering clamps too, covering configs saved when the sidebar was wider.
+  const qrPxFit = Math.max(QR_PX_MIN, Math.min(QR_PX_MAX, view.sidebarWidth - 40 - 16 - 96));
+  const qrPxShown = Math.min(qrPx, qrPxFit);
+
+  // The grip rides the code's bottom-right corner, so the drag is diagonal:
+  // pull outward (down-right) to enlarge.
   const qrDrag = useScalarDrag({
-    value: view.qrPx,
+    value: qrPxShown,
     min: QR_PX_MIN,
-    max: QR_PX_MAX,
+    max: qrPxFit,
     // qrSize rides along so displays predating fine-grained sizing approximate it.
     onChange: (px) => change({ qrPx: px, qrSize: nearestQrSize(px) }),
+  });
+
+  // The banner's corner grip scales its TYPE — 2px of drag per font px keeps
+  // the swing controllable across the whole range.
+  const bannerDrag = useScalarDrag({
+    value: bannerPx,
+    min: BANNER_PX_MIN,
+    max: BANNER_PX_MAX,
+    scale: 2,
+    onChange: (px) => change({ bannerPx: px }),
   });
 
   const countDrag = useScalarDrag({
@@ -105,7 +130,7 @@ const DisplaySidebar = ({
 
   const visible: Record<SidebarSection, boolean> = {
     qr: qrSize !== 'hidden',
-    welcome: welcomeLine !== '',
+    banner: bannerLine !== '',
     upNext: showUpNext,
     boards: boardsOn,
   };
@@ -150,11 +175,18 @@ const DisplaySidebar = ({
         joinCode={joinCode}
         origin={origin}
         size={nearestQrSize(qrPx)}
-        sizePx={qrPx}
+        sizePx={qrPxShown}
+        resizeHandle={
+          edit && (
+            <CornerHandle title={t('host.display.dragResize')} dragProps={qrDrag} />
+          )
+        }
       />
     ),
-    welcome: visible.welcome && (
-      <p key="welcome" className={styles.welcomeLine}>{welcomeLine}</p>
+    banner: visible.banner && (
+      <p key="banner" className={styles.bannerLine} style={{ fontSize: bannerPx }}>
+        {bannerLine}
+      </p>
     ),
     upNext: visible.upNext && (
       <UpNextList key="upNext" upNext={upNext} upNextCount={upNextCount} />
@@ -177,17 +209,7 @@ const DisplaySidebar = ({
               selected={edit.selected}
               onSelect={edit.onSelect}
               label={t('host.display.qr')}
-              chrome={
-                <>
-                  {chromeFor('qr', () => change({ qrSize: 'hidden' }))}
-                  <button
-                    className={p.qrHandle}
-                    title={t('host.display.dragResize')}
-                    aria-label={t('host.display.dragResize')}
-                    {...qrDrag}
-                  />
-                </>
-              }
+              chrome={chromeFor('qr', () => change({ qrSize: 'hidden' }))}
             >
               {liveSections.qr}
             </Spot>
@@ -197,24 +219,35 @@ const DisplaySidebar = ({
             change({ qrSize: nearestQrSize(qrPx) })
           )
         ),
-        welcome: visible.welcome ? (
+        banner: visible.banner ? (
           <div
-            key="welcome"
-            ref={sectionRef('welcome')}
-            className={lifted === 'welcome' ? p.sectionLifted : ''}
+            key="banner"
+            ref={sectionRef('banner')}
+            className={lifted === 'banner' ? p.sectionLifted : ''}
           >
             <Spot
-              id="welcome"
+              id="banner"
               selected={edit.selected}
               onSelect={edit.onSelect}
-              label={t('host.display.welcome')}
-              chrome={chromeFor('welcome')}
+              label={t('host.display.banner')}
+              chrome={
+                <>
+                  {chromeFor('banner')}
+                  <CornerHandle
+                    title={t('host.display.dragResize')}
+                    dragProps={bannerDrag}
+                    className={p.cornerOnEdge}
+                  />
+                </>
+              }
             >
-              {liveSections.welcome}
+              {liveSections.banner}
             </Spot>
           </div>
         ) : (
-          ghost('welcome', `+ ${t('host.display.addWelcome')}`, () => {})
+          // Selecting the ghost focuses the rail's input — typing is what
+          // brings the section to life.
+          ghost('banner', `+ ${t('host.display.addBanner')}`, () => {})
         ),
         upNext: visible.upNext ? (
           <div

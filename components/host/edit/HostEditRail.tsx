@@ -1,6 +1,7 @@
+import * as React from 'react';
 import { useT } from '../../../lib/i18n/I18nProvider';
 import { HostConfig } from '../../../pages/api/types';
-import { RailShell, ThemeCard, ToggleCard, useRailCardRefs } from '../../edit/Rail';
+import { BannerCard, RailShell, ThemeCard, ToggleCard, useRailCardRefs } from '../../edit/Rail';
 import { HostSectionId } from './useHostEdit';
 
 interface HostEditRailProps {
@@ -23,16 +24,15 @@ export function HostEditRail({
   onChange,
 }: HostEditRailProps) {
   const { t } = useT();
-  const cardRef = useRailCardRefs<HostSectionId>(selected);
+  const bannerInputRef = React.useRef<HTMLInputElement>(null);
+
+  // Tapping a section on the page reveals its card; the banner ghost goes
+  // straight into typing.
+  const cardRef = useRailCardRefs<HostSectionId>(selected, (id) => {
+    if (id === 'banner') bannerInputRef.current?.focus();
+  });
 
   const toggles: { id: HostSectionId; title: string; desc: string; on: boolean; flip: () => void }[] = [
-    {
-      id: 'history',
-      title: t('host.customize.history'),
-      desc: t('host.customize.historyDesc'),
-      on: config.showHistory,
-      flip: () => onChange({ showHistory: !config.showHistory }),
-    },
     {
       id: 'boards',
       title: t('host.customize.boards'),
@@ -71,6 +71,16 @@ export function HostEditRail({
           cardRef={cardRef(id)}
         />
       ))}
+
+      <BannerCard
+        id="banner"
+        value={config.bannerLine}
+        onChange={(bannerLine) => onChange({ bannerLine })}
+        selected={selected}
+        onSelect={onSelect}
+        cardRef={cardRef('banner')}
+        inputRef={bannerInputRef}
+      />
     </RailShell>
   );
 }

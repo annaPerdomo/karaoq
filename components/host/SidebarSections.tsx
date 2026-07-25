@@ -4,11 +4,11 @@ import styles from "../../styles/Host.module.css";
 import p from "../../styles/DisplayDesigner.module.css";
 import CheerBar from "../CheerBar";
 import BoardsSummary from "../boards/BoardsSummary";
-import { HostConfig, HostSection, QueueEntry } from "../../pages/api/types";
-import { QR_PX_MIN, QR_PX_MAX } from "../../lib/limits";
+import { DEFAULT_HOST_CONFIG, HostConfig, HostSection, QueueEntry } from "../../pages/api/types";
+import { BANNER_PX_MIN, BANNER_PX_MAX, QR_PX_MIN, QR_PX_MAX } from "../../lib/limits";
 import { Boards } from "../../app/queue/useBoards";
 import { useT } from "../../lib/i18n/I18nProvider";
-import { Spot } from "../edit/EditChrome";
+import { CornerHandle, Spot } from "../edit/EditChrome";
 import { SectionChrome, SectionGhost } from "../edit/SectionChrome";
 import { useSectionReorder } from "../edit/hooks/useSectionReorder";
 import { useScalarDrag } from "../edit/hooks/useScalarDrag";
@@ -51,6 +51,7 @@ const SECTION_LABEL: Record<HostSection, string> = {
   queue: "host.customize.queue",
   boards: "host.customize.boards",
   qr: "host.customize.qr",
+  banner: "host.display.banner",
 };
 
 /** The host sidebar's arrangeable sections: the queue itself, the boards
@@ -84,12 +85,36 @@ export function SidebarSections({
   const { t } = useT();
   const { sectionOrder } = config;
 
-  // Drag the QR's corner to resize it, same interaction as the display's.
+  // The widest QR the current sidebar can hold: the shelf pads 1rem a side,
+  // the thumb frames the code with 6px of inset, and the join info keeps a
+  // column beside the code (128px + the row's 0.75rem gap) — the text sits to
+  // the QR's right at every size, never squeezed out or dropped underneath.
+  // The drag stops there rather than at the global cap — widen the sidebar and
+  // the QR can follow — and rendering clamps too, covering configs saved when
+  // the sidebar was wider.
+  const qrPxFit = Math.max(
+    QR_PX_MIN,
+    Math.min(QR_PX_MAX, config.sidebarWidth - 44 - 12 - 128)
+  );
+  const qrPxShown = Math.min(config.qrPx, qrPxFit);
+
+  // The grip rides the code's bottom-right corner, so the drag is diagonal:
+  // pull outward (down-right) to enlarge — same interaction as the display's.
   const qrDrag = useScalarDrag({
-    value: config.qrPx,
+    value: qrPxShown,
     min: QR_PX_MIN,
-    max: QR_PX_MAX,
+    max: qrPxFit,
     onChange: (qrPx) => edit?.onChange({ qrPx }),
+  });
+
+  // The banner's corner grip scales its TYPE — 2px of drag per font px keeps
+  // the swing controllable across the whole range.
+  const bannerDrag = useScalarDrag({
+    value: config.bannerPx,
+    min: BANNER_PX_MIN,
+    max: BANNER_PX_MAX,
+    scale: 2,
+    onChange: (bannerPx) => edit?.onChange({ bannerPx }),
   });
 
   // Which sections have the underlying data to appear at all.
@@ -97,19 +122,35 @@ export function SidebarSections({
     queue: true,
     boards: !!joinCode,
     qr: !remote && !!joinUrl,
+    banner: !remote,
   };
 
+  // An empty roll-up renders nothing, so before guests post the section was a
+  // zero-height strip — invisible live, and in Customize mode a floating
+  // grip/eye cluster overlapping whatever sat below it. Same content test the
+  // display's sidebar uses: full sing-together posts have nothing left to
+  // recruit for.
+  const openPosts = boards.singWithMe.filter(
+    (p) => p.joinedSingers.length < p.maxSingers
+  );
+  const boardsHasContent = openPosts.length + boards.suggestions.length > 0;
+
   // The queue can be moved but never hidden — without it there's no host page.
+  // The announcement banner shows by having text, like the display's.
   const shown: Record<HostSection, boolean> = {
     queue: true,
     boards: config.showBoards,
     qr: config.showQr,
+    banner: config.bannerLine !== "",
   };
 
   const visible: Record<HostSection, boolean> = {
     queue: dataReady.queue && shown.queue,
-    boards: dataReady.boards && shown.boards,
+    // Live, an empty boards section hides outright; in Customize mode it stays
+    // arrangeable via a labelled placeholder.
+    boards: dataReady.boards && shown.boards && (boardsHasContent || !!edit),
     qr: dataReady.qr && shown.qr,
+    banner: dataReady.banner && shown.banner,
   };
 
   const { lifted, gripProps, sectionRef } = useSectionReorder<HostSection>({
@@ -121,7 +162,11 @@ export function SidebarSections({
   const ghost = (id: HostSection, restore: () => void) => (
     <SectionGhost
       key={id}
-      label={t("host.display.hiddenTap", { section: t(SECTION_LABEL[id]) })}
+      label={
+        id === "banner"
+          ? `+ ${t("host.display.addBanner")}`
+          : t("host.display.hiddenTap", { section: t(SECTION_LABEL[id]) })
+      }
       onRestore={() => {
         restore();
         edit?.onSelect(id);
@@ -154,24 +199,42 @@ export function SidebarSections({
       {/* While customizing the shelf always renders — a tucked-away QR can't be
           resized, and its drawer toggle is inert in edit mode. */}
       {(qrShelfOpen || !!edit) && (
-        <div className={styles.qrShelf}>
-          <button
-            className={styles.qrShelfThumb}
-            // The thumb grows with the code (+12 keeps its 6px inset), otherwise
-            // the fixed 80px frame would crop anything the host drags larger.
-            style={{ width: config.qrPx + 12, height: config.qrPx + 12 }}
-            onClick={onOpenQrModal}
-            title={t("host.qr.enlarge")}
-            aria-label={t("host.qr.enlarge")}
-          >
-            <QRCodeSVG
-              value={joinUrl}
-              size={config.qrPx}
-              bgColor="transparent"
-              fgColor="#ffffff"
-              level="M"
-            />
-          </button>
+        <div
+          className={styles.qrShelf}
+          // The shelf's text tracks the code's dragged size — but only gently,
+          // capped well below the code's own growth: the text lives in the
+          // column beside the QR, and the code is what must stay readable.
+          style={
+            {
+              "--qr-scale": Math.min(
+                1.4,
+                1 + (qrPxShown / DEFAULT_HOST_CONFIG.qrPx - 1) * 0.2
+              ),
+            } as React.CSSProperties
+          }
+        >
+          <span className={p.cornerAnchor}>
+            <button
+              className={styles.qrShelfThumb}
+              // The thumb grows with the code (+12 keeps its 6px inset), otherwise
+              // the fixed 80px frame would crop anything the host drags larger.
+              style={{ width: qrPxShown + 12, height: qrPxShown + 12 }}
+              onClick={onOpenQrModal}
+              title={t("host.qr.enlarge")}
+              aria-label={t("host.qr.enlarge")}
+            >
+              <QRCodeSVG
+                value={joinUrl}
+                size={qrPxShown}
+                bgColor="transparent"
+                fgColor="#ffffff"
+                level="M"
+              />
+            </button>
+            {!!edit && (
+              <CornerHandle title={t("host.display.dragResize")} dragProps={qrDrag} />
+            )}
+          </span>
           <div className={styles.qrShelfInfo}>
             <span className={styles.qrShelfHint}>{t("host.qr.tapEnlarge")}</span>
             <span className={styles.qrShelfAlt}>
@@ -196,17 +259,26 @@ export function SidebarSections({
     queue: queueNode,
     boards: boardsLive,
     qr: qrLive,
+    banner: (
+      <p className={styles.bannerLine} style={{ fontSize: config.bannerPx }}>
+        {config.bannerLine}
+      </p>
+    ),
   };
 
+  // The banner lives or dies by its text, so its eye clears the line and its
+  // ghost just selects the rail card — typing brings it back.
   const hidePatch: Record<HostSection, Partial<HostConfig>> = {
     queue: {},
     boards: { showBoards: false },
     qr: { showQr: false },
+    banner: { bannerLine: "" },
   };
   const showPatch: Record<HostSection, Partial<HostConfig>> = {
     queue: {},
     boards: { showBoards: true },
     qr: { showQr: true },
+    banner: {},
   };
 
   // Only the queue grows; the rest size to content, so any order lays out right.
@@ -243,12 +315,11 @@ export function SidebarSections({
                 section === "queue" ? undefined : () => edit.onChange(hidePatch[section])
               }
             >
-              {section === "qr" && (
-                <button
-                  className={p.qrHandle}
+              {section === "banner" && (
+                <CornerHandle
                   title={t("host.display.dragResize")}
-                  aria-label={t("host.display.dragResize")}
-                  {...qrDrag}
+                  dragProps={bannerDrag}
+                  className={p.cornerOnEdge}
                 />
               )}
             </SectionChrome>
@@ -260,7 +331,15 @@ export function SidebarSections({
             className={section === "queue" ? p.grow : ""}
             style={{ pointerEvents: "none" }}
           >
-            {liveNode[section]}
+            {section === "boards" && !boardsHasContent ? (
+              // Stand-in body while the boards are empty, so the section can
+              // still be arranged before any guest has posted.
+              <div className={p.boardsPlaceholder}>
+                {t("host.display.boardsEmpty")}
+              </div>
+            ) : (
+              liveNode[section]
+            )}
           </div>
         </Spot>
       </div>

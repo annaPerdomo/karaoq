@@ -47,6 +47,7 @@ export default async function handler(
 
   // Store the config fully-populated so every stored config has all fields.
   const config: HostConfig = normalizeHostConfig(body);
+  config.bannerLine = config.bannerLine.trim();
 
   try {
     const collection = await getRoomsCollection();

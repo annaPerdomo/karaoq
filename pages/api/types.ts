@@ -59,14 +59,14 @@ export type DisplayTheme = "classic" | "minimal" | "neon";
 
 export const DISPLAY_THEMES: DisplayTheme[] = ["classic", "minimal", "neon"];
 export type SidebarPosition = "left" | "right";
-export type SidebarSection = "qr" | "welcome" | "upNext" | "boards";
+export type SidebarSection = "qr" | "banner" | "upNext" | "boards";
 
 /** The host sidebar's arrangeable sections — the host page's analogue of
  * SidebarSection. "queue" is the tabs + add button + queue/history list; it
  * reorders like the rest but can never be hidden (it's the point of the page).
  * The cheer bar is deliberately absent: it's a run-time setting (the gear's
  * reactions toggle), not a layout choice. */
-export type HostSection = "queue" | "boards" | "qr";
+export type HostSection = "queue" | "boards" | "qr" | "banner";
 
 /** Pixel size each coarse QR bucket renders at (also the qrPx fallback for
  * configs written before fine-grained sizing existed). */
@@ -90,9 +90,20 @@ export function normalizeDisplayConfig(stored: DisplayConfig | undefined): Displ
   if (stored && stored.qrPx === undefined && stored.qrSize && stored.qrSize !== "hidden") {
     merged.qrPx = QR_SIZE_PX[stored.qrSize];
   }
-  // Backfill sidebar sections added after a config was saved (e.g. "boards"),
-  // appended in default order — an older 3-section order still renders every
-  // section, in the same trailing spot boards previously occupied.
+  // The welcome line folded into the announcement banner; configs saved before
+  // then may still carry text in the retired field. Migrate it so a venue's
+  // greeting doesn't vanish — an existing banner wins (it was the louder of
+  // the two), then pickKnown below drops the retired field itself.
+  const legacyWelcome = (stored as { welcomeLine?: string } | undefined)?.welcomeLine;
+  if (legacyWelcome && !merged.bannerLine) merged.bannerLine = legacyWelcome;
+  // Drop retired sections from a stored order (the field-level pickKnown below
+  // can't see inside the array) — one left in place would fail the endpoint's
+  // exactly-once check on the next save. Then backfill sections added after
+  // the config was saved (e.g. "boards"), appended in default order — an older
+  // order still renders every section.
+  merged.sidebarOrder = merged.sidebarOrder.filter((s) =>
+    DEFAULT_DISPLAY_CONFIG.sidebarOrder.includes(s)
+  );
   const missing = DEFAULT_DISPLAY_CONFIG.sidebarOrder.filter(
     (s) => !merged.sidebarOrder.includes(s)
   );
@@ -121,7 +132,7 @@ export interface DisplayConfig {
   /** "hidden" hides the card; the size buckets are a coarse fallback for
    * displays that predate the fine-grained qrPx below. */
   qrSize: QrSize;
-  /** Exact QR pixel size the host dragged to (48–140). Kept in sync with the
+  /** Exact QR pixel size the host dragged to (48–300). Kept in sync with the
    * nearest qrSize bucket so stale displays still approximate it. */
   qrPx: number;
   showUpNext: boolean;
@@ -135,10 +146,18 @@ export interface DisplayConfig {
   sidebarWidth: number;
   /** Top-to-bottom order of the sidebar sections; always all four. */
   sidebarOrder: SidebarSection[];
-  /** Venue/host welcome line shown under the QR card and in attract mode. "" = none. */
-  welcomeLine: string;
-  /** Rotating promo panels when the room is idle (no current song). */
-  attractMode: boolean;
+  /** Announcement banner ("Happy 30th, Sam!", "Karaoke Tuesdays at Moe's"),
+   * its own sidebar section — also the venue's welcome line, which it
+   * absorbed. "" = none, which hides the section. */
+  bannerLine: string;
+  /** The banner's font size in px (14–64); the host drags its corner grip and
+   * the text scales with it. */
+  bannerPx: number;
+  /** Height in px of the now-playing bar (100–420); the host drags its top
+   * edge. The bar's type scales with the height, so this is really "how big is
+   * the singer's name" — a 55" TV across a bar wants a very different answer
+   * than a laptop on a kitchen table. */
+  nowPlayingHeight: number;
 }
 
 export const DEFAULT_DISPLAY_CONFIG: DisplayConfig = {
@@ -150,9 +169,10 @@ export const DEFAULT_DISPLAY_CONFIG: DisplayConfig = {
   theme: "classic",
   sidebarPosition: "right",
   sidebarWidth: 280,
-  sidebarOrder: ["qr", "welcome", "upNext", "boards"],
-  welcomeLine: "",
-  attractMode: false,
+  sidebarOrder: ["qr", "banner", "upNext", "boards"],
+  bannerLine: "",
+  bannerPx: 18,
+  nowPlayingHeight: 132,
 };
 
 /** Which fields of a saved config differ from the defaults. Feeds the
@@ -186,16 +206,23 @@ export interface HostConfig {
   sidebarPosition: SidebarPosition;
   /** Sidebar width in px (220–460); the host drags the sidebar's inner edge. */
   sidebarWidth: number;
-  /** The History tab in the sidebar. */
-  showHistory: boolean;
   /** The read-only boards roll-up (requests & sing-together). */
   showBoards: boolean;
   /** The join-QR shelf. */
   showQr: boolean;
-  /** Exact QR pixel size the host dragged to (48–140), same bounds as the
+  /** Exact QR pixel size the host dragged to (48–300), same bounds as the
    * display's. No coarse bucket here — this QR only ever renders on the host's
    * own screen, so there's no stale-client fallback to keep in sync. */
   qrPx: number;
+  /** Height in px of the playback bar (64–260); the host drags its top edge and
+   * its type scales with it. Same control the display's now-playing bar has,
+   * but ranged for a control screen rather than a TV. */
+  nowPlayingHeight: number;
+  /** Announcement banner, its own sidebar section — the host-side twin of the
+   * display's. "" = none, which hides the section. */
+  bannerLine: string;
+  /** The banner's font size in px (14–64), dragged via its corner grip. */
+  bannerPx: number;
   /** Top-to-bottom order of the sidebar's sections. */
   sectionOrder: HostSection[];
 }
@@ -204,11 +231,13 @@ export const DEFAULT_HOST_CONFIG: HostConfig = {
   theme: "classic",
   sidebarPosition: "right",
   sidebarWidth: 360,
-  showHistory: true,
   showBoards: true,
   showQr: true,
   qrPx: 72,
-  sectionOrder: ["queue", "boards", "qr"],
+  nowPlayingHeight: 64,
+  bannerLine: "",
+  bannerPx: 16,
+  sectionOrder: ["queue", "banner", "boards", "qr"],
 };
 
 /** Fill a stored host config's missing fields with defaults, and backfill any
@@ -216,6 +245,11 @@ export const DEFAULT_HOST_CONFIG: HostConfig = {
  * contract as normalizeDisplayConfig. */
 export function normalizeHostConfig(stored: HostConfig | undefined): HostConfig {
   const merged = { ...DEFAULT_HOST_CONFIG, ...stored };
+  // Retired sections dropped, then newer ones backfilled — see
+  // normalizeDisplayConfig for why both directions matter.
+  merged.sectionOrder = merged.sectionOrder.filter((s) =>
+    DEFAULT_HOST_CONFIG.sectionOrder.includes(s)
+  );
   const missing = DEFAULT_HOST_CONFIG.sectionOrder.filter(
     (s) => !merged.sectionOrder.includes(s)
   );

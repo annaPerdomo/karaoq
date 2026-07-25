@@ -1,6 +1,7 @@
 import * as React from 'react';
 import setDisplayConfig from '../../../app/queue/setDisplayConfig';
 import { DEFAULT_DISPLAY_CONFIG, DisplayConfig } from '../../../pages/api/types';
+import { DISPLAY_NOW_H_MIN, DISPLAY_NOW_H_MAX } from '../../../lib/limits';
 import { SAVE_SETTLE_MS, useConfigEdit } from '../../edit/useConfigEdit';
 import { SectionId } from './EditChrome';
 
@@ -41,6 +42,7 @@ export function useDisplayEdit(opts: {
     joinCode,
     config,
     keys: CONFIG_KEYS,
+    nowPlayingBounds: { min: DISPLAY_NOW_H_MIN, max: DISPLAY_NOW_H_MAX },
     extraDirty: boardsDraft !== settledBoards,
     onReset: () => setBoardsDraft(settledBoards),
     // One save = one write = one analytics event. Sending boards along only

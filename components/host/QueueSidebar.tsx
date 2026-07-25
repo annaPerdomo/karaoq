@@ -72,7 +72,6 @@ export function QueueSidebar({
   onToggleQrShelf,
   onOpenQrModal,
   onSongAdded,
-  showHistory,
   hostConfig,
   hostEdit,
   hostEditing = false,
@@ -123,8 +122,6 @@ export function QueueSidebar({
   onToggleQrShelf: () => void;
   onOpenQrModal: () => void;
   onSongAdded: (entry: QueueEntry) => void;
-  /** Whether the History tab shows — a Customize toggle. */
-  showHistory: boolean;
   /** Host config view (draft while customizing) — drives the bottom cluster. */
   hostConfig: HostConfig;
   /** Present only in Customize mode — edit chrome for the bottom cluster. */
@@ -162,17 +159,15 @@ export function QueueSidebar({
               <span className={styles.sidebarBadge}>{upNext.length}</span>
             )}
           </button>
-          {showHistory && (
-            <button
-              className={`${styles.sidebarTab} ${sidebarTab === "history" ? styles.sidebarTabActive : ""}`}
-              onClick={() => onSelectTab("history")}
-            >
-              {t('host.sidebar.history')}
-              {historyItems.length > 0 && (
-                <span className={styles.historyBadge}>{historyItems.length}</span>
-              )}
-            </button>
-          )}
+          <button
+            className={`${styles.sidebarTab} ${sidebarTab === "history" ? styles.sidebarTabActive : ""}`}
+            onClick={() => onSelectTab("history")}
+          >
+            {t('host.sidebar.history')}
+            {historyItems.length > 0 && (
+              <span className={styles.historyBadge}>{historyItems.length}</span>
+            )}
+          </button>
         </div>
         <button
           className={styles.sidebarCollapseBtn}

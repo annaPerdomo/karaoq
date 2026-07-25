@@ -15,16 +15,16 @@ describe("displayConfigChangedFields", () => {
       ...DEFAULT_DISPLAY_CONFIG,
       theme: "neon",
       showNowPlaying: false,
-      welcomeLine: "Karaoke Tuesdays",
+      bannerLine: "Karaoke Tuesdays",
     });
-    expect(changed.sort()).toEqual(["showNowPlaying", "theme", "welcomeLine"]);
+    expect(changed.sort()).toEqual(["bannerLine", "showNowPlaying", "theme"]);
   });
 
   it("treats a reordered sidebar as changed", () => {
     expect(
       displayConfigChangedFields({
         ...DEFAULT_DISPLAY_CONFIG,
-        sidebarOrder: ["upNext", "qr", "welcome"],
+        sidebarOrder: ["upNext", "qr", "banner"],
       })
     ).toEqual(["sidebarOrder"]);
   });
@@ -69,5 +69,36 @@ describe("normalizeDisplayConfig theme handling", () => {
   it("drops the retired showReactions field", () => {
     const stored = { ...DEFAULT_DISPLAY_CONFIG, showReactions: false } as never;
     expect(normalizeDisplayConfig(stored)).not.toHaveProperty("showReactions");
+  });
+});
+
+// The welcome line folded into the announcement banner; stored configs from
+// before still carry it (and may list it in sidebarOrder).
+describe("normalizeDisplayConfig welcome-line migration", () => {
+  it("migrates a stored welcomeLine into an empty banner", () => {
+    const stored = { ...DEFAULT_DISPLAY_CONFIG, welcomeLine: "Karaoke Tuesdays" } as never;
+    const config = normalizeDisplayConfig(stored);
+    expect(config.bannerLine).toBe("Karaoke Tuesdays");
+    expect(config).not.toHaveProperty("welcomeLine");
+  });
+
+  it("keeps an existing banner over a stored welcomeLine", () => {
+    const stored = {
+      ...DEFAULT_DISPLAY_CONFIG,
+      welcomeLine: "Karaoke Tuesdays",
+      bannerLine: "Happy 30th, Sam!",
+    } as never;
+    expect(normalizeDisplayConfig(stored).bannerLine).toBe("Happy 30th, Sam!");
+  });
+
+  it("drops the retired welcome section from a stored sidebarOrder", () => {
+    const stored = {
+      ...DEFAULT_DISPLAY_CONFIG,
+      sidebarOrder: ["qr", "welcome", "banner", "upNext", "boards"],
+      attractMode: true,
+    } as never;
+    const config = normalizeDisplayConfig(stored);
+    expect(config.sidebarOrder).toEqual(["qr", "banner", "upNext", "boards"]);
+    expect(config).not.toHaveProperty("attractMode");
   });
 });

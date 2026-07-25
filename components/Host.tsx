@@ -65,6 +65,8 @@ import { QueueSidebar } from "./host/QueueSidebar";
 import { useHostEdit } from "./host/edit/useHostEdit";
 import { HostEditRail } from "./host/edit/HostEditRail";
 import { EditOverlay } from "./edit/EditOverlay";
+import { Spot } from "./edit/EditChrome";
+import p from "../styles/DisplayDesigner.module.css";
 
 // Each theme repaints the host surface's CSS vars; classic is the default look.
 const HOST_THEME_CLASS: Record<DisplayTheme, string> = {
@@ -1032,8 +1034,7 @@ const Host = ({
   const uniqueSingers = new Set(upNext.flatMap((s) => singerKeys(s.userName))).size;
 
   // Everything below renders from hostView: the staged draft while customizing,
-  // the room's config otherwise. A hidden History tab can't be the active tab.
-  const effectiveSidebarTab = hostView.showHistory ? sidebarTab : "queue";
+  // the room's config otherwise.
   const customizing = !remote && hostEdit.editing;
 
   // The transport bar, reused by both the plain and the Customize-wrapped render.
@@ -1117,7 +1118,16 @@ const Host = ({
   return (
     <main
       className={`${styles.main} ${HOST_THEME_CLASS[hostView.theme]} ${customizing ? styles.mainCustomizing : ""}`}
-      style={{ "--host-sb-w": `${hostView.sidebarWidth}px` } as React.CSSProperties}
+      style={
+        {
+          "--host-sb-w": `${hostView.sidebarWidth}px`,
+          "--host-now-h": `${hostView.nowPlayingHeight}px`,
+          // Unitless multiplier the playback bar's type scales by. CSS can't
+          // divide a px length by a px length into a plain number, so the ratio
+          // to the default height is worked out here.
+          "--host-now-scale": `${hostView.nowPlayingHeight / DEFAULT_HOST_CONFIG.nowPlayingHeight}`,
+        } as React.CSSProperties
+      }
       onClick={customizing ? () => hostEdit.setSelected(null) : undefined}
     >
       <HostHeader
@@ -1192,8 +1202,31 @@ const Host = ({
           )}
 
           {/* Transport bar — host only; co-hosts don't control playback. Never
-              hideable: without it the host can't run the room. */}
-          {!remote && transportBar}
+              hideable: without it the host can't run the room. It is resizable
+              though — dragging its top edge grows the bar and its type with it,
+              so the singer's name reads from wherever the host is standing. */}
+          {!remote &&
+            (customizing ? (
+              <Spot
+                id="transport"
+                selected={hostEdit.selected}
+                onSelect={hostEdit.setSelected}
+                label={t('host.customize.transport')}
+                className={p.noShrink}
+                chrome={
+                  <button
+                    className={p.heightHandle}
+                    title={t('host.display.dragHeight')}
+                    aria-label={t('host.display.dragHeight')}
+                    {...hostEdit.heightDragProps}
+                  />
+                }
+              >
+                {transportBar}
+              </Spot>
+            ) : (
+              transportBar
+            ))}
         </div>
 
         <QueueSidebar
@@ -1202,7 +1235,7 @@ const Host = ({
           sidebarCollapsed={sidebarCollapsed}
           onExpandSidebar={() => setSidebarCollapsed(false)}
           onCollapseSidebar={() => setSidebarCollapsed(true)}
-          sidebarTab={effectiveSidebarTab}
+          sidebarTab={sidebarTab}
           onSelectTab={setSidebarTab}
           searchOpen={searchOpen}
           onToggleSearch={() => setSearchOpen(!searchOpen)}
@@ -1238,7 +1271,6 @@ const Host = ({
           onToggleQrShelf={toggleQrShelf}
           onOpenQrModal={() => setQrModalOpen(true)}
           onSongAdded={handleSongAdded}
-          showHistory={hostView.showHistory}
           hostConfig={hostView}
           hostEdit={
             customizing

@@ -40,6 +40,36 @@ export function Spot<Id extends string>({
   );
 }
 
+/** Round corner grip straddling an element's bottom-right corner: drag
+ * diagonally to resize it. The double-headed arrow is the universal "this
+ * corner resizes" sign, and it rides the element's own corner so it stays
+ * findable wherever the section sits on screen. */
+export function CornerHandle({
+  title,
+  dragProps,
+  className = '',
+}: {
+  title: string;
+  dragProps: React.ComponentProps<'button'>;
+  /** Placement variant (e.g. p.cornerOnEdge for full-width sections). */
+  className?: string;
+}) {
+  return (
+    <button
+      className={`${p.cornerHandle} ${className}`}
+      title={title}
+      aria-label={title}
+      {...dragProps}
+    >
+      <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M1 5V1h4" />
+        <path d="M13 9v4H9" />
+        <path d="M1 1l12 12" />
+      </svg>
+    </button>
+  );
+}
+
 /** Eye button for a section's chrome cluster: hides the section. */
 export function HideButton({ title, onHide }: { title: string; onHide: () => void }) {
   return (

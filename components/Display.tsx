@@ -20,7 +20,6 @@ import FullscreenToggle from './FullscreenToggle';
 import formatSongTitle from '../lib/songTitle';
 import DisplaySidebar from './display/DisplaySidebar';
 import NowPlayingBar from './display/NowPlayingBar';
-import AttractPanel from './display/AttractPanel';
 import p from '../styles/DisplayDesigner.module.css';
 import { useDisplayEdit } from './display/edit/useDisplayEdit';
 import { Spot, HideButton } from './display/edit/EditChrome';
@@ -444,7 +443,10 @@ const Display = (): React.ReactElement => {
   // While editing the sidebar always renders (its ghosts bring sections back).
   const sidebarCollapsed =
     !edit.editing &&
-    view.qrSize === 'hidden' && !view.showUpNext && !view.welcomeLine && !boardsOn;
+    view.qrSize === 'hidden' &&
+    !view.showUpNext &&
+    !view.bannerLine &&
+    !boardsOn;
 
   if (!joinCode) {
     return <div className={styles.loading}><div className={styles.spinner} /></div>;
@@ -485,7 +487,14 @@ const Display = (): React.ReactElement => {
   return (
     <main
       className={`${styles.main} ${themeClass} ${sideClass} ${editSideClass}`}
-      style={{ '--sb-w': `${view.sidebarWidth}px` } as React.CSSProperties}
+      style={{
+        '--sb-w': `${view.sidebarWidth}px`,
+        '--now-h': `${view.nowPlayingHeight}px`,
+        // Unitless multiplier the now-bar's type scales by. CSS can't divide a
+        // px length by a px length into a plain number, so the ratio to the
+        // default height is worked out here and the stylesheet just multiplies.
+        '--now-scale': `${view.nowPlayingHeight / DEFAULT_DISPLAY_CONFIG.nowPlayingHeight}`,
+      } as React.CSSProperties}
       onClick={edit.editing ? () => edit.setSelected(null) : undefined}
     >
       <header className={`${styles.header} ${sidebarCollapsed ? styles.headerNoSidebar : ''}`}>
@@ -533,34 +542,6 @@ const Display = (): React.ReactElement => {
               {formatSongTitle(currentSong.songTitle)}
             </p>
           </div>
-        ) : view.attractMode ? (
-          edit.editing ? (
-            <Spot
-              id="attract"
-              selected={edit.selected}
-              onSelect={edit.setSelected}
-              label={t('host.display.attract')}
-              className={p.fill}
-            >
-              <AttractPanel
-                joinUrl={joinUrl}
-                joinCode={joinCode || ''}
-                origin={origin}
-                welcomeLine={view.welcomeLine}
-                queue={queue}
-                activeIndex={activeIndex}
-              />
-            </Spot>
-          ) : (
-            <AttractPanel
-              joinUrl={joinUrl}
-              joinCode={joinCode || ''}
-              origin={origin}
-              welcomeLine={view.welcomeLine}
-              queue={queue}
-              activeIndex={activeIndex}
-            />
-          )
         ) : (
           <div className={styles.centerState}>
             <div className={styles.waitingIcon}>
@@ -637,12 +618,20 @@ const Display = (): React.ReactElement => {
             className={p.nowSlot}
             positioned
             chrome={
-              <div className={p.chrome}>
-                <HideButton
-                  title={t('host.display.hide')}
-                  onHide={() => edit.change({ showNowPlaying: false })}
+              <>
+                <div className={p.chrome}>
+                  <HideButton
+                    title={t('host.display.hide')}
+                    onHide={() => edit.change({ showNowPlaying: false })}
+                  />
+                </div>
+                <button
+                  className={p.heightHandle}
+                  title={t('host.display.dragHeight')}
+                  aria-label={t('host.display.dragHeight')}
+                  {...edit.heightDragProps}
                 />
-              </div>
+              </>
             }
           >
             <NowPlayingBar

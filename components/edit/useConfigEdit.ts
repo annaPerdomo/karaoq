@@ -5,10 +5,12 @@ import { configsEqual } from './configEquality';
 import { useScalarDrag } from './hooks/useScalarDrag';
 
 /** The layout fields every customizable surface shares, so this hook can own
- * the sidebar's side-flip and resize drags for both. */
-interface SidebarLayout {
+ * the sidebar's side-flip and resize drags — and the now-playing strip's height
+ * drag — for both. */
+interface SurfaceLayout {
   sidebarPosition: SidebarPosition;
   sidebarWidth: number;
+  nowPlayingHeight: number;
 }
 
 /** How long a fresh save outranks the server, covering the slowest poll
@@ -26,12 +28,15 @@ export const SAVE_SETTLE_MS = 5000;
  * Surfaces with state outside their config (the display's boardsOnDisplay) feed
  * it in through `extraDirty` / `onReset` and fold it into their own `save`.
  */
-export function useConfigEdit<C extends SidebarLayout, Id extends string>(opts: {
+export function useConfigEdit<C extends SurfaceLayout, Id extends string>(opts: {
   joinCode: string | undefined;
   /** Server-synced config (poll/broadcast). */
   config: C;
   /** Which fields count as the config, for draft-vs-server comparison. */
   keys: (keyof C)[];
+  /** Drag bounds for the now-playing strip's height; each surface has its own
+   * sensible range, so the shared drag can't hardcode one. */
+  nowPlayingBounds: { min: number; max: number };
   /** Persist the draft. Resolve false to surface the save-failed state. */
   save: (joinCode: string, draft: C) => Promise<boolean>;
   /** Adopt saved values immediately instead of waiting for the next poll. */
@@ -41,7 +46,16 @@ export function useConfigEdit<C extends SidebarLayout, Id extends string>(opts: 
   /** Reset that outside state when entering or discarding. */
   onReset?: () => void;
 }) {
-  const { joinCode, config, keys, save: persist, onSaved, extraDirty = false, onReset } = opts;
+  const {
+    joinCode,
+    config,
+    keys,
+    nowPlayingBounds,
+    save: persist,
+    onSaved,
+    extraDirty = false,
+    onReset,
+  } = opts;
 
   const [editing, setEditing] = React.useState(false);
   const [draft, setDraft] = React.useState<C>(config);
@@ -172,6 +186,18 @@ export function useConfigEdit<C extends SidebarLayout, Id extends string>(opts: 
     onChange: (sidebarWidth) => change({ sidebarWidth } as Partial<C>),
   });
 
+  // Drag the now-playing strip's top edge to resize it. The strip is anchored
+  // to the bottom of the screen, so pulling the edge upward grows it — and the
+  // strip's type scales with its height, which is the point of the drag.
+  const heightDragProps = useScalarDrag({
+    value: draft.nowPlayingHeight,
+    min: nowPlayingBounds.min,
+    max: nowPlayingBounds.max,
+    axis: 'y',
+    invert: true,
+    onChange: (nowPlayingHeight) => change({ nowPlayingHeight } as Partial<C>),
+  });
+
   return {
     editing,
     /** What the page should render from: the draft while editing, and our own
@@ -186,6 +212,7 @@ export function useConfigEdit<C extends SidebarLayout, Id extends string>(opts: 
     sideDragTarget,
     sideDragProps,
     widthDragProps,
+    heightDragProps,
     enter,
     discard,
     change,

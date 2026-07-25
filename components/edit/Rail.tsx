@@ -2,6 +2,7 @@ import * as React from 'react';
 import p from '../../styles/DisplayDesigner.module.css';
 import styles from '../../styles/Host.module.css';
 import { useT } from '../../lib/i18n/I18nProvider';
+import { MAX_BANNER_LENGTH } from '../../lib/limits';
 import { DisplayTheme } from '../../pages/api/types';
 import { THEMES } from './themes';
 
@@ -142,6 +143,51 @@ export function ThemeCard<Id extends string>({
           </button>
         ))}
       </div>
+    </RailCard>
+  );
+}
+
+/** The announcement banner's text input, identical on both surfaces. Every
+ * keystroke flows straight into the staged draft, so the banner on the page
+ * updates live as the host types (nothing reaches the room until Save);
+ * blur just trims. */
+export function BannerCard<Id extends string>({
+  id,
+  value,
+  onChange,
+  selected,
+  onSelect,
+  cardRef,
+  inputRef,
+}: {
+  id: Id;
+  value: string;
+  onChange: (line: string) => void;
+  selected: Id | null;
+  onSelect: (section: Id | null) => void;
+  cardRef?: (el: HTMLDivElement | null) => void;
+  inputRef?: React.Ref<HTMLInputElement>;
+}) {
+  const { t } = useT();
+  return (
+    <RailCard id={id} selected={selected} onSelect={onSelect} cardRef={cardRef}>
+      <div className={styles.spLabel}>{t('host.display.banner')}</div>
+      <input
+        ref={inputRef}
+        className={styles.dpWelcomeInput}
+        type="text"
+        value={value}
+        maxLength={MAX_BANNER_LENGTH}
+        placeholder={t('host.display.bannerPh')}
+        onChange={(e) => onChange(e.target.value)}
+        onBlur={() => {
+          const trimmed = value.trim();
+          if (trimmed !== value) onChange(trimmed);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+        }}
+      />
     </RailCard>
   );
 }

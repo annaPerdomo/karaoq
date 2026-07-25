@@ -46,9 +46,10 @@ const validConfig: DisplayConfig = {
   theme: "neon",
   sidebarPosition: "left",
   sidebarWidth: 340,
-  sidebarOrder: ["upNext", "qr", "welcome", "boards"],
-  welcomeLine: "  Karaoke Tuesdays  ",
-  attractMode: true,
+  sidebarOrder: ["upNext", "qr", "banner", "boards"],
+  bannerLine: "  Happy 30th, Sam!  ",
+  bannerPx: 34,
+  nowPlayingHeight: 260,
 };
 
 describe("POST /api/queue/[id]/display-config - Save display config", () => {
@@ -70,7 +71,7 @@ describe("POST /api/queue/[id]/display-config - Save display config", () => {
       { id: "ROOM1" },
       {
         $set: {
-          displayConfig: { ...validConfig, welcomeLine: "Karaoke Tuesdays" },
+          displayConfig: { ...validConfig, bannerLine: "Happy 30th, Sam!" },
           lastActivity: expect.any(Date),
         },
       }
@@ -86,7 +87,7 @@ describe("POST /api/queue/[id]/display-config - Save display config", () => {
       query: { id: "ROOM1" },
       // A production host — localhost would be analytics-exempt.
       headers: { host: "karaoq.live" },
-      body: { ...validConfig, welcomeLine: "" },
+      body: { ...validConfig, bannerLine: "" },
     });
     const res = createRes();
     await handler(req, res);
@@ -97,7 +98,8 @@ describe("POST /api/queue/[id]/display-config - Save display config", () => {
     expect(event.type).toBe("display_config_saved");
     expect(event.roomId).toBe("ROOM1");
     expect(event.changedFields.sort()).toEqual([
-      "attractMode",
+      "bannerPx",
+      "nowPlayingHeight",
       "qrPx",
       "qrSize",
       "showNowPlaying",
@@ -107,7 +109,7 @@ describe("POST /api/queue/[id]/display-config - Save display config", () => {
       "theme",
       "upNextCount",
     ]);
-    expect(event.displayConfig).toEqual({ ...validConfig, welcomeLine: "" });
+    expect(event.displayConfig).toEqual({ ...validConfig, bannerLine: "" });
   });
 
   // The display's Customize mode saves boardsOnDisplay in the same action as
@@ -129,7 +131,7 @@ describe("POST /api/queue/[id]/display-config - Save display config", () => {
       { id: "ROOM1" },
       {
         $set: {
-          displayConfig: { ...validConfig, welcomeLine: "Karaoke Tuesdays" },
+          displayConfig: { ...validConfig, bannerLine: "Happy 30th, Sam!" },
           lastActivity: expect.any(Date),
           boardsOnDisplay: false,
         },
@@ -201,6 +203,7 @@ describe("POST /api/queue/[id]/display-config - Save display config", () => {
       sidebarWidth: _w,
       sidebarOrder: _o,
       qrPx: _q,
+      nowPlayingHeight: _h,
       ...legacyConfig
     } = validConfig;
     const req = createMockReq({
@@ -220,10 +223,11 @@ describe("POST /api/queue/[id]/display-config - Save display config", () => {
             ...validConfig,
             sidebarPosition: "right",
             sidebarWidth: 280,
-            sidebarOrder: ["qr", "welcome", "upNext", "boards"],
+            sidebarOrder: ["qr", "banner", "upNext", "boards"],
+            nowPlayingHeight: 132,
             // Derived from the coarse qrSize bucket ("large").
             qrPx: 120,
-            welcomeLine: "Karaoke Tuesdays",
+            bannerLine: "Happy 30th, Sam!",
           },
           lastActivity: expect.any(Date),
         },
@@ -236,11 +240,13 @@ describe("POST /api/queue/[id]/display-config - Save display config", () => {
     ["sidebarWidth", 100],
     ["sidebarWidth", 500],
     ["qrPx", 20],
+    ["nowPlayingHeight", 99],
+    ["nowPlayingHeight", 421],
     ["upNextCount", 0],
     ["upNextCount", 21],
-    ["sidebarOrder", ["qr", "welcome"]],
-    ["sidebarOrder", ["qr", "qr", "welcome"]],
-    ["sidebarOrder", ["qr", "welcome", "nope"]],
+    ["sidebarOrder", ["qr", "banner"]],
+    ["sidebarOrder", ["qr", "qr", "banner", "boards"]],
+    ["sidebarOrder", ["qr", "banner", "upNext", "nope"]],
   ])("rejects invalid %s %j with 400", async (key, value) => {
     const req = createMockReq({
       method: "POST",
@@ -267,11 +273,26 @@ describe("POST /api/queue/[id]/display-config - Save display config", () => {
     expect(mockCollection.updateOne).not.toHaveBeenCalled();
   });
 
-  it("rejects an over-long welcomeLine with 400", async () => {
+  it("rejects an over-long bannerLine with 400", async () => {
     const req = createMockReq({
       method: "POST",
       query: { id: "ROOM1" },
-      body: { ...validConfig, welcomeLine: "x".repeat(81) },
+      body: { ...validConfig, bannerLine: "x".repeat(81) },
+    });
+    const res = createRes();
+    await handler(req, res);
+
+    expect(res.getStatus()).toBe(400);
+    expect(mockCollection.updateOne).not.toHaveBeenCalled();
+  });
+
+  // Clients from before the welcome line folded into the banner still send the
+  // retired fields — their saves fail the unknown-key check until they reload.
+  it("rejects the retired welcomeLine and attractMode fields with 400", async () => {
+    const req = createMockReq({
+      method: "POST",
+      query: { id: "ROOM1" },
+      body: { ...validConfig, welcomeLine: "Karaoke Tuesdays", attractMode: false },
     });
     const res = createRes();
     await handler(req, res);
