@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { trackEvent } from "../../../../lib/analytics";
-import { fairPushSpec } from "../../../../lib/fairQueue";
+import { fairPushSpec, singerKeys } from "../../../../lib/fairQueue";
 import { isValidQueueEntry, MAX_QUEUE_LENGTH, rateLimit } from "../../../../lib/limits";
 import { getRoomsCollection } from "../../../../lib/mongodb";
 import { normalizeRoomId } from "../../../../lib/roomCode";
@@ -118,7 +118,16 @@ export default async function handler(
           }
         }
       }
-      trackEvent(req, "song_added", { roomId: roomId as string, userName, songTitle, videoId, via: "search" });
+      // singerKeys is what fair rotation splits the name by, so a duet reports
+      // the same member count the queue charges turns for.
+      trackEvent(req, "song_added", {
+        roomId: roomId as string,
+        userName,
+        songTitle,
+        videoId,
+        via: "search",
+        singers: singerKeys(userName).length,
+      });
       res.status(200).json({ code: 200, message: "Song added." });
     }
   } catch (e) {

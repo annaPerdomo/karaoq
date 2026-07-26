@@ -88,6 +88,21 @@ interface AnalyticsData {
     changedFields: { _id: string; count: number }[];
     themes: { _id: string; count: number }[];
   };
+  hostSurface?: {
+    saves: number;
+    roomsCustomized: number;
+    changedFields: { _id: string; count: number }[];
+    themes: { _id: string; count: number }[];
+  };
+  rotation?: {
+    duetAdds: number;
+    /** Adds carrying a singer count — the denominator for the duet rate. */
+    trackedAdds: number;
+    bySize: { _id: number; count: number }[];
+    fairRooms: number;
+    fairEndedOn: number;
+    fairToggled: number;
+  };
   meta?: {
     timezone: string;
     generatedAt: string;
@@ -133,7 +148,8 @@ const VIA_LABELS: Record<string, string> = {
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 // qrSize is the coarse bucket kept in sync with qrPx, so it's dropped from the
-// chart rather than double-counting QR resizes.
+// chart rather than double-counting QR resizes. welcomeLine and attractMode are
+// retired fields kept here so historical events still read as English.
 const DISPLAY_FIELD_LABELS: Record<string, string> = {
   theme: 'Theme',
   qrPx: 'QR size',
@@ -144,9 +160,28 @@ const DISPLAY_FIELD_LABELS: Record<string, string> = {
   sidebarPosition: 'Sidebar side',
   sidebarWidth: 'Sidebar width',
   sidebarOrder: 'Sidebar order',
-  welcomeLine: 'Welcome message',
-  attractMode: 'Idle promo screen',
+  bannerLine: 'Announcement banner',
+  bannerPx: 'Banner text size',
+  nowPlayingHeight: 'Now-playing bar size',
+  welcomeLine: 'Welcome message (retired)',
+  attractMode: 'Idle promo screen (retired)',
   boardsOnDisplay: 'Boards on TV',
+};
+
+// The host control surface's own layout fields. showHistory is retired (the
+// History tab is always shown now) but stays labelled for historical events.
+const HOST_FIELD_LABELS: Record<string, string> = {
+  theme: 'Theme',
+  qrPx: 'QR size',
+  sidebarPosition: 'Sidebar side',
+  sidebarWidth: 'Sidebar width',
+  sectionOrder: 'Section order',
+  showBoards: 'Boards roll-up on/off',
+  showQr: 'QR shelf on/off',
+  bannerLine: 'Announcement banner',
+  bannerPx: 'Banner text size',
+  nowPlayingHeight: 'Playback bar size',
+  showHistory: 'History tab (retired)',
 };
 
 // Vercel geo headers are URL-encoded, but stray '%' sequences in raw values
@@ -273,7 +308,7 @@ const Analytics = (): React.ReactElement => {
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [data, setData] = React.useState<AnalyticsData | null>(null);
-  const [activeTab, setActiveTab] = React.useState<'overview' | 'geo' | 'languages' | 'songs' | 'suggestions' | 'social' | 'display' | 'rooms'>('overview');
+  const [activeTab, setActiveTab] = React.useState<'overview' | 'geo' | 'languages' | 'songs' | 'suggestions' | 'social' | 'rotation' | 'customize' | 'rooms'>('overview');
   const [rooms, setRooms] = React.useState<RoomRow[]>([]);
   const [roomsHasMore, setRoomsHasMore] = React.useState(false);
   const [roomsLoading, setRoomsLoading] = React.useState(false);
@@ -468,7 +503,7 @@ const Analytics = (): React.ReactElement => {
     );
   }
 
-  const { overview, charts, geo, languages, rankings, devices, suggestions, funnel, engagement, social, display } = data;
+  const { overview, charts, geo, languages, rankings, devices, suggestions, funnel, engagement, social, display, hostSurface, rotation } = data;
 
   const mobileCount = devices.find((d) => d._id === 'Mobile')?.count || 0;
   const desktopCount = devices.find((d) => d._id === 'Desktop')?.count || 0;
@@ -502,7 +537,7 @@ const Analytics = (): React.ReactElement => {
       )}
 
       <nav className={styles.tabs}>
-        {(['overview', 'geo', 'languages', 'songs', 'suggestions', 'social', 'display', 'rooms'] as const).map((tab) => (
+        {(['overview', 'geo', 'languages', 'songs', 'suggestions', 'social', 'rotation', 'customize', 'rooms'] as const).map((tab) => (
           <button
             key={tab}
             className={`${styles.tab} ${activeTab === tab ? styles.tabActive : ''}`}
@@ -861,45 +896,152 @@ const Analytics = (): React.ReactElement => {
         </div>
       )}
 
-      {activeTab === 'display' && display && (
+      {activeTab === 'rotation' && rotation && (
         <div className={styles.tabContent}>
-          <div className={styles.statGrid}>
-            <StatCard label="Display Applies" value={display.saves} />
-            <StatCard
-              label="Rooms That Customized"
-              value={display.roomsCustomized}
-              sub="changed anything from the defaults"
-            />
-          </div>
-
           <section className={styles.section}>
-            <h2 className={styles.sectionTitle}>Settings Changed From Default (by rooms)</h2>
-            {display.changedFields.length === 0 ? (
-              <p className={styles.empty}>No display customizations yet</p>
-            ) : (
-              <BarChart
-                data={display.changedFields
-                  .filter((f) => f._id !== 'qrSize')
-                  .map((f) => ({
-                    label: DISPLAY_FIELD_LABELS[f._id] ?? f._id,
-                    value: f.count,
-                  }))}
-                color="#f472b6"
+            <h2 className={styles.sectionTitle}>Fair Rotation</h2>
+            <div className={styles.statGrid}>
+              <StatCard label="Rooms Tracked" value={rotation.fairRooms} />
+              <StatCard
+                label="Ended On Fair Rotation"
+                value={rotation.fairEndedOn}
+                sub={
+                  rotation.fairRooms > 0
+                    ? `${Math.round((rotation.fairEndedOn / rotation.fairRooms) * 100)}% of tracked rooms`
+                    : undefined
+                }
               />
-            )}
+              <StatCard
+                label="Hosts Who Changed It"
+                value={rotation.fairToggled}
+                sub="rest ran on the default"
+              />
+            </div>
           </section>
 
           <section className={styles.section}>
-            <h2 className={styles.sectionTitle}>Theme Rooms Ended On</h2>
-            {display.themes.length === 0 ? (
-              <p className={styles.empty}>No themes applied yet</p>
+            <h2 className={styles.sectionTitle}>Duets &amp; Groups</h2>
+            <div className={styles.statGrid}>
+              <StatCard
+                label="Multi-Singer Adds"
+                value={rotation.duetAdds}
+                sub={
+                  rotation.trackedAdds > 0
+                    ? `${Math.round((rotation.duetAdds / rotation.trackedAdds) * 100)}% of tracked adds`
+                    : undefined
+                }
+              />
+              <StatCard
+                label="Adds With A Singer Count"
+                value={rotation.trackedAdds}
+                sub="adds predating duets aren't counted"
+              />
+            </div>
+            <h3 className={styles.sectionTitle}>Singers Per Entry</h3>
+            {rotation.bySize.length === 0 ? (
+              <p className={styles.empty}>No duets or group songs yet</p>
             ) : (
               <BarChart
-                data={display.themes.map((d) => ({ label: d._id, value: d.count }))}
-                color="#60a5fa"
+                data={rotation.bySize.map((d) => ({
+                  label: `${d._id} singers`,
+                  value: d.count,
+                }))}
+                color="#34d399"
               />
             )}
           </section>
+        </div>
+      )}
+
+      {activeTab === 'customize' && (
+        <div className={styles.tabContent}>
+          {display && (
+            <>
+              <section className={styles.section}>
+                <h2 className={styles.sectionTitle}>Display (TV)</h2>
+                <div className={styles.statGrid}>
+                  <StatCard label="Display Applies" value={display.saves} />
+                  <StatCard
+                    label="Rooms That Customized"
+                    value={display.roomsCustomized}
+                    sub="changed anything from the defaults"
+                  />
+                </div>
+              </section>
+
+              <section className={styles.section}>
+                <h2 className={styles.sectionTitle}>Display Settings Changed From Default (by rooms)</h2>
+                {display.changedFields.length === 0 ? (
+                  <p className={styles.empty}>No display customizations yet</p>
+                ) : (
+                  <BarChart
+                    data={display.changedFields
+                      .filter((f) => f._id !== 'qrSize')
+                      .map((f) => ({
+                        label: DISPLAY_FIELD_LABELS[f._id] ?? f._id,
+                        value: f.count,
+                      }))}
+                    color="#f472b6"
+                  />
+                )}
+              </section>
+
+              <section className={styles.section}>
+                <h2 className={styles.sectionTitle}>Display Theme Rooms Ended On</h2>
+                {display.themes.length === 0 ? (
+                  <p className={styles.empty}>No themes applied yet</p>
+                ) : (
+                  <BarChart
+                    data={display.themes.map((d) => ({ label: d._id, value: d.count }))}
+                    color="#60a5fa"
+                  />
+                )}
+              </section>
+            </>
+          )}
+
+          {hostSurface && (
+            <>
+              <section className={styles.section}>
+                <h2 className={styles.sectionTitle}>Host Screen</h2>
+                <div className={styles.statGrid}>
+                  <StatCard label="Host Applies" value={hostSurface.saves} />
+                  <StatCard
+                    label="Rooms That Customized"
+                    value={hostSurface.roomsCustomized}
+                    sub="changed anything from the defaults"
+                  />
+                </div>
+              </section>
+
+              <section className={styles.section}>
+                <h2 className={styles.sectionTitle}>Host Settings Changed From Default (by rooms)</h2>
+                {hostSurface.changedFields.length === 0 ? (
+                  <p className={styles.empty}>No host customizations yet</p>
+                ) : (
+                  <BarChart
+                    data={hostSurface.changedFields.map((f) => ({
+                      label: HOST_FIELD_LABELS[f._id] ?? f._id,
+                      value: f.count,
+                    }))}
+                    color="#fbbf24"
+                  />
+                )}
+              </section>
+
+              <section className={styles.section}>
+                <h2 className={styles.sectionTitle}>Host Theme Rooms Ended On</h2>
+                {hostSurface.themes.length === 0 ? (
+                  <p className={styles.empty}>No themes applied yet</p>
+                ) : (
+                  <BarChart
+                    data={hostSurface.themes.map((d) => ({ label: d._id, value: d.count }))}
+                    color="#a78bfa"
+                  />
+                )}
+              </section>
+            </>
+          )}
         </div>
       )}
 

@@ -85,11 +85,14 @@ export async function queueSingWithMeIfReady(
       // Also count it as a song add so core metrics (funnel, songs/room, top
       // songs) include group songs. No userName: the group credit string
       // would pollute per-singer stats, and joins are tracked individually.
+      // The singer count comes from the joins themselves rather than from
+      // splitting the credit name — this is a group song by construction.
       trackEvent(req, "song_added", {
         roomId,
         songTitle: post.songTitle,
         videoId: post.videoId,
         via: "singwithme",
+        singers: post.joinedSingers.length,
       });
     }
   }

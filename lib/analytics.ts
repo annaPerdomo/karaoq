@@ -41,6 +41,12 @@ export interface AnalyticsEvent {
   // How a song_added event reached the queue. Absent on events from before
   // this field existed, which were all search adds.
   via?: "search" | "board_claim" | "singwithme";
+  // song_added: how many people the entry is credited to — 1 for a solo, more
+  // for a duet/group ("Anna & Bob"), counted the way fair rotation splits the
+  // name so this matches the turns the queue actually charges. Absent on
+  // events from before duets existed, which is why the dashboard reports the
+  // rate against the tracked subset rather than every add ever.
+  singers?: number;
   // display_config_saved: which fields differ from DEFAULT_DISPLAY_CONFIG,
   // plus the full saved config so theme/size popularity can be aggregated.
   changedFields?: string[];

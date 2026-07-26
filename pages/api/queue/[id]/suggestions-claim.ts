@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { v4 as uuidv4 } from "uuid";
 import { trackEvent } from "../../../../lib/analytics";
-import { fairPushSpec } from "../../../../lib/fairQueue";
+import { fairPushSpec, singerKeys } from "../../../../lib/fairQueue";
 import { MAX_NAME_LENGTH, MAX_QUEUE_LENGTH, rateLimit } from "../../../../lib/limits";
 import { getRoomsCollection } from "../../../../lib/mongodb";
 import { normalizeRoomId } from "../../../../lib/roomCode";
@@ -128,6 +128,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       songTitle: suggestion.songTitle,
       videoId: suggestion.videoId,
       via: "board_claim",
+      singers: singerKeys(userName).length,
     });
     res.status(200).json({ code: 200, message: "Added to queue." });
   } catch (e) {

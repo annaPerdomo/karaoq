@@ -87,6 +87,14 @@ export default async function handler(
       displayRoomsCustomized,
       displayFieldCounts,
       displayThemeCounts,
+      hostSaves,
+      hostRoomsCustomized,
+      hostFieldCounts,
+      hostThemeCounts,
+      duetAdds,
+      singerTrackedAdds,
+      singerSizeCounts,
+      fairRoomStats,
       sessionsByLocale,
       roomsCreatedByLocale,
       localeByCountry,
@@ -471,6 +479,82 @@ export default async function handler(
         ])
         .toArray(),
 
+      // Host-surface customization, the same four cuts as the display above.
+      // Kept as its own set rather than merged: the two surfaces have separate
+      // layouts and separate defaults, so "hosts move the sidebar" means a
+      // different thing on a TV than on the organizer's own screen.
+      events.countDocuments({ type: "host_config_saved" }),
+      events
+        .distinct("roomId", {
+          type: "host_config_saved",
+          "changedFields.0": { $exists: true },
+        })
+        .then((rooms) => rooms.length),
+      events
+        .aggregate([
+          { $match: { type: "host_config_saved" } },
+          { $unwind: "$changedFields" },
+          { $group: { _id: { field: "$changedFields", room: "$roomId" } } },
+          { $group: { _id: "$_id.field", count: { $sum: 1 } } },
+          { $sort: { count: -1 } },
+        ])
+        .toArray(),
+      events
+        .aggregate([
+          { $match: { type: "host_config_saved", "hostConfig.theme": { $exists: true } } },
+          { $sort: { timestamp: -1 } },
+          { $group: { _id: "$roomId", theme: { $first: "$hostConfig.theme" } } },
+          { $group: { _id: "$theme", count: { $sum: 1 } } },
+          { $sort: { count: -1 } },
+        ])
+        .toArray(),
+
+      // Duets & groups. The rate is reported against adds that actually carry
+      // a singer count, not every add ever — events predating the field would
+      // otherwise read as a room full of solos and bury the real number.
+      events.countDocuments({ type: "song_added", singers: { $gte: 2 } }),
+      events.countDocuments({ type: "song_added", singers: { $type: "number" } }),
+      events
+        .aggregate([
+          { $match: { type: "song_added", singers: { $gte: 2 } } },
+          { $group: { _id: "$singers", count: { $sum: 1 } } },
+          { $sort: { _id: 1 } },
+        ])
+        .toArray(),
+
+      // Fair rotation adoption. room_created carries the state the room opened
+      // with and fair_mode_toggled every later change, so sorting ascending and
+      // taking the LAST value per room gives the state it ended on — the same
+      // "last toggle wins, else the created value" rule the rooms table uses.
+      events
+        .aggregate([
+          {
+            $match: {
+              type: { $in: ["room_created", "fair_mode_toggled"] },
+              fairMode: { $type: "bool" },
+            },
+          },
+          { $sort: { timestamp: 1 } },
+          {
+            $group: {
+              _id: "$roomId",
+              ended: { $last: "$fairMode" },
+              toggles: {
+                $sum: { $cond: [{ $eq: ["$type", "fair_mode_toggled"] }, 1, 0] },
+              },
+            },
+          },
+          {
+            $group: {
+              _id: null,
+              rooms: { $sum: 1 },
+              endedOn: { $sum: { $cond: ["$ended", 1, 0] } },
+              toggled: { $sum: { $cond: [{ $gt: ["$toggles", 0] }, 1, 0] } },
+            },
+          },
+        ])
+        .toArray(),
+
       // Which UI language rooms are actually run in. Ranked by unique rooms so
       // one long night can't outweigh ten rooms, with sessions and the
       // host/singer split alongside. `chosen` counts the sessions whose locale
@@ -564,6 +648,9 @@ export default async function handler(
 
     const retention = hostRetention[0] || { hosts: 0, repeatHosts: 0 };
 
+    // Empty until a room records a fair-mode value either way.
+    const fairStats = fairRoomStats[0] || { rooms: 0, endedOn: 0, toggled: 0 };
+
     // "Today" in the viewer's timezone; en-CA formats as YYYY-MM-DD, matching
     // the $dateToString keys above.
     const todayKey = new Intl.DateTimeFormat("en-CA", { timeZone: tz }).format(now);
@@ -651,6 +738,20 @@ export default async function handler(
         roomsCustomized: displayRoomsCustomized,
         changedFields: displayFieldCounts,
         themes: displayThemeCounts,
+      },
+      hostSurface: {
+        saves: hostSaves,
+        roomsCustomized: hostRoomsCustomized,
+        changedFields: hostFieldCounts,
+        themes: hostThemeCounts,
+      },
+      rotation: {
+        duetAdds,
+        trackedAdds: singerTrackedAdds,
+        bySize: singerSizeCounts,
+        fairRooms: fairStats.rooms,
+        fairEndedOn: fairStats.endedOn,
+        fairToggled: fairStats.toggled,
       },
       meta: {
         timezone: tz,

@@ -7,6 +7,8 @@ import { createMockReq } from "../helpers/mockRequest";
 const mockCollection = {
   findOne: vi.fn(),
   updateOne: vi.fn(),
+  // The analytics event write lands here too — same mocked client.
+  insertOne: vi.fn(),
 };
 
 vi.mock("mongodb", () => ({
@@ -306,5 +308,59 @@ describe("POST /api/queue/[id]/videos - Add song to queue", () => {
     await handler(req, res);
 
     expect(res.getStatus()).toBe(405);
+  });
+
+  // The singer count feeds the duets dashboard, and it has to agree with what
+  // fair rotation actually charges turns for — so it's counted with the same
+  // name split, not a looser "does it contain an ampersand" test.
+  describe("singer count on the song_added event", () => {
+    async function addAs(userName: string) {
+      vi.clearAllMocks();
+      const room: Room = { id: "ROOM1", queue: [], activeVideoIndex: 0, isPlaying: false };
+      mockCollection.findOne.mockResolvedValue(room);
+      mockCollection.updateOne.mockResolvedValue({ matchedCount: 1, modifiedCount: 1 });
+      mockCollection.insertOne.mockResolvedValue({});
+
+      const req = createMockReq({
+        method: "POST",
+        query: { id: "ROOM1" },
+        // A production host — localhost would be analytics-exempt.
+        headers: { host: "karaoq.live" },
+        body: {
+          entryId: "entry-1",
+          userName,
+          videoId: "dQw4w9WgXcQ",
+          songTitle: "Never Gonna Give You Up",
+        },
+      });
+      await handler(req, createRes());
+      // The add path fires its analytics write without awaiting it, so the
+      // insert lands a tick after the handler resolves.
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      const event = mockCollection.insertOne.mock.calls[0][0];
+      expect(event.type).toBe("song_added");
+      return event.singers as number;
+    }
+
+    it.each([
+      ["Anna", 1],
+      ["Anna & Bob", 2],
+      ["anna and bob", 2],
+      ["Anna+Bob", 2],
+      ["Anna, Bob, Cara", 3],
+    ])("counts %j as %i singer(s)", async (userName, expected) => {
+      expect(await addAs(userName)).toBe(expected);
+    });
+
+    // Both mirror singerKeys' own folding: a name that only looks like a pair
+    // must not report two turns when the queue only charges one.
+    it("counts a self-duet as one singer", async () => {
+      expect(await addAs("Anna & anna")).toBe(1);
+    });
+
+    it("counts a name containing 'and' as one singer", async () => {
+      expect(await addAs("Sandy")).toBe(1);
+    });
   });
 });
