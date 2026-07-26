@@ -20,7 +20,6 @@ function entry(userName: string): QueueEntry {
   };
 }
 
-/** An entry with an explicit queue time. */
 function at(userName: string, addedAt: number): QueueEntry {
   return { ...entry(userName), addedAt };
 }
@@ -62,8 +61,7 @@ describe("fairOrder", () => {
   });
 
   it("does not let a case change buy a fresh turn", () => {
-    // Requeueing as "ANNA" is the same singer, so it stays a round-1 song and
-    // Bob's first still goes ahead of it.
+    // "ANNA" folds to the same singer — still round 1, Bob's first goes ahead.
     const [anna1, ANNA, bob] = [entry("anna"), entry("ANNA"), entry("Bob")];
     expect(fairOrder([anna1, ANNA, bob])).toEqual([anna1, bob, ANNA]);
   });
@@ -96,8 +94,7 @@ describe("singerKey — the anti-gaming fold", () => {
   });
 
   it("does not collapse non-Latin names into one singer", () => {
-    // A naive [^a-z0-9] strip would fold every one of these to "" and put the
-    // whole room on a single rotation slot.
+    // A naive [^a-z0-9] strip would fold all of these to "" — one shared slot.
     expect(singerKey("ゆき")).not.toBe("");
     expect(singerKey("현우")).not.toBe("");
     expect(singerKey("Дмитрий")).not.toBe("");
@@ -151,9 +148,7 @@ describe("arrivalOrder", () => {
 
 describe("fairOrder — rounds come from queue time, not array position", () => {
   it("ranks a singer's songs by when they were queued, not where they sit", () => {
-    // The host dragged A's second song to the top. A round must still mean
-    // "their nth-earliest song", so A's FIRST song leads and the second falls
-    // behind B.
+    // Host dragged A2 to the top; a round still means "nth-earliest", so A1 leads.
     const cur = at("X", 1);
     const [a1, a2, b1] = [at("A", 2), at("A", 3), at("B", 4)];
     expect(fairOrder([cur, a2, a1, b1])).toEqual([cur, a1, b1, a2]);
@@ -213,8 +208,7 @@ describe("withArrivalTimes", () => {
   });
 
   it("lets a legacy queue round-trip once its times are recorded", () => {
-    // Exactly the upgrade path: a room queued before addedAt existed gets
-    // stamped on the first toggle, so turning the mode back off restores it.
+    // Upgrade path: pre-addedAt room stamped on first toggle, so off restores it.
     const original = withArrivalTimes([
       entry("A"), entry("A"), entry("B"), entry("C"),
     ]);
@@ -226,8 +220,7 @@ describe("withArrivalTimes", () => {
 
 describe("fairInsertIndex", () => {
   it("slots a new song at the end of its round (worked example)", () => {
-    // Sorted upcoming [A1, B1, C1, A2, A3]; B's new song is round 1 → the
-    // first round-2 entry is A3 at index 4.
+    // Upcoming [A1, B1, C1, A2, A3]; new B is round 1 → before round-2 A3 at 4.
     const sorted = [entry("A"), entry("B"), entry("C"), entry("A"), entry("A")];
     expect(fairInsertIndex(sorted, "B")).toBe(4);
   });
@@ -256,8 +249,7 @@ describe("fairInsertIndex", () => {
 
   it("gives a case-changed name the same slot as the original", () => {
     const sorted = [entry("a"), entry("b"), entry("a")];
-    // "A" is just "a", who already has two upcoming songs → round 2 → tail,
-    // not a free round-0 slot near the front.
+    // "A" folds to "a" with two songs queued → round 2 → tail, no free slot.
     expect(fairInsertIndex(sorted, "A")).toBe(3);
   });
 
@@ -300,9 +292,7 @@ describe("singerKeys — duet names split into members", () => {
 
 describe("duets in the rotation", () => {
   it("slots a first-timer's duet where the first-timer's own song would go (acceptance case)", () => {
-    // The room regular has three songs queued; a newcomer joins them on a
-    // duet. The pair takes the NEWCOMER's round-0 slot — right behind the
-    // other first songs — instead of inheriting the regular's long wait.
+    // A regular+newcomer duet takes the NEWCOMER's round-0 slot, not the regular's wait.
     const sorted = [
       entry("test"), entry("Bob"), entry("Sherry"), entry("test"), entry("test"),
     ];
@@ -310,8 +300,7 @@ describe("duets in the rotation", () => {
   });
 
   it("charges the duet as a turn to BOTH members", () => {
-    // After the duet, Anna's and Bob's next solos are round 1 — behind a
-    // brand-new singer's first song, which still slips in at round 0.
+    // Post-duet, both members' solos are round 1 — behind a new singer's round 0.
     const upcoming = [entry("Anna & Bob"), entry("Cara"), entry("Cara")];
     expect(fairInsertIndex(upcoming, "Anna")).toBe(3);
     expect(fairInsertIndex(upcoming, "Bob")).toBe(3);
@@ -319,8 +308,7 @@ describe("duets in the rotation", () => {
   });
 
   it("re-sorts a queued duet into its least-served member's round on toggle", () => {
-    // Arrival: Anna, Anna again, then "Anna & Bob". Bob hasn't sung, so the
-    // duet takes his round-0 turn and plays before Anna's own second song.
+    // Bob hasn't sung, so the duet rides his round-0 turn — before Anna's second.
     const cur = at("X", 1);
     const [a1, a2, d] = [at("Anna", 2), at("Anna", 3), at("Anna & Bob", 4)];
     expect(fairOrder([cur, a1, a2, d])).toEqual([cur, a1, d, a2]);
@@ -329,15 +317,12 @@ describe("duets in the rotation", () => {
   it("keeps both members of an on-stage duet from owning the next slot", () => {
     const cur = at("Anna & Bob", 1);
     const [a2, b2, c1] = [at("Anna", 2), at("Bob", 3), at("Cara", 4)];
-    // Anna AND Bob are singing right now, so each one's solo is round 1 and
-    // Cara's first song goes ahead of both.
+    // Both duet members are mid-song, so their solos are round 1; Cara goes first.
     expect(fairOrder([cur, a2, b2, c1])).toEqual([cur, c1, a2, b2]);
   });
 
   it("counts duet members individually when they sing solo later", () => {
-    // Bob's duet was his first turn, so his solo is round 1: it falls behind
-    // Cara's round-0 song but stays ahead of nobody unfairly — arrival order
-    // holds within the round.
+    // Bob's duet was his first turn → his solo is round 1, behind Cara's round 0.
     const cur = at("X", 1);
     const [d, b1, c1] = [at("Anna & Bob", 2), at("Bob", 3), at("Cara", 4)];
     expect(fairOrder([cur, d, b1, c1])).toEqual([cur, d, c1, b1]);

@@ -10,48 +10,33 @@ export interface Reaction {
   timestamp: number;
 }
 
-/**
- * A "Sing with me" post: someone wants company on a song and broadcasts it so
- * others can join. Auto-adds to the queue once `minSingers` have joined; extra
- * singers can keep joining up to `maxSingers` until it plays.
- */
+/** Auto-adds to the queue at `minSingers` joins; joinable up to `maxSingers` until played. */
 export interface SingWithMePost {
   id: string;
   songTitle: string;
   videoId: string;
-  /** Empty string when posted anonymously. */
+  /** "" when anonymous. */
   createdBy: string;
   anonymous: boolean;
-  /** Minimum singers before it auto-adds to the queue (>= 2). */
   minSingers: number;
-  /** Cap on how many can join (>= minSingers). */
   maxSingers: number;
-  /** Display names of everyone who has joined (includes creator when named). */
   joinedSingers: string[];
-  /** True once auto-added to the queue. */
   queued: boolean;
   timestamp: number;
 }
 
-/**
- * A song requested for the room. Any singer can claim it ("I'll sing this"),
- * which queues it under their name. Supports the too-shy-to-sing case.
- */
+/** A requested song any singer can claim, queueing it under their name. */
 export interface SuggestedSong {
   id: string;
   songTitle: string;
   videoId: string;
-  /** Empty string when suggested anonymously. */
+  /** "" when anonymous. */
   suggestedBy: string;
   anonymous: boolean;
   timestamp: number;
 }
 
-/**
- * Where the room's video plays: on the host page itself ("here") or on a
- * separate display screen ("tv"). Stored on the room so every host device
- * agrees on the mode, not just the one that picked it.
- */
+/** Stored on the room so every host device agrees on where video plays. */
 export type PlayMode = "here" | "tv";
 
 export type QrSize = "large" | "normal" | "small" | "hidden";
@@ -61,46 +46,33 @@ export const DISPLAY_THEMES: DisplayTheme[] = ["classic", "minimal", "neon"];
 export type SidebarPosition = "left" | "right";
 export type SidebarSection = "qr" | "banner" | "upNext" | "boards";
 
-/** The host sidebar's arrangeable sections — the host page's analogue of
- * SidebarSection. "queue" is the tabs + add button + queue/history list; it
- * reorders like the rest but can never be hidden (it's the point of the page).
- * The cheer bar is deliberately absent: it's a run-time setting (the gear's
- * reactions toggle), not a layout choice. */
+/** "queue" reorders like the rest but can never be hidden. */
 export type HostSection = "queue" | "boards" | "qr" | "banner";
 
-/** Pixel size each coarse QR bucket renders at (also the qrPx fallback for
- * configs written before fine-grained sizing existed). */
+/** Coarse-bucket px — the qrPx fallback for configs predating fine-grained sizing. */
 export const QR_SIZE_PX: Record<Exclude<QrSize, "hidden">, number> = {
   small: 48,
   normal: 80,
   large: 120,
 };
 
-/** Coarse bucket a dragged QR size lands in — kept alongside qrPx so displays
- * that predate fine-grained sizing still approximate the host's intent. */
+/** Kept in sync with qrPx so stale displays approximate the dragged size. */
 export function nearestQrSize(px: number): Exclude<QrSize, "hidden"> {
   return px <= 60 ? "small" : px <= 100 ? "normal" : "large";
 }
 
-/** Fill a stored config's missing fields with defaults. Configs written before
- * a field existed lack it; qrPx in particular must follow the stored qrSize
- * bucket, not the default, or an old "large" QR would render at normal size. */
+// Fills fields missing from older stored configs. qrPx must follow the stored
+// qrSize bucket, not the default, or an old "large" QR renders at normal size.
 export function normalizeDisplayConfig(stored: DisplayConfig | undefined): DisplayConfig {
   const merged = { ...DEFAULT_DISPLAY_CONFIG, ...stored };
   if (stored && stored.qrPx === undefined && stored.qrSize && stored.qrSize !== "hidden") {
     merged.qrPx = QR_SIZE_PX[stored.qrSize];
   }
-  // The welcome line folded into the announcement banner; configs saved before
-  // then may still carry text in the retired field. Migrate it so a venue's
-  // greeting doesn't vanish — an existing banner wins (it was the louder of
-  // the two), then pickKnown below drops the retired field itself.
+  // Retired welcomeLine migrates into the banner; an existing banner wins.
   const legacyWelcome = (stored as { welcomeLine?: string } | undefined)?.welcomeLine;
   if (legacyWelcome && !merged.bannerLine) merged.bannerLine = legacyWelcome;
-  // Drop retired sections from a stored order (the field-level pickKnown below
-  // can't see inside the array) — one left in place would fail the endpoint's
-  // exactly-once check on the next save. Then backfill sections added after
-  // the config was saved (e.g. "boards"), appended in default order — an older
-  // order still renders every section.
+  // Drop retired sections (pickKnown can't see inside the array — a leftover
+  // would fail the endpoint's exactly-once check), then backfill new ones.
   merged.sidebarOrder = merged.sidebarOrder.filter((s) =>
     DEFAULT_DISPLAY_CONFIG.sidebarOrder.includes(s)
   );
@@ -108,18 +80,13 @@ export function normalizeDisplayConfig(stored: DisplayConfig | undefined): Displ
     (s) => !merged.sidebarOrder.includes(s)
   );
   if (missing.length) merged.sidebarOrder = [...merged.sidebarOrder, ...missing];
-  // Rooms saved while the retired palettes existed still carry them; fall back
-  // to the default look rather than rendering an unknown theme class.
   if (!DISPLAY_THEMES.includes(merged.theme)) {
     merged.theme = DEFAULT_DISPLAY_CONFIG.theme;
   }
-  // Drop fields that no longer exist (e.g. the retired showReactions). Carrying
-  // them forward would make the next save fail the endpoint's unknown-key check.
+  // Retired fields carried forward would fail the endpoint's unknown-key check.
   return pickKnown(merged, DEFAULT_DISPLAY_CONFIG);
 }
 
-/** Rebuild an object from only the keys present in `shape`, so retired fields
- * on a stored config don't ride along into the next write. */
 function pickKnown<C extends object>(value: C, shape: C): C {
   const out = {} as C;
   (Object.keys(shape) as (keyof C)[]).forEach((key) => {
@@ -128,35 +95,22 @@ function pickKnown<C extends object>(value: C, shape: C): C {
   return out;
 }
 
+// Ranges are enforced in lib/limits.ts.
 export interface DisplayConfig {
-  /** "hidden" hides the card; the size buckets are a coarse fallback for
-   * displays that predate the fine-grained qrPx below. */
+  /** Coarse fallback for displays predating qrPx; "hidden" hides the card. */
   qrSize: QrSize;
-  /** Exact QR pixel size the host dragged to (48–300). Kept in sync with the
-   * nearest qrSize bucket so stale displays still approximate it. */
   qrPx: number;
   showUpNext: boolean;
-  /** How many upcoming songs the sidebar lists (1–20). */
   upNextCount: number;
   showNowPlaying: boolean;
   theme: DisplayTheme;
-  /** Which edge of the TV the QR/up-next sidebar sits on. */
   sidebarPosition: SidebarPosition;
-  /** Sidebar width in px (220–460); the host drags the sidebar's inner edge. */
   sidebarWidth: number;
-  /** Top-to-bottom order of the sidebar sections; always all four. */
+  /** Always all four sections. */
   sidebarOrder: SidebarSection[];
-  /** Announcement banner ("Happy 30th, Sam!", "Karaoke Tuesdays at Moe's"),
-   * its own sidebar section — also the venue's welcome line, which it
-   * absorbed. "" = none, which hides the section. */
+  /** "" = none, which hides the section. Absorbed the retired welcomeLine. */
   bannerLine: string;
-  /** The banner's font size in px (14–64); the host drags its corner grip and
-   * the text scales with it. */
   bannerPx: number;
-  /** Height in px of the now-playing bar (100–420); the host drags its top
-   * edge. The bar's type scales with the height, so this is really "how big is
-   * the singer's name" — a 55" TV across a bar wants a very different answer
-   * than a laptop on a kitchen table. */
   nowPlayingHeight: number;
 }
 
@@ -175,9 +129,7 @@ export const DEFAULT_DISPLAY_CONFIG: DisplayConfig = {
   nowPlayingHeight: 132,
 };
 
-/** Which fields of a saved config differ from the defaults. Feeds the
- * display_config_saved analytics event, so what hosts actually change can
- * argue for moving the defaults themselves. */
+/** Fields differing from defaults; feeds the display_config_saved event. */
 export function displayConfigChangedFields(
   config: DisplayConfig
 ): (keyof DisplayConfig)[] {
@@ -193,37 +145,20 @@ export function displayConfigChangedFields(
   );
 }
 
-/**
- * Per-room customization of the HOST control surface — the organizer's own
- * screen, not the TV. Mirrors DisplayConfig: stored on the room so every host
- * device (and co-hosts) share one layout, edited in place via the same
- * Customize mode. Theme reuses the display's palette union.
- */
+/** Host-surface twin of DisplayConfig, stored on the room so all host devices
+ * share one layout. Ranges enforced in lib/limits.ts. */
 export interface HostConfig {
-  /** Palette for the host surface — same set the display offers. */
   theme: DisplayTheme;
-  /** Which edge the queue sidebar docks to. */
   sidebarPosition: SidebarPosition;
-  /** Sidebar width in px (220–460); the host drags the sidebar's inner edge. */
   sidebarWidth: number;
-  /** The read-only boards roll-up (requests & sing-together). */
   showBoards: boolean;
-  /** The join-QR shelf. */
   showQr: boolean;
-  /** Exact QR pixel size the host dragged to (48–300), same bounds as the
-   * display's. No coarse bucket here — this QR only ever renders on the host's
-   * own screen, so there's no stale-client fallback to keep in sync. */
+  /** No coarse bucket: this QR never renders on a stale client. */
   qrPx: number;
-  /** Height in px of the playback bar (64–260); the host drags its top edge and
-   * its type scales with it. Same control the display's now-playing bar has,
-   * but ranged for a control screen rather than a TV. */
   nowPlayingHeight: number;
-  /** Announcement banner, its own sidebar section — the host-side twin of the
-   * display's. "" = none, which hides the section. */
+  /** "" = none, which hides the section. */
   bannerLine: string;
-  /** The banner's font size in px (14–64), dragged via its corner grip. */
   bannerPx: number;
-  /** Top-to-bottom order of the sidebar's sections. */
   sectionOrder: HostSection[];
 }
 
@@ -240,13 +175,9 @@ export const DEFAULT_HOST_CONFIG: HostConfig = {
   sectionOrder: ["queue", "banner", "boards", "qr"],
 };
 
-/** Fill a stored host config's missing fields with defaults, and backfill any
- * sections added after it was saved (appended in default order) — same
- * contract as normalizeDisplayConfig. */
+/** Same contract as normalizeDisplayConfig. */
 export function normalizeHostConfig(stored: HostConfig | undefined): HostConfig {
   const merged = { ...DEFAULT_HOST_CONFIG, ...stored };
-  // Retired sections dropped, then newer ones backfilled — see
-  // normalizeDisplayConfig for why both directions matter.
   merged.sectionOrder = merged.sectionOrder.filter((s) =>
     DEFAULT_HOST_CONFIG.sectionOrder.includes(s)
   );
@@ -260,8 +191,7 @@ export function normalizeHostConfig(stored: HostConfig | undefined): HostConfig 
   return pickKnown(merged, DEFAULT_HOST_CONFIG);
 }
 
-/** Which fields of a saved host config differ from the defaults. Feeds the
- * host_config_saved analytics event. */
+/** Fields differing from defaults; feeds the host_config_saved event. */
 export function hostConfigChangedFields(
   config: HostConfig
 ): (keyof HostConfig)[] {
@@ -283,47 +213,29 @@ export interface Room {
   activeVideoIndex: number;
   isPlaying: boolean;
   reactionsEnabled: boolean;
-  /** Unset on rooms where the host has never chosen a mode. */
   playMode?: PlayMode;
-  /**
-   * Random token minted by the device that started the current song in
-   * "here" mode — that device is the playback surface. Cleared whenever
-   * playback stops. Lets a reloading owner be told apart from a second
-   * host device joining mid-song.
-   */
+  /** Minted by the device that started the song in "here" mode — tells a
+   * reloading owner apart from a second host device. Cleared on stop. */
   playToken?: string;
-  /**
-   * True while someone has paused the video on the display screen (reported
-   * by the display's player watcher). Cleared whenever playback starts,
-   * stops, or advances.
-   */
   displayPaused?: boolean;
-  /**
-   * Heartbeat from any open display page (~10s cadence). A TV room that
-   * claims to be playing with no recent heartbeat has orphaned playback —
-   * the room GET clears it so host controls never show a phantom song.
-   */
+  /** Display heartbeat (~10s); the room GET clears playing state with no
+   * recent heartbeat so host controls never show a phantom song. */
   displayLastSeen?: Date;
-  /** When the current playback started; gives a just-pressed play a grace
-   * window for a display to load before orphan-healing kicks in. */
+  /** Grace window for a display to load before orphan-healing kicks in. */
   playStartedAt?: Date;
-  /** Computed on GET (never stored): a display heartbeat was seen recently. */
+  /** Computed on GET, never stored. */
   displayConnected?: boolean;
   reactions?: Reaction[];
   singWithMe?: SingWithMePost[];
   suggestions?: SuggestedSong[];
-  /** Unset (legacy rooms) means shown — the display treats it as true. */
+  /** Unset (legacy rooms) means shown. */
   boardsOnDisplay?: boolean;
-  /** Fair rotation: while on, new songs are inserted at their round-robin
-   * position instead of appended (lib/fairQueue). Absent/false = off. */
+  /** New songs insert at their round-robin slot (lib/fairQueue). Absent = off. */
   fairMode?: boolean;
   displayConfig?: DisplayConfig;
-  /** Per-room customization of the host control surface. Unset rooms use
-   * DEFAULT_HOST_CONFIG. */
   hostConfig?: HostConfig;
-  /** Set on insert; rooms created before expiry shipped lack these. */
   createdAt?: Date;
-  /** Bumped on every write; drives the TTL index that expires stale rooms. */
+  /** Bumped on every write; drives the TTL index. */
   lastActivity?: Date;
 }
 
@@ -332,12 +244,7 @@ export interface QueueEntry {
   userName: string;
   songTitle: string;
   videoId: string;
-  /**
-   * When the song was queued, as epoch ms. This is what "sorted by queue
-   * time" means: fair rotation reorders the array, so array position stops
-   * being a record of arrival and turning the mode back off would have
-   * nothing to restore. Optional because entries queued before this field
-   * existed don't have it — see lib/fairQueue for how those are ordered.
-   */
+  /** Epoch ms at queue time — the order fair-mode-off restores, since fair
+   * rotation destroys array-position-as-arrival. Absent on legacy entries. */
   addedAt?: number;
 }

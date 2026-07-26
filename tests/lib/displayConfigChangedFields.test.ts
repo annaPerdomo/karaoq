@@ -63,17 +63,14 @@ describe("normalizeDisplayConfig theme handling", () => {
     expect(normalizeDisplayConfig(stored).theme).toBe(theme);
   });
 
-  // The cheer overlay moved to the room's reactions setting. A config still
-  // carrying it must not round-trip it back, or the next save would 400 on the
-  // endpoint's unknown-key check.
+  // Retired showReactions must not round-trip, or the next save 400s on unknown keys.
   it("drops the retired showReactions field", () => {
     const stored = { ...DEFAULT_DISPLAY_CONFIG, showReactions: false } as never;
     expect(normalizeDisplayConfig(stored)).not.toHaveProperty("showReactions");
   });
 });
 
-// The welcome line folded into the announcement banner; stored configs from
-// before still carry it (and may list it in sidebarOrder).
+// Stored configs may still carry the retired welcomeLine (and list it in sidebarOrder).
 describe("normalizeDisplayConfig welcome-line migration", () => {
   it("migrates a stored welcomeLine into an empty banner", () => {
     const stored = { ...DEFAULT_DISPLAY_CONFIG, welcomeLine: "Karaoke Tuesdays" } as never;

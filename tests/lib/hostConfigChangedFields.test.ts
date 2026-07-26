@@ -62,8 +62,7 @@ describe("normalizeHostConfig", () => {
     expect(normalizeHostConfig(stored)).toEqual(stored);
   });
 
-  // A section that was renamed or removed must not survive in a stored order,
-  // or the next save would fail the endpoint's exactly-once check.
+  // Retired sections must not survive, or the next save fails the exactly-once check.
   it("drops retired sections from a stored order", () => {
     const stored = {
       ...DEFAULT_HOST_CONFIG,
@@ -77,8 +76,7 @@ describe("normalizeHostConfig", () => {
     ]);
   });
 
-  // Retired fields must not survive a round-trip, or the next save would fail
-  // the endpoint's unknown-key check.
+  // Retired fields must not round-trip, or the next save fails the unknown-key check.
   it("drops fields that no longer exist on the config", () => {
     const stored = { ...DEFAULT_HOST_CONFIG, showTransport: true, showHistory: false } as never;
     const config = normalizeHostConfig(stored);

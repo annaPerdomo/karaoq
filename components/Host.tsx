@@ -74,8 +74,7 @@ const HOST_THEME_CLASS: Record<DisplayTheme, string> = {
   neon: styles.themeNeon,
 };
 
-// `remote` renders a co-host surface: queue management only — it never embeds
-// the player, controls transport, or resets playback.
+// `remote` = co-host surface: queue management only, no player or transport.
 const Host = ({
   remote = false,
 }: { remote?: boolean } = {}): React.ReactElement => {
@@ -120,8 +119,7 @@ const Host = ({
   const [playMode, setPlayMode] = React.useState<PlayMode | null>(
     remote ? "here" : null,
   );
-  // The chooser must wait for the localStorage restore — otherwise a remembered
-  // host would be re-prompted in the window before it lands.
+  // The chooser waits for the localStorage restore, or a remembered host re-prompts.
   const [playModeRestored, setPlayModeRestored] = React.useState(false);
   const tvMode = playMode === "tv";
 
@@ -129,14 +127,12 @@ const Host = ({
   // other host devices show a status panel instead of double-playing.
   const [ownedPlayToken, setOwnedPlayToken] = React.useState<string | null>(null);
   const [serverPlayToken, setServerPlayToken] = React.useState<string | null>(null);
-  // Reported by the display page.
   const [displayPaused, setDisplayPaused] = React.useState(false);
   // A display page has heartbeated recently (server-computed on each GET).
   const [displayConnected, setDisplayConnected] = React.useState(false);
   // Auto-fallback bookkeeping — see the two detection effects below.
   const displayWindowRef = React.useRef<Window | null>(null);
-  // Bumped on each display open so the handle watcher re-arms even when
-  // already in TV mode (e.g. a restored session hits "reopen").
+  // Bumped per display open so the handle watcher re-arms even mid-TV-mode.
   const [displayWindowNonce, setDisplayWindowNonce] = React.useState(0);
   const displaySeenLiveRef = React.useRef(false);
   const displayGoneTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -216,9 +212,7 @@ const Host = ({
     setOrigin(window.location.origin);
   }, []);
 
-  // Restore this device's play mode as soon as the code is known — independent
-  // of room loading, so the chooser never flashes. The room's server-stored
-  // playMode (applied once the room loads) wins over this.
+  // Restored before room load so the chooser never flashes; server playMode wins later.
   React.useEffect(() => {
     if (remote) {
       setPlayModeRestored(true);
@@ -359,8 +353,7 @@ const Host = ({
     reactionTimers.current.push(timer);
   }
 
-  // Non-remote hosts adopt the room's playMode so a device (re)joining an
-  // existing TV-mode room doesn't default to playing locally.
+  // Adopt the room's playMode so rejoining a TV-mode room doesn't play locally.
   function applyRoomState(room: Room) {
     setQueue(room.queue);
     applyBoards(room);
@@ -422,7 +415,6 @@ const Host = ({
     return startSessionTracking(joinCode, hostName || "Host", "host");
   }, [joinCode, hostName, adminPeek]);
 
-  // Room poll — paused during drag operations.
   React.useEffect(() => {
     if (!joinCode || error || isPaused) return;
 
@@ -445,8 +437,7 @@ const Host = ({
     }, POLL_INTERVAL);
   }, [joinCode, error, isPaused]);
 
-  // Auto-fallback to "this screen" when a cast display disappears. Co-hosts
-  // never own the mode, so they sit this out.
+  // Auto-fallback to "this screen" when a cast display disappears (hosts only).
   function cancelDisplayFallback() {
     if (displayGoneTimer.current) {
       clearTimeout(displayGoneTimer.current);
@@ -475,9 +466,8 @@ const Host = ({
     showToast(t("host.toast.displayClosedFallback"));
   }
 
-  // Fast path: the window handle's `.closed` flips instantly on close but stays
-  // false across a reload. A display opened by URL on another device leaves no
-  // handle and relies on the heartbeat backstop below.
+  // Fast path: handle `.closed` flips instantly on close, stays false across a
+  // reload; URL-opened displays have no handle and rely on the heartbeat backstop.
   React.useEffect(() => {
     if (remote || !tvMode || !playModeRestored) return;
     if (!displayWindowRef.current) return;
@@ -720,8 +710,7 @@ const Host = ({
 
   function handleSongAdded(entry: QueueEntry) {
     pausePolling();
-    // Mirror where the server just put it: in fair mode the song lands at the
-    // singer's round-robin slot, not the bottom of the queue.
+    // Mirror the server: fair mode lands the song at its round-robin slot.
     let newQueue: QueueEntry[];
     if (fairMode) {
       const upcoming = queue.slice(activeIndex);
@@ -866,8 +855,7 @@ const Host = ({
 
     const entry = queue[idx];
     const withoutSong = queue.filter((e) => e.id !== entryId);
-    // Removing a history entry shifts the active song down by one; slot the
-    // restored song right after it (or at the top when nothing is playing).
+    // History removal shifts the active index down one; restore right after it.
     const newActiveIndex = activeIndex - 1;
     const insertAt = isPlaying ? activeIndex : newActiveIndex;
     const newQueue = [

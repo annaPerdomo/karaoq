@@ -3,8 +3,7 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { I18nProvider, useT } from "../../lib/i18n/I18nProvider";
 import { getActiveLocale, asLocale, isLocaleSource } from "../../lib/i18n/activeLocale";
 
-// The heartbeat reads the language from this mirror rather than React state, so
-// what it reports is only as good as the provider keeping it in sync.
+// The heartbeat reads this module mirror, not React state — sync is the contract under test.
 function Probe(): React.ReactElement {
   const { locale, setLocale } = useT();
   return (

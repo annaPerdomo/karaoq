@@ -22,8 +22,7 @@ describe("Client API wrappers", () => {
       const result = await createRoom("ABC12");
 
       expect(result).toBe(true);
-      // The locale header tags room_created with the language the host set the
-      // room up in.
+      // Locale header tags room_created with the host's language.
       expect(mockFetch).toHaveBeenCalledWith("/api/queue/ABC12", {
         method: "POST",
         headers: { "x-karaoq-locale": "en" },
@@ -177,9 +176,7 @@ describe("Client API wrappers", () => {
     });
   });
 
-  // A rejected fetch (venue wifi dropping) must resolve to false in every
-  // boolean wrapper — callers use the boolean to reset busy/in-flight state,
-  // and an escaping rejection permanently bricked those UIs.
+  // A rejected fetch must resolve to false — an escaping rejection bricked busy-state UIs.
   describe("network failure resolves to false across wrappers", () => {
     const wrappers: [string, (mod: { default: (...args: never[]) => Promise<boolean> }) => Promise<boolean>][] = [
       ["postEntryToQueue", (m) => (m.default as (r: string, e: QueueEntry) => Promise<boolean>)("R", { id: "e", userName: "A", songTitle: "S", videoId: "v" })],

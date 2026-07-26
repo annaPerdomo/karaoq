@@ -34,9 +34,7 @@ describe("reorderSections", () => {
     ]);
   });
 
-  // The regression: a hidden section used to be appended to the tail on every
-  // drag, so an unset welcome line teleported to the bottom and Save kept it
-  // there.
+  // Regression: hidden sections used to teleport to the tail on every drag.
   it("keeps a hidden section in the slot it already holds", () => {
     const visible = { ...allVisible, welcome: false };
     expect(reorderSections(ORDER, visible, "qr", ["upNext"])).toEqual([

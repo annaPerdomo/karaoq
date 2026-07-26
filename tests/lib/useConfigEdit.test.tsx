@@ -23,8 +23,7 @@ const BASE: Cfg = {
   nowPlayingHeight: 132,
 };
 
-/** Drives the hook the way a page does: `config` is the server-synced value a
- * poll overwrites, and the harness exposes the hook so a test can act on it. */
+/** Drives the hook the way a page does; `config` is the poll-overwritten server value. */
 function harness() {
   const save = vi.fn(async () => true);
   const state: { hook?: ReturnType<typeof useConfigEdit<Cfg, string>> } = {};
@@ -67,8 +66,7 @@ describe("useConfigEdit", () => {
     expect(h.themeText()).toBe("classic");
   });
 
-  // The regression: a poll issued before the write landed resolves after it and
-  // used to revert the page for a whole poll interval.
+  // Regression: a poll in flight at save time used to revert the page on resolve.
   it("keeps the saved values when a poll predating the save arrives", async () => {
     const h = harness();
     await act(async () => h.hook.enter());
@@ -84,8 +82,7 @@ describe("useConfigEdit", () => {
     expect(h.themeText()).toBe("neon");
   });
 
-  // The nastier half: the stale poll used to re-stale the draft too, so
-  // re-entering Customize and saving again wrote the old values back.
+  // Nastier half: the stale poll also re-staled the draft, so a re-save wrote old values.
   it("does not re-stale the draft from a poll predating the save", async () => {
     const h = harness();
     await act(async () => h.hook.enter());

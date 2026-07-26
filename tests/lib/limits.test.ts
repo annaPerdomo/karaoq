@@ -84,8 +84,7 @@ describe("isValidDisplayConfig", () => {
     expect(isValidDisplayConfig({ ...DEFAULT_DISPLAY_CONFIG, showNowPlaying: 1 })).toBe(false);
   });
 
-  // The cheer overlay is governed by the room's reactions setting, not the
-  // display config — a config still carrying the retired field is rejected.
+  // A config still carrying the retired showReactions is rejected.
   it("rejects the retired showReactions field", () => {
     expect(isValidDisplayConfig({ ...DEFAULT_DISPLAY_CONFIG, showReactions: true })).toBe(false);
   });
@@ -109,8 +108,7 @@ describe("isValidDisplayConfig", () => {
     ).toBe(false);
   });
 
-  // The welcome line folded into the banner and the idle promo screen was
-  // retired — configs still carrying either field are rejected.
+  // Configs still carrying retired welcomeLine/attractMode are rejected.
   it("rejects the retired welcomeLine and attractMode fields", () => {
     expect(isValidDisplayConfig({ ...DEFAULT_DISPLAY_CONFIG, welcomeLine: "hi" })).toBe(false);
     expect(isValidDisplayConfig({ ...DEFAULT_DISPLAY_CONFIG, attractMode: false })).toBe(false);
