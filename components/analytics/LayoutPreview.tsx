@@ -119,7 +119,7 @@ export function displayBlocks(c: DisplayConfig): { blocks: Block[]; hidden: stri
         else {
           blocks.push({
             key: 'upNext',
-            label: `Up next · ${c.upNextCount}`,
+            label: 'Up next',
             grow: true,
           });
         }

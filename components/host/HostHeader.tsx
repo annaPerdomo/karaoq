@@ -119,10 +119,10 @@ export function HostHeader({
           <button
             className={styles.headerCustomize}
             onClick={onCustomize}
-            title={t('host.customize.button')}
+            title={t('customize.button')}
           >
             {Icons.brush}
-            <span className={styles.headerCustomizeLabel}>{t('host.customize.button')}</span>
+            <span className={styles.headerCustomizeLabel}>{t('customize.button')}</span>
           </button>
         )}
         <LanguageSwitcher />

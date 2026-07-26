@@ -20,23 +20,23 @@ export function EditBar({
     <div className={p.bar}>
       <span className={`${p.actionsHint} ${saveFailed ? p.actionsHintError : ''}`}>
         {saveFailed
-          ? t('host.display.saveFailed')
+          ? t('customize.saveFailed')
           : dirty
-            ? t('host.display.unsaved')
-            : t('host.display.synced')}
+            ? t('customize.unsaved')
+            : t('customize.synced')}
       </span>
       {dirty ? (
         <>
           <button className={p.discardBtn} onClick={onDiscard} disabled={saving}>
-            {t('host.display.discard')}
+            {t('customize.discard')}
           </button>
           <button className={p.applyBtn} onClick={onSave} disabled={saving}>
-            {t('host.display.apply')}
+            {t('customize.apply')}
           </button>
         </>
       ) : (
         <button className={p.doneBtn} onClick={onDiscard}>
-          {t('host.display.done')}
+          {t('customize.done')}
         </button>
       )}
     </div>

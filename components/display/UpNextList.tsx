@@ -6,10 +6,9 @@ import formatSongTitle from '../../lib/songTitle';
 
 interface UpNextListProps {
   upNext: QueueEntry[];
-  upNextCount: number;
 }
 
-const UpNextList = ({ upNext, upNextCount }: UpNextListProps): React.ReactElement => {
+const UpNextList = ({ upNext }: UpNextListProps): React.ReactElement => {
   const { t } = useT();
 
   return (
@@ -20,9 +19,11 @@ const UpNextList = ({ upNext, upNextCount }: UpNextListProps): React.ReactElemen
           <span className={styles.upNextCount}>{upNext.length}</span>
         )}
       </h3>
+      {/* No cap: the list fills the sidebar and clips what doesn't fit. The
+          title's badge still carries the true total. */}
       {upNext.length > 0 ? (
         <div className={styles.upNextList}>
-          {upNext.slice(0, upNextCount).map((item, i) => (
+          {upNext.map((item, i) => (
             <div key={item.id} className={styles.upNextItem}>
               <span className={styles.upNextNum}>{i + 1}</span>
               <div className={styles.upNextInfo}>
@@ -41,11 +42,6 @@ const UpNextList = ({ upNext, upNextCount }: UpNextListProps): React.ReactElemen
               </div>
             </div>
           ))}
-          {upNext.length > upNextCount && (
-            <div className={styles.moreCount}>
-              {t('display.moreCount', { count: upNext.length - upNextCount })}
-            </div>
-          )}
         </div>
       ) : (
         <p className={styles.emptyQueue}>

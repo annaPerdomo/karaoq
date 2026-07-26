@@ -63,9 +63,10 @@ import { SongStage } from "./host/SongStage";
 import { TransportBar } from "./host/TransportBar";
 import { QueueSidebar } from "./host/QueueSidebar";
 import { useHostEdit } from "./host/edit/useHostEdit";
-import { HostEditRail } from "./host/edit/HostEditRail";
+import { ConfigRail } from "./edit/ConfigRail";
+import { hostRailToggles } from "./host/edit/railToggles";
 import { EditOverlay } from "./edit/EditOverlay";
-import { Spot } from "./edit/EditChrome";
+import { HideButton, Spot } from "./edit/EditChrome";
 import p from "../styles/DisplayDesigner.module.css";
 
 const HOST_THEME_CLASS: Record<DisplayTheme, string> = {
@@ -1107,28 +1108,50 @@ const Host = ({
             <ReactionOverlay reactions={visibleReactions} />
           )}
 
-          {/* Transport bar — host only, never hideable, but resizable. */}
+          {/* The display's now-playing bar, plus playback controls. Hide/restore
+              mirrors Display.tsx so both surfaces customize it the same way. */}
           {!remote &&
             (customizing ? (
-              <Spot
-                id="transport"
-                selected={hostEdit.selected}
-                onSelect={hostEdit.setSelected}
-                label={t('host.customize.transport')}
-                className={p.noShrink}
-                chrome={
-                  <button
-                    className={p.heightHandle}
-                    title={t('host.display.dragHeight')}
-                    aria-label={t('host.display.dragHeight')}
-                    {...hostEdit.heightDragProps}
-                  />
-                }
-              >
-                {transportBar}
-              </Spot>
+              hostView.showTransport ? (
+                <Spot
+                  id="transport"
+                  selected={hostEdit.selected}
+                  onSelect={hostEdit.setSelected}
+                  label={t('customize.nowPlaying')}
+                  className={p.noShrink}
+                  chrome={
+                    <>
+                      <div className={p.chrome}>
+                        <HideButton
+                          title={t('customize.hide')}
+                          onHide={() => hostEdit.change({ showTransport: false })}
+                        />
+                      </div>
+                      <button
+                        className={p.heightHandle}
+                        title={t('customize.dragHeight')}
+                        aria-label={t('customize.dragHeight')}
+                        {...hostEdit.heightDragProps}
+                      />
+                    </>
+                  }
+                >
+                  {transportBar}
+                </Spot>
+              ) : (
+                <button
+                  className={`${p.ghost} ${p.ghostSlot}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    hostEdit.change({ showTransport: true });
+                    hostEdit.setSelected('transport');
+                  }}
+                >
+                  {t('customize.hiddenTap', { section: t('customize.nowPlaying') })}
+                </button>
+              )
             ) : (
-              transportBar
+              hostView.showTransport && transportBar
             ))}
         </div>
 
@@ -1194,12 +1217,17 @@ const Host = ({
       {customizing && (
         <EditOverlay
           rail={
-            <HostEditRail
-              config={hostView}
+            <ConfigRail
               side={hostView.sidebarPosition === "right" ? "left" : "right"}
+              hintKey="customize.hint.host"
+              theme={hostView.theme}
+              onPickTheme={(theme) => hostEdit.change({ theme })}
+              toggles={hostRailToggles(hostView, hostEdit.change)}
+              bannerId="banner"
+              bannerLine={hostView.bannerLine}
+              onBannerChange={(bannerLine) => hostEdit.change({ bannerLine })}
               selected={hostEdit.selected}
               onSelect={hostEdit.setSelected}
-              onChange={hostEdit.change}
             />
           }
           dirty={hostEdit.dirty}

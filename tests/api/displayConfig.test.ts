@@ -41,7 +41,6 @@ const validConfig: DisplayConfig = {
   qrSize: "large",
   qrPx: 118,
   showUpNext: true,
-  upNextCount: 7,
   showNowPlaying: false,
   theme: "neon",
   sidebarPosition: "left",
@@ -107,7 +106,6 @@ describe("POST /api/queue/[id]/display-config - Save display config", () => {
       "sidebarPosition",
       "sidebarWidth",
       "theme",
-      "upNextCount",
     ]);
     expect(event.displayConfig).toEqual({ ...validConfig, bannerLine: "" });
   });
@@ -229,6 +227,24 @@ describe("POST /api/queue/[id]/display-config - Save display config", () => {
         },
       }
     );
+  });
+
+  // upNextCount is retired — the list fills the sidebar now — but displays on an
+  // older bundle still send it, and their saves must not start failing.
+  it("accepts and strips a retired upNextCount from a stale client", async () => {
+    mockCollection.updateOne.mockResolvedValue({ matchedCount: 1 });
+
+    const req = createMockReq({
+      method: "POST",
+      query: { id: "ROOM1" },
+      body: { ...validConfig, upNextCount: 7 },
+    });
+    const res = createRes();
+    await handler(req, res);
+
+    expect(res.getStatus()).toBe(200);
+    const stored = mockCollection.updateOne.mock.calls[0][1].$set.displayConfig;
+    expect(stored).not.toHaveProperty("upNextCount");
   });
 
   it.each([

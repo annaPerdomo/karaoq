@@ -19,22 +19,17 @@ import {
   QR_PX_MAX,
   SIDEBAR_WIDTH_MIN,
   SIDEBAR_WIDTH_MAX,
-  UP_NEXT_COUNT_MAX,
 } from '../../lib/limits';
 import { useT } from '../../lib/i18n/I18nProvider';
-import { Spot, SectionId } from './edit/EditChrome';
-import { CornerHandle } from '../edit/EditChrome';
+import { CornerHandle, Spot } from '../edit/EditChrome';
+import { DisplaySectionId } from './edit/useDisplayEdit';
 import { SectionChrome, SectionGhost } from '../edit/SectionChrome';
 import { useSectionReorder } from '../edit/hooks/useSectionReorder';
 import { useScalarDrag } from '../edit/hooks/useScalarDrag';
 
-// Approximate rendered height of one up-next row; the depth drag converts
-// pointer travel to rows.
-const UP_NEXT_ROW_H = 54;
-
 export interface SidebarEdit {
-  selected: SectionId | null;
-  onSelect: (section: SectionId | null) => void;
+  selected: DisplaySectionId | null;
+  onSelect: (section: DisplaySectionId | null) => void;
   onChange: (patch: Partial<DisplayConfig>) => void;
   /** boardsOn is a room field outside DisplayConfig, so it rides separately from onChange. */
   onToggleBoards: () => void;
@@ -68,7 +63,7 @@ const DisplaySidebar = ({
 }: DisplaySidebarProps): React.ReactElement => {
   const { t } = useT();
   const view = displayConfig;
-  const { qrSize, qrPx, showUpNext, upNextCount, bannerLine, bannerPx, sidebarOrder } = view;
+  const { qrSize, qrPx, showUpNext, bannerLine, bannerPx, sidebarOrder } = view;
 
   const change = (patch: Partial<DisplayConfig>) => edit?.onChange(patch);
 
@@ -94,15 +89,6 @@ const DisplaySidebar = ({
     onChange: (px) => change({ bannerPx: px }),
   });
 
-  const countDrag = useScalarDrag({
-    value: view.upNextCount,
-    min: 1,
-    max: UP_NEXT_COUNT_MAX,
-    axis: 'y',
-    scale: UP_NEXT_ROW_H,
-    onChange: (upNextCount) => change({ upNextCount }),
-  });
-
   const openPosts = singWithMe.filter((p) => p.joinedSingers.length < p.maxSingers);
   const boardsHasContent = openPosts.length + suggestions.length > 0;
 
@@ -123,9 +109,9 @@ const DisplaySidebar = ({
     <SectionChrome gripProps={gripProps(id)} onHide={onHide} />
   );
 
-  const hiddenTap = (section: string) => t('host.display.hiddenTap', { section });
+  const hiddenTap = (section: string) => t('customize.hiddenTap', { section });
 
-  const ghost = (id: SectionId, label: string, restore: () => void) => (
+  const ghost = (id: DisplaySectionId, label: string, restore: () => void) => (
     <SectionGhost
       key={id}
       label={label}
@@ -155,7 +141,7 @@ const DisplaySidebar = ({
         sizePx={qrPxShown}
         resizeHandle={
           edit && (
-            <CornerHandle title={t('host.display.dragResize')} dragProps={qrDrag} />
+            <CornerHandle title={t('customize.dragResize')} dragProps={qrDrag} />
           )
         }
       />
@@ -166,7 +152,7 @@ const DisplaySidebar = ({
       </p>
     ),
     upNext: visible.upNext && (
-      <UpNextList key="upNext" upNext={upNext} upNextCount={upNextCount} />
+      <UpNextList key="upNext" upNext={upNext} />
     ),
     boards: visible.boards && <React.Fragment key="boards">{boardsSummary}</React.Fragment>,
   };
@@ -183,14 +169,14 @@ const DisplaySidebar = ({
               id="qr"
               selected={edit.selected}
               onSelect={edit.onSelect}
-              label={t('host.display.qr')}
+              label={t('customize.qr')}
               chrome={chromeFor('qr', () => change({ qrSize: 'hidden' }))}
             >
               {liveSections.qr}
             </Spot>
           </div>
         ) : (
-          ghost('qr', hiddenTap(t('host.display.qr')), () =>
+          ghost('qr', hiddenTap(t('customize.qr')), () =>
             change({ qrSize: nearestQrSize(qrPx) })
           )
         ),
@@ -204,12 +190,12 @@ const DisplaySidebar = ({
               id="banner"
               selected={edit.selected}
               onSelect={edit.onSelect}
-              label={t('host.display.banner')}
+              label={t('customize.banner')}
               chrome={
                 <>
                   {chromeFor('banner')}
                   <CornerHandle
-                    title={t('host.display.dragResize')}
+                    title={t('customize.dragResize')}
                     dragProps={bannerDrag}
                     className={p.cornerOnEdge}
                   />
@@ -221,7 +207,7 @@ const DisplaySidebar = ({
           </div>
         ) : (
           // Restore is a no-op: selecting focuses the rail's banner input; typing shows the section.
-          ghost('banner', `+ ${t('host.display.addBanner')}`, () => {})
+          ghost('banner', `+ ${t('customize.addBanner')}`, () => {})
         ),
         upNext: visible.upNext ? (
           <div
@@ -233,27 +219,15 @@ const DisplaySidebar = ({
               id="upNext"
               selected={edit.selected}
               onSelect={edit.onSelect}
-              label={t('host.display.upNext')}
+              label={t('customize.queue')}
               className={p.grow}
-              chrome={
-                <>
-                  {chromeFor('upNext', () => change({ showUpNext: false }))}
-                  <button
-                    className={p.countHandle}
-                    title={t('host.display.dragCount')}
-                    aria-label={t('host.display.dragCount')}
-                    {...countDrag}
-                  >
-                    ↕ {upNextCount}
-                  </button>
-                </>
-              }
+              chrome={chromeFor('upNext', () => change({ showUpNext: false }))}
             >
               {liveSections.upNext}
             </Spot>
           </div>
         ) : (
-          ghost('upNext', hiddenTap(t('host.display.upNext')), () => change({ showUpNext: true }))
+          ghost('upNext', hiddenTap(t('customize.queue')), () => change({ showUpNext: true }))
         ),
         boards: visible.boards ? (
           <div
@@ -265,18 +239,18 @@ const DisplaySidebar = ({
               id="boards"
               selected={edit.selected}
               onSelect={edit.onSelect}
-              label={t('host.display.boards')}
+              label={t('customize.boards')}
               chrome={chromeFor('boards', edit.onToggleBoards)}
             >
               {boardsHasContent ? (
                 boardsSummary
               ) : (
-                <div className={p.boardsPlaceholder}>{t('host.display.boardsEmpty')}</div>
+                <div className={p.boardsPlaceholder}>{t('customize.boardsEmpty')}</div>
               )}
             </Spot>
           </div>
         ) : (
-          ghost('boards', hiddenTap(t('host.display.boards')), edit.onToggleBoards)
+          ghost('boards', hiddenTap(t('customize.boards')), edit.onToggleBoards)
         ),
       }
     : liveSections;
@@ -285,7 +259,7 @@ const DisplaySidebar = ({
     <div className={`${styles.sidebar} ${edit?.dragging ? p.sidebarDragging : ''}`}>
       {edit && (
         <button className={p.dragHandle} {...edit.dragHandleProps}>
-          ⋮⋮ {t('host.display.dragHint')}
+          ⋮⋮ {t('customize.dragHint')}
         </button>
       )}
 
@@ -294,8 +268,8 @@ const DisplaySidebar = ({
       {edit && (
         <button
           className={`${p.widthHandle} ${view.sidebarPosition === 'right' ? p.widthHandleL : p.widthHandleR}`}
-          title={t('host.display.dragWidth')}
-          aria-label={t('host.display.dragWidth')}
+          title={t('customize.dragWidth')}
+          aria-label={t('customize.dragWidth')}
           {...edit.widthDragProps}
         />
       )}

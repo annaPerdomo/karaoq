@@ -93,6 +93,13 @@
   left: calc(var(--sb-w, 280px) + 16px);
 }
 
+/* Host twin of .ghostStrip. The host's transport bar sits in normal flow (see
+   .noShrink) rather than pinned like the display's .nowSlot, so its ghost holds
+   that slot instead of anchoring to the viewport — --sb-w is display-only. */
+.ghostSlot {
+  flex-shrink: 0;
+}
+
 .ghostChip {
   position: absolute;
   top: 64px;
@@ -171,34 +178,6 @@
 
 .sectionLifted::after {
   border-color: #00f0ff !important;
-}
-
-.countHandle {
-  position: absolute;
-  bottom: 8px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 6;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 14px;
-  font-size: 13px;
-  font-weight: 700;
-  color: #0a0a19;
-  background: #00f0ff;
-  border: none;
-  border-radius: 999px;
-  cursor: ns-resize;
-  touch-action: none;
-  opacity: 0.85;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
-  transition: opacity 0.15s;
-}
-
-.spot:hover .countHandle,
-.spotOn .countHandle {
-  opacity: 1;
 }
 
 .cornerAnchor {

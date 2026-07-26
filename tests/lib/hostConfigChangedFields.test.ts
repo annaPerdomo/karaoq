@@ -78,9 +78,9 @@ describe("normalizeHostConfig", () => {
 
   // Retired fields must not round-trip, or the next save fails the unknown-key check.
   it("drops fields that no longer exist on the config", () => {
-    const stored = { ...DEFAULT_HOST_CONFIG, showTransport: true, showHistory: false } as never;
+    const stored = { ...DEFAULT_HOST_CONFIG, showCheers: true, showHistory: false } as never;
     const config = normalizeHostConfig(stored);
-    expect(config).not.toHaveProperty("showTransport");
+    expect(config).not.toHaveProperty("showCheers");
     expect(config).not.toHaveProperty("showHistory");
   });
 });

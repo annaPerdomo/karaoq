@@ -717,14 +717,6 @@
   word-break: break-word;
 }
 
-.moreCount {
-  padding: 0.75rem 1.25rem;
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  text-align: center;
-  font-style: italic;
-}
-
 .emptyQueue {
   padding: 2rem 1.25rem;
   font-size: 0.85rem;

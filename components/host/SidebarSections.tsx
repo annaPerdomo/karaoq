@@ -45,10 +45,10 @@ interface SidebarSectionsProps {
 }
 
 const SECTION_LABEL: Record<HostSection, string> = {
-  queue: "host.customize.queue",
-  boards: "host.customize.boards",
-  qr: "host.customize.qr",
-  banner: "host.display.banner",
+  queue: "customize.queue",
+  boards: "customize.boards",
+  qr: "customize.qr",
+  banner: "customize.banner",
 };
 
 export function SidebarSections({
@@ -114,7 +114,7 @@ export function SidebarSections({
   const boardsHasContent = openPosts.length + boards.suggestions.length > 0;
 
   const shown: Record<HostSection, boolean> = {
-    queue: true,
+    queue: config.showQueue,
     boards: config.showBoards,
     qr: config.showQr,
     banner: config.bannerLine !== "",
@@ -138,8 +138,8 @@ export function SidebarSections({
       key={id}
       label={
         id === "banner"
-          ? `+ ${t("host.display.addBanner")}`
-          : t("host.display.hiddenTap", { section: t(SECTION_LABEL[id]) })
+          ? `+ ${t("customize.addBanner")}`
+          : t("customize.hiddenTap", { section: t(SECTION_LABEL[id]) })
       }
       onRestore={() => {
         restore();
@@ -201,7 +201,7 @@ export function SidebarSections({
               />
             </button>
             {!!edit && (
-              <CornerHandle title={t("host.display.dragResize")} dragProps={qrDrag} />
+              <CornerHandle title={t("customize.dragResize")} dragProps={qrDrag} />
             )}
           </span>
           <div className={styles.qrShelfInfo}>
@@ -236,13 +236,13 @@ export function SidebarSections({
   };
 
   const hidePatch: Record<HostSection, Partial<HostConfig>> = {
-    queue: {},
+    queue: { showQueue: false },
     boards: { showBoards: false },
     qr: { showQr: false },
     banner: {},
   };
   const showPatch: Record<HostSection, Partial<HostConfig>> = {
-    queue: {},
+    queue: { showQueue: true },
     boards: { showBoards: true },
     qr: { showQr: true },
     banner: {},
@@ -276,16 +276,16 @@ export function SidebarSections({
           chrome={
             <SectionChrome
               gripProps={gripProps(section)}
-              // No eye for the queue (never hideable) or the banner (hiding it would erase its text).
+              // No eye for the banner — hiding it would erase its text. Same rule on the display.
               onHide={
-                section === "queue" || section === "banner"
+                section === "banner"
                   ? undefined
                   : () => edit.onChange(hidePatch[section])
               }
             >
               {section === "banner" && (
                 <CornerHandle
-                  title={t("host.display.dragResize")}
+                  title={t("customize.dragResize")}
                   dragProps={bannerDrag}
                   className={p.cornerOnEdge}
                 />
@@ -299,7 +299,7 @@ export function SidebarSections({
           >
             {section === "boards" && !boardsHasContent ? (
               <div className={p.boardsPlaceholder}>
-                {t("host.display.boardsEmpty")}
+                {t("customize.boardsEmpty")}
               </div>
             ) : (
               liveNode[section]

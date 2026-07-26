@@ -37,12 +37,12 @@ export function EditOverlay({
           <div
             className={`${p.dropZone} ${p.dropZoneL} ${sideDragTarget === 'left' ? p.dropZoneActive : ''}`}
           >
-            {t('host.display.side.left')}
+            {t('customize.side.left')}
           </div>
           <div
             className={`${p.dropZone} ${p.dropZoneR} ${sideDragTarget === 'right' ? p.dropZoneActive : ''}`}
           >
-            {t('host.display.side.right')}
+            {t('customize.side.right')}
           </div>
         </>
       )}

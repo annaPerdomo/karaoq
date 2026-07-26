@@ -276,12 +276,12 @@ export function QueueSidebar({
       {hostEditing && !sidebarCollapsed && (
         <>
           <button className={p.dragHandle} {...sideDragProps}>
-            ⋮⋮ {t('host.display.dragHint')}
+            ⋮⋮ {t('customize.dragHint')}
           </button>
           <button
             className={`${p.widthHandle} ${hostConfig.sidebarPosition === "right" ? p.widthHandleL : p.widthHandleR}`}
-            title={t('host.display.dragWidth')}
-            aria-label={t('host.display.dragWidth')}
+            title={t('customize.dragWidth')}
+            aria-label={t('customize.dragWidth')}
             {...widthDragProps}
           />
         </>

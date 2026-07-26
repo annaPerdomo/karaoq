@@ -101,7 +101,6 @@ export interface DisplayConfig {
   qrSize: QrSize;
   qrPx: number;
   showUpNext: boolean;
-  upNextCount: number;
   showNowPlaying: boolean;
   theme: DisplayTheme;
   sidebarPosition: SidebarPosition;
@@ -118,7 +117,6 @@ export const DEFAULT_DISPLAY_CONFIG: DisplayConfig = {
   qrSize: "normal",
   qrPx: 80,
   showUpNext: true,
-  upNextCount: 8,
   showNowPlaying: true,
   theme: "classic",
   sidebarPosition: "right",
@@ -153,6 +151,11 @@ export interface HostConfig {
   sidebarWidth: number;
   showBoards: boolean;
   showQr: boolean;
+  /** Twin of DisplayConfig.showUpNext — the host's queue panel. */
+  showQueue: boolean;
+  /** Twin of DisplayConfig.showNowPlaying — the host's bar carries playback
+   * controls too, which is the only real difference between the two surfaces. */
+  showTransport: boolean;
   /** No coarse bucket: this QR never renders on a stale client. */
   qrPx: number;
   nowPlayingHeight: number;
@@ -168,6 +171,8 @@ export const DEFAULT_HOST_CONFIG: HostConfig = {
   sidebarWidth: 360,
   showBoards: true,
   showQr: true,
+  showQueue: true,
+  showTransport: true,
   qrPx: 72,
   nowPlayingHeight: 64,
   bannerLine: "",

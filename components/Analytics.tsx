@@ -149,7 +149,8 @@ const VIA_LABELS: Record<string, string> = {
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 // qrSize mirrors qrPx and is filtered out of the chart to avoid double-counting
-// resizes; welcomeLine/attractMode are retired but historical events still carry them.
+// resizes; welcomeLine/attractMode/upNextCount are retired but historical events
+// still carry them.
 const DISPLAY_FIELD_LABELS: Record<string, string> = {
   theme: 'Theme',
   qrPx: 'QR size',

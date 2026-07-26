@@ -120,7 +120,7 @@ export function ThemeCard<Id extends string>({
   const { t } = useT();
   return (
     <RailCard<Id> selected={selected} onSelect={onSelect}>
-      <div className={styles.spLabel}>{t('host.display.theme')}</div>
+      <div className={styles.spLabel}>{t('customize.theme')}</div>
       <div className={p.swatches}>
         {THEMES.map(({ id, dot }) => (
           <button
@@ -129,7 +129,7 @@ export function ThemeCard<Id extends string>({
             onClick={() => onPick(id)}
           >
             <span className={`${p.swatchDot} ${dot}`} />
-            {t(`host.display.theme.${id}`)}
+            {t(`customize.theme.${id}`)}
           </button>
         ))}
       </div>
@@ -157,14 +157,14 @@ export function BannerCard<Id extends string>({
   const { t } = useT();
   return (
     <RailCard id={id} selected={selected} onSelect={onSelect} cardRef={cardRef}>
-      <div className={styles.spLabel}>{t('host.display.banner')}</div>
+      <div className={styles.spLabel}>{t('customize.banner')}</div>
       <input
         ref={inputRef}
         className={styles.dpWelcomeInput}
         type="text"
         value={value}
         maxLength={MAX_BANNER_LENGTH}
-        placeholder={t('host.display.bannerPh')}
+        placeholder={t('customize.bannerPh')}
         onChange={(e) => onChange(e.target.value)}
         onBlur={() => {
           const trimmed = value.trim();

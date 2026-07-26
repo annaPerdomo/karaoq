@@ -22,8 +22,9 @@ import DisplaySidebar from './display/DisplaySidebar';
 import NowPlayingBar from './display/NowPlayingBar';
 import p from '../styles/DisplayDesigner.module.css';
 import { useDisplayEdit } from './display/edit/useDisplayEdit';
-import { Spot, HideButton } from './display/edit/EditChrome';
-import { EditRail } from './display/edit/EditRail';
+import { Spot, HideButton } from './edit/EditChrome';
+import { ConfigRail } from './edit/ConfigRail';
+import { displayRailToggles } from './display/edit/railToggles';
 import { EditOverlay } from './edit/EditOverlay';
 import { SAMPLE_QUEUE } from './display/edit/sampleContent';
 import { Icons } from './host/icons';
@@ -429,10 +430,10 @@ const Display = (): React.ReactElement => {
             <button
               className={styles.headerEdit}
               onClick={edit.enter}
-              title={t('display.customize')}
+              title={t('customize.button')}
             >
               {Icons.brush}
-              <span>{t('display.customize')}</span>
+              <span>{t('customize.button')}</span>
             </button>
           )}
           <LanguageSwitcher className={styles.headerLang} />
@@ -532,21 +533,21 @@ const Display = (): React.ReactElement => {
             id="nowPlaying"
             selected={edit.selected}
             onSelect={edit.setSelected}
-            label={t('host.display.nowPlaying')}
+            label={t('customize.nowPlaying')}
             className={p.nowSlot}
             positioned
             chrome={
               <>
                 <div className={p.chrome}>
                   <HideButton
-                    title={t('host.display.hide')}
+                    title={t('customize.hide')}
                     onHide={() => edit.change({ showNowPlaying: false })}
                   />
                 </div>
                 <button
                   className={p.heightHandle}
-                  title={t('host.display.dragHeight')}
-                  aria-label={t('host.display.dragHeight')}
+                  title={t('customize.dragHeight')}
+                  aria-label={t('customize.dragHeight')}
                   {...edit.heightDragProps}
                 />
               </>
@@ -566,7 +567,7 @@ const Display = (): React.ReactElement => {
               edit.setSelected('nowPlaying');
             }}
           >
-            {t('host.display.hiddenTap', { section: t('host.display.nowPlaying') })}
+            {t('customize.hiddenTap', { section: t('customize.nowPlaying') })}
           </button>
         )
       ) : (
@@ -621,14 +622,22 @@ const Display = (): React.ReactElement => {
       {edit.editing && (
         <EditOverlay
           rail={
-            <EditRail
-              config={view}
+            <ConfigRail
               side={view.sidebarPosition === 'right' ? 'left' : 'right'}
-              boardsOn={edit.boardsView}
-              onToggleBoards={edit.toggleBoards}
+              hintKey="customize.hint.display"
+              theme={view.theme}
+              onPickTheme={(theme) => edit.change({ theme })}
+              toggles={displayRailToggles(
+                view,
+                edit.change,
+                edit.boardsView,
+                edit.toggleBoards
+              )}
+              bannerId="banner"
+              bannerLine={view.bannerLine}
+              onBannerChange={(bannerLine) => edit.change({ bannerLine })}
               selected={edit.selected}
               onSelect={edit.setSelected}
-              onChange={edit.change}
             />
           }
           dirty={edit.dirty}

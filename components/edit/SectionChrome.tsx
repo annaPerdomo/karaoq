@@ -18,13 +18,13 @@ export function SectionChrome({
       <div className={p.chrome}>
         <button
           className={`${p.chromeBtn} ${p.gripBtn}`}
-          title={t('host.display.dragReorder')}
-          aria-label={t('host.display.dragReorder')}
+          title={t('customize.dragReorder')}
+          aria-label={t('customize.dragReorder')}
           {...gripProps}
         >
           ⋮⋮
         </button>
-        {onHide && <HideButton title={t('host.display.hide')} onHide={onHide} />}
+        {onHide && <HideButton title={t('customize.hide')} onHide={onHide} />}
       </div>
       {children}
     </>

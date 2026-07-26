@@ -43,6 +43,8 @@ const validConfig: HostConfig = {
   sidebarWidth: 340,
   showBoards: true,
   showQr: false,
+  showQueue: true,
+  showTransport: false,
   qrPx: 118,
   nowPlayingHeight: 200,
   bannerLine: "Happy 30th, Sam!",
@@ -102,6 +104,7 @@ describe("POST /api/queue/[id]/host-config - Save host config", () => {
       "qrPx",
       "sectionOrder",
       "showQr",
+      "showTransport",
       "sidebarPosition",
       "sidebarWidth",
       "theme",
@@ -121,9 +124,10 @@ describe("POST /api/queue/[id]/host-config - Save host config", () => {
     ["sectionOrder", ["boards", "qr"]],
     ["sectionOrder", ["queue", "queue", "qr"]],
     ["sectionOrder", ["queue", "boards", "nope"]],
+    ["showQueue", "yes"],
+    ["showTransport", 1],
     // Retired fields — no longer part of the layout config.
     ["showCheers", true],
-    ["showTransport", false],
     ["showHistory", true],
   ])("rejects invalid %s %j with 400", async (key, value) => {
     const req = createMockReq({
@@ -171,6 +175,31 @@ describe("POST /api/queue/[id]/host-config - Save host config", () => {
       {
         $set: {
           hostConfig: { ...validConfig, nowPlayingHeight: 64 },
+          lastActivity: expect.any(Date),
+        },
+      }
+    );
+  });
+
+  // Same story for hosts predating the queue/transport toggles.
+  it("shows the queue and transport when a stale client omits their flags", async () => {
+    mockCollection.updateOne.mockResolvedValue({ matchedCount: 1 });
+
+    const { showQueue: _q, showTransport: _t, ...legacyConfig } = validConfig;
+    const req = createMockReq({
+      method: "POST",
+      query: { id: "ROOM1" },
+      body: legacyConfig,
+    });
+    const res = createRes();
+    await handler(req, res);
+
+    expect(res.getStatus()).toBe(200);
+    expect(mockCollection.updateOne).toHaveBeenCalledWith(
+      { id: "ROOM1" },
+      {
+        $set: {
+          hostConfig: { ...validConfig, showQueue: true, showTransport: true },
           lastActivity: expect.any(Date),
         },
       }

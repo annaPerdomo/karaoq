@@ -125,7 +125,10 @@ export function isValidDisplayConfig(value: unknown): value is DisplayConfig {
     typeof e.qrSize === "string" &&
     QR_SIZES.has(e.qrSize) &&
     typeof e.showUpNext === "boolean" &&
-    isIntInRange(e.upNextCount, 1, UP_NEXT_COUNT_MAX) &&
+    // Retired: the up-next list now fills the sidebar. Still tolerated so displays
+    // on an older bundle can keep saving; normalizeDisplayConfig strips it.
+    (e.upNextCount === undefined ||
+      isIntInRange(e.upNextCount, 1, UP_NEXT_COUNT_MAX)) &&
     typeof e.showNowPlaying === "boolean" &&
     typeof e.theme === "string" &&
     DISPLAY_THEMES.has(e.theme) &&
@@ -163,6 +166,8 @@ const HOST_CONFIG_KEYS = new Set([
   "sidebarWidth",
   "showBoards",
   "showQr",
+  "showQueue",
+  "showTransport",
   "qrPx",
   "nowPlayingHeight",
   "bannerLine",
@@ -192,6 +197,10 @@ export function isValidHostConfig(value: unknown): value is HostConfig {
     isIntInRange(e.sidebarWidth, SIDEBAR_WIDTH_MIN, SIDEBAR_WIDTH_MAX) &&
     typeof e.showBoards === "boolean" &&
     typeof e.showQr === "boolean" &&
+    // Absent on configs saved before the queue and transport became hideable;
+    // normalizeHostConfig defaults them.
+    (e.showQueue === undefined || typeof e.showQueue === "boolean") &&
+    (e.showTransport === undefined || typeof e.showTransport === "boolean") &&
     isIntInRange(e.qrPx, QR_PX_MIN, QR_PX_MAX) &&
     // Absent on configs saved before the bar became resizable; normalizeHostConfig defaults it.
     (e.nowPlayingHeight === undefined ||

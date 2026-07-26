@@ -3,7 +3,13 @@ import setDisplayConfig from '../../../app/queue/setDisplayConfig';
 import { DEFAULT_DISPLAY_CONFIG, DisplayConfig } from '../../../pages/api/types';
 import { DISPLAY_NOW_H_MIN, DISPLAY_NOW_H_MAX } from '../../../lib/limits';
 import { SAVE_SETTLE_MS, useConfigEdit } from '../../edit/useConfigEdit';
-import { SectionId } from './EditChrome';
+
+export type DisplaySectionId =
+  | 'qr'
+  | 'upNext'
+  | 'nowPlaying'
+  | 'banner'
+  | 'boards';
 
 const CONFIG_KEYS = Object.keys(DEFAULT_DISPLAY_CONFIG) as (keyof DisplayConfig)[];
 
@@ -33,7 +39,7 @@ export function useDisplayEdit(opts: {
 
   const settledBoards = settling ? savedBoards.current : boardsOn;
 
-  const edit = useConfigEdit<DisplayConfig, SectionId>({
+  const edit = useConfigEdit<DisplayConfig, DisplaySectionId>({
     joinCode,
     config,
     keys: CONFIG_KEYS,
