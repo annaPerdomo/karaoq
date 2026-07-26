@@ -13,10 +13,7 @@
   }
 }
 
-/* ─── Theme presets — the display's palettes mirrored onto the singer's phone
-   (classic = the vars above, no class), same pure-CSS-custom-property approach
-   as Display.module.css / Host.module.css. Only this page's own chrome retints;
-   action buttons stay branded, matching the themed host page. */
+/* Theme presets; classic = the base vars, no class. */
 .themeMinimal {
   --acc-a: #aab0c0;
   --acc-b: #d7dae2;
@@ -40,8 +37,6 @@
   color: var(--acc-b);
 }
 
-/* Deepens to near-pure black so the pink/cyan accents read as brighter by
-   contrast — same trick as the display's neon theme. */
 .themeNeon {
   --bg-primary: #050505;
   --bg-secondary: #0d0d14;
@@ -73,7 +68,6 @@
   justify-content: center;
 }
 
-/* ─── Header ─── */
 .header {
   display: flex;
   align-items: center;
@@ -117,14 +111,12 @@
   letter-spacing: 2px;
 }
 
-/* ─── Two-panel content layout ─── */
 .content {
   display: flex;
   flex: 1;
   overflow: hidden;
 }
 
-/* ─── Left panel: search + results ─── */
 .searchPanel {
   flex: 1;
   display: flex;
@@ -141,7 +133,6 @@
   margin-bottom: 1.25rem;
 }
 
-/* Name section */
 .nameSection {
   display: flex;
   align-items: center;
@@ -179,7 +170,6 @@
   color: var(--text-muted);
 }
 
-/* Search bar */
 .searchBar {
   display: flex;
   gap: 0.5rem;
@@ -229,7 +219,6 @@
   cursor: not-allowed;
 }
 
-/* Search options row (toggle + filters inline) */
 .searchOptions {
   display: flex;
   align-items: center;
@@ -237,7 +226,6 @@
   flex-wrap: wrap;
 }
 
-/* Karaoke toggle */
 .toggleRow {
   display: flex;
   align-items: center;
@@ -284,7 +272,6 @@
   transform: translateX(18px);
 }
 
-/* Filters */
 .filterSection {
   display: flex;
   gap: 1.25rem;
@@ -342,7 +329,6 @@
   color: #00f0ff;
 }
 
-/* Toast */
 .toast {
   padding: 0.65rem 1rem;
   background: linear-gradient(135deg, rgba(0, 240, 255, 0.12), rgba(124, 58, 237, 0.12));
@@ -360,7 +346,6 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* ─── Search results: responsive grid ─── */
 .results {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -435,7 +420,6 @@
   cursor: not-allowed;
 }
 
-/* Empty search state */
 .searchEmpty {
   flex: 1;
   display: flex;
@@ -463,7 +447,6 @@
   font-size: 0.9rem;
 }
 
-/* ─── Right sidebar: queue ─── */
 .sidebar {
   width: 340px;
   flex-shrink: 0;
@@ -474,7 +457,6 @@
   background: rgba(255, 255, 255, 0.015);
 }
 
-/* Now playing */
 .nowPlaying {
   padding: 1rem 1.2rem;
   background: linear-gradient(135deg, rgba(255, 45, 120, 0.08), rgba(255, 45, 120, 0.03));
@@ -527,7 +509,6 @@
   color: var(--acc-b, #00f0ff);
 }
 
-/* Queue */
 .queueSection {
   flex: 1;
   display: flex;
@@ -595,7 +576,6 @@
   min-width: 0;
 }
 
-/* Never truncated — the tail of the title is the version. */
 .queueSong {
   font-size: 0.82rem;
   color: var(--text-primary);
@@ -634,7 +614,6 @@
   padding: 2rem 0;
 }
 
-/* Spinner */
 .spinner {
   width: 28px;
   height: 28px;
@@ -648,7 +627,6 @@
   to { transform: rotate(360deg); }
 }
 
-/* ─── Modal overlay ─── */
 .overlay {
   position: fixed;
   inset: 0;
@@ -720,7 +698,6 @@
   gap: 0.5rem;
 }
 
-/* Buttons */
 .btnPink {
   width: 100%;
   padding: 0.75rem;
@@ -754,7 +731,6 @@
   background: rgba(255, 255, 255, 0.05);
 }
 
-/* Error card */
 .errorCard {
   margin: auto;
   text-align: center;
@@ -781,14 +757,10 @@
   margin-bottom: 1.5rem;
 }
 
-/* ─── Mobile bottom drawer (hidden on desktop) ─── */
 .mobileDrawer {
   display: none;
 }
 
-/* ─── Responsive ─── */
-
-/* Tablet: sidebar goes below */
 @media (max-width: 900px) {
   .content {
     flex-direction: column;
@@ -802,7 +774,6 @@
   }
 }
 
-/* Mobile */
 @media (max-width: 640px) {
   .header {
     padding: 0.6rem 1rem;
@@ -813,17 +784,15 @@
     padding-bottom: 4rem; /* space for the fixed drawer handle */
   }
 
-  /* While someone's performing the drawer grows a quick-cheer row */
+  /* Matches the drawer's expanded quick-cheer height. */
   .searchPanelCheer {
     padding-bottom: 7.25rem;
   }
 
-  /* Hide desktop sidebar on mobile */
   .sidebar {
     display: none;
   }
 
-  /* Show mobile drawer */
   .mobileDrawer {
     display: flex;
     flex-direction: column;
@@ -842,7 +811,7 @@
     box-shadow: 0 -2px 20px rgba(0, 0, 0, 0.3);
   }
 
-  /* Collapsed with the quick-cheer row showing */
+  /* Collapsed with the quick-cheer row showing. */
   .mobileDrawerCheer {
     max-height: 6.5rem;
   }
@@ -852,7 +821,6 @@
     box-shadow: 0 -4px 40px rgba(0, 0, 0, 0.5);
   }
 
-  /* One-tap cheer row on the collapsed drawer */
   .quickCheerRow {
     display: flex;
     align-items: center;
@@ -862,8 +830,7 @@
     transition: opacity 0.2s ease;
   }
 
-  /* While a finger is dragging the drawer, the full cheer bar in the body is
-     already sliding into view — fade the duplicate quick row out */
+  /* While dragging, the body's full cheer bar slides in — fade the duplicate quick row. */
   .mobileDrawerDragging .quickCheerRow {
     opacity: 0;
   }
@@ -917,7 +884,6 @@
     white-space: nowrap;
   }
 
-  /* Drawer handle / collapsed bar */
   .drawerHandle {
     display: flex;
     align-items: center;
@@ -931,8 +897,6 @@
     flex-shrink: 0;
     position: relative;
     min-height: 3.25rem;
-    /* the handle is draggable — keep the browser from scrolling the page
-       underneath the gesture */
     touch-action: none;
   }
 
@@ -1001,7 +965,6 @@
     transform: rotate(180deg);
   }
 
-  /* Drawer expanded body */
   .drawerBody {
     flex: 1;
     overflow-y: auto;
@@ -1036,7 +999,6 @@
   }
 }
 
-/* ─── Cheer hint ─── */
 .cheerHint {
   padding: 0.75rem 1.2rem;
   font-size: 0.78rem;
@@ -1046,7 +1008,6 @@
   background: linear-gradient(135deg, rgba(255, 215, 0, 0.04), rgba(255, 45, 120, 0.04));
 }
 
-/* ─── Floating reaction pops (everyone's cheers, risen from the cheer UI) ─── */
 .reactionOverlay {
   position: fixed;
   right: 0.5rem;
@@ -1068,8 +1029,7 @@
   position: absolute;
   bottom: 0;
   opacity: 0;
-  /* Twitch-style: fade in, drift steadily up with a slight lean (--sway,
-     set inline per cheer), fade out near the top. */
+  /* --sway is set inline per cheer. */
   animation: reactionRise 4s ease-out forwards;
 }
 
@@ -1108,7 +1068,6 @@
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
 }
 
-/* ─── Welcome overlay ─── */
 .welcomeOverlay {
   position: fixed;
   inset: 0;
@@ -1206,7 +1165,6 @@
   cursor: not-allowed;
 }
 
-/* ─── First-run tips banner (non-blocking, above search) ─── */
 .tipsBanner {
   display: flex;
   align-items: flex-start;

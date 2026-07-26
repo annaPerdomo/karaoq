@@ -9,8 +9,6 @@ import {
   type HostConfig,
 } from "../types";
 
-// Per-room detail: who joined, what they added, what they requested, and
-// their sing-with-me activity. Read-only view for the admin dashboard.
 async function handleGet(
   req: NextApiRequest,
   res: NextApiResponse,
@@ -20,8 +18,7 @@ async function handleGet(
 
   const db = await getAnalyticsDb();
 
-  // People who joined: one session doc per (clientId, role). Exclude displays
-  // (TVs, not people) — same rule the head count on the rooms list uses.
+  // Exclude displays (TVs, not people) — same rule as the rooms-list head count.
   const sessionsPromise = db
     .collection("analytics_sessions")
     .find({ roomId, role: { $ne: "display" } })
@@ -29,7 +26,8 @@ async function handleGet(
     .limit(500)
     .toArray();
 
-  // All activity events, oldest first. Partitioned by type below.
+  // Fetched NEWEST-first so the 2000-doc cap trims the start of the night ("last save wins" and the
+  // fair-mode end state depend on the tail), then reversed to chronological order.
   const eventsPromise = db
     .collection<AnalyticsEvent>("analytics_events")
     .find({
@@ -43,20 +41,19 @@ async function handleGet(
           "singwithme_queued",
           "reaction_sent",
           "search_performed",
-          // Fair rotation's starting value rides on room_created; every
-          // change after that is a fair_mode_toggled.
+          // Fair rotation's starting value rides on room_created.
           "room_created",
           "fair_mode_toggled",
-          // Each carries the whole config it saved, so the last one is the
-          // layout the room ended up running.
+          // Each carries the whole saved config, so the last one is the layout the room ended on.
           "display_config_saved",
           "host_config_saved",
         ],
       },
     })
-    .sort({ timestamp: 1 })
+    .sort({ timestamp: -1 })
     .limit(2000)
-    .toArray();
+    .toArray()
+    .then((docs) => docs.reverse());
 
   const [sessions, events] = await Promise.all([sessionsPromise, eventsPromise]);
 
@@ -67,15 +64,10 @@ async function handleGet(
     lastSeen: s.lastSeen ?? null,
     country: s.country ?? null,
     city: s.city ?? null,
-    // The language this person's tab was rendering in, and how it got there —
-    // a deliberate pick reads very differently from a browser/geo guess.
     locale: s.locale ?? null,
     localeSource: s.localeSource ?? null,
   }));
 
-  // Per-language head count for the room, so a night where the host ran in
-  // Japanese while their singers sat in English is visible as such instead of
-  // averaging into one number. Sorted commonest-first.
   const localeTally = new Map<string, { people: number; chosen: number }>();
   for (const s of sessions) {
     if (typeof s.locale !== "string") continue;
@@ -89,8 +81,6 @@ async function handleGet(
     ...row,
   })).sort((a, b) => b.people - a.people);
 
-  // The language the room was opened in — the host's first choice, which is
-  // what the room's own copy (join screen, TV) was rendered in.
   const createdLocale =
     events.find((e) => e.type === "room_created")?.locale ?? null;
 
@@ -102,8 +92,6 @@ async function handleGet(
   let searches = 0;
   // undefined = the room predates the flag, so we genuinely don't know.
   let fairStarted: boolean | undefined;
-  // The last layout each surface was saved with; null when the host never
-  // opened Customize on that surface, which is its own useful answer.
   let displayConfig: DisplayConfig | null = null;
   let hostConfig: HostConfig | null = null;
   let displaySaves = 0;
@@ -132,7 +120,7 @@ async function handleGet(
       case "singwithme_joined":
       case "singwithme_queued":
         singWithMe.push({
-          kind: e.type.replace("singwithme_", ""), // posted | joined | queued
+          kind: e.type.replace("singwithme_", ""),
           userName: e.userName ?? null,
           songTitle: e.songTitle ?? null,
           videoId: e.videoId ?? null,
@@ -154,13 +142,11 @@ async function handleGet(
         }
         break;
       case "display_config_saved":
-        // The boards-on-TV toggle writes this event with changedFields only,
-        // so a config-less event must not blank the layout a real save left.
+        // The boards-on-TV toggle writes this event with changedFields only, so a config-less
+        // event must not blank the layout a real save left.
         displaySaves += 1;
         if (e.displayConfig) {
-          // Normalizing here means a config saved before a field existed (or
-          // still carrying a retired one) previews as today's shape rather
-          // than rendering half-empty.
+          // Normalize so configs saved before a field existed preview as today's shape.
           displayConfig = normalizeDisplayConfig(e.displayConfig);
         }
         break;
@@ -171,8 +157,7 @@ async function handleGet(
     }
   }
 
-  // Events are already oldest-first, so the last toggle is the state the room
-  // ended in; with no toggles it ran on whatever it was created with.
+  // Events are oldest-first, so the last toggle is the ending state; else the created value.
   const fairFinal = fairToggles.length
     ? fairToggles[fairToggles.length - 1].enabled
     : fairStarted;

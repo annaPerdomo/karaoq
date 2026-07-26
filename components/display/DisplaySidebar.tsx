@@ -29,23 +29,17 @@ import { useSectionReorder } from '../edit/hooks/useSectionReorder';
 import { useScalarDrag } from '../edit/hooks/useScalarDrag';
 
 // Approximate rendered height of one up-next row; the depth drag converts
-// pointer travel to "rows worth" of songs. Off-by-a-few just changes drag feel.
+// pointer travel to rows.
 const UP_NEXT_ROW_H = 54;
 
-/** Present only in edit mode — the same sidebar then grows drag handles,
- * outlines, and ghosts on its real sections. */
 export interface SidebarEdit {
   selected: SectionId | null;
   onSelect: (section: SectionId | null) => void;
   onChange: (patch: Partial<DisplayConfig>) => void;
-  /** boardsOn is a room field outside DisplayConfig, so its hide/show rides
-   * separately from onChange. */
+  /** boardsOn is a room field outside DisplayConfig, so it rides separately from onChange. */
   onToggleBoards: () => void;
-  /** True while the whole sidebar is being dragged across the screen. */
   dragging: boolean;
-  /** "Switch sides" drag on the sidebar's top handle. */
   dragHandleProps: React.ComponentProps<'button'>;
-  /** Resize drag on the sidebar's inner edge. */
   widthDragProps: React.ComponentProps<'button'>;
 }
 
@@ -61,9 +55,6 @@ interface DisplaySidebarProps {
   edit?: SidebarEdit;
 }
 
-/** The QR/welcome/up-next sections the sidebar always shows. In edit mode the
- * REAL sections become the editing surface: drag to reorder, resize the QR and
- * up-next depth, set the width; ghosts restore hidden sections. */
 const DisplaySidebar = ({
   joinUrl,
   joinCode,
@@ -79,22 +70,13 @@ const DisplaySidebar = ({
   const view = displayConfig;
   const { qrSize, qrPx, showUpNext, upNextCount, bannerLine, bannerPx, sidebarOrder } = view;
 
-  // With draft-staged editing every patch is local state, so drag moves and
-  // drag ends both flow through the same onChange.
   const change = (patch: Partial<DisplayConfig>) => edit?.onChange(patch);
 
-  // The widest QR the current sidebar can hold: the join card pads 1.25rem a
-  // side (40px), and the "scan to join" label keeps a column beside the code
-  // (96px + the row's 1rem gap) — the text sits to the QR's right at every
-  // size, never squeezed out or dropped underneath. The drag stops there
-  // instead of at the global cap, so pulling the grip never "grows" pixels the
-  // sidebar can't show — widen the sidebar first, then the QR can follow.
-  // Rendering clamps too, covering configs saved when the sidebar was wider.
+  // Widest QR the sidebar can hold: 40px card padding + 16px row gap + 96px label
+  // column. Rendering clamps too, covering configs saved when the sidebar was wider.
   const qrPxFit = Math.max(QR_PX_MIN, Math.min(QR_PX_MAX, view.sidebarWidth - 40 - 16 - 96));
   const qrPxShown = Math.min(qrPx, qrPxFit);
 
-  // The grip rides the code's bottom-right corner, so the drag is diagonal:
-  // pull outward (down-right) to enlarge.
   const qrDrag = useScalarDrag({
     value: qrPxShown,
     min: QR_PX_MIN,
@@ -103,8 +85,7 @@ const DisplaySidebar = ({
     onChange: (px) => change({ qrPx: px, qrSize: nearestQrSize(px) }),
   });
 
-  // The banner's corner grip scales its TYPE — 2px of drag per font px keeps
-  // the swing controllable across the whole range.
+  // scale 2: 2px of drag per font px keeps the swing controllable.
   const bannerDrag = useScalarDrag({
     value: bannerPx,
     min: BANNER_PX_MIN,
@@ -122,9 +103,6 @@ const DisplaySidebar = ({
     onChange: (upNextCount) => change({ upNextCount }),
   });
 
-  // Boards visibility is the room's boardsOn flag; in edit mode it reflects the
-  // draft. Its content is empty until guests post, so edit mode shows a labelled
-  // placeholder so the section can still be arranged.
   const openPosts = singWithMe.filter((p) => p.joinedSingers.length < p.maxSingers);
   const boardsHasContent = openPosts.length + suggestions.length > 0;
 
@@ -166,7 +144,6 @@ const DisplaySidebar = ({
     />
   );
 
-  // The plain sections the audience sees; hidden ones simply render nothing.
   const liveSections: Record<SidebarSection, React.ReactNode> = {
     qr: visible.qr && (
       <QrJoinCard
@@ -194,8 +171,6 @@ const DisplaySidebar = ({
     boards: visible.boards && <React.Fragment key="boards">{boardsSummary}</React.Fragment>,
   };
 
-  // The same sections with editing chrome attached; ghosts stand in for
-  // hidden ones so they can be tapped back.
   const editSections: Record<SidebarSection, React.ReactNode> = edit
     ? {
         qr: visible.qr ? (
@@ -245,8 +220,7 @@ const DisplaySidebar = ({
             </Spot>
           </div>
         ) : (
-          // Selecting the ghost focuses the rail's input — typing is what
-          // brings the section to life.
+          // Restore is a no-op: selecting focuses the rail's banner input; typing shows the section.
           ghost('banner', `+ ${t('host.display.addBanner')}`, () => {})
         ),
         upNext: visible.upNext ? (

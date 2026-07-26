@@ -1,14 +1,12 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { trackEvent } from "../../../../lib/analytics";
 import { arrivalOrder, fairOrder, withArrivalTimes } from "../../../../lib/fairQueue";
+import { rateLimit } from "../../../../lib/limits";
 import { getRoomsCollection } from "../../../../lib/mongodb";
 import { normalizeRoomId } from "../../../../lib/roomCode";
 
-// Toggle fair rotation. Both directions re-sort the upcoming songs once,
-// atomically: ON spaces singers out round-robin, OFF restores the order they
-// were queued in. The queue-equality filter makes the write optimistic (same
-// CAS style as reorder.ts), so a concurrent add/remove just retries the sort
-// on a fresh snapshot instead of clobbering it.
+// Both directions re-sort the upcoming songs atomically. The queue-equality filter makes the write
+// optimistic (same CAS style as reorder.ts), so a concurrent add/remove retries on a fresh snapshot.
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -28,6 +26,12 @@ export default async function handler(
 
   const enabled = enabledParam === "true";
 
+  // A toggle costs a room read plus a full-queue rewrite and an analytics doc — same cap as the config saves.
+  if (!rateLimit(req, "fair-mode", 20, 60_000)) {
+    res.status(429).json({ code: 429, message: "Too many toggles, slow down." });
+    return;
+  }
+
   try {
     const collection = await getRoomsCollection();
 
@@ -38,27 +42,23 @@ export default async function handler(
         return;
       }
 
-      // Both directions re-sort, so the toggle is a true undo: ON spaces the
-      // singers out, OFF puts the room back in the order songs were queued.
-      // History never moves or counts; the current song joins the round
-      // counting but stays put (see lib/fairQueue for why that's guaranteed).
       const split = room.activeVideoIndex;
-      // Record arrival times first: for a room queued before `addedAt`
-      // existed, the array order IS the arrival order right up until the
-      // line below reorders it, and then it is gone for good.
+      // Record arrival times first: for a legacy room the array order IS the arrival order, right up
+      // until the line below reorders it for good.
       const upcoming = withArrivalTimes(room.queue.slice(split));
       const newQueue = room.queue
         .slice(0, split)
         .concat(enabled ? fairOrder(upcoming) : arrivalOrder(upcoming));
 
+      // activeVideoIndex rides in the CAS: video-ended/position advance it WITHOUT touching the
+      // queue array, and a re-sort computed against a stale split would move the now-playing song.
       const result = await collection.updateOne(
-        { id: roomId, queue: room.queue },
+        { id: roomId, queue: room.queue, activeVideoIndex: split },
         { $set: { queue: newQueue, fairMode: enabled, lastActivity: new Date() } }
       );
       if (result.matchedCount > 0) {
-        // Only after the write lands, so a retried/lost CAS can't log a
-        // toggle that never happened.
-        trackEvent(req, "fair_mode_toggled", { roomId, fairMode: enabled });
+        // Only after the write lands, so a lost CAS can't log a toggle that never happened.
+        await trackEvent(req, "fair_mode_toggled", { roomId, fairMode: enabled });
         res.status(200).json({ code: 200, message: "Fair rotation toggled." });
         return;
       }

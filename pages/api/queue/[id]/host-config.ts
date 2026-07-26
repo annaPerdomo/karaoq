@@ -38,14 +38,12 @@ export default async function handler(
     return;
   }
 
-  // Every accepted save also writes an analytics doc carrying the whole config,
-  // so an unthrottled endpoint grows the events collection without bound.
+  // Every accepted save also writes an analytics doc carrying the whole config.
   if (!rateLimit(req, "host-config", 20, 60_000)) {
     res.status(429).json({ code: 429, message: "Too many saves, slow down." });
     return;
   }
 
-  // Store the config fully-populated so every stored config has all fields.
   const config: HostConfig = normalizeHostConfig(body);
   config.bannerLine = config.bannerLine.trim();
 
@@ -59,8 +57,6 @@ export default async function handler(
       res.status(404).json({ code: 404, message: "Room not found." });
       return;
     }
-    // One event per explicit Save — low volume; the changed-vs-default fields
-    // show which host-layout defaults organizers actually override.
     await trackEvent(req, "host_config_saved", {
       roomId,
       changedFields: hostConfigChangedFields(config),

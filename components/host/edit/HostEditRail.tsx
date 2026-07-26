@@ -6,16 +6,12 @@ import { HostSectionId } from './useHostEdit';
 
 interface HostEditRailProps {
   config: HostConfig;
-  /** Which viewport edge the floating rail docks to. */
   side: 'left' | 'right';
   selected: HostSectionId | null;
   onSelect: (section: HostSectionId | null) => void;
   onChange: (patch: Partial<HostConfig>) => void;
 }
 
-/** Theme picker plus the show/hide toggles for the host control surface.
- * Everything spatial — the sidebar's side and width, section order, the QR's
- * size — is dragged on the page itself. */
 export function HostEditRail({
   config,
   side,
@@ -26,8 +22,6 @@ export function HostEditRail({
   const { t } = useT();
   const bannerInputRef = React.useRef<HTMLInputElement>(null);
 
-  // Tapping a section on the page reveals its card; the banner ghost goes
-  // straight into typing.
   const cardRef = useRailCardRefs<HostSectionId>(selected, (id) => {
     if (id === 'banner') bannerInputRef.current?.focus();
   });

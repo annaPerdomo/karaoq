@@ -60,8 +60,7 @@ describe("POST /api/queue/[id]/videos - Add song to queue", () => {
     await handler(req, res);
 
     expect(res.getStatus()).toBe(200);
-    // Non-fair rooms keep the single append write; the fair-mode exclusion and
-    // the queue cap both ride in the filter so concurrent writes can't race it.
+    // The fair-mode exclusion and queue cap ride in the filter so concurrent writes can't race.
     expect(mockCollection.updateOne).toHaveBeenCalledTimes(1);
     expect(mockCollection.updateOne).toHaveBeenCalledWith(
       {
@@ -89,9 +88,7 @@ describe("POST /api/queue/[id]/videos - Add song to queue", () => {
     const entry = (id: string, userName: string) => ({
       id, userName, songTitle: `Song ${id}`, videoId: "dQw4w9WgXcQ",
     });
-    // Upcoming (after the current song at index 0) is already fair-sorted:
-    // A, B, C, A, A. A new B is round 1 → before the round-2 A at upcoming
-    // index 4 → absolute index 0 + 1 + 4 = 5.
+    // Upcoming is fair-sorted A, B, C, A, A; a new B is round 1 → before the round-2 A → index 5.
     const room: Room = {
       id: "ROOM1",
       queue: [
@@ -118,10 +115,11 @@ describe("POST /api/queue/[id]/videos - Add song to queue", () => {
 
     expect(res.getStatus()).toBe(200);
     expect(mockCollection.updateOne).toHaveBeenLastCalledWith(
-      // CAS on the exact queue snapshot the index was computed against.
+      // CAS on the exact queue + pointer snapshot the index was computed against.
       {
         id: "ROOM1",
         queue: room.queue,
+        activeVideoIndex: 0,
         $expr: { $lt: [{ $size: "$queue" }, MAX_QUEUE_LENGTH] },
       },
       {
@@ -148,9 +146,7 @@ describe("POST /api/queue/[id]/videos - Add song to queue", () => {
     const entry = (id: string, userName: string) => ({
       id, userName, songTitle: `Song ${id}`, videoId: "dQw4w9WgXcQ",
     });
-    // Fair-sorted queue with the pointer on A1: [A1, B1, C1, A2, A3]. A new B
-    // is round 1 (B1 counts even though it follows the current song), so it
-    // lands before the round-2 A3 — absolute index 4.
+    // Pointer on A1; B1 counts toward the new B's round even though it follows it → index 4.
     const room: Room = {
       id: "ROOM1",
       queue: [
@@ -203,8 +199,7 @@ describe("POST /api/queue/[id]/videos - Add song to queue", () => {
     const res = createRes();
     await handler(req, res);
 
-    // A song must never be lost to fairness — the fallback drops the fairMode
-    // condition and appends plainly.
+    // A song must never be lost to fairness — the fallback drops the fairMode condition.
     expect(res.getStatus()).toBe(200);
     expect(mockCollection.updateOne).toHaveBeenCalledTimes(5);
     expect(mockCollection.updateOne).toHaveBeenLastCalledWith(
@@ -310,9 +305,7 @@ describe("POST /api/queue/[id]/videos - Add song to queue", () => {
     expect(res.getStatus()).toBe(405);
   });
 
-  // The singer count feeds the duets dashboard, and it has to agree with what
-  // fair rotation actually charges turns for — so it's counted with the same
-  // name split, not a looser "does it contain an ampersand" test.
+  // The singer count must agree with the name split fair rotation charges turns for.
   describe("singer count on the song_added event", () => {
     async function addAs(userName: string) {
       vi.clearAllMocks();
@@ -334,8 +327,7 @@ describe("POST /api/queue/[id]/videos - Add song to queue", () => {
         },
       });
       await handler(req, createRes());
-      // The add path fires its analytics write without awaiting it, so the
-      // insert lands a tick after the handler resolves.
+      // The analytics write isn't awaited — it lands a tick after the handler resolves.
       await new Promise((resolve) => setTimeout(resolve, 0));
 
       const event = mockCollection.insertOne.mock.calls[0][0];
@@ -353,8 +345,7 @@ describe("POST /api/queue/[id]/videos - Add song to queue", () => {
       expect(await addAs(userName)).toBe(expected);
     });
 
-    // Both mirror singerKeys' own folding: a name that only looks like a pair
-    // must not report two turns when the queue only charges one.
+    // Mirrors singerKeys' folding: a name that only looks like a pair charges one turn.
     it("counts a self-duet as one singer", async () => {
       expect(await addAs("Anna & anna")).toBe(1);
     });

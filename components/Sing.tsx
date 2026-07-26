@@ -21,11 +21,8 @@ import LanguageSwitcher from './LanguageSwitcher';
 
 
 const POLL_INTERVAL = 5000;
-// Global (not per-room) so a returning singer is remembered across any room.
 const NAME_STORAGE_KEY = 'karaoq_username';
 
-// Singer phones follow the display's host-selected theme (classic = base vars,
-// no class) so the room looks like one product, not three.
 const THEME_CLASS: Record<DisplayTheme, string> = {
   classic: '',
   minimal: styles.themeMinimal,
@@ -40,7 +37,6 @@ const Sing = (): React.ReactElement => {
   const [queue, setQueue] = React.useState<QueueEntry[]>([]);
   // A "sing with me" join can auto-add the song, so re-sync the queue too.
   const boards = useBoards(joinCode, (room) => setQueue(room.queue));
-  // Stable across renders — safe to depend on from the init/poll effects.
   const applyBoards = boards.applyRoom;
   const [activeIndex, setActiveIndex] = React.useState(0);
   const [username, setUsername] = React.useState('');
@@ -48,27 +44,17 @@ const Sing = (): React.ReactElement => {
   const [reactionsOn, setReactionsOn] = React.useState(true);
   const [theme, setTheme] = React.useState<DisplayTheme>('classic');
   const [loading, setLoading] = React.useState(true);
-  // Definitive "room doesn't exist" — terminal, stops polling.
   const [error, setError] = React.useState<string | null>(null);
-  // Transient load failure (venue wifi, 5xx) — retryable; polling keeps
-  // running and heals it on the first successful fetch.
   const [loadError, setLoadError] = React.useState(false);
   const [initNonce, setInitNonce] = React.useState(0);
-  // Consecutive not-found polls; a TTL-expired room should surface the
-  // not-found state instead of a live-looking UI, but one blip shouldn't.
   const notFoundPollsRef = React.useRef(0);
   const [reactionCooldown, setReactionCooldown] = React.useState(false);
   const [lastSentEmoji, setLastSentEmoji] = React.useState<string | null>(null);
   const [mobileQueueOpen, setMobileQueueOpen] = React.useState(false);
-  // Live height while a finger is dragging the drawer handle; null hands
-  // control back to the CSS max-height + transition.
   const [drawerDragHeight, setDrawerDragHeight] = React.useState<number | null>(null);
   const drawerRef = React.useRef<HTMLDivElement>(null);
   const drawerDrag = React.useRef({ startY: 0, startHeight: 0, delta: 0, dragging: false });
   const [showWelcome, setShowWelcome] = React.useState(true);
-  // First-run tips are a non-blocking banner above search (see render) rather
-  // than a gate — a new singer can start searching immediately. Returning
-  // singers who've already dismissed it never see it again.
   const [showTipsBanner, setShowTipsBanner] = React.useState(false);
   const [welcomeName, setWelcomeName] = React.useState('');
   const [visibleReactions, setVisibleReactions] = React.useState<(Reaction & { key: string; left: number; sway: number })[]>([]);
@@ -84,14 +70,10 @@ const Sing = (): React.ReactElement => {
     try {
       if (!localStorage.getItem('karaoq_seen_tips')) setShowTipsBanner(true);
     } catch {
-      /* private mode — show the first-run banner, harmless */
       setShowTipsBanner(true);
     }
   }, []);
 
-  // Persist the name wherever the singer sets it — welcome overlay or the inline
-  // search field — so a reload or a return trip skips the prompt. The helper is
-  // guarded + cookie-backed for the flaky mobile/in-app storage singers hit.
   React.useEffect(() => {
     setStoredName(NAME_STORAGE_KEY, username);
   }, [username]);
@@ -108,13 +90,12 @@ const Sing = (): React.ReactElement => {
     try {
       localStorage.setItem('karaoq_seen_tips', '1');
     } catch {
-      /* private mode — fine, banner just shows again next visit */
+      /* private mode */
     }
   }
 
-  // Debounce the tracked name: `username` updates per keystroke (the inline
-  // search field edits it), and restarting the tracker on each one POSTs a
-  // heartbeat with every partial name.
+  // Debounced: username updates per keystroke, and restarting the tracker on
+  // each one would POST every partial name.
   const [trackedName, setTrackedName] = React.useState('');
   React.useEffect(() => {
     const timer = setTimeout(() => setTrackedName(username), 1500);
@@ -148,10 +129,8 @@ const Sing = (): React.ReactElement => {
     reactionTimers.current.push(timer);
   }, []);
 
-  // Mark polled reactions as seen; animate the new ones so the whole room
-  // sees each cheer, not just the display screen. On the initial load we only
-  // seed the seen-set — replaying the last 30s of cheers at once would spam
-  // whoever just joined.
+  // animate=false on initial load only seeds the seen-set — otherwise a join
+  // replays the last 30s of cheers at once.
   const processReactions = React.useCallback(
     (reactions: Reaction[] | undefined, animate = true) => {
       if (!reactions || reactions.length === 0) return;
@@ -177,8 +156,6 @@ const Sing = (): React.ReactElement => {
       if (room === "notFound") {
         setError(t('sing.error.notFound'));
       } else if (room === "error") {
-        // Flaky connection — show a retryable state, never "room doesn't
-        // exist" (and never an eternal spinner).
         setLoadError(true);
       } else {
         setQueue(room.queue);
@@ -201,9 +178,8 @@ const Sing = (): React.ReactElement => {
 
     return startVisiblePolling(async () => {
       const room = await getRoom(joinCode);
-      if (room === "error") return; // transient — try again next tick
+      if (room === "error") return;
       if (room === "notFound") {
-        // Only a run of definitive 404s means the room is really gone.
         notFoundPollsRef.current += 1;
         if (notFoundPollsRef.current >= 3) setError(t('sing.error.notFound'));
         return;
@@ -216,7 +192,6 @@ const Sing = (): React.ReactElement => {
       setReactionsOn(room.reactionsEnabled ?? true);
       setTheme(normalizeDisplayConfig(room.displayConfig).theme);
       processReactions(room.reactions);
-      // A successful poll also recovers a failed initial load.
       setLoadError(false);
       setLoading(false);
     }, POLL_INTERVAL);
@@ -224,8 +199,7 @@ const Sing = (): React.ReactElement => {
 
   function handleSongAdded(entry: QueueEntry) {
     // Functional update: the click-closure `queue` can predate a poll that
-    // landed mid-await, so spreading it would drop other singers' songs (or
-    // duplicate this one if the poll already delivered it).
+    // landed mid-await — spreading it would drop or duplicate songs.
     setQueue((prev) =>
       prev.some((e) => e.id === entry.id) ? prev : [...prev, entry]
     );
@@ -238,18 +212,13 @@ const Sing = (): React.ReactElement => {
     setTimeout(() => setLastSentEmoji(null), 1500);
     setTimeout(() => setReactionCooldown(false), REACTION_COOLDOWN_MS);
     const id = uuidv4();
-    // Pop your own cheer locally right away; the seen-set keeps the next poll
-    // from replaying it.
+    // Pop the cheer locally now; the seen-set keeps the next poll from replaying it.
     seenReactionIds.current.add(id);
     spawnReactionPops([{ id, emoji, userName: username.trim(), timestamp: Date.now() }]);
     const ok = await postReaction(joinCode, id, emoji, username.trim());
-    // Don't keep claiming "Sent!" for a cheer that never left the phone.
     if (!ok) setLastSentEmoji(null);
   }
 
-  // The grabber invites dragging, so the handle honors it: the drawer follows
-  // the finger, then snaps open or closed based on which way it moved. Taps
-  // (movement under the start threshold) fall through to the click toggle.
   const DRAG_START_PX = 8;
   const DRAG_COMMIT_PX = 40;
   const DRAWER_COLLAPSED_PX = 52; // matches the 3.25rem collapsed max-height
@@ -283,7 +252,7 @@ const Sing = (): React.ReactElement => {
   }
 
   function handleDrawerHandleClick() {
-    // A drag can still synthesize a click on release; only toggle on real taps.
+    // A drag can synthesize a click on release; only toggle on real taps.
     if (drawerDrag.current.dragging) return;
     setMobileQueueOpen(!mobileQueueOpen);
   }
@@ -311,8 +280,6 @@ const Sing = (): React.ReactElement => {
     );
   }
 
-  // Transient failure: retry button plus the still-running poll, so it heals
-  // by itself the moment the connection comes back.
   if (loadError) {
     return (
       <main className={mainClass}>
@@ -338,8 +305,6 @@ const Sing = (): React.ReactElement => {
   const showingNowPlaying = !!(currentSong && isPlaying);
   const queueItems = showingNowPlaying ? upcomingSongs.slice(1) : upcomingSongs;
   const queueCount = queueItems.length;
-  // One-tap cheer row on the collapsed drawer; the expanded drawer shows the
-  // full CheerBar instead, so the row hides while open.
   const quickCheerVisible = showingNowPlaying && reactionsOn && !mobileQueueOpen;
 
   return (
@@ -357,7 +322,6 @@ const Sing = (): React.ReactElement => {
       </header>
 
       <div className={styles.content}>
-        {/* Left panel: search + results */}
         <div
           className={`${styles.searchPanel} ${showingNowPlaying && reactionsOn ? styles.searchPanelCheer : ''}`}
         >
@@ -401,7 +365,6 @@ const Sing = (): React.ReactElement => {
           )}
         </div>
 
-        {/* Right panel: queue sidebar (desktop) */}
         <aside className={styles.sidebar}>
           {currentSong && isPlaying && (
             <div className={styles.nowPlaying}>
@@ -416,8 +379,6 @@ const Sing = (): React.ReactElement => {
             </div>
           )}
 
-          {/* Cheer bar — with Now Playing, above the queue: cheering is the
-              primary action while someone's on stage */}
           {currentSong && isPlaying && reactionsOn ? (
             <CheerBar
               onReaction={sendReaction}
@@ -467,7 +428,6 @@ const Sing = (): React.ReactElement => {
           </div>
         </aside>
 
-        {/* Mobile bottom drawer */}
         <div
           ref={drawerRef}
           className={`${styles.mobileDrawer} ${quickCheerVisible ? styles.mobileDrawerCheer : ''} ${mobileQueueOpen ? styles.mobileDrawerOpen : ''} ${drawerDragHeight !== null ? styles.mobileDrawerDragging : ''}`}
@@ -508,7 +468,6 @@ const Sing = (): React.ReactElement => {
             </span>
           </button>
 
-          {/* One-tap cheers without opening the drawer */}
           {quickCheerVisible && (
             <div className={styles.quickCheerRow}>
               {CHEER_EMOJIS.slice(0, 5).map((emoji) => (
@@ -536,7 +495,6 @@ const Sing = (): React.ReactElement => {
           )}
 
           <div className={styles.drawerBody}>
-            {/* Cheer bar — first thing you see when the drawer opens */}
             {currentSong && isPlaying && reactionsOn ? (
               <CheerBar
                 onReaction={sendReaction}
@@ -588,7 +546,6 @@ const Sing = (): React.ReactElement => {
         </div>
       </div>
 
-      {/* Cheers from everyone in the room float up from the drawer */}
       {reactionsOn && visibleReactions.length > 0 && (
         <div className={styles.reactionOverlay} aria-hidden="true">
           {visibleReactions.map((r) => (

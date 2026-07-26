@@ -52,7 +52,6 @@ const RoomDetail = ({
     };
   }, [roomId, secret]);
 
-  // Close on Escape for keyboard users.
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();

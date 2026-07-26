@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { trackEvent } from "../../../../lib/analytics";
+import { rateLimit } from "../../../../lib/limits";
 import { getRoomsCollection } from "../../../../lib/mongodb";
 import { normalizeRoomId } from "../../../../lib/roomCode";
 
@@ -22,6 +23,12 @@ export default async function handler(
 
   const enabled = enabledParam === "true";
 
+  // Every accepted toggle writes an analytics doc — same cap as the config saves.
+  if (!rateLimit(req, "boards-toggle", 20, 60_000)) {
+    res.status(429).json({ code: 429, message: "Too many toggles, slow down." });
+    return;
+  }
+
   try {
     const collection = await getRoomsCollection();
     const room = await collection.findOne({ id: roomId });
@@ -33,9 +40,7 @@ export default async function handler(
         { id: roomId },
         { $set: { boardsOnDisplay: enabled } }
       );
-      // boardsOnDisplay lives outside DisplayConfig but is still a display
-      // default hosts override. It defaults to ON, so turning boards OFF is
-      // the deviation — enabling just restores the default.
+      // boardsOnDisplay defaults to ON, so turning boards OFF is the deviation.
       await trackEvent(req, "display_config_saved", {
         roomId,
         changedFields: enabled ? [] : ["boardsOnDisplay"],

@@ -1,7 +1,6 @@
 import * as React from 'react';
 import styles from '../../styles/Analytics.module.css';
 
-/** Horizontal bar list used by every ranked breakdown in the dashboard. */
 export default function BarChart({ data, color = '#a78bfa' }: {
   data: { label: string; value: number }[];
   color?: string;

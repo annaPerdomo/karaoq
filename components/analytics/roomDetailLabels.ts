@@ -5,10 +5,6 @@ import {
   type LocaleSource,
 } from '../../lib/i18n/activeLocale';
 
-// Shapes the room-detail endpoint returns, plus the pure formatters that turn
-// them into the strings the modal prints. Kept out of the component so the
-// wording is testable on its own.
-
 export interface Person {
   userName: string | null;
   role: string | null;
@@ -49,7 +45,7 @@ export interface FairToggle {
 }
 
 export interface RoomLanguages {
-  /** The language the room was opened in; null where it predates recording. */
+  /** null where the room predates recording. */
   created: string | null;
   byLocale: { locale: string; people: number; chosen: number }[];
 }
@@ -66,8 +62,7 @@ export interface RoomDetailData {
     final: boolean | null;
     toggles: FairToggle[];
   };
-  /** The last layout each surface saved; null where Customize was never used
-   * on it. Absent entirely on a response from an older deploy. */
+  /** Absent entirely on a response from an older deploy. */
   layout?: {
     display: DisplayConfig | null;
     host: HostConfig | null;
@@ -113,7 +108,6 @@ export function formatTime(iso: string | null): string {
   });
 }
 
-/** "Fair rotation on", plus how many times the host changed their mind. */
 export function fairLabel(f: RoomDetailData['fairRotation']): string {
   if (f.final === null) return 'Fair rotation: unknown';
   const state = f.final ? 'on' : 'off';
@@ -139,14 +133,10 @@ export function locationLabel(p: Person): string {
   return p.country || '';
 }
 
-/** A locale code as its native name, falling back to the raw code so an
- * unrecognized one still prints something. */
 function localeName(code: string): string {
   return isLocale(code) ? LOCALE_LABELS[code] : code;
 }
 
-/** A person's language, marked when they picked it rather than being guessed
- * into it — the switch/stored/url split the dashboard reads as "chosen". */
 export function languageLabel(p: Person): string {
   if (!p.locale) return '';
   return CHOSEN_LOCALE_SOURCES.includes(p.localeSource as LocaleSource)
@@ -154,9 +144,6 @@ export function languageLabel(p: Person): string {
     : localeName(p.locale);
 }
 
-/** "English · 2 in 日本語" — the room's own language, then anyone who differed.
- * The split is the interesting part: it's how a host running in one language
- * while their singers sit in another becomes visible. */
 export function roomLanguageLabel(l: RoomLanguages | undefined): string {
   if (!l || (l.created === null && l.byLocale.length === 0)) {
     return 'Language: unknown';
@@ -170,7 +157,6 @@ export function roomLanguageLabel(l: RoomLanguages | undefined): string {
   return `${head} · ${rest}`;
 }
 
-/** Per-language head count for the chip's hover, one line each. */
 export function roomLanguageTitle(l: RoomLanguages | undefined): string {
   if (!l || l.byLocale.length === 0) {
     return 'No language was recorded for this room.';

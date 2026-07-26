@@ -68,26 +68,21 @@ import { EditOverlay } from "./edit/EditOverlay";
 import { Spot } from "./edit/EditChrome";
 import p from "../styles/DisplayDesigner.module.css";
 
-// Each theme repaints the host surface's CSS vars; classic is the default look.
 const HOST_THEME_CLASS: Record<DisplayTheme, string> = {
   classic: "",
   minimal: styles.themeMinimal,
   neon: styles.themeNeon,
 };
 
-// `remote` renders a co-host control surface: it manages the queue (add /
-// remove / reorder / restore) but never embeds the player, never controls
-// transport, and never resets playback — so it can't disrupt the song playing
-// on the real host screen.
+// `remote` renders a co-host surface: queue management only — it never embeds
+// the player, controls transport, or resets playback.
 const Host = ({
   remote = false,
 }: { remote?: boolean } = {}): React.ReactElement => {
   const router = useRouter();
   const { t, tn } = useT();
   const joinCode = normalizeRoomId(router.query.joinCode) as string | undefined;
-  // Entering from the analytics dashboard's "Open as admin" link. We skip
-  // session tracking so an operator peeking at a room isn't counted as a
-  // participant that joined it.
+  // Analytics "Open as admin" — skips session tracking so an operator isn't counted.
   const adminPeek = router.query.admin === "1";
 
   const [queue, setQueue] = React.useState<QueueEntry[]>([]);
@@ -99,13 +94,10 @@ const Host = ({
   const [loading, setLoading] = React.useState(true);
   // Definitive "room doesn't exist" — terminal, stops polling.
   const [error, setError] = React.useState<string | null>(null);
-  // Transient load failure (flaky network, 5xx) — retryable; polling keeps
-  // running and heals it on the first successful fetch.
+  // Transient load failure — retryable; polling keeps running and heals it.
   const [loadError, setLoadError] = React.useState(false);
   const [initNonce, setInitNonce] = React.useState(0);
-  // Consecutive not-found polls; a TTL-expired room must surface the
-  // not-found state instead of a live-looking UI where every button no-ops,
-  // but a single blip shouldn't.
+  // Consecutive not-found polls — a single blip must not surface not-found.
   const notFoundPollsRef = React.useRef(0);
   const [origin, setOrigin] = React.useState("");
   const [confirmRemove, setConfirmRemove] = React.useState<string | null>(null);
@@ -123,35 +115,28 @@ const Host = ({
   const reactionTimers = React.useRef<ReturnType<typeof setTimeout>[]>([]);
   const videoRef = React.useRef<HTMLIFrameElement>(null);
 
-  // Where the video plays. `null` until the host has chosen (or we've
-  // restored a previous choice), which is what triggers the first-run chooser.
-  // Co-hosts never play video, so they stay in the default "here" surface.
+  // null until chosen/restored — that's what triggers the first-run chooser.
+  // Co-hosts never play video, so they stay "here".
   const [playMode, setPlayMode] = React.useState<PlayMode | null>(
     remote ? "here" : null,
   );
-  // Whether we've checked localStorage for a remembered choice yet. The chooser
-  // must wait for this — otherwise a remembered host would be re-prompted in the
-  // window before the restore lands.
+  // The chooser must wait for the localStorage restore — otherwise a remembered
+  // host would be re-prompted in the window before it lands.
   const [playModeRestored, setPlayModeRestored] = React.useState(false);
   const tvMode = playMode === "tv";
 
-  // Which device owns the current playback (here-mode only). We render the
-  // video iff the room's playToken is one we minted; other host devices show a
-  // status panel instead of double-playing the song.
+  // Here-mode: the video renders iff the room's playToken is one we minted;
+  // other host devices show a status panel instead of double-playing.
   const [ownedPlayToken, setOwnedPlayToken] = React.useState<string | null>(null);
   const [serverPlayToken, setServerPlayToken] = React.useState<string | null>(null);
-  // Someone paused the video on the display screen (reported by the display).
+  // Reported by the display page.
   const [displayPaused, setDisplayPaused] = React.useState(false);
   // A display page has heartbeated recently (server-computed on each GET).
   const [displayConnected, setDisplayConnected] = React.useState(false);
-  // Auto-fallback bookkeeping (see the effects below). displayWindowRef holds
-  // the window.open handle for a display this host opened — the fast, reliable
-  // close signal. displaySeenLiveRef gates the slower server-heartbeat path so
-  // the startup gap before the first heartbeat can't trip it; displayGoneTimer
-  // is that path's confirm delay, which absorbs a cross-device display reload.
+  // Auto-fallback bookkeeping — see the two detection effects below.
   const displayWindowRef = React.useRef<Window | null>(null);
-  // Bumped whenever we open a display window, so the handle watcher re-arms even
-  // when we were already in TV mode (e.g. a restored session hits "reopen").
+  // Bumped on each display open so the handle watcher re-arms even when
+  // already in TV mode (e.g. a restored session hits "reopen").
   const [displayWindowNonce, setDisplayWindowNonce] = React.useState(0);
   const displaySeenLiveRef = React.useRef(false);
   const displayGoneTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -162,12 +147,8 @@ const Host = ({
   const playsVideoHere =
     isPlaying && !!serverPlayToken && serverPlayToken === ownedPlayToken;
 
-  // Here-mode only: whether the host's own YouTube player is currently playing,
-  // so the transport can show a real Pause/Play control (parity with TV mode)
-  // instead of leaving the host to hunt for YouTube's own chrome. Starts
-  // optimistically true (the room says it's playing); the watchdog below flips
-  // it to false if autoplay was actually blocked. herePlayingRef mirrors it for
-  // the watchdog and the postMessage listener.
+  // Here-mode: starts optimistically true; the autoplay watchdog flips it false
+  // if blocked. herePlayingRef mirrors it for the watchdog + postMessage listener.
   const [hereVideoPlaying, setHereVideoPlaying] = React.useState(true);
   const herePlayingRef = React.useRef(false);
 
@@ -176,9 +157,8 @@ const Host = ({
     setOwnedPlayToken(readStoredPlayToken(joinCode));
   }, [joinCode, remote]);
 
-  // Mirror this tab's play token out as the tab goes away (close, navigate,
-  // reload) so a genuine restore can reclaim it — see storage.ts for why the
-  // live token is per-tab.
+  // Mirror the per-tab play token out on pagehide so a genuine restore can
+  // reclaim it — see storage.ts for why the live token is per-tab.
   React.useEffect(() => {
     if (!joinCode || remote) return;
     const onPageHide = () => mirrorPlayTokenForRestore(joinCode);
@@ -190,8 +170,6 @@ const Host = ({
   const [showWelcome, setShowWelcome] = React.useState(true);
   const [welcomeName, setWelcomeName] = React.useState("");
 
-  // A name from a previous session (or set on the landing page when starting
-  // the queue) means we can skip the welcome prompt entirely on reload.
   React.useEffect(() => {
     try {
       const saved = localStorage.getItem("karaoq_host_name");
@@ -216,16 +194,9 @@ const Host = ({
   const [settingsOpen, setSettingsOpen] = React.useState(false);
   const [modeMenuOpen, setModeMenuOpen] = React.useState(false);
   const [cohostOpen, setCohostOpen] = React.useState(false);
-  // The join QR sits in a drawer the host can tuck away — handy when this
-  // screen is what's cast and the code isn't needed mid-song. Starts closed to
-  // avoid a flash on narrow screens; the restore effect opens it on wide
-  // screens (and honors the per-room choice). A tap opens a big, scannable
-  // popout.
+  // Starts closed to avoid a flash on narrow screens; the restore effect below opens it.
   const [qrShelfOpen, setQrShelfOpen] = React.useState(false);
   const [qrModalOpen, setQrModalOpen] = React.useState(false);
-  // The cheer bar can be tucked away too — same reasoning as the QR drawer:
-  // when this screen is cast, the host may not want tappable emoji on the
-  // shared display. Defaults open; remembered per-room.
   const [cheersOpen, setCheersOpen] = React.useState(true);
   const [searchOpen, setSearchOpen] = React.useState(false);
   const [sidebarTab, setSidebarTab] = React.useState<"queue" | "history">(
@@ -236,7 +207,7 @@ const Host = ({
   const [toast, setToast] = React.useState<string | null>(null);
   const toastTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Pause polling while the organizer is actively reordering or adding songs
+  // Pauses polling while the organizer is actively reordering or adding songs.
   const [isPaused, setIsPaused] = React.useState(false);
   const isPausedRef = React.useRef(false);
   const pauseTimeout = React.useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -245,11 +216,9 @@ const Host = ({
     setOrigin(window.location.origin);
   }, []);
 
-  // Restore where this device last played video for this room, so a refresh
-  // keeps the host's setup instead of re-asking. Runs the moment we know the
-  // room code — independent of room loading — so the chooser never flashes.
-  // The room's server-stored playMode (applied once the room loads) wins over
-  // this: it's what lets a brand-new host device pick up an existing TV setup.
+  // Restore this device's play mode as soon as the code is known — independent
+  // of room loading, so the chooser never flashes. The room's server-stored
+  // playMode (applied once the room loads) wins over this.
   React.useEffect(() => {
     if (remote) {
       setPlayModeRestored(true);
@@ -258,9 +227,6 @@ const Host = ({
     if (!joinCode) return;
     try {
       const saved = localStorage.getItem(playModeStorageKey(joinCode));
-      // Default new hosts to "here" — the zero-setup option — so the room is
-      // immediately usable instead of blocking on a first-run chooser. They can
-      // switch to a separate TV anytime from the mode pill up top.
       setPlayMode(saved === "tv" ? "tv" : "here");
     } catch {
       setPlayMode("here");
@@ -268,8 +234,6 @@ const Host = ({
     setPlayModeRestored(true);
   }, [joinCode, remote]);
 
-  // Restore whether this host had the join QR open for this room; fall back to
-  // open on wide screens, tucked away on narrow ones.
   React.useEffect(() => {
     if (!joinCode) return;
     try {
@@ -280,7 +244,6 @@ const Host = ({
     }
   }, [joinCode]);
 
-  // Restore whether this host had the cheer bar tucked away for this room.
   React.useEffect(() => {
     if (!joinCode) return;
     try {
@@ -319,31 +282,28 @@ const Host = ({
     });
   }
 
-  // Persist the mode on the room (so every host device agrees) and in
-  // localStorage (fallback for rooms that predate server-stored modes).
+  // Persisted on the room (every host device agrees) and in localStorage
+  // (fallback for rooms predating server-stored modes).
   function rememberMode(mode: PlayMode) {
     if (!joinCode) return;
     try {
       localStorage.setItem(playModeStorageKey(joinCode), mode);
     } catch {}
-    // Hold polling briefly so an in-flight poll with the old mode can't
-    // flip the pill back before the server write lands.
+    // Hold polling so an in-flight poll with the old mode can't flip the pill
+    // back before the write lands.
     pausePolling();
     savePlayMode(joinCode, mode).then((ok) => {
       if (!ok) resyncAfterFailedWrite();
     });
   }
 
-  // Choose "this screen" — the simplest setup, nothing else to open.
   function playHere() {
     setPlayMode("here");
     rememberMode("here");
     setModeMenuOpen(false);
   }
 
-  // Choose "separate TV" — open (or re-open) the display window to cast. Keep
-  // the window handle: its `.closed` is the fast, reliable signal that the host
-  // watches to fall back to this screen the instant the display is closed.
+  // Keep the window handle — its `.closed` is the fast fallback signal.
   function openTvDisplay() {
     displayWindowRef.current = window.open(`/display/${joinCode}`, "_blank");
     fallbackFiredRef.current = false;
@@ -373,8 +333,8 @@ const Host = ({
     };
   }, []);
 
-  // On the initial load we only seed the seen-set (animate=false) — otherwise
-  // a refresh replays the last 30s of cheers all at once.
+  // animate=false on initial load seeds the seen-set only — otherwise a
+  // refresh replays the last 30s of cheers all at once.
   function processReactions(reactions: Reaction[] | undefined, animate = true) {
     if (!reactions || reactions.length === 0) return;
     const fresh = reactions.filter((r) => !seenReactionIds.current.has(r.id));
@@ -399,9 +359,8 @@ const Host = ({
     reactionTimers.current.push(timer);
   }
 
-  // Apply a fresh server snapshot to local state. Non-remote hosts also adopt
-  // the room's playMode so a host device that joins (or rejoins) an existing
-  // TV-mode room acts as a remote instead of defaulting to playing locally.
+  // Non-remote hosts adopt the room's playMode so a device (re)joining an
+  // existing TV-mode room doesn't default to playing locally.
   function applyRoomState(room: Room) {
     setQueue(room.queue);
     applyBoards(room);
@@ -418,10 +377,8 @@ const Host = ({
     if (!remote && room.playMode) setPlayMode(room.playMode);
   }
 
-  // Customize mode: the host page keeps running exactly as-is while the REAL
-  // control-surface elements grow drag handles and render from a staged draft.
-  // Nothing reaches the room until Save. Co-hosts see the shared layout but
-  // never enter edit (the Customize button is host-only).
+  // Customize: the real elements render from a staged draft; nothing reaches
+  // the room until Save. Co-hosts never enter edit.
   const hostEdit = useHostEdit({
     joinCode,
     config: hostConfig,
@@ -435,21 +392,17 @@ const Host = ({
     let cancelled = false;
 
     async function init() {
-      // A co-host only reads the room — never create it. Sending our stored
-      // play token lets the server reset play state only when WE were the
-      // playback surface and just reloaded (the song died with the page).
+      // Co-hosts only read — never create. Sending our stored play token lets the
+      // server reset play state only when WE were the playback surface and reloaded.
       if (!remote) await createRoom(joinCode!, readStoredPlayToken(joinCode!));
       const room = await getRoom(joinCode!);
       if (cancelled) return;
       if (room === "notFound") {
         setError(t('host.error.notFound'));
       } else if (room === "error") {
-        // Flaky connection — retryable state, never "room not found" (and
-        // never an eternal spinner).
         setLoadError(true);
       } else {
-        // Mark this as the device's current room so the landing page offers
-        // "resume" instead of a duplicate. Co-hosts don't own the room.
+        // Lets the landing page offer "resume"; co-hosts don't own the room.
         if (!remote) rememberLastHostedRoom(joinCode!);
         applyRoomState(room);
         processReactions(room.reactions, false);
@@ -469,7 +422,7 @@ const Host = ({
     return startSessionTracking(joinCode, hostName || "Host", "host");
   }, [joinCode, hostName, adminPeek]);
 
-  // Poll for queue updates (pauses during drag operations)
+  // Room poll — paused during drag operations.
   React.useEffect(() => {
     if (!joinCode || error || isPaused) return;
 
@@ -478,8 +431,7 @@ const Host = ({
       if (isPausedRef.current) return;
       if (room === "error") return; // transient — try again next tick
       if (room === "notFound") {
-        // Only a run of definitive 404s means the room is really gone
-        // (TTL-expired); surface it instead of a UI where every write no-ops.
+        // Only a run of definitive 404s (TTL-expired room) surfaces not-found.
         notFoundPollsRef.current += 1;
         if (notFoundPollsRef.current >= 3) setError(t('host.error.notFound'));
         return;
@@ -493,10 +445,8 @@ const Host = ({
     }, POLL_INTERVAL);
   }, [joinCode, error, isPaused]);
 
-  // Auto-fallback to "this screen" when a cast display disappears. Casting
-  // to a dead TV strands the host on a "playing on another screen" panel for a
-  // song that isn't playing anywhere; switching the room back to here-mode keeps
-  // it usable. Co-hosts (remote) never own the mode, so they sit this out.
+  // Auto-fallback to "this screen" when a cast display disappears. Co-hosts
+  // never own the mode, so they sit this out.
   function cancelDisplayFallback() {
     if (displayGoneTimer.current) {
       clearTimeout(displayGoneTimer.current);
@@ -504,9 +454,8 @@ const Host = ({
     }
   }
 
-  // The actual switch back, shared by both detection paths. Guarded to fire
-  // exactly once per TV session so overlapping signals (handle close + stale
-  // heartbeat) can't double-switch or double-toast.
+  // Fires exactly once per TV session — overlapping signals (handle close +
+  // stale heartbeat) must not double-switch or double-toast.
   const fallbackFiredRef = React.useRef(false);
   function runDisplayFallback() {
     if (fallbackFiredRef.current) return;
@@ -514,10 +463,8 @@ const Host = ({
     cancelDisplayFallback();
     displayWindowRef.current = null;
     displaySeenLiveRef.current = false;
-    // Flip everything in one synchronous batch so the panel transitions
-    // straight from "playing on the TV" to "ready to play here" — no flash
-    // through a stale "playing on another device" frame while an async stop
-    // resolves. We clear the local playing flag up front, then persist it.
+    // Clear local playing state synchronously before the async stop resolves,
+    // so the panel doesn't flash a stale "playing on another device" frame.
     if (isPlayingRef.current) {
       setIsPlaying(false);
       setServerPlayToken(null);
@@ -528,12 +475,9 @@ const Host = ({
     showToast(t("host.toast.displayClosedFallback"));
   }
 
-  // Fast path: watch the window.open handle for a display this host opened.
-  // `.closed` flips true the instant the window/tab is closed and — unlike an
-  // unload-time signal — stays false across a reload, so we react immediately
-  // with no confirm delay and no network round-trip. This covers the common
-  // laptop→TV case; a display opened by URL on another device leaves no handle
-  // and relies on the server-heartbeat path below.
+  // Fast path: the window handle's `.closed` flips instantly on close but stays
+  // false across a reload. A display opened by URL on another device leaves no
+  // handle and relies on the heartbeat backstop below.
   React.useEffect(() => {
     if (remote || !tvMode || !playModeRestored) return;
     if (!displayWindowRef.current) return;
@@ -543,8 +487,7 @@ const Host = ({
       }
     };
     const interval = setInterval(check, 400);
-    // React instantly when the host tab regains focus — the user just closed
-    // the display and switched back — instead of waiting for the next tick.
+    // Check immediately on refocus instead of waiting for the next tick.
     window.addEventListener("focus", check);
     document.addEventListener("visibilitychange", check);
     return () => {
@@ -554,9 +497,8 @@ const Host = ({
     };
   }, [remote, tvMode, playModeRestored, displayWindowNonce]);
 
-  // Backstop: the server heartbeat going stale (covers a cross-device display,
-  // or one whose handle we lost to a host reload). A couple of poll cycles of
-  // confirm ride out a display reload before we give up on it.
+  // Backstop: stale server heartbeat (cross-device display, or a handle lost to
+  // a host reload). The confirm delay rides out a display reload.
   React.useEffect(() => {
     if (remote || !tvMode || !playModeRestored) {
       displaySeenLiveRef.current = false;
@@ -587,9 +529,8 @@ const Host = ({
     }, 5000);
   }
 
-  // A failed write must not fail silently: the optimistic UI would quietly
-  // revert on a later poll (~5-8s), which reads as "the button did nothing".
-  // Toast it and resync to the server's truth right away.
+  // Without this a failed write's optimistic UI would silently revert on a
+  // later poll (~5-8s); toast and resync to the server's truth right away.
   async function resyncAfterFailedWrite() {
     showToast(t("host.toast.saveFailed"));
     if (!joinCode) return;
@@ -608,17 +549,15 @@ const Host = ({
     });
   }
 
-  // Once-guard for the here-mode ended handler (mirrors the display's
-  // endedHandledRef): YouTube can deliver a straggler infoDelivery state-0
-  // after the advance commits, which would advance twice and skip a singer's
-  // song. Reset whenever a new song (or a replay) starts.
+  // Once-guard: YouTube can deliver a straggler state-0 after the advance
+  // commits, which would advance twice and skip a singer's song.
   const endedHandledRef = React.useRef(false);
   const currentQueueSongId = queue[activeIndex]?.id;
   React.useEffect(() => {
     endedHandledRef.current = false;
   }, [currentQueueSongId, isPlaying]);
 
-  // Use a ref so the postMessage handler always has current state
+  // Ref so the postMessage handler always has current state.
   const onVideoEndedRef = React.useRef<() => void>(() => {});
   onVideoEndedRef.current = async () => {
     if (!joinCode || endedHandledRef.current) return;
@@ -645,9 +584,8 @@ const Host = ({
     }
   };
 
-  // All-in-one mode: listen for YouTube postMessage when the video ends.
-  // Only the device actually playing the video (playsVideoHere) listens —
-  // other host pages have no player and must not advance the queue.
+  // Only the device actually playing (playsVideoHere) listens — other host
+  // pages have no player and must not advance the queue.
   React.useEffect(() => {
     if (remote || !playsVideoHere || tvMode) return;
 
@@ -678,9 +616,8 @@ const Host = ({
     return () => window.removeEventListener("message", onMessage);
   }, [playsVideoHere, tvMode, remote]);
 
-  // Here-mode autoplay watchdog: assume playing (the room says so), but if
-  // YouTube never confirms shortly after the player (re)mounts, autoplay was
-  // blocked — flip the control to Play so the host can start it with one tap.
+  // Autoplay watchdog: if YouTube never confirms shortly after the player
+  // (re)mounts, autoplay was blocked — flip the control to Play.
   React.useEffect(() => {
     if (remote || tvMode || !playsVideoHere) return;
     herePlayingRef.current = false;
@@ -691,8 +628,7 @@ const Host = ({
     return () => clearTimeout(timer);
   }, [playsVideoHere, tvMode, remote, activeIndex]);
 
-  // Pause/resume the host's own player. A click is the user gesture that lets a
-  // blocked player start with sound (same trick the display uses on tap).
+  // The click is the user gesture that lets a blocked player start with sound.
   function toggleHereVideo() {
     const playing = hereVideoPlaying;
     videoRef.current?.contentWindow?.postMessage(
@@ -706,7 +642,6 @@ const Host = ({
     setHereVideoPlaying(!playing);
   }
 
-  // All-in-one mode: subscribe to YouTube events when iframe loads
   function handleIframeLoad() {
     videoRef.current?.contentWindow?.postMessage(
       JSON.stringify({ event: "listening", id: "karaoq" }),
@@ -714,10 +649,8 @@ const Host = ({
     );
   }
 
-  // TV mode: the display advances the room server-side when a video ends,
-  // then pings same-browser host tabs over BroadcastChannel. Refetch instead
-  // of advancing again — advancing here too would double-skip. Cross-device
-  // hosts don't get the ping and pick the change up on the next poll.
+  // TV mode: the display already advanced the room server-side — refetch
+  // instead of advancing again, which would double-skip.
   React.useEffect(() => {
     if (remote || !joinCode || !tvMode) return;
     return onVideoEnded(joinCode, async () => {
@@ -756,12 +689,19 @@ const Host = ({
     }
   }
 
-  // Write-first like toggleReactions — but either direction re-sorts the
-  // upcoming queue server-side (on = round-robin, off = back to queue time),
-  // so always refetch and adopt the server's order rather than re-sorting
-  // locally, then broadcast the fresh state to displays.
+  // Either direction re-sorts the queue server-side, so refetch and adopt the
+  // server's order. One flight at a time: a double-tap would send the same stale value twice.
+  const fairToggleInFlight = React.useRef(false);
   async function toggleFairMode() {
-    if (!joinCode) return;
+    if (!joinCode || fairToggleInFlight.current) return;
+    fairToggleInFlight.current = true;
+    try {
+      await doToggleFairMode(joinCode);
+    } finally {
+      fairToggleInFlight.current = false;
+    }
+  }
+  async function doToggleFairMode(joinCode: string) {
     const next = !fairMode;
     pausePolling();
     const ok = await setFairMode(joinCode, next);
@@ -780,9 +720,8 @@ const Host = ({
 
   function handleSongAdded(entry: QueueEntry) {
     pausePolling();
-    // Mirror where the server just put it. In fair mode the song lands at the
-    // singer's round-robin slot, so appending here would show the host a
-    // bottom-of-queue song that silently jumps once polling resumes.
+    // Mirror where the server just put it: in fair mode the song lands at the
+    // singer's round-robin slot, not the bottom of the queue.
     let newQueue: QueueEntry[];
     if (fairMode) {
       const upcoming = queue.slice(activeIndex);
@@ -828,9 +767,8 @@ const Host = ({
 
   async function startSong() {
     if (!joinCode) return;
-    // Mint a fresh playback token: this device becomes the playback surface.
-    // If another host device was playing, it sees the foreign token on its
-    // next poll and yields — starting here doubles as a clean takeover.
+    // Mint a fresh playback token: another host device sees the foreign token
+    // on its next poll and yields — starting here doubles as a clean takeover.
     const token = uuidv4();
     const ok = await setPlaying(joinCode, true, token);
     if (ok) {
@@ -852,19 +790,16 @@ const Host = ({
     }
   }
 
-  // TV mode: pause or resume the video playing on the display, from here.
-  // Flips the room's shared pause flag; the display watches it and drives its
-  // own player, then reports the real state back — which also keeps a pause
-  // made on the display screen itself reflected on this button.
+  // Flips the room's shared pause flag; the display drives its own player and
+  // reports the real state back.
   async function toggleDisplayPause() {
     if (!joinCode) return;
     const next = !displayPaused;
-    // Hold polling briefly so an in-flight poll with the old value can't flip
-    // the button back before the write lands (same trick as rememberMode).
+    // Hold polling so an in-flight poll with the old value can't flip the button back.
     pausePolling();
     setDisplayPaused(next);
-    // Nudge a same-browser display right away so it reacts instantly; the POST
-    // persists it and reaches cross-device displays on their next poll.
+    // Nudge a same-browser display instantly; the POST reaches cross-device
+    // displays on their next poll.
     broadcastDisplayPause(joinCode, next);
     const ok = await saveDisplayPaused(joinCode, next);
     if (!ok) {
@@ -896,8 +831,8 @@ const Host = ({
     if (!joinCode) return;
 
     if (!isPlaying) {
-      // Paused: the current "UP NEXT" song is part of the list, so move within
-      // queue.slice(activeIndex) to keep the clicked song at activeIndex.
+      // Paused: the on-stage song is part of the list, so move within
+      // queue.slice(activeIndex).
       const fullUpcoming = queue.slice(activeIndex);
       const idx = fullUpcoming.findIndex((e) => e.id === entryId);
       if (idx <= 0) return;
@@ -923,8 +858,6 @@ const Host = ({
     showToast(t('host.toast.movedTop'));
   }
 
-  // Move one history entry back into the queue as the next song, leaving the
-  // rest of history and the active pointer in place.
   async function replayFromHistory(entryId: string) {
     if (!joinCode) return;
 
@@ -984,9 +917,8 @@ const Host = ({
   async function editSave(id: string, newName: string) {
     setEditingId(null);
     if (!joinCode) return;
-    // Persist the rename (positional $set server-side) — local-only state
-    // would be reverted by the next poll and never reach other devices.
-    // Hold polling so an in-flight poll with the old name can't flash back.
+    // Local-only state would be reverted by the next poll; hold polling so an
+    // in-flight poll with the old name can't flash back.
     pausePolling();
     const newQueue = queue.map((e) =>
       e.id === id ? { ...e, userName: newName } : e,
@@ -1001,8 +933,7 @@ const Host = ({
     const { active, over } = event;
     if (!over || active.id === over.id) return;
 
-    // Match the rendered list: when paused, the on-stage "next up" song is part
-    // of the sidebar (queue.slice(activeIndex)); otherwise it starts after it.
+    // Match the rendered list: when paused the on-stage song is part of the sidebar.
     const includesCurrent = !!(queue[activeIndex] && !isPlaying);
     const start = includesCurrent ? activeIndex : activeIndex + 1;
     const upNext = queue.slice(start);
@@ -1015,29 +946,21 @@ const Host = ({
   }
 
   const currentSong = queue[activeIndex];
-  // Keep the waiting current song in the sidebar so it isn't empty during "UP NEXT".
+  // The waiting current song stays in the sidebar while paused.
   const includesCurrent = !!(currentSong && !isPlaying);
   const upNext = includesCurrent
     ? queue.slice(activeIndex)
     : queue.slice(activeIndex + 1);
   const historyItems = queue.slice(0, activeIndex);
 
-  // On phones an empty room hides the transport bar and sidebar entirely —
-  // the empty-state pitch already carries the add button and join QR, so the
-  // extra chrome is all duplicates (second add button, second QR, controls
-  // with nothing to control). Desktop keeps everything.
   const roomEmpty = queue.length === 0;
 
-  // Counted the way the rotation groups people, so "4 singers" never disagrees
-  // with how many turns the queue is actually splitting between — a duet
-  // entry counts each of its members.
+  // Counted the way the rotation groups people — a duet entry counts each member.
   const uniqueSingers = new Set(upNext.flatMap((s) => singerKeys(s.userName))).size;
 
-  // Everything below renders from hostView: the staged draft while customizing,
-  // the room's config otherwise.
+  // hostView is the staged draft while customizing, the room's config otherwise.
   const customizing = !remote && hostEdit.editing;
 
-  // The transport bar, reused by both the plain and the Customize-wrapped render.
   const transportBar = (
     <TransportBar
       roomEmpty={roomEmpty}
@@ -1092,8 +1015,6 @@ const Host = ({
     );
   }
 
-  // Transient failure: retry button plus the still-running poll, so it heals
-  // by itself the moment the connection comes back.
   if (loadError) {
     return (
       <main className={styles.main}>
@@ -1122,9 +1043,8 @@ const Host = ({
         {
           "--host-sb-w": `${hostView.sidebarWidth}px`,
           "--host-now-h": `${hostView.nowPlayingHeight}px`,
-          // Unitless multiplier the playback bar's type scales by. CSS can't
-          // divide a px length by a px length into a plain number, so the ratio
-          // to the default height is worked out here.
+          // CSS can't divide px by px into a plain number, so the type-scale
+          // ratio is computed here.
           "--host-now-scale": `${hostView.nowPlayingHeight / DEFAULT_HOST_CONFIG.nowPlayingHeight}`,
         } as React.CSSProperties
       }
@@ -1195,16 +1115,11 @@ const Host = ({
             onAddFirst={() => setSearchOpen(true)}
           />
 
-          {/* Reaction overlay — inside the player area so cheers float over
-              the current song, never the queue or panels */}
           {!remote && reactionsOn && visibleReactions.length > 0 && (
             <ReactionOverlay reactions={visibleReactions} />
           )}
 
-          {/* Transport bar — host only; co-hosts don't control playback. Never
-              hideable: without it the host can't run the room. It is resizable
-              though — dragging its top edge grows the bar and its type with it,
-              so the singer's name reads from wherever the host is standing. */}
+          {/* Transport bar — host only, never hideable, but resizable. */}
           {!remote &&
             (customizing ? (
               <Spot
@@ -1288,8 +1203,6 @@ const Host = ({
         />
       </div>
 
-      {/* Customize-mode chrome: theme/toggle rail on the free edge, floating
-          save bar, and side drop-zones while the sidebar is dragged across. */}
       {customizing && (
         <EditOverlay
           rail={

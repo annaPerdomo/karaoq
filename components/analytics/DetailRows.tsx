@@ -1,14 +1,9 @@
 import * as React from 'react';
 import styles from '../../styles/Analytics.module.css';
 
-/** One line in a room-detail list: a headline, an optional badge, and the
- * muted facts that trail it. Every tab in the room modal is this same shape,
- * so they share one renderer instead of four copies of the markup. */
 export interface DetailRow {
   title: string;
   badge?: string;
-  /** Which badge palette to use — people are tagged by role, everything else
-   * by how it reached the room. */
   badgeKind?: 'role' | 'via';
   /** Falsy entries are dropped, so callers can pass conditionals inline. */
   meta: (string | null | undefined | false)[];

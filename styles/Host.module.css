@@ -20,7 +20,6 @@
   font-size: 1.2rem;
 }
 
-/* ─── Header ─── */
 .header {
   display: flex;
   align-items: center;
@@ -46,7 +45,6 @@
   flex-shrink: 0;
 }
 
-/* ─── Gear button ─── */
 .gearBtn {
   position: relative;
   display: flex;
@@ -70,7 +68,6 @@
   color: var(--text-primary);
 }
 
-/* ─── Settings popover ─── */
 .settingsPopover {
   position: absolute;
   top: 52px;
@@ -149,10 +146,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  /* Keeps a wrapped description off the switch instead of running into it. */
   gap: 0.85rem;
-  /* Buttons centre their text by default; these are left-aligned label rows,
-     which also stops a wrapped line reaching toward the switch. */
   text-align: left;
   width: 100%;
   padding: 0.6rem 0.75rem;
@@ -198,14 +192,12 @@
   transform: translateX(16px);
 }
 
-/* ─── Content layout ─── */
 .content {
   display: flex;
   flex: 1;
   overflow: hidden;
 }
 
-/* ─── Player area ─── */
 .playerArea {
   flex: 1;
   display: flex;
@@ -223,7 +215,6 @@
   background: #000;
 }
 
-/* ─── Control panel (TV mode / stopped) ─── */
 .controlPanel {
   flex: 1;
   display: flex;
@@ -315,12 +306,10 @@
   color: var(--text-secondary);
 }
 
-/* ─── Reaction overlay ─── */
 .reactionOverlay {
   position: absolute;
   inset: 0;
-  /* Clear the transport bar at the bottom of the player area — its dragged
-     height plus its own footer row. */
+  /* Clears the transport bar: its dragged height plus the 46px footer row. */
   bottom: calc(var(--host-now-h, 64px) + 46px);
   pointer-events: none;
   z-index: 5;
@@ -335,8 +324,7 @@
   align-items: center;
   gap: 0.15rem;
   opacity: 0;
-  /* Twitch-style: fade in, drift steadily up with a slight lean (--sway,
-     set inline per cheer), fade out near the top. */
+  /* --sway is set inline per cheer. */
   animation: reactionFloat 4.2s ease-out forwards;
 }
 
@@ -375,7 +363,6 @@
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
 }
 
-/* ─── Sidebar ─── */
 .sidebar {
   width: var(--host-sb-w, 360px);
   flex-shrink: 0;
@@ -386,10 +373,7 @@
   position: relative;
 }
 
-/* ─── Collapsed sidebar: thin reopen rail ─── */
-/* Use .sidebar.sidebarCollapsed (specificity 0,2,0) so the collapsed width wins
-   over the responsive `.sidebar { width: 300px }` rule that comes later in the
-   file — otherwise on tablet/iPad (≤1200px) the rail keeps the full width. */
+/* Double class so the collapsed width beats the later responsive `.sidebar { width: 300px }`. */
 .sidebar.sidebarCollapsed {
   width: 44px;
 }
@@ -446,7 +430,6 @@
   color: var(--text-secondary);
 }
 
-/* ─── Sidebar header ─── */
 .sidebarHeader {
   display: flex;
   align-items: center;
@@ -466,8 +449,6 @@
   letter-spacing: 0;
 }
 
-/* One-tap fair-rotation switch, sitting on the right of the queue stats row.
-   Both states keep the same box so flipping it never shifts the row. */
 .fairToggle {
   margin-left: auto;
   display: inline-flex;
@@ -512,8 +493,6 @@
   color: #40dca0;
 }
 
-/* Miniature of the gear panel's .toggle so the pill states the mode rather
-   than just tinting itself. Same box in both states — no layout shift. */
 .fairSwitch {
   width: 20px;
   height: 11px;
@@ -544,7 +523,6 @@
   transform: translateX(9px);
 }
 
-/* ─── Queue stats ─── */
 .queueStats {
   display: flex;
   align-items: center;
@@ -563,7 +541,6 @@
   opacity: 0.5;
 }
 
-/* ─── Queue list ─── */
 .queueList {
   flex: 1;
   overflow-y: auto;
@@ -595,7 +572,6 @@
   background: rgba(0, 240, 255, 0.04);
 }
 
-/* ─── Drag handle ─── */
 .dragHandle {
   display: flex;
   align-items: center;
@@ -653,7 +629,6 @@
   text-overflow: ellipsis;
 }
 
-/* Never truncated — the host reads these aloud. */
 .queueSong {
   font-size: 0.75rem;
   color: var(--text-primary);
@@ -683,12 +658,6 @@
   font-family: inherit;
 }
 
-/* ─── Queue item actions ─── */
-/* Absolutely positioned so the hidden controls don't reserve ~110px of
-   horizontal space on every row — that reserved column squeezed the song
-   title into an unnecessarily narrow column with blank space to its right.
-   Now the title uses the full row width and the actions overlay on hover,
-   fading the text out beneath them via the gradient. */
 .queueActions {
   display: flex;
   gap: 2px;
@@ -739,7 +708,6 @@
   color: #00f0ff;
 }
 
-/* ─── History list ─── */
 .historyBadge {
   font-size: 0.6rem;
   font-weight: 700;
@@ -812,7 +780,6 @@
   transform: scale(1.04);
 }
 
-/* ─── Search overlay ─── */
 .searchOverlay {
   position: absolute;
   inset: 0;
@@ -859,9 +826,7 @@
   text-align: center;
 }
 
-/* ─── Transport bar ─── The host drags its top edge in Customize mode;
-   --host-now-h is that height and --host-now-scale the matching type
-   multiplier, both set inline on .main from hostConfig.nowPlayingHeight. */
+/* --host-now-h and --host-now-scale are set inline on .main from hostConfig.nowPlayingHeight. */
 .transport {
   flex-shrink: 0;
   display: flex;
@@ -1019,9 +984,6 @@
   cursor: not-allowed;
 }
 
-/* Fullscreen is a display-mode toggle, not a playback control — nudge it a bit
-   further from the prev/play/next cluster so it doesn't read as a 4th transport
-   button. (transportControls already supplies a 0.5rem gap.) */
 .tFullscreen {
   margin-left: 0.5rem;
 }
@@ -1073,7 +1035,6 @@
   color: #ff4444;
 }
 
-/* ─── Modal (remove confirmation) ─── */
 .overlay {
   position: fixed;
   inset: 0;
@@ -1106,7 +1067,6 @@
   to { transform: translateY(0); opacity: 1; }
 }
 
-/* ─── QR modal pieces (shared by the Invite panel) ─── */
 .qrModalClose {
   position: absolute;
   top: 0.75rem;
@@ -1222,7 +1182,6 @@
   background: rgba(255, 255, 255, 0.1);
 }
 
-/* ─── Toast ─── */
 .toast {
   position: fixed;
   bottom: 24px;
@@ -1248,7 +1207,6 @@
   to { opacity: 0; transform: translateX(-50%) translateY(-8px); }
 }
 
-/* ─── Empty / error states ─── */
 .emptyState {
   flex: 1;
   min-height: 0;
@@ -1271,7 +1229,6 @@
   letter-spacing: -0.02em;
 }
 
-/* The co-host empty state shows the literal wordmark, not a headline. */
 .emptyTitleBrand {
   font-family: var(--font-brand);
   font-weight: 400;
@@ -1430,7 +1387,6 @@
   cursor: not-allowed;
 }
 
-/* ─── Responsive ─── */
 @media (max-width: 1200px) {
   .sidebar {
     width: 300px;
@@ -1441,10 +1397,7 @@
   }
 }
 
-/* ─── Tablet / iPad / phone: read the whole entry + tappable actions ─── */
 @media (max-width: 1200px) {
-  /* Let the singer name and song title wrap fully so the host can read the
-     entire queue entry at a glance instead of truncating with an ellipsis. */
   .queueItem {
     flex-wrap: wrap;
     align-items: flex-start;
@@ -1470,9 +1423,6 @@
     word-break: break-word;
   }
 
-  /* Touch screens can't hover, so the move/edit/remove controls go on their
-     own full-width row beneath the song where they're always visible and
-     large enough to tap — without stealing horizontal space from the text. */
   .queueActions {
     position: static;
     transform: none;
@@ -1492,18 +1442,13 @@
   }
 }
 
-/* Any touch device (e.g. iPad in landscape past 1200px) has no hover, so the
-   queue actions must stay visible rather than appearing only on :hover. */
+/* An iPad in landscape can exceed 1200px but still has no hover. */
 @media (hover: none) {
   .queueActions {
     opacity: 1;
   }
 }
 
-/* ─── Phone: the queue becomes the main surface ───
-   Stacked layout where the player/status area hugs its content and the
-   sidebar (Add a song + queue) takes every remaining pixel — on a phone the
-   host is managing the lineup, not staring at a status headline. */
 @media (max-width: 768px) {
   .header {
     flex-wrap: wrap;
@@ -1523,15 +1468,12 @@
   .sidebar {
     width: 100%;
     flex: 1;
-    /* Never crushed below the tab row + Add button, even when the player
-       area's content runs long (that content scrolls internally instead). */
+    /* 132px = tab row + Add button; player content scrolls internally instead. */
     min-height: 132px;
     border-left: none;
     border-top: 1px solid rgba(255, 255, 255, 0.06);
   }
 
-  /* Stacked layout: a thin vertical rail wastes a whole row, so collapse to a
-     short full-width bar with a horizontal label instead. */
   .sidebar.sidebarCollapsed {
     width: 100%;
     flex: 0 0 auto;
@@ -1553,9 +1495,6 @@
     transform: rotate(-90deg);
   }
 
-  /* Player/status area sizes to its content instead of soaking up the screen.
-     When the sidebar is collapsed it may stretch again, so the inner states
-     scroll rather than clip. */
   .playerArea,
   .controlPanel {
     flex: 0 1 auto;
@@ -1569,9 +1508,6 @@
     aspect-ratio: 16 / 9;
   }
 
-  /* The between-songs status: one glance, not half the screen. Shrinkable
-     (min-height: 0) so on short screens it scrolls instead of painting over
-     the transport bar and queue below. */
   .songControl {
     flex: 0 1 auto;
     min-height: 0;
@@ -1592,7 +1528,6 @@
     margin-top: 0.75rem;
   }
 
-  /* Empty room: keep the whole pitch reachable on short screens. */
   .emptyState {
     flex: 0 1 auto;
     min-height: 0;
@@ -1628,9 +1563,7 @@
     padding: 0.25rem 1rem;
   }
 
-  /* Song search gets the whole screen — inside the stacked sidebar it was
-     fighting the on-screen keyboard for a sliver of space. The overlay owns
-     the scrolling on phones, where SongSearch stops nesting its own. */
+  /* On phones the overlay owns the scrolling — SongSearch stops nesting its own. */
   .searchOverlay {
     position: fixed;
     z-index: 400;
@@ -1648,7 +1581,6 @@
   }
 }
 
-/* ─── Co-host (remote queue manager) ─── */
 .cohostBadge {
   display: inline-block;
   margin-left: 0.5rem;
@@ -1672,12 +1604,6 @@
   letter-spacing: 0.02em;
 }
 
-/* ═══════════════════════════════════════════════════════════════════
-   Redesign — explicit play mode, one Invite surface, tabbed sidebar.
-   Same dark theme / pink-cyan accents as the rest of the host UI.
-   ═══════════════════════════════════════════════════════════════════ */
-
-/* ─── Header right-side actions ─── */
 .headerActions {
   margin-left: auto;
   display: flex;
@@ -1686,13 +1612,10 @@
   flex-shrink: 0;
 }
 
-/* gearBtn carries margin-left:auto for the standalone layout; inside the
-   actions cluster it should sit snug next to Invite. */
 .headerActions .gearBtn {
   margin-left: 0;
 }
 
-/* ─── Play-mode pill (where the video is playing) ─── */
 .modePillWrap {
   position: relative;
   flex-shrink: 0;
@@ -1788,7 +1711,6 @@
   font-size: 0.85rem;
 }
 
-/* ─── Sidebar tabs (Up Next / History) ─── */
 .sidebarTabs {
   display: flex;
   gap: 0.25rem;
@@ -1823,7 +1745,6 @@
   color: #ff2d78;
 }
 
-/* ─── Add-song button ─── */
 .addSongBtn {
   display: flex;
   align-items: center;
@@ -1858,7 +1779,6 @@
   box-shadow: none;
 }
 
-/* ─── Sidebar bottom cluster (cheers + persistent join code) ─── */
 .sidebarBottom {
   margin-top: auto;
   display: flex;
@@ -1866,25 +1786,18 @@
   flex-shrink: 0;
 }
 
-/* ─── Singer boards ─── */
-/* Holds the read-only BoardsSummary, which caps its own item count — so this
-   shelf never grows enough to push the join code off-screen. */
+/* BoardsSummary caps its own item count, so this shelf can't push the join code off-screen. */
 .boardsShelf {
   flex-shrink: 0;
   padding: 0.5rem 0.75rem;
 }
 
-/* ─── Contextual cheers (only while a song is on stage) ─── */
 .cheersLive {
   flex-shrink: 0;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
   background: rgba(255, 45, 120, 0.03);
 }
 
-/* ─── Join-QR drawer (sidebar) ───
-   A slim toggle row tucks the "Scan to join" shelf away cleanly — handy when
-   this screen is what's cast and the code isn't needed mid-song. Tapping the
-   thumbnail opens a big, scannable popout. */
 .drawerToggle {
   display: flex;
   align-items: center;
@@ -1917,8 +1830,6 @@
   transform: rotate(180deg);
 }
 
-/* The announcement banner in the host sidebar — same festive treatment as the
-   display's .bannerLine, sized for a control panel. */
 .bannerLine {
   margin: 0;
   padding: 0.7rem 1rem;
@@ -1971,8 +1882,7 @@
   min-width: 0;
 }
 
-/* --qr-scale is set inline from the dragged QR size, so the shelf's text grows
-   in step with the code instead of leaving dead space beside it. */
+/* --qr-scale is set inline from the host's dragged QR size. */
 .qrShelfHint {
   font-size: calc(0.62rem * var(--qr-scale, 1));
   letter-spacing: 1px;
@@ -2000,8 +1910,6 @@
   text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
 }
 
-/* ─── Empty-state stage (host, no songs yet) ─── */
-/* Primary action: add the first song so the room is playable solo. */
 .emptyStage {
   display: flex;
   flex-direction: column;
@@ -2038,7 +1946,6 @@
   box-shadow: 0 6px 22px rgba(255, 45, 120, 0.4);
 }
 
-/* Secondary action: invite the room to add songs too. */
 .emptyInvite {
   display: flex;
   flex-direction: column;
@@ -2115,7 +2022,6 @@
   background: rgba(255, 255, 255, 0.12);
 }
 
-/* On a narrow / stacked layout, let the invite row go vertical. */
 @media (max-width: 560px) {
   .emptyInviteRow {
     flex-direction: column;
@@ -2133,7 +2039,6 @@
   }
 }
 
-/* ─── Invite panel (modal) ─── */
 .invitePanel {
   position: relative;
   display: flex;
@@ -2155,7 +2060,6 @@
   margin-bottom: 1rem;
 }
 
-/* ─── Co-host modal: cyan-accented, step-by-step instructions ─── */
 .cohostLede {
   font-size: 0.85rem;
   color: var(--text-secondary);
@@ -2254,23 +2158,17 @@
   color: var(--text-primary);
 }
 
-/* Keep the header compact on small screens: the mode pill collapses to its
-   icon. */
 @media (max-width: 640px) {
   .modePillText {
     display: none;
   }
 }
 
-/* ─── Mobile-only footer ───
-   Rendered on every host screen but hidden outside the phone breakpoint. */
 .mobileFooter {
   display: none;
 }
 
 @media (max-width: 768px) {
-  /* The transport footer would sit mid-page in the stacked layout (above the
-     queue), so it moves to the dedicated page footer below instead. */
   .transportFooter {
     display: none;
   }
@@ -2284,9 +2182,6 @@
     flex-shrink: 0;
   }
 
-  /* Empty room on a phone: the stage pitch already carries the add button and
-     join QR, so the transport bar (nothing to control yet) and the sidebar (a
-     second add button + a second QR) hide until the first song exists. */
   .transport.transportEmptyMobile {
     display: none;
   }
@@ -2297,14 +2192,12 @@
     border-top: none;
   }
 
-  /* Hide the sidebar's own chrome but keep the search overlay reachable —
-     "Add the first song" opens it, and it's position: fixed on phones. */
+  /* The search overlay must stay reachable — "Add the first song" opens it. */
   .sidebar.sidebarEmptyMobile > *:not(.searchOverlay) {
     display: none;
   }
 }
 
-/* ─── Display designer controls (shared with components/host/display/) ─── */
 .dpSubLabel {
   font-size: 0.68rem;
   color: var(--text-muted);
@@ -2361,20 +2254,11 @@
 }
 
 
-/* ═══ Customize mode ═══════════════════════════════════════════════════════
-   The host control surface's in-place editor: a left/right dockable, resizable
-   sidebar and the header Customize button. The host surface is deliberately
-   un-themed — themes are a display-only feature. The drag chrome itself is
-   shared CSS in DisplayDesigner.module.css. */
-
-/* Curb accidental text selection while dragging handles across the page. */
 .mainCustomizing {
   user-select: none;
 }
 
-/* Arrangeable sidebar sections. Only the queue grows, so whatever the host
-   orders after it is pushed to the bottom and whatever precedes it sits on
-   top — every permutation lays out correctly without per-order rules. */
+/* Only the queue grows, so every section permutation lays out without per-order rules. */
 .sectionBlock {
   flex-shrink: 0;
   display: flex;
@@ -2388,8 +2272,7 @@
   flex-direction: column;
 }
 
-/* Host theme palettes — the same set the display offers. Classic is the
-   default (no class); these repaint the surface vars. */
+/* Theme presets; classic = the base vars, no class. */
 .main {
   --acc-a: #ff2d78;
   --acc-b: #00f0ff;
@@ -2407,8 +2290,6 @@
   --bg-secondary: #0d0d14;
 }
 
-/* Dock the sidebar on the left — only in the side-by-side desktop layout; the
-   stacked mobile layout keeps its natural order. Flip the divider to match. */
 @media (min-width: 769px) {
   .contentSidebarLeft {
     flex-direction: row-reverse;
@@ -2419,7 +2300,6 @@
   }
 }
 
-/* Header Customize button — mirrors the display's headerEdit affordance. */
 .headerCustomize {
   display: flex;
   align-items: center;

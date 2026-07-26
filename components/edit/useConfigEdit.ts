@@ -4,46 +4,24 @@ import { SIDEBAR_WIDTH_MIN, SIDEBAR_WIDTH_MAX } from '../../lib/limits';
 import { configsEqual } from './configEquality';
 import { useScalarDrag } from './hooks/useScalarDrag';
 
-/** The layout fields every customizable surface shares, so this hook can own
- * the sidebar's side-flip and resize drags — and the now-playing strip's height
- * drag — for both. */
 interface SurfaceLayout {
   sidebarPosition: SidebarPosition;
   sidebarWidth: number;
   nowPlayingHeight: number;
 }
 
-/** How long a fresh save outranks the server, covering the slowest poll
- * (the host's 3s) plus the write's own round trip. */
+/** How long a fresh save outranks the server: the slowest poll (host's 3s) plus
+ * the write's own round trip. */
 export const SAVE_SETTLE_MS = 5000;
 
-/**
- * Edit-mode state for a live, customizable page — the engine behind both the
- * display's and the host's Customize modes.
- *
- * Edits stage in a local draft that the real page renders from; nothing reaches
- * the room until save(). The page stays fully live throughout (video keeps
- * playing, polls keep running) — this only swaps which config feeds the render.
- *
- * Surfaces with state outside their config (the display's boardsOnDisplay) feed
- * it in through `extraDirty` / `onReset` and fold it into their own `save`.
- */
 export function useConfigEdit<C extends SurfaceLayout, Id extends string>(opts: {
   joinCode: string | undefined;
-  /** Server-synced config (poll/broadcast). */
   config: C;
-  /** Which fields count as the config, for draft-vs-server comparison. */
   keys: (keyof C)[];
-  /** Drag bounds for the now-playing strip's height; each surface has its own
-   * sensible range, so the shared drag can't hardcode one. */
   nowPlayingBounds: { min: number; max: number };
-  /** Persist the draft. Resolve false to surface the save-failed state. */
   save: (joinCode: string, draft: C) => Promise<boolean>;
-  /** Adopt saved values immediately instead of waiting for the next poll. */
   onSaved: (draft: C) => void;
-  /** Unsaved state living outside the config. */
   extraDirty?: boolean;
-  /** Reset that outside state when entering or discarding. */
   onReset?: () => void;
 }) {
   const {
@@ -64,8 +42,6 @@ export function useConfigEdit<C extends SurfaceLayout, Id extends string>(opts: 
   const [saveFailed, setSaveFailed] = React.useState(false);
   // What we last wrote, held until the server echoes it back. See `settled`.
   const [justSaved, setJustSaved] = React.useState<C | null>(null);
-  // In-flight sidebar side-flip: where the sidebar would land if the drag
-  // ended now (drop zones render while non-null).
   const [sideDragTarget, setSideDragTarget] = React.useState<SidebarPosition | null>(null);
 
   const same = React.useCallback(
@@ -75,12 +51,8 @@ export function useConfigEdit<C extends SurfaceLayout, Id extends string>(opts: 
     []
   );
 
-  // A poll already in flight when we save resolves with the PRE-save config, so
-  // for one poll interval the server would tell us to revert. Trust what we just
-  // wrote until the server echoes it back — the same bargain Display makes for
-  // play/pause via localPauseRef. Without this the page visibly reverts after
-  // Save, and the draft re-syncs to the stale config, so re-entering Customize
-  // and saving again silently undoes the edit.
+  // A poll in flight at save time resolves with the PRE-save config; trust what
+  // we just wrote until the server echoes it, or the page reverts after Save.
   const settled = justSaved ?? config;
 
   React.useEffect(() => {
@@ -96,20 +68,16 @@ export function useConfigEdit<C extends SurfaceLayout, Id extends string>(opts: 
 
   const dirty = editing && (!same(draft, settled) || extraDirty);
 
-  // A poll can refresh the room config mid-edit (e.g. a co-host change).
-  // Follow it while the draft is untouched; otherwise the in-progress edits
-  // win and save() overwrites.
+  // Follow polled config changes while the draft is untouched.
   const lastConfig = React.useRef(settled);
   React.useEffect(() => {
-    // Read the previous value into a local BEFORE updating the ref: the updater
-    // below can run during a later render, by which point the ref already holds
-    // the new config and every draft would look pristine.
+    // Snapshot prev BEFORE updating the ref: the updater can run during a later
+    // render, when the ref already holds the new config and every draft looks pristine.
     const prev = lastConfig.current;
     lastConfig.current = settled;
     setDraft((d) => (same(d, prev) ? settled : d));
   }, [settled, same]);
 
-  // Closing the tab would silently drop staged edits.
   React.useEffect(() => {
     if (!dirty) return;
     const warn = (e: BeforeUnloadEvent) => e.preventDefault();
@@ -154,8 +122,6 @@ export function useConfigEdit<C extends SurfaceLayout, Id extends string>(opts: 
     }
   }
 
-  // Drag props for the sidebar's "switch sides" handle: track which viewport
-  // half the pointer is over, commit on release.
   const sideDragProps: React.ComponentProps<'button'> = {
     onPointerDown: (e) => {
       e.preventDefault();
@@ -175,8 +141,6 @@ export function useConfigEdit<C extends SurfaceLayout, Id extends string>(opts: 
     onPointerCancel: () => setSideDragTarget(null),
   };
 
-  // Drag the sidebar's inner edge to resize it; docked right, dragging the
-  // edge outward (leftwards) widens it.
   const widthDragProps = useScalarDrag({
     value: draft.sidebarWidth,
     min: SIDEBAR_WIDTH_MIN,
@@ -186,9 +150,6 @@ export function useConfigEdit<C extends SurfaceLayout, Id extends string>(opts: 
     onChange: (sidebarWidth) => change({ sidebarWidth } as Partial<C>),
   });
 
-  // Drag the now-playing strip's top edge to resize it. The strip is anchored
-  // to the bottom of the screen, so pulling the edge upward grows it — and the
-  // strip's type scales with its height, which is the point of the drag.
   const heightDragProps = useScalarDrag({
     value: draft.nowPlayingHeight,
     min: nowPlayingBounds.min,
@@ -200,8 +161,6 @@ export function useConfigEdit<C extends SurfaceLayout, Id extends string>(opts: 
 
   return {
     editing,
-    /** What the page should render from: the draft while editing, and our own
-     * just-saved values until the server catches up. */
     view: editing ? draft : settled,
     draft,
     dirty,

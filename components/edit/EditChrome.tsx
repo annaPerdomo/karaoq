@@ -1,10 +1,6 @@
 import * as React from 'react';
 import p from '../../styles/DisplayDesigner.module.css';
 
-/** Clickable region of a live page in edit mode: hover/selected outline + a name
- * tag. The children are the REAL page element, not a copy. `chrome` holds the
- * section's editing handles (grip, eye, resize). Generic over the section-id
- * union so each surface (display, host) keeps its own typed ids. */
 export function Spot<Id extends string>({
   id,
   selected,
@@ -20,7 +16,6 @@ export function Spot<Id extends string>({
   onSelect: (section: Id) => void;
   label: string;
   className?: string;
-  /** The wrapper brings its own positioning (e.g. a fixed slot) — skip .hotspot's. */
   positioned?: boolean;
   chrome?: React.ReactNode;
   children: React.ReactNode;
@@ -40,10 +35,6 @@ export function Spot<Id extends string>({
   );
 }
 
-/** Round corner grip straddling an element's bottom-right corner: drag
- * diagonally to resize it. The double-headed arrow is the universal "this
- * corner resizes" sign, and it rides the element's own corner so it stays
- * findable wherever the section sits on screen. */
 export function CornerHandle({
   title,
   dragProps,
@@ -51,7 +42,6 @@ export function CornerHandle({
 }: {
   title: string;
   dragProps: React.ComponentProps<'button'>;
-  /** Placement variant (e.g. p.cornerOnEdge for full-width sections). */
   className?: string;
 }) {
   return (
@@ -70,7 +60,6 @@ export function CornerHandle({
   );
 }
 
-/** Eye button for a section's chrome cluster: hides the section. */
 export function HideButton({ title, onHide }: { title: string; onHide: () => void }) {
   return (
     <button

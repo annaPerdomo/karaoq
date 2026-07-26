@@ -25,11 +25,6 @@ import { formatSongTitle } from "./utils";
 import { SortableQueueItem } from "./SortableQueueItem";
 import { SidebarSections, HostSidebarEdit } from "./SidebarSections";
 
-// The right-hand rail: the Up Next / History tabs, the add-song button and
-// search overlay, the drag-reorderable queue, the history list, and the bottom
-// cluster (cheers, a read-only roll-up of the singer boards, and the join QR
-// shelf). Rendered for host and co-host alike; the bottom cluster guards its
-// host-only bits with `remote`.
 export function QueueSidebar({
   remote,
   roomEmpty,
@@ -89,12 +84,10 @@ export function QueueSidebar({
   searchOpen: boolean;
   onToggleSearch: () => void;
   onCloseSearch: () => void;
-  /** Opens the search panel, which is where the interactive boards live. */
   onOpenBoards: () => void;
   upNext: QueueEntry[];
   historyItems: QueueEntry[];
   uniqueSingers: number;
-  /** Fair rotation is on — drives the queue-header toggle's state. */
   fairMode: boolean;
   onToggleFairMode: () => void;
   editingId: string | null;
@@ -122,17 +115,12 @@ export function QueueSidebar({
   onToggleQrShelf: () => void;
   onOpenQrModal: () => void;
   onSongAdded: (entry: QueueEntry) => void;
-  /** Host config view (draft while customizing) — drives the bottom cluster. */
+  /** Draft config while customizing, server-synced otherwise. */
   hostConfig: HostConfig;
-  /** Present only in Customize mode — edit chrome for the bottom cluster. */
   hostEdit?: HostSidebarEdit;
-  /** Whether the host is in Customize mode — grows the sidebar's drag handles. */
   hostEditing?: boolean;
-  /** "Switch sides" drag on the sidebar's top handle. */
   sideDragProps?: React.ComponentProps<"button">;
-  /** Resize drag on the sidebar's inner edge. */
   widthDragProps?: React.ComponentProps<"button">;
-  /** True while the whole sidebar is being dragged across the screen. */
   sideDragging?: boolean;
 }) {
   const { t, tn } = useT();
@@ -143,9 +131,6 @@ export function QueueSidebar({
     }),
   );
 
-  // The queue section — tabs, add button, and the queue/history list. Handed to
-  // SidebarSections so Customize can reorder it against the boards and QR
-  // sections, exactly like the display's up-next list.
   const queueNode = (
     <>
       <div className={styles.sidebarHeader}>
@@ -188,9 +173,6 @@ export function QueueSidebar({
 
       {sidebarTab === "queue" && (
         <>
-          {/* The fair-rotation switch lives with the queue it reorders, not
-              behind the gear: it is a run-time control the host flips while
-              reading the room, so it has to be one tap from the list. */}
           <div className={styles.queueStats}>
             {upNext.length > 0 && (
               <>
@@ -207,9 +189,6 @@ export function QueueSidebar({
             >
               {Icons.shuffle}
               {t('host.settings.fair')}
-              {/* A switch, not a colour change: the label reads the same either
-                  way, so without this an OFF pill looks like a badge saying the
-                  queue IS fair. Mirrors the gear panel's toggle. */}
               <span
                 className={`${styles.fairSwitch} ${fairMode ? styles.fairSwitchOn : ""}`}
               >
@@ -222,9 +201,8 @@ export function QueueSidebar({
             <DndContext
               sensors={sensors}
               collisionDetection={closestCenter}
-              // Pause polling the moment a drag starts — a poll landing
-              // mid-drag re-renders the SortableContext and the drop hits
-              // the wrong neighbor.
+              // onDragStart pauses polling — a poll landing mid-drag re-renders
+              // the SortableContext and the drop hits the wrong neighbor.
               onDragStart={onDragStart}
               onDragEnd={onDragEnd}
             >
@@ -295,8 +273,6 @@ export function QueueSidebar({
     <div
       className={`${styles.sidebar} ${sidebarCollapsed ? styles.sidebarCollapsed : ""} ${!remote && roomEmpty ? styles.sidebarEmptyMobile : ""} ${sideDragging ? p.sidebarDragging : ""}`}
     >
-      {/* Customize mode: a "switch sides" handle up top and a resize handle on
-          the inner edge — the same drag chrome the display sidebar uses. */}
       {hostEditing && !sidebarCollapsed && (
         <>
           <button className={p.dragHandle} {...sideDragProps}>

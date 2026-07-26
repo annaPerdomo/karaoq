@@ -11,9 +11,7 @@ interface QrJoinCardProps {
   onClose?: () => void;
   onPrint?: () => void;
   size?: "small" | "normal" | "large";
-  /** Exact QR pixel size (host-dragged); overrides the coarse size bucket. */
   sizePx?: number;
-  /** Customize mode's resize grip, anchored to the code's corner. */
   resizeHandle?: React.ReactNode;
 }
 
@@ -21,15 +19,10 @@ const QrJoinCard = ({ joinUrl, joinCode, origin, onClose, onPrint, size = "norma
   const { t } = useT();
   const displayUrl = (origin || 'karaoq.live').replace(/^https?:\/\/(www\.)?/, '');
 
-  // "or visit {url} and enter {code}" — split on the placeholders so the URL
-  // and code keep their emphasis while translators control word order.
   const altParts = t('qr.orVisit').split(/(\{url\}|\{code\})/);
 
-  // With an exact pixel size the card's text tracks the code — but only
-  // gently, capped well below the code's own growth: the text lives in the
-  // column beside the QR, and the code is the thing that must stay readable.
   // The coarse size buckets remain for displays running code that predates
-  // fine-grained sizing.
+  // fine-grained (sizePx) sizing.
   const scaled = sizePx !== undefined;
   const textScale = scaled ? Math.min(1.4, 1 + (sizePx / QR_SIZE_PX.normal - 1) * 0.2) : 1;
   return (

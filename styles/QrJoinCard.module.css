@@ -39,8 +39,7 @@
   flex-shrink: 0;
 }
 
-/* --qr-scale is set inline when the host dragged an exact QR size, so the text
-   grows in step with the code instead of leaving dead space beside it. */
+/* --qr-scale is set inline from the host's dragged QR size. */
 .label {
   font-size: calc(0.65rem * var(--qr-scale, 1));
   letter-spacing: calc(2px * var(--qr-scale, 1));

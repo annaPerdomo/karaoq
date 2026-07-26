@@ -32,8 +32,6 @@ describe("languageLabel", () => {
     );
   });
 
-  // The whole point of localeSource: "they asked for Japanese" is a different
-  // signal from "we guessed Japanese from their phone".
   it.each(["switch", "stored", "url"])(
     "marks %s as a deliberate pick",
     (localeSource) => {
@@ -73,7 +71,6 @@ describe("roomLanguageLabel", () => {
     ).toBe("English");
   });
 
-  // A host in one language with singers in another is the case worth seeing.
   it("calls out people who ran in a different language", () => {
     expect(
       roomLanguageLabel(

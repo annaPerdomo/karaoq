@@ -2,16 +2,10 @@ import * as React from 'react';
 import styles from '../../styles/Analytics.module.css';
 import type { DisplayConfig, HostConfig } from '../../pages/api/types';
 
-// The stored sizes are pixels on a real screen, so a wireframe needs a screen
-// to be a fraction OF. These are the nominal targets each surface is designed
-// against — a 720p TV, a laptop — which is what turns a bare "460" into
-// "about a third of the screen".
+// Nominal screens the stored pixel sizes are rendered as fractions of.
 const TV = { w: 1280, h: 720 };
 const LAPTOP = { w: 1440, h: 900 };
 
-// Floors/ceilings on the rendered proportions. A sidebar that is honestly 15%
-// of a TV still needs enough room to print "Up next" inside it, and nothing
-// should ever eat the whole frame.
 const MIN_SIDEBAR = 18;
 const MAX_SIDEBAR = 45;
 const MIN_BAR = 8;
@@ -21,7 +15,6 @@ function proportion(px: number, of: number, min: number, max: number): number {
   return Math.round(Math.min(max, Math.max(min, (px / of) * 100)));
 }
 
-/** Keeps a host's banner from stretching the wireframe out of shape. */
 function truncate(text: string, max = 22): string {
   return text.length > max ? `${text.slice(0, max - 1)}…` : text;
 }
@@ -29,7 +22,6 @@ function truncate(text: string, max = 22): string {
 export interface Block {
   key: string;
   label: string;
-  /** Takes the leftover sidebar height, the way the real list does. */
   grow?: boolean;
 }
 
@@ -53,7 +45,6 @@ function Surface({
   sidebarPct: number;
   sidebarPx: number;
   stageLabel: string;
-  /** null when the surface's bottom bar is switched off. */
   barPct: number | null;
   barLabel: string;
   blocks: Block[];
@@ -103,9 +94,8 @@ function Surface({
   );
 }
 
-/** The display's four sidebar sections, in the order the host arranged them.
- * Boards are the exception: their on/off is a room flag outside DisplayConfig,
- * so the preview shows the slot and says so rather than guessing. */
+/** Boards' on/off is a room flag outside DisplayConfig, so the preview shows
+ * the slot without claiming its state. */
 export function displayBlocks(c: DisplayConfig): { blocks: Block[]; hidden: string[] } {
   const blocks: Block[] = [];
   const hidden: string[] = [];
@@ -142,8 +132,6 @@ export function displayBlocks(c: DisplayConfig): { blocks: Block[]; hidden: stri
   return { blocks, hidden };
 }
 
-/** The host sidebar's sections. The queue can be reordered but never hidden,
- * so it never lands in the hidden list. */
 export function hostBlocks(c: HostConfig): { blocks: Block[]; hidden: string[] } {
   const blocks: Block[] = [];
   const hidden: string[] = [];
@@ -174,9 +162,6 @@ export function hostBlocks(c: HostConfig): { blocks: Block[]; hidden: string[] }
   return { blocks, hidden };
 }
 
-/** Wireframes of the layout a room's host actually saved, drawn to the same
- * proportions the stored pixel sizes produce on a real screen. Beats reading
- * "sidebarWidth: 340" and trying to picture it. */
 const LayoutPreview = ({
   display,
   host,
@@ -236,8 +221,7 @@ const LayoutPreview = ({
           sidebarPct={proportion(host.sidebarWidth, LAPTOP.w, MIN_SIDEBAR, MAX_SIDEBAR)}
           sidebarPx={host.sidebarWidth}
           stageLabel="Player"
-          // The transport bar is never hideable — the host can't run the room
-          // without it — so it always draws.
+          // The host transport bar is never hideable, so it always draws.
           barPct={proportion(host.nowPlayingHeight, LAPTOP.h, MIN_BAR, MAX_BAR)}
           barLabel={`Transport · ${host.nowPlayingHeight}px`}
           blocks={hostParts.blocks}

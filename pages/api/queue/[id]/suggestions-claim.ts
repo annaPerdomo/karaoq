@@ -7,8 +7,7 @@ import { getRoomsCollection } from "../../../../lib/mongodb";
 import { normalizeRoomId } from "../../../../lib/roomCode";
 import type { QueueEntry } from "../../types";
 
-// Claim a suggested song ("I'll sing this"): queues it under the claimer's
-// name and removes it from the board.
+// Claim a suggested song: queue it under the claimer's name and remove it from the board.
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") {
     res.status(405).json({ code: 405, message: "Method not allowed." });
@@ -70,10 +69,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       addedAt: Date.now(),
     };
 
-    // One atomic write: the suggestion must still be on the board and the
-    // queue under its cap at write time. Two concurrent claims can't both
-    // match, so the loser gets a 409 instead of silently erasing the
-    // winner's queue entry (or any concurrently added song).
+    // One atomic write: the suggestion must still be on the board and the queue under its cap at
+    // write time, so of two concurrent claims the loser 409s instead of erasing the winner's entry.
     const claim = {
       id: roomId,
       "suggestions.id": suggestionId,
@@ -84,17 +81,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       $set: { lastActivity: new Date() },
     };
 
-    // A claimed song is a queued song, so it obeys fair rotation like any
-    // other. The CAS on the queue snapshot is what makes $position correct;
-    // if it keeps losing, fall through to the plain append rather than fail
-    // the claim — a song must never be lost to fairness.
+    // The CAS on the queue snapshot is what makes $position correct; if it keeps losing, fall
+    // through to the plain append rather than fail the claim — a song must never be lost to fairness.
     let result = { matchedCount: 0 };
     if (room.fairMode) {
       for (let attempt = 0; attempt < 3 && result.matchedCount === 0; attempt++) {
         const fresh = attempt === 0 ? room : await collection.findOne({ id: roomId });
         if (!fresh || !fresh.fairMode) break;
+        // activeVideoIndex rides in the CAS: video-ended/position advance it WITHOUT touching the
+        // queue array, and a $position computed against a stale index can land on the now-playing slot.
         result = await collection.updateOne(
-          { ...claim, queue: fresh.queue },
+          { ...claim, queue: fresh.queue, activeVideoIndex: fresh.activeVideoIndex },
           {
             ...pullAndSet,
             $push: {
@@ -120,8 +117,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       songTitle: suggestion.songTitle,
       videoId: suggestion.videoId,
     });
-    // Also count it as a song add so core metrics (funnel, songs/room, top
-    // songs) include queue entries that came through the board.
     trackEvent(req, "song_added", {
       roomId,
       userName,

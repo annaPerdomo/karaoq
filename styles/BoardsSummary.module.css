@@ -1,5 +1,3 @@
-/* Shared by the display and host sidebars, so it carries its own styles
-   instead of leaning on either screen's module. */
 .summary {
   flex-shrink: 0;
   display: block;
@@ -55,7 +53,6 @@
   border-bottom: 1px solid rgba(255, 255, 255, 0.04);
 }
 
-/* Never truncated — the point of the card is reading what's on offer. */
 .song {
   font-size: 0.85rem;
   font-weight: 600;

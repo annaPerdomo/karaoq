@@ -1,7 +1,6 @@
 import { QueueEntry } from '../../../pages/api/types';
 
-// Stand-in queue so the depth/size drags have something visible to resize even
-// while the real queue is short. Names/titles are content, not UI — untranslated.
+// Names/titles are content, not UI — deliberately untranslated.
 export const SAMPLE_QUEUE: QueueEntry[] = [
   ['Mia', 'Dancing Queen - ABBA'],
   ['Leo', "Livin' on a Prayer - Bon Jovi"],

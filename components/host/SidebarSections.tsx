@@ -14,8 +14,6 @@ import { useSectionReorder } from "../edit/hooks/useSectionReorder";
 import { useScalarDrag } from "../edit/hooks/useScalarDrag";
 import { HostSectionId } from "./edit/useHostEdit";
 
-/** Present only in Customize mode — the same sections then grow drag grips,
- * outlines, and ghosts. */
 export interface HostSidebarEdit {
   selected: HostSectionId | null;
   onSelect: (section: HostSectionId | null) => void;
@@ -23,7 +21,6 @@ export interface HostSidebarEdit {
 }
 
 interface SidebarSectionsProps {
-  /** The queue section's contents: tabs + add button + queue/history list. */
   queueNode: React.ReactNode;
   remote: boolean;
   reactionsOn: boolean;
@@ -42,7 +39,7 @@ interface SidebarSectionsProps {
   qrShelfOpen: boolean;
   onToggleQrShelf: () => void;
   onOpenQrModal: () => void;
-  /** The host config view (draft while editing) — drives order + visibility. */
+  /** Draft while editing, server-synced otherwise. */
   config: HostConfig;
   edit?: HostSidebarEdit;
 }
@@ -54,12 +51,6 @@ const SECTION_LABEL: Record<HostSection, string> = {
   banner: "host.display.banner",
 };
 
-/** The host sidebar's arrangeable sections: the queue itself, the boards
- * roll-up, and the join-QR shelf. In Customize mode the REAL sections become
- * the editing surface — drag the grip to reorder, the eye to hide; ghosts
- * restore hidden ones. The queue grows to fill, so whatever sits after it is
- * pushed to the bottom whichever order the host picks. The cheer bar is pinned
- * last and is not customizable: it's governed by the gear's reactions setting. */
 export function SidebarSections({
   queueNode,
   remote,
@@ -85,21 +76,14 @@ export function SidebarSections({
   const { t } = useT();
   const { sectionOrder } = config;
 
-  // The widest QR the current sidebar can hold: the shelf pads 1rem a side,
-  // the thumb frames the code with 6px of inset, and the join info keeps a
-  // column beside the code (128px + the row's 0.75rem gap) — the text sits to
-  // the QR's right at every size, never squeezed out or dropped underneath.
-  // The drag stops there rather than at the global cap — widen the sidebar and
-  // the QR can follow — and rendering clamps too, covering configs saved when
-  // the sidebar was wider.
+  // Widest QR the sidebar holds (44 shelf padding + 12 thumb inset + 128 info column).
+  // Rendering clamps too: a config may have been saved when the sidebar was wider.
   const qrPxFit = Math.max(
     QR_PX_MIN,
     Math.min(QR_PX_MAX, config.sidebarWidth - 44 - 12 - 128)
   );
   const qrPxShown = Math.min(config.qrPx, qrPxFit);
 
-  // The grip rides the code's bottom-right corner, so the drag is diagonal:
-  // pull outward (down-right) to enlarge — same interaction as the display's.
   const qrDrag = useScalarDrag({
     value: qrPxShown,
     min: QR_PX_MIN,
@@ -107,8 +91,6 @@ export function SidebarSections({
     onChange: (qrPx) => edit?.onChange({ qrPx }),
   });
 
-  // The banner's corner grip scales its TYPE — 2px of drag per font px keeps
-  // the swing controllable across the whole range.
   const bannerDrag = useScalarDrag({
     value: config.bannerPx,
     min: BANNER_PX_MIN,
@@ -117,7 +99,6 @@ export function SidebarSections({
     onChange: (bannerPx) => edit?.onChange({ bannerPx }),
   });
 
-  // Which sections have the underlying data to appear at all.
   const dataReady: Record<HostSection, boolean> = {
     queue: true,
     boards: !!joinCode,
@@ -125,18 +106,13 @@ export function SidebarSections({
     banner: !remote,
   };
 
-  // An empty roll-up renders nothing, so before guests post the section was a
-  // zero-height strip — invisible live, and in Customize mode a floating
-  // grip/eye cluster overlapping whatever sat below it. Same content test the
-  // display's sidebar uses: full sing-together posts have nothing left to
-  // recruit for.
+  // An empty roll-up renders as a zero-height strip — invisible live, and in
+  // Customize mode a floating grip/eye cluster over whatever sits below it.
   const openPosts = boards.singWithMe.filter(
     (p) => p.joinedSingers.length < p.maxSingers
   );
   const boardsHasContent = openPosts.length + boards.suggestions.length > 0;
 
-  // The queue can be moved but never hidden — without it there's no host page.
-  // The announcement banner shows by having text, like the display's.
   const shown: Record<HostSection, boolean> = {
     queue: true,
     boards: config.showBoards,
@@ -146,8 +122,6 @@ export function SidebarSections({
 
   const visible: Record<HostSection, boolean> = {
     queue: dataReady.queue && shown.queue,
-    // Live, an empty boards section hides outright; in Customize mode it stays
-    // arrangeable via a labelled placeholder.
     boards: dataReady.boards && shown.boards && (boardsHasContent || !!edit),
     qr: dataReady.qr && shown.qr,
     banner: dataReady.banner && shown.banner,
@@ -196,14 +170,10 @@ export function SidebarSections({
         </svg>
         {t("host.scanToJoin")}
       </button>
-      {/* While customizing the shelf always renders — a tucked-away QR can't be
-          resized, and its drawer toggle is inert in edit mode. */}
+      {/* While customizing the shelf always renders — a tucked-away QR can't be resized. */}
       {(qrShelfOpen || !!edit) && (
         <div
           className={styles.qrShelf}
-          // The shelf's text tracks the code's dragged size — but only gently,
-          // capped well below the code's own growth: the text lives in the
-          // column beside the QR, and the code is what must stay readable.
           style={
             {
               "--qr-scale": Math.min(
@@ -216,8 +186,7 @@ export function SidebarSections({
           <span className={p.cornerAnchor}>
             <button
               className={styles.qrShelfThumb}
-              // The thumb grows with the code (+12 keeps its 6px inset), otherwise
-              // the fixed 80px frame would crop anything the host drags larger.
+              // +12 keeps the thumb's 6px inset around the code at any size.
               style={{ width: qrPxShown + 12, height: qrPxShown + 12 }}
               onClick={onOpenQrModal}
               title={t("host.qr.enlarge")}
@@ -266,13 +235,11 @@ export function SidebarSections({
     ),
   };
 
-  // The banner lives or dies by its text, so its eye clears the line and its
-  // ghost just selects the rail card — typing brings it back.
   const hidePatch: Record<HostSection, Partial<HostConfig>> = {
     queue: {},
     boards: { showBoards: false },
     qr: { showQr: false },
-    banner: { bannerLine: "" },
+    banner: {},
   };
   const showPatch: Record<HostSection, Partial<HostConfig>> = {
     queue: {},
@@ -281,7 +248,6 @@ export function SidebarSections({
     banner: {},
   };
 
-  // Only the queue grows; the rest size to content, so any order lays out right.
   const blockClass = (section: HostSection) =>
     section === "queue" ? styles.sectionGrow : styles.sectionBlock;
 
@@ -310,9 +276,11 @@ export function SidebarSections({
           chrome={
             <SectionChrome
               gripProps={gripProps(section)}
-              // The queue has no eye — it can be moved but not hidden.
+              // No eye for the queue (never hideable) or the banner (hiding it would erase its text).
               onHide={
-                section === "queue" ? undefined : () => edit.onChange(hidePatch[section])
+                section === "queue" || section === "banner"
+                  ? undefined
+                  : () => edit.onChange(hidePatch[section])
               }
             >
               {section === "banner" && (
@@ -325,15 +293,11 @@ export function SidebarSections({
             </SectionChrome>
           }
         >
-          {/* Inert while customizing: a click selects the section rather than
-              firing its controls. */}
           <div
             className={section === "queue" ? p.grow : ""}
             style={{ pointerEvents: "none" }}
           >
             {section === "boards" && !boardsHasContent ? (
-              // Stand-in body while the boards are empty, so the section can
-              // still be arranged before any guest has posted.
               <div className={p.boardsPlaceholder}>
                 {t("host.display.boardsEmpty")}
               </div>

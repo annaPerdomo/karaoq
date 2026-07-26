@@ -11,12 +11,15 @@ const data: LanguageData = {
   ],
   roomsCreated: [{ _id: "en", count: 6 }],
   byCountry: [{ _id: { country: "JP", locale: "ja" }, count: 3 }],
+  // 6 en + 4 ja overlap in 2 rooms, so the per-locale sums (10) overcount — hence 8.
+  uniqueRooms: 8,
+  nonEnglishRooms: 4,
 };
 
 describe("LanguagesPanel", () => {
-  it("shows the non-English share of rooms", () => {
+  it("shows the non-English share of rooms without double-counting mixed rooms", () => {
     render(<LanguagesPanel languages={data} />);
-    expect(screen.getByText(/Non-English rooms: 4 of 10 \(40%\)/)).toBeTruthy();
+    expect(screen.getByText(/Non-English rooms: 4 of 8 \(50%\)/)).toBeTruthy();
   });
 
   it("names languages natively and reports how deliberate each pick was", () => {

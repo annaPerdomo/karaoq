@@ -3,9 +3,6 @@ import styles from "../../styles/Host.module.css";
 import { useT } from "../../lib/i18n/I18nProvider";
 import { Icons } from "./icons";
 
-// The room's "set once" controls: audience reactions, the co-host invite, and
-// the host's name. Playback mode lives in the header pill, and inviting singers
-// lives in the Invite panel.
 export function SettingsPopover({
   isOpen,
   onClose,

@@ -14,16 +14,8 @@ export function creditNames(names: string[]): string {
   return `${names.length} singers`;
 }
 
-/**
- * Queue a "Sing with me" post if it has reached its minimum, then drop it from
- * the board once it's queued and full. Call after any write that can change the
- * balance between joined singers and `minSingers` — a join, or a host edit that
- * lowers the bar.
- *
- * Re-reads the room first: the caller's snapshot predates its own write, and a
- * concurrent join may have moved the post since. The `queued: $ne: true` filter
- * on the write is what guarantees exactly one caller wins the queueing.
- */
+/** Call after any write that can change joined-vs-minSingers. Re-reads the room (the caller's
+ * snapshot predates its own write); the `queued: $ne: true` filter guarantees exactly one caller wins. */
 export async function queueSingWithMeIfReady(
   collection: Collection<Room>,
   roomId: string,
@@ -55,20 +47,24 @@ export async function queueSingWithMeIfReady(
     const markQueued = {
       $set: { "singWithMe.$.queued": true, lastActivity: new Date() },
     };
-    // A group song lands in the rotation under its combined credit name, so
-    // it takes a turn like any singer. Falls back to a plain append if the
-    // CAS loses — never drop the song on the floor.
-    let queueResult = fresh.fairMode
-      ? await collection.updateOne(
-          { ...graduate, queue: fresh.queue },
+    // Same CAS-with-retries as the search-add path, with a plain-append fallback — never drop the song.
+    // activeVideoIndex rides in the CAS: video-ended advances it without touching the queue, so a stale $position could land on the now-playing slot.
+    let queueResult: { matchedCount: number } = { matchedCount: 0 };
+    if (fresh.fairMode) {
+      for (let attempt = 0; attempt < 3 && queueResult.matchedCount === 0; attempt++) {
+        const snap = attempt === 0 ? fresh : await collection.findOne({ id: roomId });
+        if (!snap || !snap.fairMode) break;
+        queueResult = await collection.updateOne(
+          { ...graduate, queue: snap.queue, activeVideoIndex: snap.activeVideoIndex },
           {
             ...markQueued,
             $push: {
-              queue: fairPushSpec(fresh.queue, fresh.activeVideoIndex, queuedEntry),
+              queue: fairPushSpec(snap.queue, snap.activeVideoIndex, queuedEntry),
             },
           }
-        )
-      : { matchedCount: 0 };
+        );
+      }
+    }
     if (queueResult.matchedCount === 0) {
       queueResult = await collection.updateOne(graduate, {
         ...markQueued,
@@ -82,11 +78,7 @@ export async function queueSingWithMeIfReady(
         songTitle: post.songTitle,
         videoId: post.videoId,
       });
-      // Also count it as a song add so core metrics (funnel, songs/room, top
-      // songs) include group songs. No userName: the group credit string
-      // would pollute per-singer stats, and joins are tracked individually.
-      // The singer count comes from the joins themselves rather than from
-      // splitting the credit name — this is a group song by construction.
+      // No userName: the group credit string would pollute per-singer stats; joins are tracked individually.
       trackEvent(req, "song_added", {
         roomId,
         songTitle: post.songTitle,

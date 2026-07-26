@@ -31,7 +31,6 @@ export default async function handler(
     const db = await getAnalyticsDb();
     const events = db.collection("analytics_events");
 
-    // Fetch one extra doc to determine whether more pages exist.
     const docs = await events
       .aggregate([
         { $match: { type: "room_created" } },
@@ -50,8 +49,7 @@ export default async function handler(
           },
         },
         {
-          // One session doc per (clientId, role); count non-display docs for
-          // the real head count rather than one per name keystroke.
+          // Non-display session docs only, for the real head count.
           $lookup: {
             from: "analytics_sessions",
             let: { rid: "$roomId" },
@@ -72,8 +70,7 @@ export default async function handler(
           },
         },
         {
-          // Fair rotation's last recorded change. Newest-first + limit 1 so
-          // this stays a single index hit per room rather than a full scan.
+          // Newest-first + limit 1 keeps this a single index hit per room rather than a full scan.
           $lookup: {
             from: "analytics_events",
             let: { rid: "$roomId" },
@@ -104,9 +101,7 @@ export default async function handler(
             city: 1,
             songs: { $ifNull: [{ $arrayElemAt: ["$songCount.total", 0] }, 0] },
             participants: { $ifNull: [{ $arrayElemAt: ["$participantCount.total", 0] }, 0] },
-            // The state the room ended in: its last toggle, or the value it
-            // was created with when the host never touched it. Null on rooms
-            // created before either was recorded.
+            // Last toggle wins, else the created value; null on rooms predating both.
             fairMode: {
               $ifNull: [
                 { $arrayElemAt: ["$lastFairToggle.fairMode", 0] },
@@ -114,8 +109,7 @@ export default async function handler(
               ],
             },
             fairToggled: { $gt: [{ $size: "$lastFairToggle" }, 0] },
-            // The language the host opened the room in. Rides on room_created
-            // itself, so it needs no lookup. Null before it was recorded.
+            // Rides on room_created itself; null before it was recorded.
             locale: { $ifNull: ["$locale", null] },
           },
         },

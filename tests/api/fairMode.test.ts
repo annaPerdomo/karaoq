@@ -50,8 +50,7 @@ describe("POST /api/queue/[id]/fair-mode - Toggle fair rotation", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("disables via CAS and restores the order the songs were queued in", async () => {
-    // Sitting in fair order (A, B, A) but queued A1, A2, B1 — turning the
-    // mode off has to undo the spacing, not just clear the flag.
+    // Sitting in fair order (A, B, A) but queued A1, A2, B1 — disabling must undo the spacing.
     const [cur, a1, a2, b1] = [
       entry("cur", "X", 1), entry("a1", "A", 2), entry("a2", "A", 3), entry("b1", "B", 4),
     ];
@@ -74,8 +73,9 @@ describe("POST /api/queue/[id]/fair-mode - Toggle fair rotation", () => {
     await handler(req, res);
 
     expect(res.getStatus()).toBe(200);
+    // activeVideoIndex is in the CAS: an advance changes the pointer without touching the queue.
     expect(mockCollection.updateOne).toHaveBeenCalledWith(
-      { id: "ROOM1", queue: room.queue },
+      { id: "ROOM1", queue: room.queue, activeVideoIndex: 0 },
       {
         $set: {
           queue: [cur, a1, a2, b1],
@@ -190,8 +190,8 @@ describe("POST /api/queue/[id]/fair-mode - Toggle fair rotation", () => {
 
     expect(res.getStatus()).toBe(200);
     const [filter, update] = mockCollection.updateOne.mock.calls[0];
-    // Queue-equality filter: the sorted array is only valid for this snapshot.
-    expect(filter).toEqual({ id: "ROOM1", queue: room.queue });
+    // The sorted array is only valid for this exact queue + pointer snapshot.
+    expect(filter).toEqual({ id: "ROOM1", queue: room.queue, activeVideoIndex: 1 });
     expect(update.$set.fairMode).toBe(true);
     expect((update.$set.queue as QueueEntry[]).map((e) => e.id)).toEqual(
       [hist, cur, a1, b1, c1, a2, a3].map((e) => e.id)
@@ -201,8 +201,7 @@ describe("POST /api/queue/[id]/fair-mode - Toggle fair rotation", () => {
   });
 
   it("counts the current song toward rounds without moving it (acceptance case)", async () => {
-    // Fresh room: pointer on A's first song. A's later songs are rounds 1-2,
-    // so B and C leapfrog them — but A1 itself must stay at the pointer.
+    // A's later songs are rounds 1-2, so B and C leapfrog them; A1 stays at the pointer.
     const [a1, a2, b1, c1, a3] = [
       entry("a1", "A"), entry("a2", "A"), entry("b1", "B"), entry("c1", "C"), entry("a3", "A"),
     ];
@@ -227,8 +226,7 @@ describe("POST /api/queue/[id]/fair-mode - Toggle fair rotation", () => {
     const [, update] = mockCollection.updateOne.mock.calls[0];
     const written = update.$set.queue as QueueEntry[];
     expect(written.map((e) => e.id)).toEqual([a1, b1, c1, a2, a3].map((e) => e.id));
-    // Legacy entries pick up arrival times on the way through, so the host can
-    // turn the mode back off and get this exact order again.
+    // Legacy entries pick up arrival times so disabling can restore this order.
     expect(written.every((e) => typeof e.addedAt === "number")).toBe(true);
   });
 

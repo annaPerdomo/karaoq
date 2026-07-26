@@ -4,8 +4,6 @@ import LanguageSwitcher from "../LanguageSwitcher";
 import { Icons } from "./icons";
 import { SettingsPopover } from "./SettingsPopover";
 
-// The top bar: brand, the playback-mode pill + menu (host only), the language
-// switcher, the settings gear, and the settings popover it toggles.
 export function HostHeader({
   remote,
   tvMode,
@@ -31,10 +29,7 @@ export function HostHeader({
 }: {
   remote: boolean;
   tvMode: boolean;
-  /** True while the host is in Customize mode — the rail + save bar take over,
-   * so the pill and gear step aside. */
   customizing: boolean;
-  /** Whether the Customize button shows (host only, once loaded). */
   canCustomize: boolean;
   onCustomize: () => void;
   modeMenuOpen: boolean;
@@ -62,7 +57,6 @@ export function HostHeader({
         {remote && <span className={styles.cohostBadge}>{t('host.role.cohost')}</span>}
       </div>
 
-      {/* Playback-mode pill: shows where the video plays and switches in one tap. */}
       {!remote && !customizing && (
         <div className={styles.modePillWrap}>
           <button

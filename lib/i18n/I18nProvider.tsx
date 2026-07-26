@@ -13,8 +13,6 @@ import { setActiveLocale, LocaleSource } from './activeLocale';
 
 const STORAGE_KEY = 'karaoq_lang';
 
-// Cache fetched catalogs for the session so switching back and forth never
-// re-hits the network. English is bundled; the rest are CDN-cached JSON.
 const catalogCache: Partial<Record<Locale, Catalog>> = { en };
 
 interface I18nValue {
@@ -38,24 +36,9 @@ function interpolate(
   );
 }
 
-/**
- * Resolve the visitor's UI locale from the fastest available signals, or null
- * if none of them tell us anything. Returning null (rather than English) lets
- * the caller tell "the browser is genuinely set to English" apart from "no
- * signal at all" — only the latter should fall through to a country guess, so a
- * visitor whose device is in English keeps English even abroad.
- */
-/**
- * The two signals that represent an explicit user decision — the ?lang= URL
- * override and a stored pick from the language switcher. Unlike the browser
- * language or a geo guess, these must win even on a server-localized route.
- */
-/**
- * A resolved locale plus the signal it came from, so analytics can tell a
- * deliberate pick apart from a guess.
- */
 type Resolved = { locale: Locale; source: LocaleSource };
 
+// The two signals that are an explicit user decision — unlike browser/geo, they win even on a server-localized route.
 function readExplicitLocale(): Resolved | null {
   if (typeof window === 'undefined') return null;
   try {
@@ -69,18 +52,16 @@ function readExplicitLocale(): Resolved | null {
   return null;
 }
 
+// Returns null (not English) when there is no signal at all — only that case may fall through to a country guess.
 function readInitialLocale(): Resolved | null {
   if (typeof window === 'undefined') return null;
   const explicit = readExplicitLocale();
   if (explicit) return explicit;
-  // The device/browser language — the same preference that decides what
-  // language they read other sites in. This wins over any location guess.
   const nav = matchNavigatorLocale(
     navigator.languages ?? (navigator.language ? [navigator.language] : [])
   );
   if (nav) return { locale: nav, source: 'browser' };
-  // Cached geo country from a prior visit (useCountry writes this; the shared
-  // reader applies its 7-day TTL so a stale guess can't pick the language).
+  // useCountry writes this cache; the shared reader applies its 7-day TTL.
   const geo = localeForCountry(readCachedCountry() ?? undefined);
   if (geo) return { locale: geo, source: 'geo' };
   return null;
@@ -95,7 +76,6 @@ async function loadCatalog(locale: Locale): Promise<Catalog> {
     catalogCache[locale] = data;
     return data;
   } catch {
-    // Network/parse failure — fall back to English so the UI stays usable.
     return en;
   }
 }
@@ -106,33 +86,23 @@ export function I18nProvider({
   initialCatalog = null,
 }: {
   children: React.ReactNode;
-  /**
-   * Locale a page rendered on the server (a localized landing route). When set,
-   * both SSR and the first client render use it — no detection, no flash, no
-   * hydration drift — and the switcher can still change it afterward. Left null
-   * on `/` and app pages, which fall back to client-side detection.
-   */
+  /** Locale a server-localized route rendered in: SSR and the first client render both use it (no
+   * detection, no hydration drift). Null on `/` and app pages, which detect client-side. */
   initialLocale?: Locale | null;
   /** The `initialLocale` catalog, shipped from getStaticProps so SSR is localized. */
   initialCatalog?: Catalog | null;
 }): React.ReactElement {
   const seeded = !!initialLocale;
-  // Register the server-provided catalog so a later re-visit is instant.
   if (initialLocale && initialCatalog) catalogCache[initialLocale] = initialCatalog;
 
-  // A seeded page starts in its server locale (first client render must match
-  // the localized SSR HTML); otherwise start from the default and detect below.
+  // A seeded page must start in its server locale so the first client render matches the SSR HTML.
   const [locale, setLocaleState] = React.useState<Locale>(initialLocale ?? DEFAULT_LOCALE);
   const [catalog, setCatalog] = React.useState<Catalog>(
     (initialLocale && initialCatalog) || en
   );
 
-  // Seed the analytics mirror on the first client render rather than waiting for
-  // the effect below: a page that creates its room from a mount effect runs
-  // *before* this parent's effect (children go first), and would otherwise tag
-  // the room with the default language. Only touches a module variable, never
-  // React state, so it can't affect what this render outputs — and it's skipped
-  // on the server, whose module state is shared across requests.
+  // Seed the analytics mirror during render, not in the effect below: children's mount effects (room
+  // creation) run first. Module-var only, so render output is unaffected; skipped on the server, whose module state is shared.
   const mirrorSeeded = React.useRef(false);
   if (typeof window !== 'undefined' && !mirrorSeeded.current) {
     mirrorSeeded.current = true;
@@ -145,8 +115,7 @@ export function I18nProvider({
 
   const applyLocale = React.useCallback((next: Locale, source: LocaleSource) => {
     setLocaleState(next);
-    // Keep the module-level mirror in step so the session heartbeat reports the
-    // language actually on screen, including after a mid-session switch.
+    // Keep the module mirror in step so session heartbeats report the on-screen language.
     setActiveLocale(next, source);
     if (typeof document !== 'undefined') document.documentElement.lang = next;
     if (next === 'en') {
@@ -162,23 +131,20 @@ export function I18nProvider({
     });
   }, []);
 
-  // Resolve the visitor's locale after mount. A URL/stored/browser-language
-  // signal wins outright (so an English device stays English anywhere). Only
-  // when there's no such signal do we guess from the country via /api/geo —
-  // that's what localizes a visitor whose browser language we don't support.
-  // Skipped entirely when the page was server-rendered in a chosen locale.
+  // Post-mount detection: URL/stored/browser signal wins outright; only with no signal at all do we
+  // guess from the country via /api/geo. Skipped when the page was server-rendered in a chosen locale.
   React.useEffect(() => {
     if (seeded) {
       if (typeof document !== 'undefined') document.documentElement.lang = initialLocale!;
       setActiveLocale(initialLocale!, 'route');
-      // A seeded (SEO) route renders in its server locale, but the visitor's
-      // explicit choice — ?lang= or a stored switcher pick — still wins:
-      // someone who landed on /cs and switched to English must not be Czech
-      // again next visit. Applied post-mount so SSR and hydration both stay
-      // in the server locale (no mismatch), same as the detection below.
+      // An explicit ?lang=/stored pick still beats the route locale. Applied post-mount so SSR and
+      // hydration both stay in the server locale (no mismatch).
       const explicit = readExplicitLocale();
       if (explicit && explicit.locale !== initialLocale) {
         applyLocale(explicit.locale, explicit.source);
+      } else if (explicit) {
+        // Same locale the route renders, but report the deliberate source; skip the needless catalog reload.
+        setActiveLocale(explicit.locale, explicit.source);
       }
       return;
     }
@@ -187,7 +153,6 @@ export function I18nProvider({
       applyLocale(resolved.locale, resolved.source);
       return;
     }
-    // No explicit/browser signal — try geo once as a last resort.
     let cancelled = false;
     fetch('/api/geo')
       .then((r) => r.json())
@@ -242,8 +207,7 @@ export function I18nProvider({
 export function useT(): I18nValue {
   const ctx = React.useContext(I18nContext);
   if (!ctx) {
-    // Defensive fallback so a component rendered outside the provider (tests,
-    // storybook) still returns English instead of throwing.
+    // Outside the provider (tests, storybook) fall back to English instead of throwing.
     const t = (key: string, vars?: Record<string, string | number>) =>
       interpolate(en[key as keyof typeof en] ?? key, vars);
     return {

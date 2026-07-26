@@ -8,10 +8,6 @@ import {
   DEFAULT_HOST_CONFIG,
 } from "../../pages/api/types";
 
-// The wireframe is only worth reading if a section appears in it exactly when
-// it appears on the real screen, so these assert the same visibility rules the
-// sidebars use — text-driven banner, flag-driven toggles, queue never hidden.
-
 describe("displayBlocks", () => {
   it("follows the saved sidebar order", () => {
     const { blocks } = displayBlocks({
@@ -36,7 +32,6 @@ describe("displayBlocks", () => {
     expect(hidden).toContain("QR");
   });
 
-  // The banner has no on/off switch — it exists exactly when it has text.
   it("hides an empty banner and shows one with text", () => {
     expect(displayBlocks(DEFAULT_DISPLAY_CONFIG).hidden).toContain("Banner");
 
@@ -73,8 +68,7 @@ describe("displayBlocks", () => {
     expect(blocks.find((b) => b.key === "upNext")?.grow).toBe(true);
   });
 
-  // Boards visibility is a room flag outside DisplayConfig, so the slot is
-  // always drawn rather than guessed at from a config that can't know.
+  // Boards visibility is a room flag outside DisplayConfig, so the slot is always drawn.
   it("always draws the boards slot", () => {
     const { blocks, hidden } = displayBlocks(DEFAULT_DISPLAY_CONFIG);
     expect(blocks.some((b) => b.key === "boards")).toBe(true);
@@ -97,7 +91,6 @@ describe("hostBlocks", () => {
     ]);
   });
 
-  // Without the queue there's no host page, so it can be moved but never hidden.
   it("never hides the queue, and gives it the leftover height", () => {
     const { blocks, hidden } = hostBlocks(DEFAULT_HOST_CONFIG);
     expect(blocks.find((b) => b.key === "queue")?.grow).toBe(true);

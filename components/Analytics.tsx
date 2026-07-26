@@ -97,7 +97,6 @@ interface AnalyticsData {
   };
   rotation?: {
     duetAdds: number;
-    /** Adds carrying a singer count — the denominator for the duet rate. */
     trackedAdds: number;
     bySize: { _id: number; count: number }[];
     fairRooms: number;
@@ -117,11 +116,10 @@ interface RoomRow {
   city?: string;
   songs: number;
   participants: number;
-  /** State the room ended in; null where it predates the flag. */
+  /** null where the room predates the flag. */
   fairMode?: boolean | null;
-  /** Whether the host ever changed it, vs running on the default. */
   fairToggled?: boolean;
-  /** UI language the room was created in; null where it predates recording. */
+  /** null where the room predates recording. */
   locale?: string | null;
 }
 
@@ -150,9 +148,8 @@ const VIA_LABELS: Record<string, string> = {
 // Mongo's $dayOfWeek: 1 = Sunday … 7 = Saturday
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-// qrSize is the coarse bucket kept in sync with qrPx, so it's dropped from the
-// chart rather than double-counting QR resizes. welcomeLine and attractMode are
-// retired fields kept here so historical events still read as English.
+// qrSize mirrors qrPx and is filtered out of the chart to avoid double-counting
+// resizes; welcomeLine/attractMode are retired but historical events still carry them.
 const DISPLAY_FIELD_LABELS: Record<string, string> = {
   theme: 'Theme',
   qrPx: 'QR size',
@@ -171,8 +168,7 @@ const DISPLAY_FIELD_LABELS: Record<string, string> = {
   boardsOnDisplay: 'Boards on TV',
 };
 
-// The host control surface's own layout fields. showHistory is retired (the
-// History tab is always shown now) but stays labelled for historical events.
+// showHistory is retired but historical events still carry it.
 const HOST_FIELD_LABELS: Record<string, string> = {
   theme: 'Theme',
   qrPx: 'QR size',
@@ -187,8 +183,7 @@ const HOST_FIELD_LABELS: Record<string, string> = {
   showHistory: 'History tab (retired)',
 };
 
-// Vercel geo headers are URL-encoded, but stray '%' sequences in raw values
-// would make decodeURIComponent throw and take down the whole dashboard.
+// decodeURIComponent throws on stray '%' sequences in raw geo header values.
 function safeDecode(value: string): string {
   try {
     return decodeURIComponent(value);
@@ -205,9 +200,8 @@ function viewerTimezone(): string {
   }
 }
 
-// Parse a YYYY-MM-DD key as a local date. new Date('YYYY-MM-DD') would parse
-// it as UTC midnight, shifting every chart label back a day for viewers west
-// of Greenwich.
+// new Date('YYYY-MM-DD') would parse as UTC midnight, shifting labels back a
+// day for viewers west of Greenwich.
 function formatDate(day: string): string {
   const [y, m, d] = day.split('-').map(Number);
   return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -219,8 +213,7 @@ function localDayKey(d: Date): string {
   return `${d.getFullYear()}-${m}-${day}`;
 }
 
-// The server omits days with no events; fill them in so a sparse month
-// doesn't render as a dense-looking chart.
+// The server omits days with no events.
 function fillDays(rows: DayCount[], days: number): { label: string; value: number }[] {
   if (rows.length === 0) return [];
   const byKey = new Map(rows.map((r) => [r._id, r.count]));
@@ -364,8 +357,7 @@ const Analytics = (): React.ReactElement => {
         setRoomsHasMore(false);
         setRoomsError(true);
       }
-      // Mark as loaded even on failure so the auto-load effect doesn't retry in
-      // a loop; the error state offers a manual retry instead.
+      // Loaded even on failure so the auto-load effect doesn't retry in a loop.
       setRoomsLoaded(true);
       setRoomsLoading(false);
     },
@@ -380,14 +372,12 @@ const Analytics = (): React.ReactElement => {
     }
   }, [fetchData]);
 
-  // Load the first page of rooms the first time the Rooms tab is opened.
   React.useEffect(() => {
     if (activeTab === 'rooms' && authenticated && !roomsLoaded && !roomsLoading) {
       loadRooms(0, true);
     }
   }, [activeTab, authenticated, roomsLoaded, roomsLoading, loadRooms]);
 
-  // Infinite scroll: load the next page when the sentinel enters view.
   React.useEffect(() => {
     if (activeTab !== 'rooms' || !roomsHasMore || roomsLoading) return;
     const el = sentinelRef.current;
@@ -430,7 +420,7 @@ const Analytics = (): React.ReactElement => {
       if (!res.ok) throw new Error('Delete failed');
       if (mergeSource === roomId) setMergeSource(null);
       loadRooms(0, true);
-      // Totals and charts include the deleted room; refresh them too.
+      // Totals and charts included the deleted room; refresh them too.
       fetchData(secret);
     } catch {
       alert('Failed to delete room');
@@ -496,8 +486,6 @@ const Analytics = (): React.ReactElement => {
     );
   }
 
-  // Only blank the page before the first load; refreshes keep the current
-  // data on screen.
   if (!data) {
     return (
       <main className={styles.main}>
@@ -1109,8 +1097,6 @@ const Analytics = (): React.ReactElement => {
                       <span data-label="Songs">{r.songs}</span>
                       <span data-label="People">{r.participants}</span>
                       <span data-label="Lang">
-                        {/* The code, not the endonym — the column is narrow and
-                            a scan wants "ja" more than it wants 日本語. */}
                         <span
                           className={styles.langCell}
                           title={
@@ -1162,8 +1148,6 @@ const Analytics = (): React.ReactElement => {
                 </div>
                 <div ref={sentinelRef} />
                 {roomsLoading && <p className={styles.empty}>Loading…</p>}
-                {/* A failed page fetch must not masquerade as the end of the
-                    list — "N rooms total" over a partial list lies. */}
                 {roomsError && !roomsLoading ? (
                   <p className={styles.empty}>
                     Couldn&rsquo;t load more rooms.{' '}

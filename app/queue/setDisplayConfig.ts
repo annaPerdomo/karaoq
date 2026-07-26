@@ -1,8 +1,6 @@
 import { DisplayConfig } from "../../pages/api/types";
 
-/** `boardsOnDisplay` is room state rather than a DisplayConfig field, but the
- * display's Customize mode saves it in the same action — so it rides along as a
- * query param, keeping one save to one write and one analytics event. */
+/** `boardsOnDisplay` is room state, not a DisplayConfig field; it rides along as a query param so one save stays one write/event. */
 export default async function setDisplayConfig(
   roomId: string,
   config: DisplayConfig,

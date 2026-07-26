@@ -12,10 +12,8 @@ import {
 
 interface EditRailProps {
   config: DisplayConfig;
-  /** Which viewport edge the floating rail docks to. */
   side: 'left' | 'right';
-  /** boardsOnDisplay is room state outside DisplayConfig, so it rides along
-   * as its own prop pair instead of through onChange patches. */
+  /** boardsOnDisplay is room state outside DisplayConfig, so it rides as its own prop pair. */
   boardsOn: boolean;
   onToggleBoards: () => void;
   selected: SectionId | null;
@@ -23,9 +21,6 @@ interface EditRailProps {
   onChange: (patch: Partial<DisplayConfig>) => void;
 }
 
-/** Show/hide toggles plus the non-spatial settings (theme, banner).
- * Everything spatial — order, sizes, width, side — is dragged on the page
- * itself; this panel floats over the edge opposite the sidebar. */
 export function EditRail({
   config,
   boardsOn,
@@ -38,8 +33,6 @@ export function EditRail({
   const { t } = useT();
   const bannerInputRef = React.useRef<HTMLInputElement>(null);
 
-  // Tapping a section on the page reveals its card; the banner ghost goes
-  // straight into typing.
   const cardRef = useRailCardRefs<SectionId>(selected, (id) => {
     if (id === 'banner') bannerInputRef.current?.focus();
   });
@@ -64,8 +57,6 @@ export function EditRail({
       on: config.showNowPlaying,
       flip: () => onChange({ showNowPlaying: !config.showNowPlaying }),
     },
-    // boardsOn is room state outside DisplayConfig (see the props note), so its
-    // flip rides its own callback — but to the host it's just another section.
     {
       id: 'boards',
       title: t('host.display.boards'),

@@ -112,9 +112,6 @@ describe("POST /api/queue/[id]/display-config - Save display config", () => {
     expect(event.displayConfig).toEqual({ ...validConfig, bannerLine: "" });
   });
 
-  // The display's Customize mode saves boardsOnDisplay in the same action as
-  // the config, so it rides along here rather than firing a second write and a
-  // second display_config_saved event for one Save.
   it("writes boardsOnDisplay when the save carries it", async () => {
     mockCollection.updateOne.mockResolvedValue({ matchedCount: 1 });
 
@@ -154,8 +151,7 @@ describe("POST /api/queue/[id]/display-config - Save display config", () => {
     expect(update.$set).not.toHaveProperty("boardsOnDisplay");
   });
 
-  // boardsOnDisplay defaults to ON, so hiding boards is the deviation worth
-  // counting — enabling just restores the default.
+  // boardsOnDisplay defaults to ON, so only hiding boards deviates from the default.
   it("counts hiding boards as a changed field, and showing them as not", async () => {
     mockCollection.updateOne.mockResolvedValue({ matchedCount: 1 });
     mockCollection.insertOne.mockResolvedValue({});
@@ -286,8 +282,6 @@ describe("POST /api/queue/[id]/display-config - Save display config", () => {
     expect(mockCollection.updateOne).not.toHaveBeenCalled();
   });
 
-  // Clients from before the welcome line folded into the banner still send the
-  // retired fields — their saves fail the unknown-key check until they reload.
   it("rejects the retired welcomeLine and attractMode fields with 400", async () => {
     const req = createMockReq({
       method: "POST",

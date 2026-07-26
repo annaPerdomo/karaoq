@@ -3,9 +3,6 @@ import p from '../../styles/DisplayDesigner.module.css';
 import { useT } from '../../lib/i18n/I18nProvider';
 import { HideButton } from './EditChrome';
 
-/** A section's editing cluster: the reorder grip, plus an eye when the section
- * is allowed to be hidden. Sections that are essential (the host's queue) pass
- * no `onHide` and get a grip only. */
 export function SectionChrome({
   gripProps,
   onHide,
@@ -13,7 +10,6 @@ export function SectionChrome({
 }: {
   gripProps: React.ComponentProps<'button'>;
   onHide?: () => void;
-  /** Extra handles for this section (e.g. a resize corner). */
   children?: React.ReactNode;
 }) {
   const { t } = useT();
@@ -35,7 +31,6 @@ export function SectionChrome({
   );
 }
 
-/** Stand-in for a hidden section — tapping it brings the section back. */
 export function SectionGhost({
   label,
   className = '',

@@ -88,7 +88,6 @@ describe("POST /api/queue/[id] - Room creation", () => {
   });
 
   it("resets isPlaying when the device that was playing reconnects", async () => {
-    // Its page reloaded, so the playback died with it — token proves identity
     const existing: Room = {
       id: "ABC12",
       queue: [{ id: "e1", userName: "Anna", songTitle: "Song", videoId: "v1" }],
@@ -120,7 +119,6 @@ describe("POST /api/queue/[id] - Room creation", () => {
   });
 
   it("does not reset isPlaying when a different host device connects", async () => {
-    // The song is playing on another device's screen — joining must not cut it
     const existing: Room = {
       id: "ABC12",
       queue: [{ id: "e1", userName: "Anna", songTitle: "Song", videoId: "v1" }],
@@ -169,8 +167,7 @@ describe("POST /api/queue/[id] - Room creation", () => {
   });
 
   it("keeps isPlaying untouched when the room plays on a separate screen", async () => {
-    // Even the owner's token must not reset a TV room — playback lives on the
-    // display device, not the reconnecting host page.
+    // Even the owner's token must not reset a TV room — playback lives on the display.
     const existing: Room = {
       id: "ABC12",
       queue: [{ id: "e1", userName: "Anna", songTitle: "Song", videoId: "v1" }],
@@ -192,7 +189,6 @@ describe("POST /api/queue/[id] - Room creation", () => {
     await handler(req, res);
 
     expect(res.getStatus()).toBe(200);
-    // A host (re)connecting must not stop what the display is playing
     expect((res.getBody() as Room).isPlaying).toBe(true);
     expect(mockCollection.updateOne).toHaveBeenCalledWith(
       { id: "ABC12" },
@@ -251,8 +247,7 @@ describe("GET /api/queue/[id] - Room retrieval", () => {
       reactionsEnabled: true,
       playMode: "tv",
       playToken: "tok-dead",
-      // Started long ago, display last seen well past the 75s liveness
-      // window → nothing is playing
+      // Both well past the 75s liveness window.
       playStartedAt: new Date(Date.now() - 300_000),
       displayLastSeen: new Date(Date.now() - 300_000),
     };

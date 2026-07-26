@@ -2,9 +2,6 @@ import * as React from 'react';
 import p from '../../styles/DisplayDesigner.module.css';
 import { useT } from '../../lib/i18n/I18nProvider';
 
-/** Floating save bar for any in-place edit mode: dirty/saved state, Discard, and
- * the Save button that lands the staged edits on the room. Config-agnostic — the
- * host and display both drive it with their own edit hook. */
 export function EditBar({
   dirty,
   saving,

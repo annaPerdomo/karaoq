@@ -1,10 +1,3 @@
-/* ─── Display edit mode ───
-   Chrome for editing the live display page IN PLACE: the page's real
-   elements grow outlines, drag handles, and ghosts, a settings rail floats
-   on the free edge, and a save bar floats at the bottom. There is no canvas
-   and no copy — every class here decorates components the audience is
-   actually looking at, so everything is authored at natural UI size. */
-
 .sampleBadge {
   font-size: 0.68rem;
   color: var(--text-muted);
@@ -14,7 +7,6 @@
   white-space: nowrap;
 }
 
-/* ─── Editing affordances on the real sections ─── */
 .spot {
   cursor: pointer;
 }
@@ -65,7 +57,6 @@
   opacity: 1;
 }
 
-/* Ghost placeholders for hidden sections — tap to bring them back. */
 .ghost {
   display: flex;
   align-items: center;
@@ -88,8 +79,6 @@
   color: rgba(255, 255, 255, 0.75);
 }
 
-/* Bottom strip ghost for the hidden now-playing bar. Sits where the real bar
-   would, clear of the page footer. */
 .ghostStrip {
   position: fixed;
   bottom: 48px;
@@ -104,7 +93,6 @@
   left: calc(var(--sb-w, 280px) + 16px);
 }
 
-/* Floating chip ghost for hidden cheers. */
 .ghostChip {
   position: absolute;
   top: 64px;
@@ -114,8 +102,7 @@
   padding: 8px 12px;
 }
 
-/* ─── Now-playing slot: carries the fixed placement so the real bar inside
-   can be wrapped (and outlined) — the child drops to static flow. ─── */
+/* Carries the fixed placement so the wrapped real bar can drop to static flow. */
 .nowSlot {
   position: fixed;
   bottom: 0;
@@ -133,8 +120,6 @@
   left: var(--sb-w, 280px);
 }
 
-/* ─── Per-section editing chrome: grip + eye cluster (top-left), shown on
-   hover/selection. ─── */
 .chrome {
   position: absolute;
   top: 6px;
@@ -180,7 +165,6 @@
   cursor: grabbing;
 }
 
-/* The section being reordered. */
 .sectionLifted {
   opacity: 0.55;
 }
@@ -189,9 +173,6 @@
   border-color: #00f0ff !important;
 }
 
-/* Bottom pill: drag to show more/fewer up-next songs. Always visible while
-   editing (hover-only affordances made Customize feel undiscoverable); it
-   brightens to full on hover/selection. */
 .countHandle {
   position: absolute;
   bottom: 8px;
@@ -220,17 +201,12 @@
   opacity: 1;
 }
 
-/* Wrapper that pins a corner grip to the element it resizes (the QR code):
-   position context only, no visual footprint. */
 .cornerAnchor {
   position: relative;
   display: inline-flex;
   flex-shrink: 0;
 }
 
-/* Round grip straddling the QR's bottom-right corner — the classic diagonal
-   resize affordance. It rides the code's own corner, so it grows outward with
-   the drag and stays reachable wherever the section is docked. */
 .cornerHandle {
   position: absolute;
   right: -12px;
@@ -247,8 +223,7 @@
   border-radius: 50%;
   cursor: nwse-resize;
   touch-action: none;
-  /* The QR shelf disables pointer events on its contents while editing; the
-     grip must stay live inside it. */
+  /* The QR shelf disables pointer events on its contents while editing; the grip must stay live. */
   pointer-events: auto;
   opacity: 0.85;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
@@ -261,16 +236,12 @@
   opacity: 1;
 }
 
-/* Placement for full-width sections (the announcement banner): the default
-   -12px offsets would push the grip past the sidebar's clipped edge, so it
-   tucks inside horizontally and straddles only the bottom edge. */
+/* Full-width sections: the -12px offsets would clip at the sidebar edge, so tuck inside. */
 .cornerOnEdge {
   right: 8px;
   bottom: -12px;
 }
 
-/* Edge rail: drag to set the sidebar width. Straddles the sidebar's inner
-   edge; always visible as a subtle line, brightens on hover/drag. */
 .widthHandle {
   position: absolute;
   top: 0;
@@ -301,8 +272,6 @@
   background: #00f0ff;
 }
 
-/* A grab pill riding the rail line, so the edge reads as draggable without
-   having to discover it by hovering. */
 .widthHandle::after {
   content: '↔';
   position: absolute;
@@ -324,10 +293,6 @@
 .widthHandleL { left: -7px; }
 .widthHandleR { right: -7px; }
 
-/* Top-edge rail: drag to set the now-playing strip's height — .widthHandle's
-   sibling on the other axis, and drawn the same way so the two read as one
-   family of resize affordances. The strip is anchored to the bottom of the
-   screen, so pulling this edge upward makes it (and its type) bigger. */
 .heightHandle {
   position: absolute;
   left: 0;
@@ -358,7 +323,6 @@
   background: #00f0ff;
 }
 
-/* Same grab pill as the width rail's, rotated to the vertical axis. */
 .heightHandle::after {
   content: '↕';
   position: absolute;
@@ -377,7 +341,6 @@
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
 }
 
-/* Layout utilities for hotspot wrappers around flex-sized display sections. */
 .grow {
   flex: 1;
   min-height: 0;
@@ -385,14 +348,11 @@
   flex-direction: column;
 }
 
-/* For a wrapper around a child that sets its own flex-shrink (the host's
-   playback bar) — the wrapper has to match it, or the bar loses the height the
-   host just dragged it to. */
+/* Must match the wrapped bar's own flex-shrink, or it loses its dragged height. */
 .noShrink {
   flex-shrink: 0;
 }
 
-/* ─── Sidebar drag ─── */
 .dragHandle {
   display: flex;
   align-items: center;
@@ -418,7 +378,6 @@
   opacity: 0.45;
 }
 
-/* Viewport-edge drop zones while the sidebar is dragged across the page. */
 .dropZone {
   position: fixed;
   top: 0;
@@ -444,15 +403,10 @@
   background: rgba(0, 240, 255, 0.18);
 }
 
-/* ─── Controls rail: floats over the edge OPPOSITE the sidebar, so the
-   sections being dragged stay unobstructed. ─── */
 .rail {
   position: fixed;
   top: 64px;
-  /* Height follows the cards, so a short rail (the host's) doesn't leave a tall
-     empty panel. The cap is where `bottom: 150px` used to pin it — clear of the
-     save bar AND the real now-playing bar below — and a rail with more cards
-     than that scrolls inside itself instead of overflowing. */
+  /* The 214px cap keeps the rail clear of the save bar and the real now-playing bar. */
   max-height: calc(100vh - 214px);
   max-height: calc(100dvh - 214px);
   width: 280px;
@@ -497,7 +451,6 @@
   background: rgba(0, 240, 255, 0.06);
 }
 
-/* Theme swatches */
 .swatches {
   display: flex;
   flex-wrap: wrap;
@@ -544,9 +497,6 @@
   box-shadow: 0 0 10px rgba(255, 45, 120, 0.8), 0 0 16px rgba(0, 240, 255, 0.6);
 }
 
-/* ─── Save bar ─── Floats bottom-center of the live page, lifted clear of the
-   footer and drawn as a solid raised toolbar so the confirm button is
-   unmistakable. Edits stage in place; these buttons land them on the room. */
 .bar {
   position: fixed;
   bottom: 24px;
@@ -595,7 +545,6 @@
   color: var(--text-primary);
 }
 
-/* Save (dirty) and Done (clean) are the primary exit — big, bright, filled. */
 .applyBtn,
 .doneBtn {
   height: 40px;
@@ -615,8 +564,6 @@
   box-shadow: 0 4px 16px rgba(255, 45, 120, 0.5);
 }
 
-/* Green so "leave edit mode" reads as a safe finish, distinct from a
-   destructive action. */
 .doneBtn {
   background: linear-gradient(135deg, #22c55e, #16a34a);
   box-shadow: 0 4px 16px rgba(34, 197, 94, 0.45);
@@ -638,8 +585,6 @@
   cursor: default;
 }
 
-/* Placeholder shown for an enabled-but-empty boards section while editing, so
-   it can still be arranged before any guest has posted. */
 .boardsPlaceholder {
   padding: 1.1rem 0.75rem;
   text-align: center;
@@ -650,8 +595,6 @@
   border-radius: 10px;
 }
 
-/* ─── Responsive: on narrow screens the floating rail hugs the bottom edge
-   as a short sheet above the save bar instead of a tall side panel. ─── */
 @media (max-width: 860px) {
   .rail {
     top: auto;

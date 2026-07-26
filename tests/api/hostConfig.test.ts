@@ -121,8 +121,7 @@ describe("POST /api/queue/[id]/host-config - Save host config", () => {
     ["sectionOrder", ["boards", "qr"]],
     ["sectionOrder", ["queue", "queue", "qr"]],
     ["sectionOrder", ["queue", "boards", "nope"]],
-    // Retired fields: the cheer bar and playback controls aren't layout
-    // fields, and the History tab always shows.
+    // Retired fields — no longer part of the layout config.
     ["showCheers", true],
     ["showTransport", false],
     ["showHistory", true],
@@ -153,8 +152,7 @@ describe("POST /api/queue/[id]/host-config - Save host config", () => {
     expect(mockCollection.updateOne).not.toHaveBeenCalled();
   });
 
-  // Hosts on a stale bundle still POST configs without the bar-height field;
-  // rejecting them would break Customize for anyone who hadn't reloaded.
+  // Hosts on a stale bundle still POST configs without the bar-height field.
   it("fills the default when a client omits the bar height", async () => {
     mockCollection.updateOne.mockResolvedValue({ matchedCount: 1 });
 

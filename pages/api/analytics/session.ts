@@ -30,17 +30,13 @@ export default async function handler(
 
   const { roomId, userName, role, clientId } = body;
 
-  // Language fields are dropped rather than rejected when unrecognized: an
-  // unknown locale is a client we no longer ship, not a reason to lose the
-  // heartbeat. Narrowing to the supported set also keeps the free-text value
-  // out of the session doc.
+  // Unrecognized language fields are dropped, not rejected — an old client isn't a reason to lose
+  // the heartbeat — and narrowing keeps free text out of the session doc.
   const locale = asLocale(body.locale) ?? undefined;
   const localeSource = isLocaleSource(body.localeSource) ? body.localeSource : undefined;
 
-  // Length caps + rate limit: session docs key on roomId:clientId:role, so
-  // uncapped ids let a script mint unlimited MB-scale docs on the free tier.
-  // The limit is generous — heartbeats fire once a minute per tab, so even a
-  // venue's worth of guests behind one NAT stays well under it.
+  // Session docs key on roomId:clientId:role, so uncapped ids would let a script mint unlimited
+  // MB-scale docs. The rate limit is generous: one beat per minute per tab keeps a NAT'd venue under it.
   if (
     typeof roomId !== "string" ||
     roomId.length > MAX_ENTRY_ID_LENGTH ||

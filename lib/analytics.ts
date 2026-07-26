@@ -38,36 +38,20 @@ export interface AnalyticsEvent {
   suggestionSource?: "random" | "song_pick" | "genre_chip" | "trending";
   sectionId?: string;
   categoryId?: string;
-  // How a song_added event reached the queue. Absent on events from before
-  // this field existed, which were all search adds.
+  // Absent on events from before this field existed, which were all search adds.
   via?: "search" | "board_claim" | "singwithme";
-  // song_added: how many people the entry is credited to — 1 for a solo, more
-  // for a duet/group ("Anna & Bob"), counted the way fair rotation splits the
-  // name so this matches the turns the queue actually charges. Absent on
-  // events from before duets existed, which is why the dashboard reports the
-  // rate against the tracked subset rather than every add ever.
+  // song_added: singers credited, counted the way fair rotation splits the name; absent pre-duets.
   singers?: number;
-  // display_config_saved: which fields differ from DEFAULT_DISPLAY_CONFIG,
-  // plus the full saved config so theme/size popularity can be aggregated.
+  // display_config_saved: fields differing from DEFAULT_DISPLAY_CONFIG.
   changedFields?: string[];
   displayConfig?: DisplayConfig;
-  // host_config_saved: same idea for the host control surface's layout.
   hostConfig?: HostConfig;
-  // Fair rotation's value: the state it was switched TO on fair_mode_toggled,
-  // and the room's starting value on room_created. Absent on rooms created
-  // before the flag existed, which is what "unknown" reads as in the dashboard.
+  // State switched TO on fair_mode_toggled; starting value on room_created. Absent pre-flag.
   fairMode?: boolean;
-  // UI language the client was in when the event fired, from the
-  // x-karaoq-locale header. Absent on events sent before this existed and on
-  // call sites that don't set the header.
   locale?: Locale;
 }
 
-// A heartbeat fires every 60s while a tab is open. If more than this elapses
-// between heartbeats for the same room+browser, the tab was closed (or the room
-// revisited days later), so the next beat starts a fresh session rather than
-// stretching the old one's span. 30 min tolerates a briefly backgrounded tab
-// whose timers were throttled without splitting a genuine continuous session.
+// Heartbeat gap beyond which the next beat starts a fresh session; 30 min tolerates throttled background-tab timers.
 const SESSION_GAP_MS = 30 * 60 * 1000;
 
 function headerString(value: string | string[] | undefined): string | undefined {
@@ -75,19 +59,14 @@ function headerString(value: string | string[] | undefined): string | undefined 
   return value || undefined;
 }
 
-// Demo tooling (screenshot harnesses, promo-video capture scripts) sends this
-// header on every request so the rooms it creates never reach analytics, even
-// if a script is ever pointed at production instead of a local dev server.
+// Demo tooling sends this on every request so its rooms never reach analytics, even against production.
 export const DEMO_EXEMPT_HEADER = "x-karaoq-demo";
 
-// localhost, loopback, and private-LAN hosts — matches a dev server reached as
-// localhost:3000 as well as a phone on the same network hitting 192.168.x.x.
+// localhost, loopback, and private-LAN hosts (incl. phones hitting a 192.168.x.x dev server).
 const LOCAL_HOST_PATTERN =
   /^(localhost|127(\.\d{1,3}){3}|\[::1\]|0\.0\.0\.0|10(\.\d{1,3}){3}|192\.168(\.\d{1,3}){2}|172\.(1[6-9]|2\d|3[01])(\.\d{1,3}){2})(:\d+)?$/i;
 
-// Rooms used from local development or by demo tooling must not pollute
-// production analytics. Checked at the write choke points below so every
-// event type and session heartbeat is covered without touching call sites.
+// Checked at the write choke points so every event type and heartbeat is covered without touching call sites.
 export function isAnalyticsExempt(req: NextApiRequest): boolean {
   if (headerString(req.headers[DEMO_EXEMPT_HEADER]) === "1") return true;
   const host = headerString(req.headers.host) ?? "";
@@ -95,10 +74,7 @@ export function isAnalyticsExempt(req: NextApiRequest): boolean {
   return LOCAL_HOST_PATTERN.test(host) || LOCAL_HOST_PATTERN.test(forwardedHost);
 }
 
-// Clients tag requests with the UI language they're rendering in (LOCALE_HEADER
-// lives in lib/i18n/activeLocale so client bundles can set it without pulling
-// this server-only module in). Read at the write choke point below so any call
-// site that sets the header gets the language recorded for free.
+// LOCALE_HEADER lives in lib/i18n/activeLocale so client bundles can set it without pulling in this server-only module.
 export function localeFromRequest(req: NextApiRequest): Locale | null {
   return asLocale(headerString(req.headers[LOCALE_HEADER]));
 }
@@ -131,7 +107,6 @@ export async function trackEvent(
     };
     await db.collection("analytics_events").insertOne(event);
   } catch (e) {
-    // Analytics should never break the main app flow
     console.error("Analytics tracking error:", e);
   }
 }
@@ -142,8 +117,6 @@ export async function trackSessionHeartbeat(
   userName: string,
   role: "host" | "singer" | "display",
   clientId?: string,
-  // The UI language this tab is rendering in, and how it got there. Written on
-  // every beat so a mid-room switch is reflected — see trackSession.ts.
   locale?: Locale,
   localeSource?: LocaleSource
 ): Promise<void> {
@@ -153,22 +126,17 @@ export async function trackSessionHeartbeat(
     const geo = extractGeo(req);
     const userAgent = headerString(req.headers["user-agent"]);
     const now = new Date();
-    // Key on the stable per-browser clientId so name edits update the same
-    // session doc instead of spawning a new one. Fall back to userName for
-    // older clients that don't send a clientId.
+    // Key on the stable clientId so name edits update the same doc; userName fallback for old clients.
     const sessionKey = `${roomId}:${clientId || userName}:${role}`;
 
-    // $literal-wrap externally-supplied strings so a value like a userName of
-    // "$role" can't be misread as a field path inside the update pipeline.
+    // $literal-wrap externally-supplied strings so e.g. a userName of "$role" isn't read as a field path.
     const set: Record<string, unknown> = {
       roomId: { $literal: roomId },
       userName: { $literal: userName },
       role: { $literal: role },
       lastSeen: now,
-      // Anchor firstSeen at the start of the *current* session. Keep the
-      // existing anchor only while heartbeats stay within SESSION_GAP_MS;
-      // otherwise (a reopened tab or a room revisited days later) reset it so
-      // the session's span reflects one sitting, not the room's whole lifetime.
+      // Keep the firstSeen anchor only while beats stay within SESSION_GAP_MS; otherwise reset it
+      // so the span reflects one sitting, not the room's whole lifetime.
       firstSeen: {
         $cond: [
           {

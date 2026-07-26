@@ -38,8 +38,7 @@ export default async function handler(
     return;
   }
 
-  // Optional: the display's Customize mode saves boardsOnDisplay in the same
-  // action. Absent means "leave it alone" (the host page's own writes).
+  // Absent means "leave boardsOnDisplay alone" (the host page's own writes).
   const boardsParam = req.query.boardsOnDisplay;
   if (boardsParam !== undefined && boardsParam !== "true" && boardsParam !== "false") {
     res.status(400).json({ code: 400, message: "Invalid boardsOnDisplay." });
@@ -48,15 +47,13 @@ export default async function handler(
   const boardsOnDisplay =
     boardsParam === undefined ? undefined : boardsParam === "true";
 
-  // Every accepted save also writes an analytics doc carrying the whole config,
-  // so an unthrottled endpoint grows the events collection without bound.
+  // Every accepted save also writes an analytics doc carrying the whole config.
   if (!rateLimit(req, "display-config", 20, 60_000)) {
     res.status(429).json({ code: 429, message: "Too many saves, slow down." });
     return;
   }
 
-  // Older host clients POST configs without the drag-era fields — store them
-  // complete so every stored config is fully-populated.
+  // Older host clients POST configs without the drag-era fields — store them fully-populated.
   const config: DisplayConfig = {
     ...normalizeDisplayConfig(body),
     bannerLine: body.bannerLine.trim(),
@@ -78,9 +75,6 @@ export default async function handler(
       res.status(404).json({ code: 404, message: "Room not found." });
       return;
     }
-    // With the designer's explicit Apply button, one event per save — low
-    // volume, and the changed-vs-default fields show which defaults hosts
-    // actually override.
     // boardsOnDisplay defaults to ON, so hiding boards is the deviation.
     const changedFields: string[] = displayConfigChangedFields(config);
     if (boardsOnDisplay === false) changedFields.push("boardsOnDisplay");

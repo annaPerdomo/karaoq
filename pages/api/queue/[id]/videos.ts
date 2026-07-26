@@ -39,9 +39,8 @@ export default async function handler(
     return;
   }
 
-  // Stamped here, never taken from the body: queue time decides the running
-  // order (and the order restored when fair mode is turned off), so a client
-  // must not be able to backdate itself to the front of the queue.
+  // Stamped server-side, never taken from the body: queue time decides the running order, so a
+  // client must not be able to backdate itself to the front.
   const entry = { ...base, addedAt: Date.now() };
 
   if (!rateLimit(req, "song-add", 15, 30_000)) {
@@ -58,10 +57,8 @@ export default async function handler(
     } else if (room.queue.length >= MAX_QUEUE_LENGTH) {
       res.status(409).json({ code: 409, message: "Queue is full." });
     } else {
-      // Cap enforced in the filter so concurrent adds can't overshoot it
-      // between the length check above and the write. Excluding fair-mode
-      // rooms in the same filter keeps this single write the whole cost of
-      // the common (non-fair) path.
+      // Cap enforced in the filter so concurrent adds can't overshoot it between the length check
+      // and the write; excluding fair-mode rooms keeps this single write the whole non-fair cost.
       const cap = { $lt: [{ $size: "$queue" }, MAX_QUEUE_LENGTH] };
       const plainAppend = {
         $push: { queue: entry },
@@ -73,9 +70,8 @@ export default async function handler(
       );
 
       if (result.matchedCount === 0) {
-        // The room is in fair mode (or filled up concurrently) — insert at the
-        // singer's round-robin slot instead. CAS on the queue snapshot, since
-        // $position is only right for the exact array we computed it against.
+        // Fair mode (or filled up concurrently): insert at the round-robin slot. CAS on the queue
+        // snapshot — $position is only right for the exact array it was computed against.
         let inserted = false;
         for (let attempt = 0; attempt < 3 && !inserted; attempt++) {
           const fresh = await collection.findOne({ id: roomId });
@@ -89,12 +85,16 @@ export default async function handler(
           }
           if (!fresh.fairMode) break; // toggled off mid-flight — plain append below
 
-          // Fairness only places NEW songs (plus the one-time re-sort when the
-          // host enables the mode) — manual host reordering always wins and is
-          // never re-sorted. The current song counts toward rounds but never
-          // moves; history is untouched (see lib/fairQueue).
+          // Fairness only places NEW songs — an add never re-sorts what's queued, so manual host reordering survives.
+          // activeVideoIndex rides in the CAS: video-ended/position advance it WITHOUT touching the
+          // queue array, and a stale $position can land on the now-playing slot.
           const insert = await collection.updateOne(
-            { id: roomId, queue: fresh.queue, $expr: cap },
+            {
+              id: roomId,
+              queue: fresh.queue,
+              activeVideoIndex: fresh.activeVideoIndex,
+              $expr: cap,
+            },
             {
               $push: {
                 queue: fairPushSpec(fresh.queue, fresh.activeVideoIndex, entry),
@@ -106,8 +106,7 @@ export default async function handler(
         }
 
         if (!inserted) {
-          // A song must never be lost to fairness: after CAS exhaustion (or a
-          // mid-flight toggle-off), fall back to the plain capped append.
+          // A song must never be lost to fairness: after CAS exhaustion, fall back to the plain capped append.
           const fallback = await collection.updateOne(
             { id: roomId, $expr: cap },
             plainAppend
@@ -118,8 +117,7 @@ export default async function handler(
           }
         }
       }
-      // singerKeys is what fair rotation splits the name by, so a duet reports
-      // the same member count the queue charges turns for.
+      // singerKeys is what fair rotation splits by, so the duet count matches the turns charged.
       trackEvent(req, "song_added", {
         roomId: roomId as string,
         userName,

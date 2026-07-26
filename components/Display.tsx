@@ -29,8 +29,7 @@ import { SAMPLE_QUEUE } from './display/edit/sampleContent';
 import { Icons } from './host/icons';
 
 const POLL_INTERVAL = 1500;
-// Liveness heartbeat cadence; the server treats a display as gone after ~75s
-// without one and clears any playback that display was supposed to be running.
+// Server treats a display as gone after ~75s without a heartbeat.
 const HEARTBEAT_INTERVAL = 10_000;
 
 const THEME_CLASS: Record<DisplayTheme, string> = {
@@ -50,21 +49,11 @@ const Display = (): React.ReactElement => {
   const [boardsOn, setBoardsOn] = React.useState(true);
   const [activeIndex, setActiveIndex] = React.useState(0);
   const [isPlaying, setIsPlaying] = React.useState(false);
-  // The room's shared pause flag. Set when the video is paused on this screen
-  // (reported by the player watcher below) OR when the host pauses from their
-  // controls; either way this screen is the single place the video lives, so it
-  // reconciles its player to match.
   const [displayPaused, setDisplayPaused] = React.useState(false);
-  // In "here" mode the host page is the playback surface — this screen shows
-  // the queue and an on-stage banner instead of double-playing the video.
-  // Unset playMode (legacy rooms) is treated like "tv" so old setups keep
-  // working.
+  // Unset playMode (legacy rooms) is treated like "tv".
   const [playMode, setPlayMode] = React.useState<PlayMode | null>(null);
   const [loading, setLoading] = React.useState(true);
-  // Definitive "room doesn't exist" — terminal, stops polling.
   const [error, setError] = React.useState<string | null>(null);
-  // Transient load failure — the poll keeps running and heals it on the
-  // first successful fetch (a TV rarely has a pointer to click retry with).
   const [loadError, setLoadError] = React.useState(false);
   const notFoundPollsRef = React.useRef(0);
   const [origin, setOrigin] = React.useState('');
@@ -75,22 +64,13 @@ const Display = (): React.ReactElement => {
   const reactionTimers = React.useRef<ReturnType<typeof setTimeout>[]>([]);
   const videoRef = React.useRef<HTMLIFrameElement>(null);
 
-  // Autoplay handling: browsers block autoplay-with-sound until this page has
-  // been interacted with. When YouTube never reports a playing state we show
-  // a tap-to-start overlay; one tap unlocks this and all future songs.
   const [needsTap, setNeedsTap] = React.useState(false);
   const playbackConfirmedRef = React.useRef(false);
   const unlockRetryRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Guards against reporting the same video-end more than once (YouTube sends
-  // both onStateChange and infoDelivery for the same event).
+  // YouTube sends both onStateChange and infoDelivery for the same end event.
   const endedHandledRef = React.useRef(false);
-  // Whether we've told the server the video is paused on this screen, so we
-  // only report transitions (pause → report once, resume → clear once).
   const pausedReportedRef = React.useRef(false);
-  // The pause state we most recently drove locally (a host broadcast, or a
-  // pause/resume on this screen). Lets applyRoom ignore a lagging poll that
-  // still carries the old value before the server write propagates — the same
-  // optimism the host uses via pausePolling.
+  // Shields applyRoom from a lagging poll that predates the server write; expires after 3s.
   const localPauseRef = React.useRef<{ paused: boolean; at: number } | null>(null);
 
   React.useEffect(() => {
@@ -102,15 +82,10 @@ const Display = (): React.ReactElement => {
     return startSessionTracking(joinCode, 'Display', 'display');
   }, [joinCode]);
 
-  // Liveness heartbeat. Ticks from a dedicated Web Worker because browsers
-  // throttle window timers in hidden tabs (Chrome: down to once a minute) —
-  // a backgrounded display kept playing audio but its starved heartbeat made
-  // the server think it died and orphan-heal the song. Worker timers are
-  // exempt from that throttling. Also beats immediately when the tab is
-  // re-shown, so a returning display never looks stale.
+  // Heartbeat ticks from a Web Worker: hidden-tab window timers are throttled
+  // (Chrome: ~1/min), which starved the beat while audio kept playing.
   React.useEffect(() => {
     if (!joinCode || error) return;
-    // Fire-and-forget: a dropped beat just means the next one matters more.
     const beat = () => postDisplaySeen(joinCode).catch(() => {});
     beat();
 
@@ -132,10 +107,7 @@ const Display = (): React.ReactElement => {
     };
     document.addEventListener('visibilitychange', onVisibilityChange);
 
-    // Cross-device backstop: when this tab is torn down, beacon the server so a
-    // host on another device can fall back without waiting out the heartbeat
-    // TTL. A same-browser host detects the close far faster via the window
-    // handle it kept from window.open, so this mainly serves remote displays.
+    // Beacon so a cross-device host can fall back without waiting out the heartbeat TTL.
     const onPageHide = () => postDisplayGone(joinCode);
     window.addEventListener('pagehide', onPageHide);
     return () => {
@@ -152,14 +124,13 @@ const Display = (): React.ReactElement => {
     };
   }, []);
 
-  // On the initial load we only seed the seen-set (animate=false) — otherwise
-  // a refresh replays the last 30s of cheers all at once.
+  // animate=false on initial load only seeds the seen-set — otherwise a refresh
+  // replays the last 30s of cheers at once.
   function processReactions(reactions: Reaction[] | undefined, animate = true) {
     if (!reactions || reactions.length === 0) return;
     const fresh = reactions.filter((r) => !seenReactionIds.current.has(r.id));
     if (fresh.length === 0) return;
     fresh.forEach((r) => seenReactionIds.current.add(r.id));
-    // Cap the seen set to prevent unbounded growth
     if (seenReactionIds.current.size > 200) {
       const entries = Array.from(seenReactionIds.current);
       seenReactionIds.current = new Set(entries.slice(-100));
@@ -172,7 +143,6 @@ const Display = (): React.ReactElement => {
       sway: Math.random() * 80 - 40,
     }));
     setVisibleReactions((prev) => [...prev, ...withKeys]);
-    // Auto-remove after animation
     const timer = setTimeout(() => {
       const ids = new Set(fresh.map((r) => r.id));
       setVisibleReactions((prev) => prev.filter((r) => !ids.has(r.key)));
@@ -187,8 +157,6 @@ const Display = (): React.ReactElement => {
     setBoardsOn(room.boardsOnDisplay ?? true);
     setActiveIndex(room.activeVideoIndex);
     setIsPlaying(room.isPlaying ?? false);
-    // Trust a just-issued local pause/resume over a lagging poll that predates
-    // the server write; after a short window the server is authoritative again.
     let paused = room.displayPaused ?? false;
     const local = localPauseRef.current;
     if (local && paused !== local.paused && Date.now() - local.at < 3000) {
@@ -201,12 +169,8 @@ const Display = (): React.ReactElement => {
     processReactions(room.reactions, animateReactions);
   }
 
-  // Whether this screen is the room's playback surface right now.
   const playsVideoHere = playMode !== 'here';
 
-  // Edit mode: the page keeps running exactly as-is (video, polls, heartbeat)
-  // while the REAL elements grow drag handles and render from a staged draft.
-  // Nothing reaches the room until Save.
   const edit = useDisplayEdit({
     joinCode,
     config: displayConfig,
@@ -228,17 +192,10 @@ const Display = (): React.ReactElement => {
       if (room === "notFound") {
         setError(t('display.errorTitle'));
       } else if (room === "error") {
-        // Flaky connection — retryable state; the poll below heals it.
         setLoadError(true);
       } else {
-        // For TV rooms this page IS the playback surface, so a display that
-        // is just now loading proves any recorded playback no longer exists
-        // (stale session, or this page reloading mid-song). Clear it instead
-        // of blasting a song the host didn't just start — songs only begin
-        // with the host's play button. Here-mode rooms are left alone: their
-        // video lives on the host screen and is none of our business.
-        // A live heartbeat means ANOTHER display is running the song right
-        // now — a second/reopened display must not stop it.
+        // A TV display loading fresh proves recorded playback is stale — clear it rather
+        // than blast a song. Skip if another display's heartbeat is live, or in here-mode.
         if (room.isPlaying && room.playMode !== 'here' && !room.displayConnected) {
           await setPlaying(joinCode!, false);
           room = { ...room, isPlaying: false };
@@ -254,7 +211,6 @@ const Display = (): React.ReactElement => {
     return () => { cancelled = true; };
   }, [joinCode]);
 
-  // Instant sync from Host tab via BroadcastChannel
   React.useEffect(() => {
     if (!joinCode) return;
     return onRoomState(joinCode, (state) => {
@@ -267,8 +223,6 @@ const Display = (): React.ReactElement => {
     });
   }, [joinCode]);
 
-  // Instant pause/resume from the host controls (same-browser displays). The
-  // poll below is the cross-device fallback; this just skips the poll wait.
   React.useEffect(() => {
     if (!joinCode) return;
     return onDisplayPause(joinCode, (paused) => {
@@ -277,22 +231,19 @@ const Display = (): React.ReactElement => {
     });
   }, [joinCode]);
 
-  // Poll as fallback (for cross-device, e.g. Chromecast)
   React.useEffect(() => {
     if (!joinCode || error) return;
 
     return startVisiblePolling(async () => {
       const room = await getRoom(joinCode, { display: true });
-      if (room === "error") return; // transient — try again next tick
+      if (room === "error") return;
       if (room === "notFound") {
-        // Only a run of definitive 404s means the room is really gone.
         notFoundPollsRef.current += 1;
         if (notFoundPollsRef.current >= 3) setError(t('display.errorTitle'));
         return;
       }
       notFoundPollsRef.current = 0;
       applyRoom(room);
-      // A successful poll also recovers a failed initial load.
       setLoadError(false);
       setLoading(false);
     }, POLL_INTERVAL);
@@ -300,16 +251,12 @@ const Display = (): React.ReactElement => {
 
   const currentSongId = queue[activeIndex]?.id;
 
-  // A new song — or a replay of the same one — needs its end reported again,
-  // and starts with a clean pause state.
+  // A replay of the same song (isPlaying toggle) needs its end reported again.
   React.useEffect(() => {
     endedHandledRef.current = false;
     pausedReportedRef.current = false;
   }, [currentSongId, isPlaying]);
 
-  // Watch YouTube player events while a song should be playing: advance the
-  // room when the video ends, and confirm playback actually started (if it
-  // never does, the browser blocked autoplay — show the tap-to-start overlay).
   React.useEffect(() => {
     if (!isPlaying || !joinCode || !playsVideoHere) return;
     const roomId = joinCode;
@@ -318,9 +265,6 @@ const Display = (): React.ReactElement => {
     async function reportVideoEnded() {
       if (endedHandledRef.current) return;
       endedHandledRef.current = true;
-      // Advance the room on the server first — that's what reaches hosts on
-      // other devices — then refresh this screen right away instead of waiting
-      // out the poll, and finally nudge any same-browser host tabs to refetch.
       await postVideoEnded(roomId, endedIndex);
       const room = await getRoom(roomId, { display: true });
       if (typeof room !== "string") applyRoom(room);
@@ -340,19 +284,17 @@ const Display = (): React.ReactElement => {
         if (state === 0) {
           reportVideoEnded();
         } else if (state === 1 || state === 3) {
-          // Playing or buffering — autoplay worked, no tap needed.
+          // Playing or buffering.
           playbackConfirmedRef.current = true;
           setNeedsTap(false);
           if (pausedReportedRef.current) {
-            // Resumed after a pause we reported — tell the host controls.
             pausedReportedRef.current = false;
             localPauseRef.current = { paused: false, at: Date.now() };
             reportDisplayPaused(roomId, false);
           }
         } else if (state === 2) {
-          // Someone paused the player on this screen. Only report it once
-          // per pause and only after playback actually started (scrubbing
-          // and pre-start states also pass through 2).
+          // Paused. Report once per pause, and only after playback confirmed —
+          // scrubbing and pre-start states also pass through 2.
           if (playbackConfirmedRef.current && !pausedReportedRef.current) {
             pausedReportedRef.current = true;
             localPauseRef.current = { paused: true, at: Date.now() };
@@ -366,8 +308,7 @@ const Display = (): React.ReactElement => {
     return () => window.removeEventListener('message', onMessage);
   }, [isPlaying, joinCode, activeIndex, playsVideoHere]);
 
-  // Autoplay watchdog: if YouTube hasn't reported playing/buffering shortly
-  // after the iframe mounts, the browser blocked autoplay on this screen.
+  // If YouTube hasn't reported playing shortly after mount, autoplay was blocked.
   React.useEffect(() => {
     if (!isPlaying || !currentSongId || !playsVideoHere) {
       setNeedsTap(false);
@@ -383,11 +324,8 @@ const Display = (): React.ReactElement => {
     };
   }, [isPlaying, currentSongId, playsVideoHere]);
 
-  // Host-driven pause/resume. In TV mode the host controls flip the room's
-  // shared pause flag from a different device; this screen owns the player, so
-  // when the polled flag disagrees with what the player is actually doing
-  // (tracked by pausedReportedRef), drive the player to match. A pause/resume
-  // made on this screen itself already keeps the two in sync, so it no-ops here.
+  // Drive the player to match the polled pause flag when they disagree
+  // (host paused/resumed from another device).
   React.useEffect(() => {
     if (!isPlaying || !playsVideoHere || !playbackConfirmedRef.current) return;
     const player = videoRef.current?.contentWindow;
@@ -405,10 +343,8 @@ const Display = (): React.ReactElement => {
     }
   }, [displayPaused, isPlaying, playsVideoHere]);
 
-  // The tap gives this page sticky user activation — with allow="autoplay" on
-  // the iframe, this song and every later one can now play with sound. Also
-  // kick the already-mounted player directly, and re-show the overlay if the
-  // kick didn't take.
+  // The tap grants sticky user activation — this song and all later ones can
+  // now autoplay with sound.
   function unlockPlayback() {
     videoRef.current?.contentWindow?.postMessage(
       JSON.stringify({ event: 'command', func: 'playVideo', args: [] }),
@@ -429,24 +365,19 @@ const Display = (): React.ReactElement => {
   }
 
   const currentSong = queue[activeIndex];
-  // When the current song is waiting (not playing), include it in the sidebar list
-  // so the sidebar doesn't look empty while the center says "UP NEXT"
   const upNext = currentSong && !isPlaying
     ? queue.slice(activeIndex)
     : queue.slice(activeIndex + 1);
   const joinUrl = `${origin || 'https://karaoq.live'}/sing/${joinCode}`;
-  // Everything below renders from `view`: the staged draft while editing, the
-  // room's config otherwise. This is what makes edits appear on the real
-  // elements in place.
   const view = edit.view;
-  // Nothing left in the sidebar to show — reclaim its space for the video.
-  // While editing the sidebar always renders (its ghosts bring sections back).
+  // boardsView, not raw boardsOn: after a save that hides boards, the raw flag
+  // lags until the poll echoes.
   const sidebarCollapsed =
     !edit.editing &&
     view.qrSize === 'hidden' &&
     !view.showUpNext &&
     !view.bannerLine &&
-    !boardsOn;
+    !edit.boardsView;
 
   if (!joinCode) {
     return <div className={styles.loading}><div className={styles.spinner} /></div>;
@@ -463,8 +394,6 @@ const Display = (): React.ReactElement => {
     );
   }
 
-  // Transient failure: the poll keeps running, so this heals by itself the
-  // moment the connection comes back.
   if (loadError) {
     return (
       <main className={styles.main}>
@@ -477,11 +406,8 @@ const Display = (): React.ReactElement => {
   }
 
   const themeClass = THEME_CLASS[view.theme];
-  // Only meaningful while the sidebar exists — a collapsed sidebar leaves the
-  // default (right-anchored) offsets on the fixed bars.
   const sideClass =
     !sidebarCollapsed && view.sidebarPosition === 'left' ? styles.sidebarLeft : '';
-  // Flips the fixed edit chrome (now-bar slot, ghost strip) with the sidebar.
   const editSideClass = edit.editing && view.sidebarPosition === 'left' ? p.edLeft : '';
 
   return (
@@ -490,9 +416,8 @@ const Display = (): React.ReactElement => {
       style={{
         '--sb-w': `${view.sidebarWidth}px`,
         '--now-h': `${view.nowPlayingHeight}px`,
-        // Unitless multiplier the now-bar's type scales by. CSS can't divide a
-        // px length by a px length into a plain number, so the ratio to the
-        // default height is worked out here and the stylesheet just multiplies.
+        // CSS can't divide two px lengths into a unitless number, so the type
+        // scale ratio is computed here.
         '--now-scale': `${view.nowPlayingHeight / DEFAULT_DISPLAY_CONFIG.nowPlayingHeight}`,
       } as React.CSSProperties}
       onClick={edit.editing ? () => edit.setSelected(null) : undefined}
@@ -531,9 +456,6 @@ const Display = (): React.ReactElement => {
           />
         ) : currentSong ? (
           <div className={styles.readyState}>
-            {/* When the host plays the video on their own screen ("here"
-                mode), this screen stays a queue board with an on-stage
-                banner instead of double-playing the song. */}
             <div className={styles.readyTag}>
               {isPlaying ? t('display.tag.onStage') : t('display.tag.upNext')}
             </div>
@@ -570,7 +492,6 @@ const Display = (): React.ReactElement => {
           </div>
         )}
 
-        {/* Autoplay blocked: one tap unlocks playback on this screen */}
         {needsTap && isPlaying && currentSong && (
           <button className={styles.tapOverlay} onClick={unlockPlayback}>
             <span className={styles.tapPlayIcon}>
@@ -605,9 +526,6 @@ const Display = (): React.ReactElement => {
 
       </div>
 
-      {/* Now playing bar (only under the video — the here-mode banner above
-          already announces the singer). In edit mode it's force-shown with a
-          stand-in singer when nothing is playing, so it can be arranged. */}
       {edit.editing ? (
         view.showNowPlaying ? (
           <Spot
@@ -664,10 +582,6 @@ const Display = (): React.ReactElement => {
         </a>
       </div>
 
-      {/* Fullscreen — a quiet control pinned to the lower corner of the screen
-          (the player convention), available whether or not a video is playing
-          so a freshly-cast display can go fullscreen before the first song.
-          Hidden only while editing, where it would fight the edit chrome. */}
       {!edit.editing && (
         <FullscreenToggle
           className={`${styles.videoFullscreen} ${
@@ -704,8 +618,6 @@ const Display = (): React.ReactElement => {
         />
       )}
 
-      {/* Edit-mode chrome: settings rail on the free edge, floating save bar,
-          and side drop-zones while the sidebar is being dragged across. */}
       {edit.editing && (
         <EditOverlay
           rail={

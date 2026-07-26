@@ -1,9 +1,7 @@
 .main {
   --acc-a: #ff2d78;
   --acc-b: #00f0ff;
-  /* RGB triplet (no alpha) behind the header/now-bar/tap-overlay/sidebar
-     panels — themes retint the whole chrome by overriding just this one
-     value instead of every rgba() literal below. */
+  /* RGB triplet (no alpha) — themes retint all the chrome by overriding just this. */
   --disp-surface-rgb: 10, 10, 25;
   height: 100dvh;
   height: 100vh; /* fallback for older browsers */
@@ -18,12 +16,7 @@
   }
 }
 
-/* ─── Theme presets (host-selected; classic = these vars, no class) ───
-   Each theme repaints the background/panel colors (--bg-primary,
-   --bg-secondary, --disp-surface-rgb) as well as the accents, so the whole
-   screen reskins, not just a couple of highlight colors. All still pure CSS
-   custom properties — no new fonts, images, or network requests, so this
-   costs nothing extra to load regardless of how many themes exist. */
+/* Theme presets; classic = the base vars, no class. */
 .themeMinimal {
   --acc-a: #aab0c0;
   --acc-b: #d7dae2;
@@ -56,8 +49,6 @@
   animation: none;
 }
 
-/* Deepens to near-pure black so the pink/cyan glow reads as brighter by
-   contrast, on top of the existing glow intensification below. */
 .themeNeon {
   --bg-primary: #050505;
   --bg-secondary: #0d0d14;
@@ -87,9 +78,7 @@
   }
 }
 
-/* ─── Sidebar on the left (host-selected) ─── The fixed bars (header, footer,
-   now-playing) reserve the sidebar's width on its edge; flip every offset.
-   --sb-w is set inline on .main from displayConfig.sidebarWidth. */
+/* --sb-w is set inline on .main from displayConfig.sidebarWidth. */
 .sidebarLeft .sidebar {
   right: auto;
   left: 0;
@@ -122,7 +111,6 @@
   justify-content: center;
 }
 
-/* ─── Header ─── */
 .header {
   position: fixed;
   top: 0;
@@ -138,14 +126,10 @@
   z-index: 15;
 }
 
-/* No sidebar: QR hidden, up-next off, no banner — let the header and
-   video area reclaim the 280px the sidebar would have reserved. */
 .headerNoSidebar {
   right: 0;
 }
 
-/* Right-aligned control cluster: Customize + language, sitting together with a
-   small gap. Kept as a group so the header reads as brand-left, controls-right. */
 .headerActions {
   margin-left: auto;
   display: flex;
@@ -169,7 +153,6 @@
   background-clip: text;
 }
 
-/* ─── Video area ─── */
 .videoArea {
   flex: 1;
   min-width: 0;
@@ -180,9 +163,7 @@
   margin-right: var(--sb-w, 280px);
   position: relative;
   padding-top: 56px; /* space for fixed header */
-  /* Space for the fixed nowBar (which covers the footer), so the video clears
-     whatever height the host dragged it to. Capped so a bar sized for a TV
-     can't swallow the whole video area on a small screen. */
+  /* Clears the fixed nowBar; capped so a TV-sized bar can't swallow a small screen. */
   padding-bottom: min(calc(var(--now-h, 132px) + 8px), 50vh);
   box-sizing: border-box;
 }
@@ -191,9 +172,7 @@
   margin-right: 0;
 }
 
-/* Fullscreen control — shown only while a video plays, in the lower corner of
-   the video (the player convention). Below the iframe's own bottom controls so
-   it never clashes with YouTube's chrome; quiet until hovered. */
+/* Kept below the iframe's bottom edge so it never overlaps YouTube's controls. */
 .videoFullscreen {
   position: fixed;
   bottom: 40px;
@@ -220,7 +199,6 @@
   background: rgba(var(--disp-surface-rgb), 0.9);
 }
 
-/* Sidebar on the left (or absent): the video's free corner is the far right. */
 .videoFullscreenFarSide {
   right: 20px;
 }
@@ -232,8 +210,6 @@
   background: #000;
 }
 
-/* Entry into edit mode — a quiet bordered pill in the header's control cluster.
-   Muted so it never competes with the show. */
 .headerEdit {
   display: flex;
   align-items: center;
@@ -261,7 +237,7 @@
 }
 
 
-/* ─── Autoplay-blocked overlay (one tap unlocks playback) ─── */
+/* Autoplay-blocked overlay — one tap unlocks playback. */
 .tapOverlay {
   position: absolute;
   inset: 0;
@@ -311,7 +287,6 @@
   line-height: 1.5;
 }
 
-/* ─── Center states (loading, waiting) ─── */
 .centerState {
   flex: 1;
   display: flex;
@@ -354,7 +329,6 @@
   letter-spacing: 1px;
 }
 
-/* ─── Ready state (song queued but not playing) ─── */
 .readyState {
   flex: 1;
   display: flex;
@@ -394,7 +368,6 @@
   line-height: 1.5;
 }
 
-/* ─── Footer ─── */
 .footer {
   position: fixed;
   bottom: 0;
@@ -439,10 +412,7 @@
   color: #ec4899;
 }
 
-/* ─── Now playing bar ─── The host drags its top edge in Customize mode;
-   --now-h is that height and --now-scale the matching type multiplier, both set
-   inline on .main from displayConfig.nowPlayingHeight. Growing the bar grows
-   the singer's name with it — the whole point on a screen across a room. */
+/* --now-h and --now-scale are set inline on .main from displayConfig.nowPlayingHeight. */
 .nowBar {
   position: fixed;
   bottom: 0;
@@ -518,8 +488,6 @@
   color: var(--acc-b);
   letter-spacing: -0.02em;
   line-height: 1.15;
-  /* At the taller end the name is the biggest thing on the screen; a long one
-     must stay on its line rather than push the song title out of the bar. */
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -533,7 +501,6 @@
   text-overflow: ellipsis;
 }
 
-/* ─── Reaction overlay ─── */
 .reactionOverlay {
   position: absolute;
   inset: 0;
@@ -552,9 +519,7 @@
   align-items: center;
   gap: 0.2rem;
   opacity: 0;
-  /* Twitch-style: fade in, drift steadily up with a slight lean (--sway,
-     set inline per cheer), fade out near the top. No bounce — cheers should
-     read as ambient warmth, not steal focus from the lyrics. */
+  /* --sway is set inline per cheer. */
   animation: reactionFloat 4.5s ease-out forwards;
 }
 
@@ -593,7 +558,6 @@
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
 }
 
-/* ─── Sidebar (QR + queue) ─── */
 .sidebar {
   width: var(--sb-w, 280px);
   flex-shrink: 0;
@@ -609,7 +573,6 @@
   z-index: 20;
 }
 
-/* ─── QR section ─── */
 .qrSection {
   display: flex;
   align-items: center;
@@ -650,9 +613,6 @@
   text-shadow: 0 0 12px rgba(255, 215, 0, 0.4);
 }
 
-/* The announcement banner ("Happy 30th, Sam!", "Last call 1am") — headline
-   type in the accent gradient, so it reads as the reason everyone's here
-   rather than venue boilerplate. */
 .bannerLine {
   margin: 0;
   padding: 0.85rem 1.25rem;
@@ -669,7 +629,6 @@
   overflow-wrap: break-word;
 }
 
-/* ─── Up Next section ─── */
 .upNextSection {
   flex: 1;
   display: flex;
@@ -751,8 +710,6 @@
   text-overflow: ellipsis;
 }
 
-/* Never truncated — the tail of a YouTube title is the version, and a TV
-   viewer can't hover or scroll to recover it. */
 .upNextItemSong {
   font-size: 0.75rem;
   color: var(--text-primary);
@@ -775,7 +732,6 @@
   text-align: center;
 }
 
-/* ─── Error state ─── */
 .errorState {
   flex: 1;
   display: flex;
@@ -807,7 +763,6 @@
   to { transform: rotate(360deg); }
 }
 
-/* ─── Responsive ─── */
 @media (max-width: 900px) {
   .main {
     flex-direction: column;
@@ -838,7 +793,6 @@
     left: 0;
   }
 
-  /* Stacked layout has no side rail — undo the left-mode offsets. */
   .sidebarLeft .header,
   .sidebarLeft .footer {
     left: 0;

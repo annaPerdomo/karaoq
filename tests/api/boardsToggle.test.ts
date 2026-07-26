@@ -75,8 +75,7 @@ describe("POST /api/queue/[id]/boards-toggle - Toggle boards on display", () => 
     );
   });
 
-  // boardsOnDisplay defaults to ON, so turning boards off is the deviation from
-  // the default; turning them back on just restores it.
+  // boardsOnDisplay defaults to ON, so only turning boards off deviates from the default.
   it("records hiding boards as the changed field, not showing them", async () => {
     for (const [enabled, expected] of [
       ["false", ["boardsOnDisplay"]],
