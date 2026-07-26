@@ -22,7 +22,11 @@ describe("Client API wrappers", () => {
       const result = await createRoom("ABC12");
 
       expect(result).toBe(true);
-      expect(mockFetch).toHaveBeenCalledWith("/api/queue/ABC12", { method: "POST" });
+      // Locale header tags room_created with the host's language.
+      expect(mockFetch).toHaveBeenCalledWith("/api/queue/ABC12", {
+        method: "POST",
+        headers: { "x-karaoq-locale": "en" },
+      });
     });
 
     it("returns false on failure", async () => {
@@ -145,6 +149,20 @@ describe("Client API wrappers", () => {
     });
   });
 
+  describe("setFairMode", () => {
+    it("sends enabled as query param", async () => {
+      mockFetch.mockResolvedValue({ ok: true });
+      const { default: setFairMode } = await import("../../app/queue/setFairMode");
+
+      const result = await setFairMode("ROOM1", true);
+
+      expect(result).toBe(true);
+      const [url, options] = mockFetch.mock.calls[0];
+      expect(url).toBe("/api/queue/ROOM1/fair-mode?enabled=true");
+      expect(options.method).toBe("POST");
+    });
+  });
+
   describe("removeFromQueue", () => {
     it("sends entryId as query param", async () => {
       mockFetch.mockResolvedValue({ ok: true });
@@ -158,9 +176,7 @@ describe("Client API wrappers", () => {
     });
   });
 
-  // A rejected fetch (venue wifi dropping) must resolve to false in every
-  // boolean wrapper — callers use the boolean to reset busy/in-flight state,
-  // and an escaping rejection permanently bricked those UIs.
+  // A rejected fetch must resolve to false — an escaping rejection bricked busy-state UIs.
   describe("network failure resolves to false across wrappers", () => {
     const wrappers: [string, (mod: { default: (...args: never[]) => Promise<boolean> }) => Promise<boolean>][] = [
       ["postEntryToQueue", (m) => (m.default as (r: string, e: QueueEntry) => Promise<boolean>)("R", { id: "e", userName: "A", songTitle: "S", videoId: "v" })],
@@ -174,6 +190,7 @@ describe("Client API wrappers", () => {
       ["removeSingWithMe", (m) => (m.default as (r: string, p: string) => Promise<boolean>)("R", "p")],
       ["removeSuggestion", (m) => (m.default as (r: string, s: string) => Promise<boolean>)("R", "s")],
       ["setDisplayConfig", (m) => (m.default as (r: string, c: typeof DEFAULT_DISPLAY_CONFIG) => Promise<boolean>)("R", DEFAULT_DISPLAY_CONFIG)],
+      ["setFairMode", (m) => (m.default as (r: string, e: boolean) => Promise<boolean>)("R", true)],
     ];
 
     it.each(wrappers)("%s resolves false", async (name, call) => {

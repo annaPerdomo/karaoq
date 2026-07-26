@@ -1,6 +1,9 @@
 import * as React from 'react';
 import styles from '../styles/Analytics.module.css';
+import BarChart from './analytics/BarChart';
+import LanguagesPanel, { type LanguageData } from './analytics/LanguagesPanel';
 import RoomDetail from './analytics/RoomDetail';
+import { LOCALE_LABELS, isLocale } from '../lib/i18n/config';
 
 interface DayCount {
   _id: string;
@@ -36,6 +39,8 @@ interface AnalyticsData {
     countries: { _id: string; count: number }[];
     cities: { _id: { city: string; country: string; region: string }; count: number }[];
   };
+  // Absent on a dashboard served by an older deploy.
+  languages?: LanguageData;
   rankings: {
     topSongs: { _id: { title: string; videoId: string }; count: number }[];
     topUsers: { _id: string; count: number }[];
@@ -78,6 +83,26 @@ interface AnalyticsData {
       byDay: DayCount[];
     };
   };
+  display?: {
+    saves: number;
+    roomsCustomized: number;
+    changedFields: { _id: string; count: number }[];
+    themes: { _id: string; count: number }[];
+  };
+  hostSurface?: {
+    saves: number;
+    roomsCustomized: number;
+    changedFields: { _id: string; count: number }[];
+    themes: { _id: string; count: number }[];
+  };
+  rotation?: {
+    duetAdds: number;
+    trackedAdds: number;
+    bySize: { _id: number; count: number }[];
+    fairRooms: number;
+    fairEndedOn: number;
+    fairToggled: number;
+  };
   meta?: {
     timezone: string;
     generatedAt: string;
@@ -91,6 +116,11 @@ interface RoomRow {
   city?: string;
   songs: number;
   participants: number;
+  /** null where the room predates the flag. */
+  fairMode?: boolean | null;
+  fairToggled?: boolean;
+  /** null where the room predates recording. */
+  locale?: string | null;
 }
 
 const ROOMS_PAGE_SIZE = 25;
@@ -118,8 +148,43 @@ const VIA_LABELS: Record<string, string> = {
 // Mongo's $dayOfWeek: 1 = Sunday … 7 = Saturday
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-// Vercel geo headers are URL-encoded, but stray '%' sequences in raw values
-// would make decodeURIComponent throw and take down the whole dashboard.
+// qrSize mirrors qrPx and is filtered out of the chart to avoid double-counting
+// resizes; welcomeLine/attractMode/upNextCount are retired but historical events
+// still carry them.
+const DISPLAY_FIELD_LABELS: Record<string, string> = {
+  theme: 'Theme',
+  qrPx: 'QR size',
+  showUpNext: 'Up-next list on/off',
+  upNextCount: 'Up-next depth',
+  showNowPlaying: 'Now-playing bar',
+  showReactions: 'Cheer overlay',
+  sidebarPosition: 'Sidebar side',
+  sidebarWidth: 'Sidebar width',
+  sidebarOrder: 'Sidebar order',
+  bannerLine: 'Announcement banner',
+  bannerPx: 'Banner text size',
+  nowPlayingHeight: 'Now-playing bar size',
+  welcomeLine: 'Welcome message (retired)',
+  attractMode: 'Idle promo screen (retired)',
+  boardsOnDisplay: 'Boards on TV',
+};
+
+// showHistory is retired but historical events still carry it.
+const HOST_FIELD_LABELS: Record<string, string> = {
+  theme: 'Theme',
+  qrPx: 'QR size',
+  sidebarPosition: 'Sidebar side',
+  sidebarWidth: 'Sidebar width',
+  sectionOrder: 'Section order',
+  showBoards: 'Boards roll-up on/off',
+  showQr: 'QR shelf on/off',
+  bannerLine: 'Announcement banner',
+  bannerPx: 'Banner text size',
+  nowPlayingHeight: 'Playback bar size',
+  showHistory: 'History tab (retired)',
+};
+
+// decodeURIComponent throws on stray '%' sequences in raw geo header values.
 function safeDecode(value: string): string {
   try {
     return decodeURIComponent(value);
@@ -136,9 +201,8 @@ function viewerTimezone(): string {
   }
 }
 
-// Parse a YYYY-MM-DD key as a local date. new Date('YYYY-MM-DD') would parse
-// it as UTC midnight, shifting every chart label back a day for viewers west
-// of Greenwich.
+// new Date('YYYY-MM-DD') would parse as UTC midnight, shifting labels back a
+// day for viewers west of Greenwich.
 function formatDate(day: string): string {
   const [y, m, d] = day.split('-').map(Number);
   return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -150,8 +214,7 @@ function localDayKey(d: Date): string {
   return `${d.getFullYear()}-${m}-${day}`;
 }
 
-// The server omits days with no events; fill them in so a sparse month
-// doesn't render as a dense-looking chart.
+// The server omits days with no events.
 function fillDays(rows: DayCount[], days: number): { label: string; value: number }[] {
   if (rows.length === 0) return [];
   const byKey = new Map(rows.map((r) => [r._id, r.count]));
@@ -195,30 +258,6 @@ function formatHour(h: number): string {
   if (h < 12) return `${h}am`;
   if (h === 12) return '12pm';
   return `${h - 12}pm`;
-}
-
-function BarChart({ data, color = '#a78bfa' }: {
-  data: { label: string; value: number }[];
-  color?: string;
-}) {
-  if (data.length === 0) return <p className={styles.empty}>No data yet</p>;
-  const max = Math.max(...data.map((d) => d.value), 1);
-  return (
-    <div className={styles.barChart}>
-      {data.map((d, i) => (
-        <div key={i} className={styles.barRow}>
-          <span className={styles.barLabel}>{d.label}</span>
-          <div className={styles.barTrack}>
-            <div
-              className={styles.barFill}
-              style={{ width: `${(d.value / max) * 100}%`, backgroundColor: color }}
-            />
-          </div>
-          <span className={styles.barValue}>{d.value}</span>
-        </div>
-      ))}
-    </div>
-  );
 }
 
 function FunnelChart({ steps }: { steps: { label: string; value: number }[] }) {
@@ -266,7 +305,7 @@ const Analytics = (): React.ReactElement => {
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [data, setData] = React.useState<AnalyticsData | null>(null);
-  const [activeTab, setActiveTab] = React.useState<'overview' | 'geo' | 'songs' | 'suggestions' | 'social' | 'rooms'>('overview');
+  const [activeTab, setActiveTab] = React.useState<'overview' | 'geo' | 'languages' | 'songs' | 'suggestions' | 'social' | 'rotation' | 'customize' | 'rooms'>('overview');
   const [rooms, setRooms] = React.useState<RoomRow[]>([]);
   const [roomsHasMore, setRoomsHasMore] = React.useState(false);
   const [roomsLoading, setRoomsLoading] = React.useState(false);
@@ -319,8 +358,7 @@ const Analytics = (): React.ReactElement => {
         setRoomsHasMore(false);
         setRoomsError(true);
       }
-      // Mark as loaded even on failure so the auto-load effect doesn't retry in
-      // a loop; the error state offers a manual retry instead.
+      // Loaded even on failure so the auto-load effect doesn't retry in a loop.
       setRoomsLoaded(true);
       setRoomsLoading(false);
     },
@@ -335,14 +373,12 @@ const Analytics = (): React.ReactElement => {
     }
   }, [fetchData]);
 
-  // Load the first page of rooms the first time the Rooms tab is opened.
   React.useEffect(() => {
     if (activeTab === 'rooms' && authenticated && !roomsLoaded && !roomsLoading) {
       loadRooms(0, true);
     }
   }, [activeTab, authenticated, roomsLoaded, roomsLoading, loadRooms]);
 
-  // Infinite scroll: load the next page when the sentinel enters view.
   React.useEffect(() => {
     if (activeTab !== 'rooms' || !roomsHasMore || roomsLoading) return;
     const el = sentinelRef.current;
@@ -385,7 +421,7 @@ const Analytics = (): React.ReactElement => {
       if (!res.ok) throw new Error('Delete failed');
       if (mergeSource === roomId) setMergeSource(null);
       loadRooms(0, true);
-      // Totals and charts include the deleted room; refresh them too.
+      // Totals and charts included the deleted room; refresh them too.
       fetchData(secret);
     } catch {
       alert('Failed to delete room');
@@ -451,8 +487,6 @@ const Analytics = (): React.ReactElement => {
     );
   }
 
-  // Only blank the page before the first load; refreshes keep the current
-  // data on screen.
   if (!data) {
     return (
       <main className={styles.main}>
@@ -461,7 +495,7 @@ const Analytics = (): React.ReactElement => {
     );
   }
 
-  const { overview, charts, geo, rankings, devices, suggestions, funnel, engagement, social } = data;
+  const { overview, charts, geo, languages, rankings, devices, suggestions, funnel, engagement, social, display, hostSurface, rotation } = data;
 
   const mobileCount = devices.find((d) => d._id === 'Mobile')?.count || 0;
   const desktopCount = devices.find((d) => d._id === 'Desktop')?.count || 0;
@@ -495,7 +529,7 @@ const Analytics = (): React.ReactElement => {
       )}
 
       <nav className={styles.tabs}>
-        {(['overview', 'geo', 'songs', 'suggestions', 'social', 'rooms'] as const).map((tab) => (
+        {(['overview', 'geo', 'languages', 'songs', 'suggestions', 'social', 'rotation', 'customize', 'rooms'] as const).map((tab) => (
           <button
             key={tab}
             className={`${styles.tab} ${activeTab === tab ? styles.tabActive : ''}`}
@@ -678,6 +712,18 @@ const Analytics = (): React.ReactElement => {
         </div>
       )}
 
+      {activeTab === 'languages' && (
+        <div className={styles.tabContent}>
+          {languages ? (
+            <LanguagesPanel languages={languages} />
+          ) : (
+            <section className={styles.section}>
+              <p className={styles.empty}>No language data available</p>
+            </section>
+          )}
+        </div>
+      )}
+
       {activeTab === 'songs' && (
         <div className={styles.tabContent}>
           <section className={styles.section}>
@@ -842,6 +888,155 @@ const Analytics = (): React.ReactElement => {
         </div>
       )}
 
+      {activeTab === 'rotation' && rotation && (
+        <div className={styles.tabContent}>
+          <section className={styles.section}>
+            <h2 className={styles.sectionTitle}>Fair Rotation</h2>
+            <div className={styles.statGrid}>
+              <StatCard label="Rooms Tracked" value={rotation.fairRooms} />
+              <StatCard
+                label="Ended On Fair Rotation"
+                value={rotation.fairEndedOn}
+                sub={
+                  rotation.fairRooms > 0
+                    ? `${Math.round((rotation.fairEndedOn / rotation.fairRooms) * 100)}% of tracked rooms`
+                    : undefined
+                }
+              />
+              <StatCard
+                label="Hosts Who Changed It"
+                value={rotation.fairToggled}
+                sub="rest ran on the default"
+              />
+            </div>
+          </section>
+
+          <section className={styles.section}>
+            <h2 className={styles.sectionTitle}>Duets &amp; Groups</h2>
+            <div className={styles.statGrid}>
+              <StatCard
+                label="Multi-Singer Adds"
+                value={rotation.duetAdds}
+                sub={
+                  rotation.trackedAdds > 0
+                    ? `${Math.round((rotation.duetAdds / rotation.trackedAdds) * 100)}% of tracked adds`
+                    : undefined
+                }
+              />
+              <StatCard
+                label="Adds With A Singer Count"
+                value={rotation.trackedAdds}
+                sub="adds predating duets aren't counted"
+              />
+            </div>
+            <h3 className={styles.sectionTitle}>Singers Per Entry</h3>
+            {rotation.bySize.length === 0 ? (
+              <p className={styles.empty}>No duets or group songs yet</p>
+            ) : (
+              <BarChart
+                data={rotation.bySize.map((d) => ({
+                  label: `${d._id} singers`,
+                  value: d.count,
+                }))}
+                color="#34d399"
+              />
+            )}
+          </section>
+        </div>
+      )}
+
+      {activeTab === 'customize' && (
+        <div className={styles.tabContent}>
+          {display && (
+            <>
+              <section className={styles.section}>
+                <h2 className={styles.sectionTitle}>Display (TV)</h2>
+                <div className={styles.statGrid}>
+                  <StatCard label="Display Applies" value={display.saves} />
+                  <StatCard
+                    label="Rooms That Customized"
+                    value={display.roomsCustomized}
+                    sub="changed anything from the defaults"
+                  />
+                </div>
+              </section>
+
+              <section className={styles.section}>
+                <h2 className={styles.sectionTitle}>Display Settings Changed From Default (by rooms)</h2>
+                {display.changedFields.length === 0 ? (
+                  <p className={styles.empty}>No display customizations yet</p>
+                ) : (
+                  <BarChart
+                    data={display.changedFields
+                      .filter((f) => f._id !== 'qrSize')
+                      .map((f) => ({
+                        label: DISPLAY_FIELD_LABELS[f._id] ?? f._id,
+                        value: f.count,
+                      }))}
+                    color="#f472b6"
+                  />
+                )}
+              </section>
+
+              <section className={styles.section}>
+                <h2 className={styles.sectionTitle}>Display Theme Rooms Ended On</h2>
+                {display.themes.length === 0 ? (
+                  <p className={styles.empty}>No themes applied yet</p>
+                ) : (
+                  <BarChart
+                    data={display.themes.map((d) => ({ label: d._id, value: d.count }))}
+                    color="#60a5fa"
+                  />
+                )}
+              </section>
+            </>
+          )}
+
+          {hostSurface && (
+            <>
+              <section className={styles.section}>
+                <h2 className={styles.sectionTitle}>Host Screen</h2>
+                <div className={styles.statGrid}>
+                  <StatCard label="Host Applies" value={hostSurface.saves} />
+                  <StatCard
+                    label="Rooms That Customized"
+                    value={hostSurface.roomsCustomized}
+                    sub="changed anything from the defaults"
+                  />
+                </div>
+              </section>
+
+              <section className={styles.section}>
+                <h2 className={styles.sectionTitle}>Host Settings Changed From Default (by rooms)</h2>
+                {hostSurface.changedFields.length === 0 ? (
+                  <p className={styles.empty}>No host customizations yet</p>
+                ) : (
+                  <BarChart
+                    data={hostSurface.changedFields.map((f) => ({
+                      label: HOST_FIELD_LABELS[f._id] ?? f._id,
+                      value: f.count,
+                    }))}
+                    color="#fbbf24"
+                  />
+                )}
+              </section>
+
+              <section className={styles.section}>
+                <h2 className={styles.sectionTitle}>Host Theme Rooms Ended On</h2>
+                {hostSurface.themes.length === 0 ? (
+                  <p className={styles.empty}>No themes applied yet</p>
+                ) : (
+                  <BarChart
+                    data={hostSurface.themes.map((d) => ({ label: d._id, value: d.count }))}
+                    color="#a78bfa"
+                  />
+                )}
+              </section>
+            </>
+          )}
+        </div>
+      )}
+
       {activeTab === 'rooms' && (
         <div className={styles.tabContent}>
           <section className={styles.section}>
@@ -879,6 +1074,8 @@ const Analytics = (): React.ReactElement => {
                     <span>Location</span>
                     <span>Songs</span>
                     <span>People</span>
+                    <span>Lang</span>
+                    <span>Fair</span>
                     <span></span>
                   </div>
                   {rooms.map((r, i) => (
@@ -900,6 +1097,31 @@ const Analytics = (): React.ReactElement => {
                       </span>
                       <span data-label="Songs">{r.songs}</span>
                       <span data-label="People">{r.participants}</span>
+                      <span data-label="Lang">
+                        <span
+                          className={styles.langCell}
+                          title={
+                            r.locale
+                              ? `Room created in ${isLocale(r.locale) ? LOCALE_LABELS[r.locale] : r.locale}`
+                              : 'Created before the language was recorded'
+                          }
+                        >
+                          {r.locale ?? '—'}
+                        </span>
+                      </span>
+                      <span data-label="Fair">
+                        {r.fairMode === null || r.fairMode === undefined ? (
+                          <span className={styles.fairCell} title="Created before fair rotation was recorded">—</span>
+                        ) : (
+                          <span
+                            className={`${styles.fairCell} ${r.fairMode ? styles.fairCellOn : ''}`}
+                            title={`Fair rotation ${r.fairMode ? 'on' : 'off'}${r.fairToggled ? ' — host changed it' : ' (default)'}`}
+                          >
+                            {r.fairMode ? 'On' : 'Off'}
+                            {r.fairToggled ? '*' : ''}
+                          </span>
+                        )}
+                      </span>
                       <div className={styles.roomActions}>
                         <button
                           className={`${styles.mergeBtn} ${mergeSource === r.roomId ? styles.mergeBtnActive : ''}`}
@@ -927,8 +1149,6 @@ const Analytics = (): React.ReactElement => {
                 </div>
                 <div ref={sentinelRef} />
                 {roomsLoading && <p className={styles.empty}>Loading…</p>}
-                {/* A failed page fetch must not masquerade as the end of the
-                    list — "N rooms total" over a partial list lies. */}
                 {roomsError && !roomsLoading ? (
                   <p className={styles.empty}>
                     Couldn&rsquo;t load more rooms.{' '}

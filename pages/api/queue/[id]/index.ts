@@ -7,18 +7,14 @@ import { normalizeRoomId } from "../../../../lib/roomCode";
 
 const REACTION_TTL_MS = 30000;
 
-// Same pattern the landing page enforces client-side. Server-side it also
-// protects invariants that assume well-formed ids — e.g. the analytics
-// sessionKey `roomId:clientId:role`, where a ":" in a roomId would collide.
+// Also protects server-side invariants that assume well-formed ids — e.g. the analytics sessionKey
+// `roomId:clientId:role`, where a ":" in a roomId would collide.
 const ROOM_CODE_PATTERN = /^[A-Z0-9]{3,12}$/;
 
-// A display heartbeats every ~10s from a Web Worker (immune to background-tab
-// timer throttling). The window is still sized to survive a worst-case
-// once-per-minute throttled beat, so a hidden-but-playing display is never
-// mistaken for a dead one.
+// Displays heartbeat ~10s from a Web Worker; the window still survives a worst-case once-per-minute
+// throttled beat so a hidden-but-playing display is never mistaken for a dead one.
 const DISPLAY_LIVE_MS = 75_000;
-// After the host presses play, give a display this long to load and start
-// heartbeating before treating the playback as orphaned.
+// Time for a display to load and start heartbeating after play before playback counts as orphaned.
 const PLAY_GRACE_MS = 15_000;
 
 export default async function handler(
@@ -41,12 +37,8 @@ export default async function handler(
       if (existing && isCustom) {
         res.status(409).json({ code: 409, message: "Room code already in use." });
       } else if (existing) {
-        // Only reset play state when the device that was PLAYING the current
-        // song reconnects (its stored token matches the room's) — that page
-        // was the playback surface, so the song died with it. Any other host
-        // connecting (second device, co-host promotion, new phone) must never
-        // cut what's already playing. TV rooms never reset: playback lives on
-        // the display, not on whichever host page just loaded.
+        // Reset play state only when the device that was PLAYING reconnects (token match) — any
+        // other host device must never cut what's playing. TV rooms never reset: playback lives on the display.
         const priorToken = req.headers["x-play-token"];
         const ownerReturned =
           existing.playMode !== "tv" &&
@@ -82,8 +74,8 @@ export default async function handler(
           activeVideoIndex: 0,
           isPlaying: false,
           reactionsEnabled: true,
-          // Matches the host UI default; switching to a separate screen
-          // updates it via the mode endpoint.
+          // Rooms created before the flag are left alone — see the GET's `?? false` backfill.
+          fairMode: true,
           playMode: "here",
           displayConfig: DEFAULT_DISPLAY_CONFIG,
           createdAt: now,
@@ -92,16 +84,14 @@ export default async function handler(
         try {
           await collection.insertOne(room);
         } catch (e) {
-          // Concurrent create with the same code: the findOne above raced the
-          // unique index. The client only maps 409 to "code in use", so a raw
-          // E11000 500 would read as a server failure.
+          // The findOne above raced the unique index. The client only maps 409 to "code in use",
+          // so a raw E11000 500 would read as a server failure.
           if ((e as { code?: number })?.code === 11000) {
             if (isCustom) {
               res.status(409).json({ code: 409, message: "Room code already in use." });
               return;
             }
-            // Random-code path: rooms are code-keyed, so just join the room
-            // the winning create made (same as the existing-room branch).
+            // Random-code path: just join the room the winning create made.
             const winner = await collection.findOne({ id: roomId });
             if (winner) {
               await collection.updateOne(
@@ -114,7 +104,7 @@ export default async function handler(
           }
           throw e;
         }
-        trackEvent(req, "room_created", { roomId });
+        trackEvent(req, "room_created", { roomId, fairMode: room.fairMode });
         res.status(201).json(room);
       }
     } else if (req.method === "GET") {
@@ -127,12 +117,8 @@ export default async function handler(
           now - new Date(room.displayLastSeen).getTime() < DISPLAY_LIVE_MS
         );
 
-        // Self-heal orphaned playback: a TV room can't really be playing with
-        // no live display. Without this, a dead display session leaves the
-        // host showing a stop button for a song that isn't playing anywhere.
-        // (Here-mode rooms are exempt — their player is a host page. Reads
-        // from a display page are exempt too: they are living proof a display
-        // exists, and a display must never heal-stop its own playback.)
+        // Self-heal orphaned playback: a TV room can't be playing with no live display. Here-mode
+        // rooms are exempt (their player is a host page); display readers are exempt — a display must never heal-stop its own playback.
         const isDisplayReader = req.query.display === "1";
         let isPlaying = room.isPlaying ?? false;
         if (isPlaying && !isDisplayReader && room.playMode !== "here" && !displayConnected) {
@@ -151,9 +137,8 @@ export default async function handler(
           }
         }
 
-        // Filter stale reactions in-memory only — persisting the cleanup here
-        // would turn every poll into a write. The reactions POST route prunes
-        // the stored array whenever a new reaction comes in.
+        // In-memory filter only — persisting the cleanup would turn every poll into a write; the
+        // reactions POST route prunes the stored array.
         const reactions = (room.reactions ?? []).filter(
           (r) => now - r.timestamp < REACTION_TTL_MS
         );
@@ -162,6 +147,9 @@ export default async function handler(
           isPlaying,
           displayConnected,
           reactionsEnabled: room.reactionsEnabled ?? true,
+          // Absent = the room predates the flag. Those stay OFF even though new rooms default ON:
+          // their queue was never sorted, so reporting "on" would show a fair badge over a first-come order.
+          fairMode: room.fairMode ?? false,
           displayConfig: room.displayConfig ?? DEFAULT_DISPLAY_CONFIG,
           reactions,
         });

@@ -4,11 +4,12 @@ import LanguageSwitcher from "../LanguageSwitcher";
 import { Icons } from "./icons";
 import { SettingsPopover } from "./SettingsPopover";
 
-// The top bar: brand, the playback-mode pill + menu (host only), the language
-// switcher, the settings gear, and the settings popover it toggles.
 export function HostHeader({
   remote,
   tvMode,
+  customizing,
+  canCustomize,
+  onCustomize,
   modeMenuOpen,
   onModePillClick,
   onModeMenuBackdropClick,
@@ -19,16 +20,18 @@ export function HostHeader({
   onSettingsClose,
   reactionsOn,
   onToggleReactions,
-  boardsOnDisplay,
-  onToggleBoardsOnDisplay,
+  fairMode,
+  onToggleFairMode,
   hostName,
   onChangeName,
   onInviteCohost,
-  onOpenDisplayPanel,
   onBrandClick,
 }: {
   remote: boolean;
   tvMode: boolean;
+  customizing: boolean;
+  canCustomize: boolean;
+  onCustomize: () => void;
   modeMenuOpen: boolean;
   onModePillClick: () => void;
   onModeMenuBackdropClick: () => void;
@@ -39,12 +42,11 @@ export function HostHeader({
   onSettingsClose: () => void;
   reactionsOn: boolean;
   onToggleReactions: () => void;
-  boardsOnDisplay: boolean;
-  onToggleBoardsOnDisplay: () => void;
+  fairMode: boolean;
+  onToggleFairMode: () => void;
   hostName: string;
   onChangeName: () => void;
   onInviteCohost: () => void;
-  onOpenDisplayPanel: () => void;
   onBrandClick: () => void;
 }) {
   const { t } = useT();
@@ -55,8 +57,7 @@ export function HostHeader({
         {remote && <span className={styles.cohostBadge}>{t('host.role.cohost')}</span>}
       </div>
 
-      {/* Playback-mode pill: shows where the video plays and switches in one tap. */}
-      {!remote && (
+      {!remote && !customizing && (
         <div className={styles.modePillWrap}>
           <button
             className={styles.modePill}
@@ -114,14 +115,26 @@ export function HostHeader({
       )}
 
       <div className={styles.headerActions}>
+        {canCustomize && !customizing && (
+          <button
+            className={styles.headerCustomize}
+            onClick={onCustomize}
+            title={t('customize.button')}
+          >
+            {Icons.brush}
+            <span className={styles.headerCustomizeLabel}>{t('customize.button')}</span>
+          </button>
+        )}
         <LanguageSwitcher />
-        <button
-          className={`${styles.gearBtn} ${settingsOpen ? styles.gearBtnOpen : ""}`}
-          onClick={onGearClick}
-          aria-label={t('host.settingsAria')}
-        >
-          {Icons.gear}
-        </button>
+        {!customizing && (
+          <button
+            className={`${styles.gearBtn} ${settingsOpen ? styles.gearBtnOpen : ""}`}
+            onClick={onGearClick}
+            aria-label={t('host.settingsAria')}
+          >
+            {Icons.gear}
+          </button>
+        )}
       </div>
       <SettingsPopover
         isOpen={settingsOpen}
@@ -129,12 +142,11 @@ export function HostHeader({
         remote={remote}
         reactionsOn={reactionsOn}
         onToggleReactions={onToggleReactions}
-        boardsOnDisplay={boardsOnDisplay}
-        onToggleBoardsOnDisplay={onToggleBoardsOnDisplay}
+        fairMode={fairMode}
+        onToggleFairMode={onToggleFairMode}
         hostName={hostName}
         onChangeName={onChangeName}
         onInviteCohost={onInviteCohost}
-        onOpenDisplayPanel={onOpenDisplayPanel}
       />
     </header>
   );

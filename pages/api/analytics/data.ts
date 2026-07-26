@@ -1,4 +1,5 @@
 import { NextApiRequest, NextApiResponse } from "next";
+import { CHOSEN_LOCALE_SOURCES } from "../../../lib/i18n/activeLocale";
 import { getAnalyticsDb } from "../../../lib/mongodb";
 import {
   buildSongsHistogram,
@@ -10,10 +11,8 @@ import {
 
 const FUNNEL_WINDOW_DAYS = 30;
 
-// Ceiling on a single session's counted length. No real continuous karaoke
-// session runs longer, so anything above this is the legacy revisit artifact
-// (firstSeen anchored days before lastSeen). Capping keeps avg/max/median
-// meaningful for pre-fix docs whose true start time can't be reconstructed.
+// Cap on a session's counted length: anything above it is the legacy revisit artifact
+// (firstSeen anchored days before lastSeen) on pre-fix docs.
 const MAX_SESSION_MINUTES = 360;
 
 export default async function handler(
@@ -33,8 +32,6 @@ export default async function handler(
 
   res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
 
-  // Group days/hours in the viewer's timezone so "today" and "peak hours"
-  // match their clock instead of UTC.
   const tz = resolveTimezone(req.query.tz);
 
   try {
@@ -83,6 +80,23 @@ export default async function handler(
       boardClaimed,
       boardSuggestedByDay,
       addsByVia,
+      displaySaves,
+      displayRoomsCustomized,
+      displayFieldCounts,
+      displayThemeCounts,
+      hostSaves,
+      hostRoomsCustomized,
+      hostFieldCounts,
+      hostThemeCounts,
+      duetAdds,
+      singerTrackedAdds,
+      singerSizeCounts,
+      fairRoomStats,
+      sessionsByLocale,
+      roomsCreatedByLocale,
+      localeByCountry,
+      uniqueLocaleRooms,
+      nonEnglishLocaleRooms,
     ] = await Promise.all([
       events.countDocuments({ type: "room_created" }),
 
@@ -110,8 +124,6 @@ export default async function handler(
         ])
         .toArray(),
 
-      // Top countries by unique rooms (event counts would let one busy room
-      // dominate the ranking)
       events
         .aggregate([
           { $match: { country: { $exists: true, $ne: null } } },
@@ -150,7 +162,7 @@ export default async function handler(
         ])
         .toArray(),
 
-      // Songs added by day of week (1=Sun … 7=Sat, viewer timezone)
+      // Day of week: 1=Sun … 7=Sat, viewer timezone.
       events
         .aggregate([
           { $match: { type: "song_added" } },
@@ -187,8 +199,7 @@ export default async function handler(
         ])
         .toArray(),
 
-      // Session counts plus duration stats. Durations exclude display (TV)
-      // sessions, which stay open all night and would inflate every number.
+      // Durations exclude display (TV) sessions, which stay open all night.
       sessions
         .aggregate([
           {
@@ -276,7 +287,6 @@ export default async function handler(
 
       events.countDocuments({ type: "suggestion_used" }),
 
-      // Suggestion uses by source (random / song_pick / genre_chip)
       events
         .aggregate([
           { $match: { type: "suggestion_used" } },
@@ -285,7 +295,6 @@ export default async function handler(
         ])
         .toArray(),
 
-      // Suggestion uses by section (genre / voice-type / spanish / kpop / japanese)
       events
         .aggregate([
           { $match: { type: "suggestion_used", sectionId: { $exists: true, $ne: null } } },
@@ -303,8 +312,7 @@ export default async function handler(
         ])
         .toArray(),
 
-      // Top suggested songs clicked. Older events stored the artist in
-      // userName before songArtist existed, hence the $ifNull.
+      // Older events stored the artist in userName before songArtist existed, hence the $ifNull.
       events
         .aggregate([
           { $match: { type: "suggestion_used", suggestionSource: "song_pick", songTitle: { $exists: true } } },
@@ -330,7 +338,6 @@ export default async function handler(
         ])
         .toArray(),
 
-      // Activation funnel per room in the window: search/add counts and minutes-to-first-song.
       events
         .aggregate([
           { $match: { type: { $in: ["room_created", "search_performed", "song_added"] } } },
@@ -383,7 +390,6 @@ export default async function handler(
         ])
         .toArray(),
 
-      // Returning hosts: distinct host clientIds and how many hosted 2+ rooms
       sessions
         .aggregate([
           { $match: { role: "host", clientId: { $type: "string" } } },
@@ -401,7 +407,6 @@ export default async function handler(
         ])
         .toArray(),
 
-      // Sing With Me: posts created, joins, and auto-queued songs
       events.countDocuments({ type: "singwithme_posted" }),
       events.countDocuments({ type: "singwithme_joined" }),
       events.countDocuments({ type: "singwithme_queued" }),
@@ -413,7 +418,6 @@ export default async function handler(
         ])
         .toArray(),
 
-      // Suggestion board: songs suggested and claimed
       events.countDocuments({ type: "song_suggested" }),
       events.countDocuments({ type: "suggestion_claimed" }),
       events
@@ -424,7 +428,7 @@ export default async function handler(
         ])
         .toArray(),
 
-      // Song adds by source. Events from before the via field are search adds.
+      // Events from before the via field are search adds, hence the $ifNull.
       events
         .aggregate([
           { $match: { type: "song_added" } },
@@ -432,6 +436,178 @@ export default async function handler(
           { $sort: { count: -1 } },
         ])
         .toArray(),
+
+      events.countDocuments({ type: "display_config_saved" }),
+      events
+        .distinct("roomId", {
+          type: "display_config_saved",
+          "changedFields.0": { $exists: true },
+        })
+        .then((rooms) => rooms.length),
+      events
+        .aggregate([
+          { $match: { type: "display_config_saved" } },
+          { $unwind: "$changedFields" },
+          { $group: { _id: { field: "$changedFields", room: "$roomId" } } },
+          { $group: { _id: "$_id.field", count: { $sum: 1 } } },
+          { $sort: { count: -1 } },
+        ])
+        .toArray(),
+
+      events
+        .aggregate([
+          { $match: { type: "display_config_saved", "displayConfig.theme": { $exists: true } } },
+          { $sort: { timestamp: -1 } },
+          { $group: { _id: "$roomId", theme: { $first: "$displayConfig.theme" } } },
+          { $group: { _id: "$theme", count: { $sum: 1 } } },
+          { $sort: { count: -1 } },
+        ])
+        .toArray(),
+
+      events.countDocuments({ type: "host_config_saved" }),
+      events
+        .distinct("roomId", {
+          type: "host_config_saved",
+          "changedFields.0": { $exists: true },
+        })
+        .then((rooms) => rooms.length),
+      events
+        .aggregate([
+          { $match: { type: "host_config_saved" } },
+          { $unwind: "$changedFields" },
+          { $group: { _id: { field: "$changedFields", room: "$roomId" } } },
+          { $group: { _id: "$_id.field", count: { $sum: 1 } } },
+          { $sort: { count: -1 } },
+        ])
+        .toArray(),
+      events
+        .aggregate([
+          { $match: { type: "host_config_saved", "hostConfig.theme": { $exists: true } } },
+          { $sort: { timestamp: -1 } },
+          { $group: { _id: "$roomId", theme: { $first: "$hostConfig.theme" } } },
+          { $group: { _id: "$theme", count: { $sum: 1 } } },
+          { $sort: { count: -1 } },
+        ])
+        .toArray(),
+
+      // Duet rate is reported against adds that carry a singer count — events predating the field would read as solos.
+      events.countDocuments({ type: "song_added", singers: { $gte: 2 } }),
+      events.countDocuments({ type: "song_added", singers: { $type: "number" } }),
+      events
+        .aggregate([
+          { $match: { type: "song_added", singers: { $gte: 2 } } },
+          { $group: { _id: "$singers", count: { $sum: 1 } } },
+          { $sort: { _id: 1 } },
+        ])
+        .toArray(),
+
+      // room_created carries the opening fairMode, fair_mode_toggled every change; ascending sort +
+      // $last per room gives the ending state — same "last toggle wins" rule as the rooms table.
+      events
+        .aggregate([
+          {
+            $match: {
+              type: { $in: ["room_created", "fair_mode_toggled"] },
+              fairMode: { $type: "bool" },
+            },
+          },
+          { $sort: { timestamp: 1 } },
+          {
+            $group: {
+              _id: "$roomId",
+              ended: { $last: "$fairMode" },
+              toggles: {
+                $sum: { $cond: [{ $eq: ["$type", "fair_mode_toggled"] }, 1, 0] },
+              },
+            },
+          },
+          {
+            $group: {
+              _id: null,
+              rooms: { $sum: 1 },
+              endedOn: { $sum: { $cond: ["$ended", 1, 0] } },
+              toggled: { $sum: { $cond: [{ $gt: ["$toggles", 0] }, 1, 0] } },
+            },
+          },
+        ])
+        .toArray(),
+
+      // Ranked by unique rooms so one long night can't outweigh ten rooms.
+      sessions
+        .aggregate([
+          // Displays are TVs, not people — same exclusion the room detail and participant counts apply.
+          { $match: { locale: { $type: "string" }, role: { $ne: "display" } } },
+          {
+            $group: {
+              _id: "$locale",
+              sessions: { $sum: 1 },
+              rooms: { $addToSet: "$roomId" },
+              hosts: { $sum: { $cond: [{ $eq: ["$role", "host"] }, 1, 0] } },
+              singers: { $sum: { $cond: [{ $eq: ["$role", "singer"] }, 1, 0] } },
+              chosen: {
+                $sum: {
+                  $cond: [
+                    { $in: ["$localeSource", CHOSEN_LOCALE_SOURCES] },
+                    1,
+                    0,
+                  ],
+                },
+              },
+            },
+          },
+          {
+            $project: {
+              sessions: 1,
+              hosts: 1,
+              singers: 1,
+              chosen: 1,
+              rooms: { $size: "$rooms" },
+            },
+          },
+          { $sort: { rooms: -1, sessions: -1 } },
+        ])
+        .toArray(),
+
+      // Covers rooms that never got a heartbeat's worth of use.
+      events
+        .aggregate([
+          { $match: { type: "room_created", locale: { $type: "string" } } },
+          { $group: { _id: "$locale", count: { $sum: 1 } } },
+          { $sort: { count: -1 } },
+        ])
+        .toArray(),
+
+      sessions
+        .aggregate([
+          {
+            $match: {
+              locale: { $type: "string" },
+              country: { $type: "string" },
+            },
+          },
+          {
+            $group: {
+              _id: { country: "$country", locale: "$locale" },
+              rooms: { $addToSet: "$roomId" },
+            },
+          },
+          { $project: { count: { $size: "$rooms" } } },
+          { $sort: { count: -1 } },
+          { $limit: 30 },
+        ])
+        .toArray(),
+
+      // Distinct rooms directly — summing the per-locale groups would count a mixed-language room once per locale.
+      sessions
+        .distinct("roomId", { locale: { $type: "string" }, role: { $ne: "display" } })
+        .then((ids) => ids.length),
+
+      sessions
+        .distinct("roomId", {
+          locale: { $type: "string", $ne: "en" },
+          role: { $ne: "display" },
+        })
+        .then((ids) => ids.length),
     ]);
 
     const sessionStats = sessionData[0] || {
@@ -454,8 +630,9 @@ export default async function handler(
 
     const retention = hostRetention[0] || { hosts: 0, repeatHosts: 0 };
 
-    // "Today" in the viewer's timezone; en-CA formats as YYYY-MM-DD, matching
-    // the $dateToString keys above.
+    const fairStats = fairRoomStats[0] || { rooms: 0, endedOn: 0, toggled: 0 };
+
+    // en-CA formats as YYYY-MM-DD, matching the $dateToString keys above.
     const todayKey = new Intl.DateTimeFormat("en-CA", { timeZone: tz }).format(now);
     const roomsToday =
       roomsByDay.find((d) => d._id === todayKey)?.count ?? 0;
@@ -490,6 +667,13 @@ export default async function handler(
       geo: {
         countries: countryCounts,
         cities: cityCounts,
+      },
+      languages: {
+        bySession: sessionsByLocale,
+        roomsCreated: roomsCreatedByLocale,
+        byCountry: localeByCountry,
+        uniqueRooms: uniqueLocaleRooms,
+        nonEnglishRooms: nonEnglishLocaleRooms,
       },
       rankings: {
         topSongs,
@@ -530,6 +714,26 @@ export default async function handler(
         reactionsByEmoji,
         hosts: retention.hosts,
         repeatHosts: retention.repeatHosts,
+      },
+      display: {
+        saves: displaySaves,
+        roomsCustomized: displayRoomsCustomized,
+        changedFields: displayFieldCounts,
+        themes: displayThemeCounts,
+      },
+      hostSurface: {
+        saves: hostSaves,
+        roomsCustomized: hostRoomsCustomized,
+        changedFields: hostFieldCounts,
+        themes: hostThemeCounts,
+      },
+      rotation: {
+        duetAdds,
+        trackedAdds: singerTrackedAdds,
+        bySize: singerSizeCounts,
+        fairRooms: fairStats.rooms,
+        fairEndedOn: fairStats.endedOn,
+        fairToggled: fairStats.toggled,
       },
       meta: {
         timezone: tz,

@@ -31,7 +31,6 @@ export default async function handler(
     const db = await getAnalyticsDb();
     const events = db.collection("analytics_events");
 
-    // Fetch one extra doc to determine whether more pages exist.
     const docs = await events
       .aggregate([
         { $match: { type: "room_created" } },
@@ -50,8 +49,7 @@ export default async function handler(
           },
         },
         {
-          // One session doc per (clientId, role); count non-display docs for
-          // the real head count rather than one per name keystroke.
+          // Non-display session docs only, for the real head count.
           $lookup: {
             from: "analytics_sessions",
             let: { rid: "$roomId" },
@@ -72,6 +70,29 @@ export default async function handler(
           },
         },
         {
+          // Newest-first + limit 1 keeps this a single index hit per room rather than a full scan.
+          $lookup: {
+            from: "analytics_events",
+            let: { rid: "$roomId" },
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $and: [
+                      { $eq: ["$roomId", "$$rid"] },
+                      { $eq: ["$type", "fair_mode_toggled"] },
+                    ],
+                  },
+                },
+              },
+              { $sort: { timestamp: -1 } },
+              { $limit: 1 },
+              { $project: { _id: 0, fairMode: 1 } },
+            ],
+            as: "lastFairToggle",
+          },
+        },
+        {
           $project: {
             _id: 0,
             roomId: 1,
@@ -80,6 +101,16 @@ export default async function handler(
             city: 1,
             songs: { $ifNull: [{ $arrayElemAt: ["$songCount.total", 0] }, 0] },
             participants: { $ifNull: [{ $arrayElemAt: ["$participantCount.total", 0] }, 0] },
+            // Last toggle wins, else the created value; null on rooms predating both.
+            fairMode: {
+              $ifNull: [
+                { $arrayElemAt: ["$lastFairToggle.fairMode", 0] },
+                { $ifNull: ["$fairMode", null] },
+              ],
+            },
+            fairToggled: { $gt: [{ $size: "$lastFairToggle" }, 0] },
+            // Rides on room_created itself; null before it was recorded.
+            locale: { $ifNull: ["$locale", null] },
           },
         },
       ])

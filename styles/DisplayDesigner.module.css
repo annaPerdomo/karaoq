@@ -1,0 +1,597 @@
+.sampleBadge {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  padding: 0.15rem 0.6rem;
+  white-space: nowrap;
+}
+
+.spot {
+  cursor: pointer;
+}
+
+.spot::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 2px dashed transparent;
+  border-radius: 10px;
+  pointer-events: none;
+  transition: border-color 0.15s, background 0.15s;
+  z-index: 5;
+}
+
+.spot:hover::after {
+  border-color: rgba(0, 240, 255, 0.55);
+  background: rgba(0, 240, 255, 0.06);
+}
+
+.spotOn.spotOn::after {
+  border-color: #00f0ff;
+  background: rgba(0, 240, 255, 0.08);
+}
+
+.hotspot {
+  position: relative;
+}
+
+.spotTag {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 6;
+  font-size: 11px;
+  font-weight: 700;
+  color: #0a0a19;
+  background: #00f0ff;
+  border-radius: 6px;
+  padding: 2px 8px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+}
+
+.spot:hover .spotTag,
+.spotOn .spotTag {
+  opacity: 1;
+}
+
+.ghost {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin: 8px;
+  padding: 12px 10px;
+  font-size: 0.8rem;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.45);
+  border: 2px dashed rgba(255, 255, 255, 0.25);
+  border-radius: 10px;
+  background: none;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.ghost:hover {
+  border-color: rgba(0, 240, 255, 0.6);
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.ghostStrip {
+  position: fixed;
+  bottom: 48px;
+  left: 16px;
+  right: calc(var(--sb-w, 280px) + 16px); /* sidebar + gutter */
+  z-index: 10;
+  margin: 0;
+}
+
+.edLeft .ghostStrip {
+  right: 16px;
+  left: calc(var(--sb-w, 280px) + 16px);
+}
+
+/* Host twin of .ghostStrip. The host's transport bar sits in normal flow (see
+   .noShrink) rather than pinned like the display's .nowSlot, so its ghost holds
+   that slot instead of anchoring to the viewport — --sb-w is display-only. */
+.ghostSlot {
+  flex-shrink: 0;
+}
+
+.ghostChip {
+  position: absolute;
+  top: 64px;
+  right: 24px;
+  z-index: 9;
+  margin: 0;
+  padding: 8px 12px;
+}
+
+/* Carries the fixed placement so the wrapped real bar can drop to static flow. */
+.nowSlot {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: var(--sb-w, 280px);
+  z-index: 10;
+}
+
+.nowSlot > div {
+  position: static;
+}
+
+.edLeft .nowSlot {
+  right: 0;
+  left: var(--sb-w, 280px);
+}
+
+.chrome {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  z-index: 6;
+  display: flex;
+  gap: 6px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.spot:hover .chrome,
+.spotOn .chrome {
+  opacity: 1;
+}
+
+.chromeBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  font-size: 13px;
+  color: #fff;
+  background: rgba(10, 10, 25, 0.85);
+  border: 1px solid rgba(0, 240, 255, 0.5);
+  border-radius: 8px;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.chromeBtn:hover {
+  background: rgba(0, 240, 255, 0.25);
+}
+
+.gripBtn {
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.gripBtn:active {
+  cursor: grabbing;
+}
+
+.sectionLifted {
+  opacity: 0.55;
+}
+
+.sectionLifted::after {
+  border-color: #00f0ff !important;
+}
+
+.cornerAnchor {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.cornerHandle {
+  position: absolute;
+  right: -12px;
+  bottom: -12px;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  color: #0a0a19;
+  background: #00f0ff;
+  border: none;
+  border-radius: 50%;
+  cursor: nwse-resize;
+  touch-action: none;
+  /* The QR shelf disables pointer events on its contents while editing; the grip must stay live. */
+  pointer-events: auto;
+  opacity: 0.85;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+  transition: opacity 0.15s;
+}
+
+.cornerHandle:hover,
+.spot:hover .cornerHandle,
+.spotOn .cornerHandle {
+  opacity: 1;
+}
+
+/* Full-width sections: the -12px offsets would clip at the sidebar edge, so tuck inside. */
+.cornerOnEdge {
+  right: 8px;
+  bottom: -12px;
+}
+
+.widthHandle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 14px;
+  z-index: 7;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: ew-resize;
+  touch-action: none;
+}
+
+.widthHandle::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 3px;
+  transform: translateX(-50%);
+  background: rgba(0, 240, 255, 0.4);
+  transition: background 0.15s;
+}
+
+.widthHandle:hover::before,
+.widthHandleActive::before {
+  background: #00f0ff;
+}
+
+.widthHandle::after {
+  content: '↔';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 24px;
+  height: 44px;
+  border-radius: 999px;
+  background: #00f0ff;
+  color: #0a0a19;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 44px;
+  text-align: center;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+}
+
+.widthHandleL { left: -7px; }
+.widthHandleR { right: -7px; }
+
+.heightHandle {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -7px;
+  height: 14px;
+  z-index: 7;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: ns-resize;
+  touch-action: none;
+}
+
+.heightHandle::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 3px;
+  transform: translateY(-50%);
+  background: rgba(0, 240, 255, 0.4);
+  transition: background 0.15s;
+}
+
+.heightHandle:hover::before {
+  background: #00f0ff;
+}
+
+.heightHandle::after {
+  content: '↕';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 44px;
+  height: 24px;
+  border-radius: 999px;
+  background: #00f0ff;
+  color: #0a0a19;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 24px;
+  text-align: center;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+}
+
+.grow {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Must match the wrapped bar's own flex-shrink, or it loses its dragged height. */
+.noShrink {
+  flex-shrink: 0;
+}
+
+.dragHandle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 0;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.04);
+  border: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.dragHandle:active {
+  cursor: grabbing;
+}
+
+.sidebarDragging {
+  opacity: 0.45;
+}
+
+.dropZone {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  width: 22%;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed rgba(0, 240, 255, 0.4);
+  background: rgba(0, 240, 255, 0.06);
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.8rem;
+  font-weight: 700;
+  pointer-events: none;
+}
+
+.dropZoneL { left: 0; border-radius: 10px 0 0 10px; }
+.dropZoneR { right: 0; border-radius: 0 10px 10px 0; }
+
+.dropZoneActive {
+  border-color: #00f0ff;
+  background: rgba(0, 240, 255, 0.18);
+}
+
+.rail {
+  position: fixed;
+  top: 64px;
+  /* The 214px cap keeps the rail clear of the save bar and the real now-playing bar. */
+  max-height: calc(100vh - 214px);
+  max-height: calc(100dvh - 214px);
+  width: 280px;
+  z-index: 50;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.6rem;
+  background: rgba(10, 10, 25, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+}
+
+.railLeft {
+  left: 14px;
+}
+
+.railRight {
+  right: 14px;
+}
+
+.railHint {
+  font-size: 0.72rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+  padding: 0.15rem 0.15rem 0.25rem;
+}
+
+.railCard {
+  padding: 0.7rem 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.railCardOn {
+  border-color: #00f0ff;
+  background: rgba(0, 240, 255, 0.06);
+}
+
+.swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.swatch {
+  flex: 1 1 calc(33.333% - 0.27rem);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.55rem 0.3rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.swatch:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.swatchActive {
+  color: var(--text-primary);
+  border-color: #ff2d78;
+  box-shadow: 0 0 0 1px rgba(255, 45, 120, 0.4) inset;
+}
+
+.swatchDot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+}
+
+.swatchClassic { background: linear-gradient(135deg, #ff2d78, #00f0ff); }
+.swatchMinimal { background: linear-gradient(135deg, #aab0c0, #d7dae2); }
+.swatchNeon {
+  background: linear-gradient(135deg, #ff2d78, #00f0ff);
+  box-shadow: 0 0 10px rgba(255, 45, 120, 0.8), 0 0 16px rgba(0, 240, 255, 0.6);
+}
+
+.bar {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 55;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  max-width: min(94vw, 680px);
+  padding: 0.55rem 0.6rem 0.55rem 1.1rem;
+  background: #14142a;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(0, 0, 0, 0.4);
+}
+
+.actionsHint {
+  min-width: 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.actionsHintError {
+  color: #ff6b6b;
+}
+
+.discardBtn {
+  height: 40px;
+  padding: 0 1.1rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.discardBtn:hover:enabled {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: var(--text-primary);
+}
+
+.applyBtn,
+.doneBtn {
+  height: 40px;
+  padding: 0 1.5rem;
+  border-radius: 999px;
+  border: none;
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  cursor: pointer;
+  transition: filter 0.15s, transform 0.05s;
+}
+
+.applyBtn {
+  background: linear-gradient(135deg, #ff2d78, #ff6b35);
+  box-shadow: 0 4px 16px rgba(255, 45, 120, 0.5);
+}
+
+.doneBtn {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  box-shadow: 0 4px 16px rgba(34, 197, 94, 0.45);
+}
+
+.applyBtn:hover:enabled,
+.doneBtn:hover:enabled {
+  filter: brightness(1.08);
+}
+
+.applyBtn:active:enabled,
+.doneBtn:active:enabled {
+  transform: translateY(1px);
+}
+
+.discardBtn:disabled,
+.applyBtn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.boardsPlaceholder {
+  padding: 1.1rem 0.75rem;
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  border: 1px dashed rgba(255, 255, 255, 0.18);
+  border-radius: 10px;
+}
+
+@media (max-width: 860px) {
+  .rail {
+    top: auto;
+    bottom: 64px;
+    left: 10px;
+    right: 10px;
+    width: auto;
+    max-height: 42vh;
+  }
+}
+
+@media (pointer: coarse) {
+  .swatch,
+  .railCard button,
+  .railCard input,
+  .discardBtn,
+  .applyBtn,
+  .doneBtn {
+    min-height: 44px;
+  }
+}

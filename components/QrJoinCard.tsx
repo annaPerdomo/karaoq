@@ -2,6 +2,7 @@ import * as React from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import styles from '../styles/QrJoinCard.module.css';
 import { useT } from '../lib/i18n/I18nProvider';
+import { QR_SIZE_PX } from '../pages/api/types';
 
 interface QrJoinCardProps {
   joinUrl: string;
@@ -10,32 +11,36 @@ interface QrJoinCardProps {
   onClose?: () => void;
   onPrint?: () => void;
   size?: "small" | "normal" | "large";
+  sizePx?: number;
+  resizeHandle?: React.ReactNode;
 }
 
-const QR_PIXELS: Record<"small" | "normal" | "large", number> = {
-  small: 48,
-  normal: 80,
-  large: 120,
-};
-
-const QrJoinCard = ({ joinUrl, joinCode, origin, onClose, onPrint, size = "normal" }: QrJoinCardProps): React.ReactElement => {
+const QrJoinCard = ({ joinUrl, joinCode, origin, onClose, onPrint, size = "normal", sizePx, resizeHandle }: QrJoinCardProps): React.ReactElement => {
   const { t } = useT();
   const displayUrl = (origin || 'karaoq.live').replace(/^https?:\/\/(www\.)?/, '');
 
-  // "or visit {url} and enter {code}" — split on the placeholders so the URL
-  // and code keep their emphasis while translators control word order.
   const altParts = t('qr.orVisit').split(/(\{url\}|\{code\})/);
 
+  // The coarse size buckets remain for displays running code that predates
+  // fine-grained (sizePx) sizing.
+  const scaled = sizePx !== undefined;
+  const textScale = scaled ? Math.min(1.4, 1 + (sizePx / QR_SIZE_PX.normal - 1) * 0.2) : 1;
   return (
-    <div className={`${styles.card} ${size !== 'normal' ? styles[`card${size === 'small' ? 'Small' : 'Large'}`] : ''}`}>
+    <div
+      className={`${styles.card} ${!scaled && size !== 'normal' ? styles[`card${size === 'small' ? 'Small' : 'Large'}`] : ''}`}
+      style={scaled ? ({ '--qr-scale': textScale } as React.CSSProperties) : undefined}
+    >
       <div className={styles.top}>
-        <QRCodeSVG
-          value={joinUrl}
-          size={QR_PIXELS[size]}
-          bgColor="transparent"
-          fgColor="#ffffff"
-          level="M"
-        />
+        <span className={styles.qrBox}>
+          <QRCodeSVG
+            value={joinUrl}
+            size={sizePx ?? QR_SIZE_PX[size]}
+            bgColor="transparent"
+            fgColor="#ffffff"
+            level="M"
+          />
+          {resizeHandle}
+        </span>
         <span className={styles.label}>{t('qr.scanToJoin')}</span>
       </div>
       <span className={styles.alt}>

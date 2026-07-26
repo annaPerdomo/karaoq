@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { trackEvent } from "../../../../lib/analytics";
+import { fairPushSpec, singerKeys } from "../../../../lib/fairQueue";
 import { isValidQueueEntry, MAX_QUEUE_LENGTH, rateLimit } from "../../../../lib/limits";
 import { getRoomsCollection } from "../../../../lib/mongodb";
 import { normalizeRoomId } from "../../../../lib/roomCode";
@@ -31,12 +32,16 @@ export default async function handler(
   }
 
   const { entryId, userName, videoId, songTitle } = body;
-  const entry = { id: entryId, userName, videoId, songTitle };
+  const base = { id: entryId, userName, videoId, songTitle };
 
-  if (!isValidQueueEntry(entry)) {
+  if (!isValidQueueEntry(base)) {
     res.status(400).json({ code: 400, message: "Invalid request." });
     return;
   }
+
+  // Stamped server-side, never taken from the body: queue time decides the running order, so a
+  // client must not be able to backdate itself to the front.
+  const entry = { ...base, addedAt: Date.now() };
 
   if (!rateLimit(req, "song-add", 15, 30_000)) {
     res.status(429).json({ code: 429, message: "Too many songs added, slow down." });
@@ -52,20 +57,75 @@ export default async function handler(
     } else if (room.queue.length >= MAX_QUEUE_LENGTH) {
       res.status(409).json({ code: 409, message: "Queue is full." });
     } else {
-      // Cap enforced in the filter so concurrent adds can't overshoot it
-      // between the length check above and the write.
+      // Cap enforced in the filter so concurrent adds can't overshoot it between the length check
+      // and the write; excluding fair-mode rooms keeps this single write the whole non-fair cost.
+      const cap = { $lt: [{ $size: "$queue" }, MAX_QUEUE_LENGTH] };
+      const plainAppend = {
+        $push: { queue: entry },
+        $set: { lastActivity: new Date() },
+      };
       const result = await collection.updateOne(
-        { id: roomId, $expr: { $lt: [{ $size: "$queue" }, MAX_QUEUE_LENGTH] } },
-        {
-          $push: { queue: entry },
-          $set: { lastActivity: new Date() },
-        }
+        { id: roomId, fairMode: { $ne: true }, $expr: cap },
+        plainAppend
       );
+
       if (result.matchedCount === 0) {
-        res.status(409).json({ code: 409, message: "Queue is full." });
-        return;
+        // Fair mode (or filled up concurrently): insert at the round-robin slot. CAS on the queue
+        // snapshot — $position is only right for the exact array it was computed against.
+        let inserted = false;
+        for (let attempt = 0; attempt < 3 && !inserted; attempt++) {
+          const fresh = await collection.findOne({ id: roomId });
+          if (!fresh) {
+            res.status(404).json({ code: 404, message: "Room not found." });
+            return;
+          }
+          if (fresh.queue.length >= MAX_QUEUE_LENGTH) {
+            res.status(409).json({ code: 409, message: "Queue is full." });
+            return;
+          }
+          if (!fresh.fairMode) break; // toggled off mid-flight — plain append below
+
+          // Fairness only places NEW songs — an add never re-sorts what's queued, so manual host reordering survives.
+          // activeVideoIndex rides in the CAS: video-ended/position advance it WITHOUT touching the
+          // queue array, and a stale $position can land on the now-playing slot.
+          const insert = await collection.updateOne(
+            {
+              id: roomId,
+              queue: fresh.queue,
+              activeVideoIndex: fresh.activeVideoIndex,
+              $expr: cap,
+            },
+            {
+              $push: {
+                queue: fairPushSpec(fresh.queue, fresh.activeVideoIndex, entry),
+              },
+              $set: { lastActivity: new Date() },
+            }
+          );
+          inserted = insert.matchedCount > 0;
+        }
+
+        if (!inserted) {
+          // A song must never be lost to fairness: after CAS exhaustion, fall back to the plain capped append.
+          const fallback = await collection.updateOne(
+            { id: roomId, $expr: cap },
+            plainAppend
+          );
+          if (fallback.matchedCount === 0) {
+            res.status(409).json({ code: 409, message: "Queue is full." });
+            return;
+          }
+        }
       }
-      trackEvent(req, "song_added", { roomId: roomId as string, userName, songTitle, videoId, via: "search" });
+      // singerKeys is what fair rotation splits by, so the duet count matches the turns charged.
+      trackEvent(req, "song_added", {
+        roomId: roomId as string,
+        userName,
+        songTitle,
+        videoId,
+        via: "search",
+        singers: singerKeys(userName).length,
+      });
       res.status(200).json({ code: 200, message: "Song added." });
     }
   } catch (e) {

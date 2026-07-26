@@ -13,24 +13,18 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { QRCodeSVG } from "qrcode.react";
 import styles from "../../styles/Host.module.css";
-import CheerBar from "../CheerBar";
+import p from "../../styles/DisplayDesigner.module.css";
 import BoardsPanel from "../BoardsPanel";
-import BoardsSummary from "../boards/BoardsSummary";
 import SongSearch from "../SongSearch";
-import { QueueEntry } from "../../pages/api/types";
+import { HostConfig, QueueEntry } from "../../pages/api/types";
 import { Boards } from "../../app/queue/useBoards";
 import { useT } from "../../lib/i18n/I18nProvider";
 import { Icons } from "./icons";
 import { formatSongTitle } from "./utils";
 import { SortableQueueItem } from "./SortableQueueItem";
+import { SidebarSections, HostSidebarEdit } from "./SidebarSections";
 
-// The right-hand rail: the Up Next / History tabs, the add-song button and
-// search overlay, the drag-reorderable queue, the history list, and the bottom
-// cluster (cheers, a read-only roll-up of the singer boards, and the join QR
-// shelf). Rendered for host and co-host alike; the bottom cluster guards its
-// host-only bits with `remote`.
 export function QueueSidebar({
   remote,
   roomEmpty,
@@ -46,6 +40,8 @@ export function QueueSidebar({
   upNext,
   historyItems,
   uniqueSingers,
+  fairMode,
+  onToggleFairMode,
   editingId,
   onDragStart,
   onDragEnd,
@@ -71,6 +67,12 @@ export function QueueSidebar({
   onToggleQrShelf,
   onOpenQrModal,
   onSongAdded,
+  hostConfig,
+  hostEdit,
+  hostEditing = false,
+  sideDragProps,
+  widthDragProps,
+  sideDragging = false,
 }: {
   remote: boolean;
   roomEmpty: boolean;
@@ -82,11 +84,12 @@ export function QueueSidebar({
   searchOpen: boolean;
   onToggleSearch: () => void;
   onCloseSearch: () => void;
-  /** Opens the search panel, which is where the interactive boards live. */
   onOpenBoards: () => void;
   upNext: QueueEntry[];
   historyItems: QueueEntry[];
   uniqueSingers: number;
+  fairMode: boolean;
+  onToggleFairMode: () => void;
   editingId: string | null;
   onDragStart: () => void;
   onDragEnd: (event: DragEndEvent) => void;
@@ -112,6 +115,13 @@ export function QueueSidebar({
   onToggleQrShelf: () => void;
   onOpenQrModal: () => void;
   onSongAdded: (entry: QueueEntry) => void;
+  /** Draft config while customizing, server-synced otherwise. */
+  hostConfig: HostConfig;
+  hostEdit?: HostSidebarEdit;
+  hostEditing?: boolean;
+  sideDragProps?: React.ComponentProps<"button">;
+  widthDragProps?: React.ComponentProps<"button">;
+  sideDragging?: boolean;
 }) {
   const { t, tn } = useT();
   const sensors = useSensors(
@@ -121,10 +131,161 @@ export function QueueSidebar({
     }),
   );
 
+  const queueNode = (
+    <>
+      <div className={styles.sidebarHeader}>
+        <div className={styles.sidebarTabs}>
+          <button
+            className={`${styles.sidebarTab} ${sidebarTab === "queue" ? styles.sidebarTabActive : ""}`}
+            onClick={() => onSelectTab("queue")}
+          >
+            {t('host.sidebar.upNext')}
+            {upNext.length > 0 && (
+              <span className={styles.sidebarBadge}>{upNext.length}</span>
+            )}
+          </button>
+          <button
+            className={`${styles.sidebarTab} ${sidebarTab === "history" ? styles.sidebarTabActive : ""}`}
+            onClick={() => onSelectTab("history")}
+          >
+            {t('host.sidebar.history')}
+            {historyItems.length > 0 && (
+              <span className={styles.historyBadge}>{historyItems.length}</span>
+            )}
+          </button>
+        </div>
+        <button
+          className={styles.sidebarCollapseBtn}
+          onClick={onCollapseSidebar}
+          title={t('host.sidebar.hidePanel')}
+          aria-label={t('host.sidebar.hidePanel')}
+        >
+          {Icons.chevronRight}
+        </button>
+      </div>
+
+      <button
+        className={`${styles.addSongBtn} ${searchOpen ? styles.addSongBtnActive : ""}`}
+        onClick={onToggleSearch}
+      >
+        {Icons.plus} {t('host.sidebar.addSong')}
+      </button>
+
+      {sidebarTab === "queue" && (
+        <>
+          <div className={styles.queueStats}>
+            {upNext.length > 0 && (
+              <>
+                <span>{tn('host.stats.songs', upNext.length)}</span>
+                <span className={styles.statDot} />
+                <span>{tn('host.stats.singers', uniqueSingers)}</span>
+              </>
+            )}
+            <button
+              className={`${styles.fairToggle} ${fairMode ? styles.fairToggleOn : ""}`}
+              onClick={onToggleFairMode}
+              aria-pressed={fairMode}
+              title={fairMode ? t('host.settings.fairOn') : t('host.settings.fairOff')}
+            >
+              {Icons.shuffle}
+              {t('host.settings.fair')}
+              <span
+                className={`${styles.fairSwitch} ${fairMode ? styles.fairSwitchOn : ""}`}
+              >
+                <span className={styles.fairSwitchThumb} />
+              </span>
+            </button>
+          </div>
+
+          {upNext.length > 0 ? (
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              // onDragStart pauses polling — a poll landing mid-drag re-renders
+              // the SortableContext and the drop hits the wrong neighbor.
+              onDragStart={onDragStart}
+              onDragEnd={onDragEnd}
+            >
+              <SortableContext
+                items={upNext.map((e) => e.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className={styles.queueList}>
+                  {upNext.map((item, i) => (
+                    <SortableQueueItem
+                      key={item.id}
+                      item={item}
+                      index={i}
+                      isFirst={i === 0}
+                      editing={editingId === item.id}
+                      onMoveTop={() => onMoveTop(item.id)}
+                      onEdit={() => onToggleEdit(item.id)}
+                      onEditSave={(name) => onEditSave(item.id, name)}
+                      onRemove={() => onRequestRemove(item.id)}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
+          ) : (
+            <p className={styles.emptyQueue}>{t('host.sidebar.noQueued')}</p>
+          )}
+        </>
+      )}
+
+      {sidebarTab === "history" && (
+        <div className={styles.historyList}>
+          {historyItems.length > 0 ? (
+            [...historyItems].reverse().map((item, i) => (
+              <div key={item.id} className={styles.historyItem}>
+                <span className={styles.historyNum}>{historyItems.length - i}</span>
+                <div className={styles.queueInfo}>
+                  <div className={styles.queueArtist} title={item.userName}>
+                    {item.userName}
+                  </div>
+                  <div
+                    className={styles.queueSong}
+                    title={formatSongTitle(item.songTitle)}
+                  >
+                    {formatSongTitle(item.songTitle)}
+                  </div>
+                </div>
+                <button
+                  className={styles.replayBtn}
+                  onClick={() => onReplayFromHistory(item.id)}
+                  title={t('host.history.restoreTitle')}
+                  aria-label={t('host.history.restoreTitle')}
+                >
+                  {Icons.replay}
+                  <span className={styles.replayBtnLabel}>{t('host.history.restore')}</span>
+                </button>
+              </div>
+            ))
+          ) : (
+            <p className={styles.emptyQueue}>{t('host.history.empty')}</p>
+          )}
+        </div>
+      )}
+    </>
+  );
+
   return (
     <div
-      className={`${styles.sidebar} ${sidebarCollapsed ? styles.sidebarCollapsed : ""} ${!remote && roomEmpty ? styles.sidebarEmptyMobile : ""}`}
+      className={`${styles.sidebar} ${sidebarCollapsed ? styles.sidebarCollapsed : ""} ${!remote && roomEmpty ? styles.sidebarEmptyMobile : ""} ${sideDragging ? p.sidebarDragging : ""}`}
     >
+      {hostEditing && !sidebarCollapsed && (
+        <>
+          <button className={p.dragHandle} {...sideDragProps}>
+            ⋮⋮ {t('customize.dragHint')}
+          </button>
+          <button
+            className={`${p.widthHandle} ${hostConfig.sidebarPosition === "right" ? p.widthHandleL : p.widthHandleR}`}
+            title={t('customize.dragWidth')}
+            aria-label={t('customize.dragWidth')}
+            {...widthDragProps}
+          />
+        </>
+      )}
       {sidebarCollapsed ? (
         <button
           className={styles.sidebarReopen}
@@ -142,233 +303,28 @@ export function QueueSidebar({
         </button>
       ) : (
         <>
-          <div className={styles.sidebarHeader}>
-            <div className={styles.sidebarTabs}>
-              <button
-                className={`${styles.sidebarTab} ${sidebarTab === "queue" ? styles.sidebarTabActive : ""}`}
-                onClick={() => onSelectTab("queue")}
-              >
-                {t('host.sidebar.upNext')}
-                {upNext.length > 0 && (
-                  <span className={styles.sidebarBadge}>
-                    {upNext.length}
-                  </span>
-                )}
-              </button>
-              <button
-                className={`${styles.sidebarTab} ${sidebarTab === "history" ? styles.sidebarTabActive : ""}`}
-                onClick={() => onSelectTab("history")}
-              >
-                {t('host.sidebar.history')}
-                {historyItems.length > 0 && (
-                  <span className={styles.historyBadge}>
-                    {historyItems.length}
-                  </span>
-                )}
-              </button>
-            </div>
-            <button
-              className={styles.sidebarCollapseBtn}
-              onClick={onCollapseSidebar}
-              title={t('host.sidebar.hidePanel')}
-              aria-label={t('host.sidebar.hidePanel')}
-            >
-              {Icons.chevronRight}
-            </button>
-          </div>
-
-          <button
-            className={`${styles.addSongBtn} ${searchOpen ? styles.addSongBtnActive : ""}`}
-            onClick={onToggleSearch}
-          >
-            {Icons.plus} {t('host.sidebar.addSong')}
-          </button>
-
-          {sidebarTab === "queue" && (
-            <>
-              {upNext.length > 0 && (
-                <div className={styles.queueStats}>
-                  <span>
-                    {tn('host.stats.songs', upNext.length)}
-                  </span>
-                  <span className={styles.statDot} />
-                  <span>
-                    {tn('host.stats.singers', uniqueSingers)}
-                  </span>
-                </div>
-              )}
-
-              {upNext.length > 0 ? (
-                <DndContext
-                  sensors={sensors}
-                  collisionDetection={closestCenter}
-                  // Pause polling the moment a drag starts — a poll landing
-                  // mid-drag re-renders the SortableContext and the drop hits
-                  // the wrong neighbor.
-                  onDragStart={onDragStart}
-                  onDragEnd={onDragEnd}
-                >
-                  <SortableContext
-                    items={upNext.map((e) => e.id)}
-                    strategy={verticalListSortingStrategy}
-                  >
-                    <div className={styles.queueList}>
-                      {upNext.map((item, i) => (
-                        <SortableQueueItem
-                          key={item.id}
-                          item={item}
-                          index={i}
-                          isFirst={i === 0}
-                          editing={editingId === item.id}
-                          onMoveTop={() => onMoveTop(item.id)}
-                          onEdit={() => onToggleEdit(item.id)}
-                          onEditSave={(name) => onEditSave(item.id, name)}
-                          onRemove={() => onRequestRemove(item.id)}
-                        />
-                      ))}
-                    </div>
-                  </SortableContext>
-                </DndContext>
-              ) : (
-                <p className={styles.emptyQueue}>{t('host.sidebar.noQueued')}</p>
-              )}
-            </>
-          )}
-
-          {sidebarTab === "history" && (
-            <div className={styles.historyList}>
-              {historyItems.length > 0 ? (
-                [...historyItems].reverse().map((item, i) => (
-                  <div key={item.id} className={styles.historyItem}>
-                    <span className={styles.historyNum}>
-                      {historyItems.length - i}
-                    </span>
-                    <div className={styles.queueInfo}>
-                      <div className={styles.queueArtist} title={item.userName}>
-                        {item.userName}
-                      </div>
-                      <div
-                        className={styles.queueSong}
-                        title={formatSongTitle(item.songTitle)}
-                      >
-                        {formatSongTitle(item.songTitle)}
-                      </div>
-                    </div>
-                    <button
-                      className={styles.replayBtn}
-                      onClick={() => onReplayFromHistory(item.id)}
-                      title={t('host.history.restoreTitle')}
-                      aria-label={t('host.history.restoreTitle')}
-                    >
-                      {Icons.replay}
-                      <span className={styles.replayBtnLabel}>{t('host.history.restore')}</span>
-                    </button>
-                  </div>
-                ))
-              ) : (
-                <p className={styles.emptyQueue}>{t('host.history.empty')}</p>
-              )}
-            </div>
-          )}
-
-          {/* Bottom cluster, pinned below the queue: contextual cheers, the
-              read-only boards roll-up (tapping it opens the search panel, where
-              the interactive boards live), and the "Scan to join" QR card, which
-              a host can tuck away (remembered per-room). */}
-          <div className={styles.sidebarBottom}>
-            {!remote && reactionsOn && isPlaying && currentSong && (
-              <>
-                <button
-                  className={`${styles.drawerToggle} ${cheersOpen ? styles.drawerToggleOpen : ""}`}
-                  onClick={onToggleCheers}
-                  aria-expanded={cheersOpen}
-                >
-                  <svg
-                    className={styles.drawerCaret}
-                    width="10"
-                    height="6"
-                    viewBox="0 0 10 6"
-                    fill="currentColor"
-                  >
-                    <path d="M0 0l5 6 5-6z" />
-                  </svg>
-                  {t('host.cheers')}
-                </button>
-                {cheersOpen && (
-                  <div className={styles.cheersLive}>
-                    <CheerBar
-                      onReaction={onSendReaction}
-                      cooldown={reactionCooldown}
-                      lastSentEmoji={lastSentEmoji}
-                      compact
-                    />
-                  </div>
-                )}
-              </>
-            )}
-            {joinCode && (
-              <div className={styles.boardsShelf}>
-                <BoardsSummary
-                  singWithMe={boards.singWithMe}
-                  suggestions={boards.suggestions}
-                  onOpen={onOpenBoards}
-                />
-              </div>
-            )}
-            {!remote && joinUrl && (
-              <>
-                <button
-                  className={`${styles.drawerToggle} ${qrShelfOpen ? styles.drawerToggleOpen : ""}`}
-                  onClick={onToggleQrShelf}
-                  aria-expanded={qrShelfOpen}
-                >
-                  <svg
-                    className={styles.drawerCaret}
-                    width="10"
-                    height="6"
-                    viewBox="0 0 10 6"
-                    fill="currentColor"
-                  >
-                    <path d="M0 0l5 6 5-6z" />
-                  </svg>
-                  {t('host.scanToJoin')}
-                </button>
-                {qrShelfOpen && (
-                  <div className={styles.qrShelf}>
-                    <button
-                      className={styles.qrShelfThumb}
-                      onClick={onOpenQrModal}
-                      title={t('host.qr.enlarge')}
-                      aria-label={t('host.qr.enlarge')}
-                    >
-                      <QRCodeSVG
-                        value={joinUrl}
-                        size={72}
-                        bgColor="transparent"
-                        fgColor="#ffffff"
-                        level="M"
-                      />
-                    </button>
-                    <div className={styles.qrShelfInfo}>
-                      <span className={styles.qrShelfHint}>
-                        {t('host.qr.tapEnlarge')}
-                      </span>
-                      <span className={styles.qrShelfAlt}>
-                        {t('host.qr.orVisitEnter').split(/(\{url\})/).map((part, i) =>
-                          part === '{url}'
-                            ? <strong key={i}>{displayUrl}</strong>
-                            : <React.Fragment key={i}>{part}</React.Fragment>
-                        )}
-                      </span>
-                      <span className={styles.qrShelfCode}>
-                        {(joinCode || "").toUpperCase()}
-                      </span>
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
+          <SidebarSections
+            queueNode={queueNode}
+            remote={remote}
+            reactionsOn={reactionsOn}
+            isPlaying={isPlaying}
+            currentSong={currentSong}
+            cheersOpen={cheersOpen}
+            onToggleCheers={onToggleCheers}
+            onSendReaction={onSendReaction}
+            reactionCooldown={reactionCooldown}
+            lastSentEmoji={lastSentEmoji}
+            joinCode={joinCode}
+            boards={boards}
+            onOpenBoards={onOpenBoards}
+            joinUrl={joinUrl}
+            displayUrl={displayUrl}
+            qrShelfOpen={qrShelfOpen}
+            onToggleQrShelf={onToggleQrShelf}
+            onOpenQrModal={onOpenQrModal}
+            config={hostConfig}
+            edit={hostEdit}
+          />
 
           {searchOpen && joinCode && (
             <div className={styles.searchOverlay}>

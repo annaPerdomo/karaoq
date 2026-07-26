@@ -1,6 +1,11 @@
 import { NextApiRequest, NextApiResponse } from "next";
-import { DisplayConfig } from "../../types";
-import { isValidDisplayConfig } from "../../../../lib/limits";
+import {
+  DisplayConfig,
+  displayConfigChangedFields,
+  normalizeDisplayConfig,
+} from "../../types";
+import { trackEvent } from "../../../../lib/analytics";
+import { isValidDisplayConfig, rateLimit } from "../../../../lib/limits";
 import { getRoomsCollection } from "../../../../lib/mongodb";
 import { normalizeRoomId } from "../../../../lib/roomCode";
 
@@ -33,18 +38,51 @@ export default async function handler(
     return;
   }
 
-  const config: DisplayConfig = { ...body, welcomeLine: body.welcomeLine.trim() };
+  // Absent means "leave boardsOnDisplay alone" (the host page's own writes).
+  const boardsParam = req.query.boardsOnDisplay;
+  if (boardsParam !== undefined && boardsParam !== "true" && boardsParam !== "false") {
+    res.status(400).json({ code: 400, message: "Invalid boardsOnDisplay." });
+    return;
+  }
+  const boardsOnDisplay =
+    boardsParam === undefined ? undefined : boardsParam === "true";
+
+  // Every accepted save also writes an analytics doc carrying the whole config.
+  if (!rateLimit(req, "display-config", 20, 60_000)) {
+    res.status(429).json({ code: 429, message: "Too many saves, slow down." });
+    return;
+  }
+
+  // Older host clients POST configs without the drag-era fields — store them fully-populated.
+  const config: DisplayConfig = {
+    ...normalizeDisplayConfig(body),
+    bannerLine: body.bannerLine.trim(),
+  };
 
   try {
     const collection = await getRoomsCollection();
     const result = await collection.updateOne(
       { id: roomId },
-      { $set: { displayConfig: config, lastActivity: new Date() } }
+      {
+        $set: {
+          displayConfig: config,
+          lastActivity: new Date(),
+          ...(boardsOnDisplay === undefined ? {} : { boardsOnDisplay }),
+        },
+      }
     );
     if (result.matchedCount === 0) {
       res.status(404).json({ code: 404, message: "Room not found." });
       return;
     }
+    // boardsOnDisplay defaults to ON, so hiding boards is the deviation.
+    const changedFields: string[] = displayConfigChangedFields(config);
+    if (boardsOnDisplay === false) changedFields.push("boardsOnDisplay");
+    await trackEvent(req, "display_config_saved", {
+      roomId,
+      changedFields,
+      displayConfig: config,
+    });
     res.status(200).json({ code: 200, message: "Display config updated." });
   } catch (e) {
     console.error(e);

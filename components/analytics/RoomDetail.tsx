@@ -1,88 +1,21 @@
 import * as React from 'react';
 import styles from '../../styles/Analytics.module.css';
+import DetailRows from './DetailRows';
+import LayoutPreview from './LayoutPreview';
+import {
+  fairLabel,
+  fairTitle,
+  formatTime,
+  languageLabel,
+  locationLabel,
+  roomLanguageLabel,
+  roomLanguageTitle,
+  SWM_LABELS,
+  VIA_LABELS,
+  type RoomDetailData,
+} from './roomDetailLabels';
 
-interface Person {
-  userName: string | null;
-  role: string | null;
-  firstSeen: string | null;
-  lastSeen: string | null;
-  country: string | null;
-  city: string | null;
-}
-
-interface SongRow {
-  userName: string | null;
-  songTitle: string | null;
-  videoId: string | null;
-  via: string;
-  timestamp: string;
-}
-
-interface RequestRow {
-  userName: string | null;
-  songTitle: string | null;
-  videoId: string | null;
-  timestamp: string;
-}
-
-interface SingWithMeRow {
-  kind: 'posted' | 'joined' | 'queued';
-  userName: string | null;
-  songTitle: string | null;
-  videoId: string | null;
-  timestamp: string;
-}
-
-interface RoomDetailData {
-  roomId: string;
-  people: Person[];
-  songs: SongRow[];
-  requests: RequestRow[];
-  singWithMe: SingWithMeRow[];
-  counts: {
-    people: number;
-    songs: number;
-    requests: number;
-    singWithMe: number;
-    reactions: number;
-    searches: number;
-  };
-}
-
-type Tab = 'people' | 'songs' | 'requests' | 'singWithMe';
-
-function safeDecode(value: string): string {
-  try {
-    return decodeURIComponent(value);
-  } catch {
-    return value;
-  }
-}
-
-function formatTime(iso: string | null): string {
-  if (!iso) return '—';
-  const d = new Date(iso);
-  return d.toLocaleDateString('en-US', {
-    month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
-  });
-}
-
-const VIA_LABELS: Record<string, string> = {
-  search: 'Search',
-  board_claim: 'Request',
-  singwithme: 'Sing With Me',
-};
-
-const SWM_LABELS: Record<string, string> = {
-  posted: 'Posted',
-  joined: 'Joined',
-  queued: 'Queued',
-};
-
-function locationLabel(p: Person): string {
-  if (p.city) return `${safeDecode(p.city)}, ${p.country ?? ''}`.replace(/, $/, '');
-  return p.country || '';
-}
+type Tab = 'people' | 'songs' | 'requests' | 'singWithMe' | 'layout';
 
 const RoomDetail = ({
   roomId,
@@ -119,7 +52,6 @@ const RoomDetail = ({
     };
   }, [roomId, secret]);
 
-  // Close on Escape for keyboard users.
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -188,89 +120,75 @@ const RoomDetail = ({
               >
                 Sing With Me {c ? `(${c.singWithMe})` : ''}
               </button>
+              <button
+                className={`${styles.detailTab} ${tab === 'layout' ? styles.detailTabActive : ''}`}
+                onClick={() => setTab('layout')}
+              >
+                Layout
+              </button>
             </div>
 
             <div className={styles.detailBody}>
               {tab === 'people' && (
-                data.people.length === 0 ? (
-                  <p className={styles.detailEmpty}>No one joined this room.</p>
-                ) : (
-                  <ul className={styles.detailList}>
-                    {data.people.map((p, i) => (
-                      <li key={i} className={styles.detailItem}>
-                        <div className={styles.detailItemMain}>
-                          <span className={styles.detailName}>{p.userName || 'Anonymous'}</span>
-                          {p.role && <span className={styles.roleBadge}>{p.role}</span>}
-                        </div>
-                        <div className={styles.detailItemMeta}>
-                          {locationLabel(p) && <span>{locationLabel(p)}</span>}
-                          <span>{formatTime(p.firstSeen)}</span>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                )
+                <DetailRows
+                  empty="No one joined this room."
+                  rows={data.people.map((p) => ({
+                    title: p.userName || 'Anonymous',
+                    badge: p.role || undefined,
+                    badgeKind: 'role' as const,
+                    meta: [
+                      locationLabel(p),
+                      languageLabel(p),
+                      formatTime(p.firstSeen),
+                    ],
+                  }))}
+                />
               )}
 
               {tab === 'songs' && (
-                data.songs.length === 0 ? (
-                  <p className={styles.detailEmpty}>No songs added.</p>
-                ) : (
-                  <ul className={styles.detailList}>
-                    {data.songs.map((s, i) => (
-                      <li key={i} className={styles.detailItem}>
-                        <div className={styles.detailItemMain}>
-                          <span className={styles.detailName}>{s.songTitle || 'Untitled'}</span>
-                          <span className={styles.viaBadge}>{VIA_LABELS[s.via] || s.via}</span>
-                        </div>
-                        <div className={styles.detailItemMeta}>
-                          <span>{s.userName || 'Anonymous'}</span>
-                          <span>{formatTime(s.timestamp)}</span>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                )
+                <DetailRows
+                  empty="No songs added."
+                  rows={data.songs.map((s) => ({
+                    title: s.songTitle || 'Untitled',
+                    badge: VIA_LABELS[s.via] || s.via,
+                    meta: [s.userName || 'Anonymous', formatTime(s.timestamp)],
+                  }))}
+                />
               )}
 
               {tab === 'requests' && (
-                data.requests.length === 0 ? (
-                  <p className={styles.detailEmpty}>No requests posted.</p>
-                ) : (
-                  <ul className={styles.detailList}>
-                    {data.requests.map((r, i) => (
-                      <li key={i} className={styles.detailItem}>
-                        <div className={styles.detailItemMain}>
-                          <span className={styles.detailName}>{r.songTitle || 'Untitled'}</span>
-                        </div>
-                        <div className={styles.detailItemMeta}>
-                          <span>{r.userName || 'Anonymous'}</span>
-                          <span>{formatTime(r.timestamp)}</span>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                )
+                <DetailRows
+                  empty="No requests posted."
+                  rows={data.requests.map((r) => ({
+                    title: r.songTitle || 'Untitled',
+                    meta: [r.userName || 'Anonymous', formatTime(r.timestamp)],
+                  }))}
+                />
               )}
 
               {tab === 'singWithMe' && (
-                data.singWithMe.length === 0 ? (
-                  <p className={styles.detailEmpty}>No sing-with-me activity.</p>
+                <DetailRows
+                  empty="No sing-with-me activity."
+                  rows={data.singWithMe.map((s) => ({
+                    title: s.songTitle || 'Untitled',
+                    badge: SWM_LABELS[s.kind] || s.kind,
+                    meta: [s.userName || 'Anonymous', formatTime(s.timestamp)],
+                  }))}
+                />
+              )}
+
+              {tab === 'layout' && (
+                data.layout ? (
+                  <LayoutPreview
+                    display={data.layout.display}
+                    host={data.layout.host}
+                    displaySaves={data.layout.displaySaves}
+                    hostSaves={data.layout.hostSaves}
+                  />
                 ) : (
-                  <ul className={styles.detailList}>
-                    {data.singWithMe.map((s, i) => (
-                      <li key={i} className={styles.detailItem}>
-                        <div className={styles.detailItemMain}>
-                          <span className={styles.detailName}>{s.songTitle || 'Untitled'}</span>
-                          <span className={styles.viaBadge}>{SWM_LABELS[s.kind] || s.kind}</span>
-                        </div>
-                        <div className={styles.detailItemMeta}>
-                          <span>{s.userName || 'Anonymous'}</span>
-                          <span>{formatTime(s.timestamp)}</span>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
+                  <p className={styles.detailEmpty}>
+                    No layout recorded for this room.
+                  </p>
                 )
               )}
             </div>
@@ -278,6 +196,26 @@ const RoomDetail = ({
             {c && (
               <div className={styles.detailFooter}>
                 {c.reactions} reactions · {c.searches} searches
+                {' · '}
+                <span
+                  className={styles.langChip}
+                  title={roomLanguageTitle(data.languages)}
+                >
+                  {roomLanguageLabel(data.languages)}
+                </span>
+                {data.fairRotation && (
+                  <>
+                    {' · '}
+                    <span
+                      className={`${styles.fairChip} ${
+                        data.fairRotation.final === true ? styles.fairChipOn : ''
+                      }`}
+                      title={fairTitle(data.fairRotation)}
+                    >
+                      {fairLabel(data.fairRotation)}
+                    </span>
+                  </>
+                )}
               </div>
             )}
           </>

@@ -47,4 +47,7 @@ NEXT_STEPS.md
 /promo
 
 # local prompt drafts
-/prompts 
+/prompts
+
+# claude code local tooling (skills, settings, worktrees)
+/.claude/ 

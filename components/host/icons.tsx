@@ -130,6 +130,21 @@ export const Icons = {
       <polyline points="7,4 12,9 7,14" />
     </svg>
   ),
+  brush: (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M9.06 11.9l8.07-8.06a2.85 2.85 0 114.03 4.03l-8.06 8.08" />
+      <path d="M7.07 14.94c-1.66 0-3 1.35-3 3.02 0 1.33-1.18 2.02-2.07 2.02 1.22 1.61 3.3 2.02 5.07 2.02a4.02 4.02 0 003.02-6.72 3 3 0 00-3.02-.34z" />
+    </svg>
+  ),
   gear: (
     <svg
       width="20"
@@ -175,6 +190,24 @@ export const Icons = {
       <rect x="2" y="3" width="14" height="9" rx="1.5" />
       <path d="M9 12v3" />
       <path d="M5 15.5h8" />
+    </svg>
+  ),
+  shuffle: (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 18 18"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M12.5 3.5h3v3" />
+      <path d="M12.5 14.5h3v-3" />
+      <path d="M2.5 4h2.2c1 0 1.9.5 2.5 1.3l3.6 5.4c.6.8 1.5 1.3 2.5 1.3h2.2" />
+      <path d="M2.5 14h2.2c1 0 1.9-.5 2.5-1.3l.9-1.3" />
+      <path d="M10.4 6.6l.4-.6c.6-.8 1.5-1.3 2.5-1.3h2.2" />
     </svg>
   ),
   users: (

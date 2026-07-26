@@ -32,9 +32,17 @@
   gap: 1rem;
 }
 
+/* Position context for Customize mode's corner resize grip. */
+.qrBox {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+/* --qr-scale is set inline from the host's dragged QR size. */
 .label {
-  font-size: 0.65rem;
-  letter-spacing: 2px;
+  font-size: calc(0.65rem * var(--qr-scale, 1));
+  letter-spacing: calc(2px * var(--qr-scale, 1));
   color: #ffd700;
   text-transform: uppercase;
   font-weight: 700;
@@ -42,7 +50,7 @@
 }
 
 .alt {
-  font-size: 0.75rem;
+  font-size: calc(0.75rem * var(--qr-scale, 1));
   color: var(--text-muted);
   line-height: 1.4;
 }
