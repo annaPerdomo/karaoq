@@ -3,6 +3,7 @@ import styles from '../styles/Analytics.module.css';
 import BarChart from './analytics/BarChart';
 import LanguagesPanel, { type LanguageData } from './analytics/LanguagesPanel';
 import RoomDetail from './analytics/RoomDetail';
+import { LOCALE_LABELS, isLocale } from '../lib/i18n/config';
 
 interface DayCount {
   _id: string;
@@ -120,6 +121,8 @@ interface RoomRow {
   fairMode?: boolean | null;
   /** Whether the host ever changed it, vs running on the default. */
   fairToggled?: boolean;
+  /** UI language the room was created in; null where it predates recording. */
+  locale?: string | null;
 }
 
 const ROOMS_PAGE_SIZE = 25;
@@ -1082,6 +1085,7 @@ const Analytics = (): React.ReactElement => {
                     <span>Location</span>
                     <span>Songs</span>
                     <span>People</span>
+                    <span>Lang</span>
                     <span>Fair</span>
                     <span></span>
                   </div>
@@ -1104,6 +1108,20 @@ const Analytics = (): React.ReactElement => {
                       </span>
                       <span data-label="Songs">{r.songs}</span>
                       <span data-label="People">{r.participants}</span>
+                      <span data-label="Lang">
+                        {/* The code, not the endonym — the column is narrow and
+                            a scan wants "ja" more than it wants 日本語. */}
+                        <span
+                          className={styles.langCell}
+                          title={
+                            r.locale
+                              ? `Room created in ${isLocale(r.locale) ? LOCALE_LABELS[r.locale] : r.locale}`
+                              : 'Created before the language was recorded'
+                          }
+                        >
+                          {r.locale ?? '—'}
+                        </span>
+                      </span>
                       <span data-label="Fair">
                         {r.fairMode === null || r.fairMode === undefined ? (
                           <span className={styles.fairCell} title="Created before fair rotation was recorded">—</span>

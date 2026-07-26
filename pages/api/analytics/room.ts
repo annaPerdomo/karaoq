@@ -1,6 +1,13 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { getAnalyticsDb } from "../../../lib/mongodb";
 import type { AnalyticsEvent } from "../../../lib/analytics";
+import { CHOSEN_LOCALE_SOURCES } from "../../../lib/i18n/activeLocale";
+import {
+  normalizeDisplayConfig,
+  normalizeHostConfig,
+  type DisplayConfig,
+  type HostConfig,
+} from "../types";
 
 // Per-room detail: who joined, what they added, what they requested, and
 // their sing-with-me activity. Read-only view for the admin dashboard.
@@ -40,6 +47,10 @@ async function handleGet(
           // change after that is a fair_mode_toggled.
           "room_created",
           "fair_mode_toggled",
+          // Each carries the whole config it saved, so the last one is the
+          // layout the room ended up running.
+          "display_config_saved",
+          "host_config_saved",
         ],
       },
     })
@@ -56,7 +67,32 @@ async function handleGet(
     lastSeen: s.lastSeen ?? null,
     country: s.country ?? null,
     city: s.city ?? null,
+    // The language this person's tab was rendering in, and how it got there —
+    // a deliberate pick reads very differently from a browser/geo guess.
+    locale: s.locale ?? null,
+    localeSource: s.localeSource ?? null,
   }));
+
+  // Per-language head count for the room, so a night where the host ran in
+  // Japanese while their singers sat in English is visible as such instead of
+  // averaging into one number. Sorted commonest-first.
+  const localeTally = new Map<string, { people: number; chosen: number }>();
+  for (const s of sessions) {
+    if (typeof s.locale !== "string") continue;
+    const row = localeTally.get(s.locale) ?? { people: 0, chosen: 0 };
+    row.people += 1;
+    if (CHOSEN_LOCALE_SOURCES.includes(s.localeSource)) row.chosen += 1;
+    localeTally.set(s.locale, row);
+  }
+  const languages = Array.from(localeTally, ([locale, row]) => ({
+    locale,
+    ...row,
+  })).sort((a, b) => b.people - a.people);
+
+  // The language the room was opened in — the host's first choice, which is
+  // what the room's own copy (join screen, TV) was rendered in.
+  const createdLocale =
+    events.find((e) => e.type === "room_created")?.locale ?? null;
 
   const songs: unknown[] = [];
   const requests: unknown[] = [];
@@ -66,6 +102,12 @@ async function handleGet(
   let searches = 0;
   // undefined = the room predates the flag, so we genuinely don't know.
   let fairStarted: boolean | undefined;
+  // The last layout each surface was saved with; null when the host never
+  // opened Customize on that surface, which is its own useful answer.
+  let displayConfig: DisplayConfig | null = null;
+  let hostConfig: HostConfig | null = null;
+  let displaySaves = 0;
+  let hostSaves = 0;
 
   for (const e of events) {
     switch (e.type) {
@@ -111,6 +153,21 @@ async function handleGet(
           fairToggles.push({ enabled: e.fairMode, timestamp: e.timestamp });
         }
         break;
+      case "display_config_saved":
+        // The boards-on-TV toggle writes this event with changedFields only,
+        // so a config-less event must not blank the layout a real save left.
+        displaySaves += 1;
+        if (e.displayConfig) {
+          // Normalizing here means a config saved before a field existed (or
+          // still carrying a retired one) previews as today's shape rather
+          // than rendering half-empty.
+          displayConfig = normalizeDisplayConfig(e.displayConfig);
+        }
+        break;
+      case "host_config_saved":
+        hostSaves += 1;
+        if (e.hostConfig) hostConfig = normalizeHostConfig(e.hostConfig);
+        break;
     }
   }
 
@@ -130,6 +187,17 @@ async function handleGet(
       started: fairStarted ?? null,
       final: fairFinal ?? null,
       toggles: fairToggles,
+    },
+    layout: {
+      display: displayConfig,
+      host: hostConfig,
+      displaySaves,
+      hostSaves,
+    },
+    languages: {
+      /** null on rooms created before the language was recorded. */
+      created: createdLocale,
+      byLocale: languages,
     },
     counts: {
       people: people.length,

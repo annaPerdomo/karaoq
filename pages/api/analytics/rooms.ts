@@ -114,6 +114,9 @@ export default async function handler(
               ],
             },
             fairToggled: { $gt: [{ $size: "$lastFairToggle" }, 0] },
+            // The language the host opened the room in. Rides on room_created
+            // itself, so it needs no lookup. Null before it was recorded.
+            locale: { $ifNull: ["$locale", null] },
           },
         },
       ])

@@ -469,7 +469,7 @@
 
 .roomHeader {
   display: grid;
-  grid-template-columns: 70px 1fr 1fr 60px 60px 54px 72px;
+  grid-template-columns: 70px 1fr 1fr 60px 60px 46px 54px 72px;
   gap: 0.5rem;
   padding: 0.5rem 0.75rem;
   color: var(--text-muted);
@@ -481,7 +481,7 @@
 
 .roomRow {
   display: grid;
-  grid-template-columns: 70px 1fr 1fr 60px 60px 54px 72px;
+  grid-template-columns: 70px 1fr 1fr 60px 60px 46px 54px 72px;
   gap: 0.5rem;
   padding: 0.6rem 0.75rem;
   background: var(--bg-secondary);
@@ -938,4 +938,181 @@
 
 .fairCellOn {
   color: #40dca0;
+}
+
+/* ─── Layout preview ─── Wireframes of the layout a room's host saved, drawn
+   to the proportions the stored pixel sizes produce on a real screen. */
+.lpGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.lpSurface {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.lpHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.lpTitle {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.lpTheme {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  color: #60a5fa;
+  background: rgba(96, 165, 250, 0.14);
+}
+
+/* 16:9 so the wireframe reads as a screen at a glance. Row-reverse puts the
+   sidebar on the left without reordering the markup. */
+.lpScreen {
+  display: flex;
+  aspect-ratio: 16 / 9;
+  width: 100%;
+  gap: 3px;
+  padding: 3px;
+  border-radius: 6px;
+  background: var(--bg-secondary);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.lpScreenLeft {
+  flex-direction: row-reverse;
+}
+
+.lpMain {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.lpStage {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+  font-size: 0.65rem;
+  color: var(--text-muted);
+}
+
+/* Height is set inline from the host's dragged pixel size — the whole point
+   of the preview is that this bar is visibly the size they chose. */
+.lpBar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  background: rgba(244, 114, 182, 0.16);
+  border: 1px solid rgba(244, 114, 182, 0.35);
+  font-size: 0.62rem;
+  color: #f9a8d4;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+/* Width is set inline, same reasoning as the bar's height. */
+.lpSidebar {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.lpBlock {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.3rem 0.2rem;
+  border-radius: 4px;
+  background: rgba(167, 139, 250, 0.14);
+  border: 1px solid rgba(167, 139, 250, 0.3);
+  font-size: 0.6rem;
+  line-height: 1.2;
+  color: #c4b5fd;
+  text-align: center;
+  overflow: hidden;
+  word-break: break-word;
+}
+
+.lpBlockGrow {
+  flex: 1;
+}
+
+.lpBlockEmpty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  border: 1px dashed rgba(255, 255, 255, 0.12);
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.lpMeta {
+  margin: 0;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+.lpHidden {
+  margin: 0;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  opacity: 0.75;
+}
+
+.lpFootnote {
+  margin: 0;
+  font-size: 0.66rem;
+  line-height: 1.4;
+  color: var(--text-muted);
+  opacity: 0.8;
+}
+
+/* Room language in the detail footer. Same chip shape as the fair-rotation
+   one beside it, in the accent the Languages tab uses. */
+.langChip {
+  display: inline-block;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid rgba(96, 165, 250, 0.35);
+  background: rgba(96, 165, 250, 0.12);
+  color: #93c5fd;
+  cursor: help;
+}
+
+/* Room language in the rooms table. The locale code, lowercase and muted —
+   a scan column, not a headline. */
+.langCell {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  cursor: help;
 }
