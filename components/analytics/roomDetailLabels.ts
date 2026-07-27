@@ -133,8 +133,54 @@ export function locationLabel(p: Person): string {
   return p.country || '';
 }
 
-function localeName(code: string): string {
+export function localeName(code: string): string {
   return isLocale(code) ? LOCALE_LABELS[code] : code;
+}
+
+/** One row of "who ran the room in what". The rooms list omits `chosen`. */
+export interface LocaleCount {
+  locale: string;
+  people: number;
+}
+
+function byPeopleDesc<T extends LocaleCount>(rows: T[]): T[] {
+  return [...rows].sort((a, b) => b.people - a.people || a.locale.localeCompare(b.locale));
+}
+
+/** "English 3 · Português 1" — the languages people actually ran in, biggest group first. */
+export function languageMixLabel(rows: LocaleCount[]): string {
+  return byPeopleDesc(rows)
+    .map((r) => `${localeName(r.locale)} ${r.people}`)
+    .join(' · ');
+}
+
+/** Table-cell form: the dominant language's code plus how many others, e.g. "EN +1". */
+export function languageMixShort(rows: LocaleCount[]): string {
+  const sorted = byPeopleDesc(rows);
+  if (sorted.length === 0) return '—';
+  const head = sorted[0].locale.toUpperCase();
+  return sorted.length === 1 ? head : `${head} +${sorted.length - 1}`;
+}
+
+/**
+ * Tooltip for a room's language, for both the rooms table and the detail footer. Leads with the
+ * observed mix and treats the room's creation language as the secondary fact, because that one is
+ * absent on most rooms — see the note on `locale` in pages/api/analytics/rooms.ts.
+ */
+export function languageMixTitle(
+  rows: LocaleCount[],
+  created: string | null
+): string {
+  const lines = byPeopleDesc(rows).map(
+    (r) => `${localeName(r.locale)}: ${r.people} ${r.people === 1 ? 'person' : 'people'}`
+  );
+  if (lines.length === 0) lines.push('No participant language was recorded.');
+  lines.push(
+    created
+      ? `Room created in ${localeName(created)}.`
+      : 'The language the room was created in was not recorded.'
+  );
+  return lines.join('\n');
 }
 
 export function languageLabel(p: Person): string {
@@ -144,29 +190,32 @@ export function languageLabel(p: Person): string {
     : localeName(p.locale);
 }
 
+/**
+ * Leads with the languages people actually ran the room in, which is the fact we almost always
+ * have. The creation language moves to the tooltip: heading with it read as a contradiction
+ * ("Language not recorded · 3 in English") on the many rooms where only it is missing.
+ */
 export function roomLanguageLabel(l: RoomLanguages | undefined): string {
   if (!l || (l.created === null && l.byLocale.length === 0)) {
-    return 'Language: unknown';
+    return 'Language not recorded';
   }
-  const others = l.byLocale.filter((row) => row.locale !== l.created);
-  const head = l.created ? localeName(l.created) : 'Language not recorded';
-  if (others.length === 0) return head;
-  const rest = others
-    .map((row) => `${row.people} in ${localeName(row.locale)}`)
-    .join(', ');
-  return `${head} · ${rest}`;
+  if (l.byLocale.length === 0) return `Created in ${localeName(l.created!)}`;
+  return languageMixLabel(l.byLocale);
 }
 
 export function roomLanguageTitle(l: RoomLanguages | undefined): string {
-  if (!l || l.byLocale.length === 0) {
-    return 'No language was recorded for this room.';
-  }
-  return l.byLocale
-    .map(
-      (row) =>
-        `${localeName(row.locale)}: ${row.people} ${
-          row.people === 1 ? 'person' : 'people'
-        }, ${row.chosen} picked it deliberately`
-    )
-    .join('\n');
+  if (!l) return 'No language was recorded for this room.';
+  const lines = byPeopleDesc(l.byLocale).map(
+    (row) =>
+      `${localeName(row.locale)}: ${row.people} ${
+        row.people === 1 ? 'person' : 'people'
+      }, ${row.chosen} picked it deliberately`
+  );
+  if (lines.length === 0) lines.push('No participant language was recorded.');
+  lines.push(
+    l.created
+      ? `Room created in ${localeName(l.created)}.`
+      : 'The language the room was created in was not recorded.'
+  );
+  return lines.join('\n');
 }

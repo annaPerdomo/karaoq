@@ -49,7 +49,8 @@ export default async function handler(
           },
         },
         {
-          // Non-display session docs only, for the real head count.
+          // Non-display session docs only, for the real head count. Grouped by locale rather than
+          // counted so the head count and the language mix come from one lookup, not two.
           $lookup: {
             from: "analytics_sessions",
             let: { rid: "$roomId" },
@@ -64,9 +65,20 @@ export default async function handler(
                   },
                 },
               },
-              { $count: "total" },
+              {
+                $group: {
+                  _id: {
+                    $cond: [
+                      { $eq: [{ $type: "$locale" }, "string"] },
+                      "$locale",
+                      null,
+                    ],
+                  },
+                  people: { $sum: 1 },
+                },
+              },
             ],
-            as: "participantCount",
+            as: "participantLocales",
           },
         },
         {
@@ -100,7 +112,7 @@ export default async function handler(
             country: 1,
             city: 1,
             songs: { $ifNull: [{ $arrayElemAt: ["$songCount.total", 0] }, 0] },
-            participants: { $ifNull: [{ $arrayElemAt: ["$participantCount.total", 0] }, 0] },
+            participants: { $sum: "$participantLocales.people" },
             // Last toggle wins, else the created value; null on rooms predating both.
             fairMode: {
               $ifNull: [
@@ -109,8 +121,23 @@ export default async function handler(
               ],
             },
             fairToggled: { $gt: [{ $size: "$lastFairToggle" }, 0] },
-            // Rides on room_created itself; null before it was recorded.
+            // Rides on room_created itself; null before it was recorded — which is most rooms, so
+            // the language a room is *shown* as is the participants' mix below, not this.
             locale: { $ifNull: ["$locale", null] },
+            // What people actually ran the room in. Unsorted; the client orders it.
+            localeMix: {
+              $map: {
+                input: {
+                  $filter: {
+                    input: "$participantLocales",
+                    as: "p",
+                    cond: { $ne: ["$$p._id", null] },
+                  },
+                },
+                as: "p",
+                in: { locale: "$$p._id", people: "$$p.people" },
+              },
+            },
           },
         },
       ])

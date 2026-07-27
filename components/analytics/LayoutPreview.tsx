@@ -110,7 +110,9 @@ export function displayBlocks(c: DisplayConfig): { blocks: Block[]; hidden: stri
         else {
           blocks.push({
             key: 'banner',
-            label: `“${truncate(c.bannerLine)}” ${c.bannerPx}px`,
+            // Named, because a bare quoted string reads as a caption for the slot rather than as
+            // the announcement text the host typed into it.
+            label: `Banner “${truncate(c.bannerLine)}” · ${c.bannerPx}px`,
           });
         }
         break;
@@ -153,7 +155,9 @@ export function hostBlocks(c: HostConfig): { blocks: Block[]; hidden: string[] }
         else {
           blocks.push({
             key: 'banner',
-            label: `“${truncate(c.bannerLine)}” ${c.bannerPx}px`,
+            // Named, because a bare quoted string reads as a caption for the slot rather than as
+            // the announcement text the host typed into it.
+            label: `Banner “${truncate(c.bannerLine)}” · ${c.bannerPx}px`,
           });
         }
         break;

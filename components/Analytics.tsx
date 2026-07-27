@@ -3,7 +3,11 @@ import styles from '../styles/Analytics.module.css';
 import BarChart from './analytics/BarChart';
 import LanguagesPanel, { type LanguageData } from './analytics/LanguagesPanel';
 import RoomDetail from './analytics/RoomDetail';
-import { LOCALE_LABELS, isLocale } from '../lib/i18n/config';
+import {
+  languageMixShort,
+  languageMixTitle,
+  type LocaleCount,
+} from './analytics/roomDetailLabels';
 
 interface DayCount {
   _id: string;
@@ -119,8 +123,10 @@ interface RoomRow {
   /** null where the room predates the flag. */
   fairMode?: boolean | null;
   fairToggled?: boolean;
-  /** null where the room predates recording. */
+  /** The language the room was CREATED in; null where the room predates recording. */
   locale?: string | null;
+  /** What the people in the room actually ran it in. Absent on a response from an older deploy. */
+  localeMix?: LocaleCount[];
 }
 
 const ROOMS_PAGE_SIZE = 25;
@@ -1100,13 +1106,9 @@ const Analytics = (): React.ReactElement => {
                       <span data-label="Lang">
                         <span
                           className={styles.langCell}
-                          title={
-                            r.locale
-                              ? `Room created in ${isLocale(r.locale) ? LOCALE_LABELS[r.locale] : r.locale}`
-                              : 'Created before the language was recorded'
-                          }
+                          title={languageMixTitle(r.localeMix ?? [], r.locale ?? null)}
                         >
-                          {r.locale ?? '—'}
+                          {languageMixShort(r.localeMix ?? [])}
                         </span>
                       </span>
                       <span data-label="Fair">

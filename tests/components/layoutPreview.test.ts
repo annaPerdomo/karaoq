@@ -39,8 +39,9 @@ describe("displayBlocks", () => {
       ...DEFAULT_DISPLAY_CONFIG,
       bannerLine: "Happy 30th, Sam!",
     });
-    expect(blocks.find((b) => b.key === "banner")?.label).toContain(
-      "Happy 30th, Sam!"
+    // Named, so the quoted text can't be misread as a caption for the slot.
+    expect(blocks.find((b) => b.key === "banner")?.label).toBe(
+      "Banner “Happy 30th, Sam!” · 18px"
     );
   });
 
@@ -51,7 +52,7 @@ describe("displayBlocks", () => {
     });
     const label = blocks.find((b) => b.key === "banner")?.label ?? "";
     expect(label).toContain("…");
-    expect(label.length).toBeLessThan(40);
+    expect(label.length).toBeLessThan(45);
   });
 
   it("hides the up-next list when it's switched off", () => {
