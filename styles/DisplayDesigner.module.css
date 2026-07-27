@@ -58,6 +58,7 @@
 }
 
 .ghost {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -323,6 +324,26 @@
 .grow {
   flex: 1;
   min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Outer section wrappers, unlike .grow above. The growing section is also the
+   only shrinkable one, so a short column drove it under its own header: floor it
+   at that header plus a row, and let the roll-up absorb the deficit instead. */
+.growBlock {
+  flex: 1 1 0;
+  min-height: 11.5rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.shrinkBlock {
+  flex: 0 1 auto;
+  min-height: 5rem;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
   display: flex;
   flex-direction: column;
 }

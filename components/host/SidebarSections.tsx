@@ -249,7 +249,11 @@ export function SidebarSections({
   };
 
   const blockClass = (section: HostSection) =>
-    section === "queue" ? styles.sectionGrow : styles.sectionBlock;
+    section === "queue"
+      ? styles.sectionGrow
+      : section === "boards"
+        ? styles.sectionShrink
+        : styles.sectionBlock;
 
   function renderSection(section: HostSection): React.ReactNode {
     if (!dataReady[section]) return null;

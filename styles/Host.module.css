@@ -2265,9 +2265,23 @@
   flex-direction: column;
 }
 
+/* Floor = the queue's tabs, Add-a-song and stats rows plus a little list. Without
+   it the queue, as the only shrinkable section, took the whole deficit on a short
+   window and painted that chrome over the sections below. */
 .sectionGrow {
-  flex: 1;
-  min-height: 0;
+  flex: 1 1 0;
+  min-height: 11.5rem;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Shrinks but never grows, so "only the queue grows" still holds. */
+.sectionShrink {
+  flex: 0 1 auto;
+  min-height: 5rem;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
   display: flex;
   flex-direction: column;
 }

@@ -154,7 +154,11 @@ const DisplaySidebar = ({
     upNext: visible.upNext && (
       <UpNextList key="upNext" upNext={upNext} />
     ),
-    boards: visible.boards && <React.Fragment key="boards">{boardsSummary}</React.Fragment>,
+    boards: visible.boards && (
+      <div key="boards" className={p.shrinkBlock}>
+        {boardsSummary}
+      </div>
+    ),
   };
 
   const editSections: Record<SidebarSection, React.ReactNode> = edit
@@ -213,7 +217,7 @@ const DisplaySidebar = ({
           <div
             key="upNext"
             ref={sectionRef('upNext')}
-            className={`${p.grow} ${lifted === 'upNext' ? p.sectionLifted : ''}`}
+            className={`${p.growBlock} ${lifted === 'upNext' ? p.sectionLifted : ''}`}
           >
             <Spot
               id="upNext"
@@ -233,7 +237,7 @@ const DisplaySidebar = ({
           <div
             key="boards"
             ref={sectionRef('boards')}
-            className={lifted === 'boards' ? p.sectionLifted : ''}
+            className={`${p.shrinkBlock} ${lifted === 'boards' ? p.sectionLifted : ''}`}
           >
             <Spot
               id="boards"
