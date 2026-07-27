@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { getSearchCacheCollection } from "../../lib/mongodb";
 import { rateLimit } from "../../lib/limits";
+import { parseIso8601Duration } from "../../lib/duration";
 
 const INVIDIOUS_INSTANCES = [
   "https://invidious.materialio.us",
@@ -16,6 +17,8 @@ interface SearchResult {
   title: string;
   thumbnailUrl: string;
   videoId: string;
+  durationSeconds?: number;
+  viewCount?: number;
 }
 
 // Song searches repeat heavily across rooms ("bohemian rhapsody karaoke"),
@@ -53,13 +56,16 @@ async function searchWithYoutubeApi(
   const key = process.env.YOUTUBE_API_KEY;
   if (!key) throw new Error("No YouTube API key configured");
 
+  // A search.list call costs the same 100 quota units whether it returns 8
+  // results or 50 — so ask for 25 and let the client page through them for
+  // free instead of burning another call.
   const params = new URLSearchParams({
     part: "snippet",
     q,
     videoEmbeddable: "true",
     key,
     type: "video",
-    maxResults: "8",
+    maxResults: "25",
     order: sortBy,
   });
   if (duration !== "any") params.set("videoDuration", duration);
@@ -73,7 +79,7 @@ async function searchWithYoutubeApi(
   const data = await resp.json();
   if (data.error) throw new Error(data.error.message || "YouTube API error");
 
-  return (
+  const results: SearchResult[] =
     data.items
       ?.filter((item: any) => item.id?.videoId)
       .map((item: any) => ({
@@ -82,8 +88,51 @@ async function searchWithYoutubeApi(
           item.snippet.thumbnails.medium?.url ||
           item.snippet.thumbnails.default?.url,
         videoId: item.id.videoId,
-      })) ?? []
-  );
+      })) ?? [];
+
+  return enrichWithVideoDetails(results, key);
+}
+
+// videos.list is a flat 1 quota unit for up to 50 ids (vs 100 for the search
+// itself), so duration/view-count badges cost ~1% extra quota. Best-effort:
+// any failure just returns the bare results.
+async function enrichWithVideoDetails(
+  results: SearchResult[],
+  key: string
+): Promise<SearchResult[]> {
+  if (results.length === 0) return results;
+  try {
+    const params = new URLSearchParams({
+      part: "contentDetails,statistics",
+      id: results.map((r) => r.videoId).join(","),
+      key,
+    });
+    const resp = await fetch(
+      "https://www.googleapis.com/youtube/v3/videos?" + params,
+      { signal: AbortSignal.timeout(5000) }
+    );
+    if (!resp.ok) return results;
+
+    const data = await resp.json();
+    const byId = new Map<string, any>(
+      (data.items ?? []).map((item: any) => [item.id, item])
+    );
+    return results.map((r) => {
+      const item = byId.get(r.videoId);
+      if (!item) return r;
+      const durationSeconds = parseIso8601Duration(
+        item.contentDetails?.duration ?? ""
+      );
+      const viewCount = Number(item.statistics?.viewCount);
+      return {
+        ...r,
+        ...(durationSeconds !== undefined ? { durationSeconds } : {}),
+        ...(Number.isFinite(viewCount) ? { viewCount } : {}),
+      };
+    });
+  } catch {
+    return results;
+  }
 }
 
 async function searchWithInvidious(q: string): Promise<SearchResult[] | null> {
@@ -100,11 +149,18 @@ async function searchWithInvidious(q: string): Promise<SearchResult[] | null> {
 
       const candidates = data
         .filter((item: any) => item.type === "video" && item.videoId)
-        .slice(0, 16)
+        .slice(0, 24)
         .map((item: any) => ({
           title: item.title ?? "",
           thumbnailUrl: `https://i.ytimg.com/vi/${item.videoId}/mqdefault.jpg`,
           videoId: item.videoId,
+          // Invidious ships these in the search response itself — no extra calls.
+          ...(Number.isFinite(item.lengthSeconds) && item.lengthSeconds > 0
+            ? { durationSeconds: item.lengthSeconds }
+            : {}),
+          ...(Number.isFinite(item.viewCount) && item.viewCount > 0
+            ? { viewCount: item.viewCount }
+            : {}),
         }));
 
       // Check embeddability via YouTube oEmbed (401 = not embeddable)
@@ -122,7 +178,7 @@ async function searchWithInvidious(q: string): Promise<SearchResult[] | null> {
         })
       );
 
-      const embeddable = checks.filter(Boolean).slice(0, 8);
+      const embeddable = checks.filter(Boolean).slice(0, 24);
       // All candidates failing the oEmbed check is this instance (or the
       // check) having a bad minute, not a real "no results" — move on rather
       // than handing back an empty list that would get cached for 24h.
