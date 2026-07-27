@@ -56,6 +56,8 @@
   "search.backToIdeas": "노래 아이디어로 돌아가기",
   "search.noResults": "곡을 찾을 수 없어요. 다른 검색어로 시도해 보세요.",
   "search.finding": "곡을 찾는 중…",
+  "search.showMore": "결과 더 보기",
+  "search.views": "조회수 {count}회",
   "search.previewAria": "이 곡 미리 듣기",
   "search.add.choose": "이 곡 선택",
   "search.add.add": "대기열에 추가",

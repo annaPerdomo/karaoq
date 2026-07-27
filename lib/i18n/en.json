@@ -56,6 +56,8 @@
   "search.backToIdeas": "Back to song ideas",
   "search.noResults": "No songs found. Try a different search.",
   "search.finding": "Finding songs…",
+  "search.showMore": "Show more results",
+  "search.views": "{count} views",
   "search.previewAria": "Preview this song",
   "search.add.choose": "Choose this song",
   "search.add.add": "Add to queue",

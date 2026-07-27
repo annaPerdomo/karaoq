@@ -56,6 +56,8 @@
   "search.backToIdeas": "曲のアイデアに戻る",
   "search.noResults": "曲が見つかりません。別のキーワードで試してね。",
   "search.finding": "曲を探しています…",
+  "search.showMore": "検索結果をもっと見る",
+  "search.views": "{count}回視聴",
   "search.previewAria": "この曲をプレビュー",
   "search.add.choose": "この曲にする",
   "search.add.add": "キューに追加",

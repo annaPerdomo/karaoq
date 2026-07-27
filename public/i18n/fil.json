@@ -56,6 +56,8 @@
   "search.backToIdeas": "Balik sa mga song ideas",
   "search.noResults": "Walang nahanap na kanta. Subukan ang ibang search.",
   "search.finding": "Naghahanap ng kanta…",
+  "search.showMore": "Magpakita pa ng mga resulta",
+  "search.views": "{count} views",
   "search.previewAria": "I-preview ang kantang ito",
   "search.add.choose": "Piliin ang kantang ito",
   "search.add.add": "Idagdag sa queue",

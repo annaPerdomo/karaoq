@@ -56,6 +56,8 @@
   "search.backToIdeas": "Zpět na nápady na písničky",
   "search.noResults": "Žádné písničky nenalezeny. Zkus něco jiného.",
   "search.finding": "Hledám písničky…",
+  "search.showMore": "Zobrazit další výsledky",
+  "search.views": "{count} zhlédnutí",
   "search.previewAria": "Přehrát ukázku písničky",
   "search.add.choose": "Vybrat tuhle písničku",
   "search.add.add": "Přidat do fronty",

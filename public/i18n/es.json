@@ -56,6 +56,8 @@
   "search.backToIdeas": "Volver a las ideas de canciones",
   "search.noResults": "No se encontraron canciones. Prueba con otra búsqueda.",
   "search.finding": "Buscando canciones…",
+  "search.showMore": "Mostrar más resultados",
+  "search.views": "{count} visualizaciones",
   "search.previewAria": "Ver un adelanto de esta canción",
   "search.add.choose": "Elegir esta canción",
   "search.add.add": "Agregar a la fila",

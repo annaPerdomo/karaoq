@@ -25,6 +25,7 @@ import {
   SongSection,
 } from '../app/queue/songSuggestions';
 import useCountry from '../app/queue/useCountry';
+import SearchResults from './search/SearchResults';
 import fetchRegionalPack from '../app/queue/regionalPack';
 import { useT } from '../lib/i18n/I18nProvider';
 import { renderWithHeart } from '../lib/i18n/renderWithHeart';
@@ -35,6 +36,11 @@ const DURATION_OPTIONS: { value: VideoDuration; tKey: string }[] = [
   { value: 'medium', tKey: 'search.duration.medium' },
   { value: 'long', tKey: 'search.duration.long' },
 ];
+
+// How many results are revealed at once; the server returns up to 25 per
+// search (one YouTube quota spend) and "Show more" pages through the rest
+// client-side without another request.
+const INITIAL_RESULTS = 8;
 
 const SORT_OPTIONS: { value: SortOrder; tKey: string }[] = [
   { value: 'relevance', tKey: 'search.sort.relevance' },
@@ -84,6 +90,7 @@ const SongSearch: React.FC<SongSearchProps> = ({
 }) => {
   const [query, setQuery] = React.useState('');
   const [results, setResults] = React.useState<YoutubeResult[]>([]);
+  const [visibleCount, setVisibleCount] = React.useState(INITIAL_RESULTS);
   const [searching, setSearching] = React.useState(false);
   const [karaokeMode, setKaraokeMode] = React.useState(true);
   const [hasSearched, setHasSearched] = React.useState(false);
@@ -193,10 +200,6 @@ const SongSearch: React.FC<SongSearchProps> = ({
 
   const debounceRef = React.useRef<ReturnType<typeof setTimeout>>();
   const abortRef = React.useRef<AbortController>();
-  const filtersRef = React.useRef(filters);
-  filtersRef.current = filters;
-  const karaokeModeRef = React.useRef(karaokeMode);
-  karaokeModeRef.current = karaokeMode;
 
   React.useEffect(() => {
     if (query.trim().length === 0 && hasSearched) {
@@ -217,33 +220,10 @@ const SongSearch: React.FC<SongSearchProps> = ({
     } catch {}
   }, []);
 
-  function toggleKaraokeMode() {
-    const next = !karaokeMode;
-    setKaraokeMode(next);
-    try {
-      localStorage.setItem('karaoq_karaoke_mode', String(next));
-    } catch {}
-    if (hasSearched && query.trim()) {
-      abortRef.current?.abort();
-      const controller = new AbortController();
-      abortRef.current = controller;
-
-      setSearching(true);
-      const searchQuery = next ? `${query.trim()} karaoke` : query.trim();
-      searchYoutube(searchQuery, filters, controller.signal)
-        .then(setResults)
-        .catch((err) => {
-          if (err?.name !== 'AbortError') setResults([]);
-        })
-        .finally(() => {
-          if (!controller.signal.aborted) setSearching(false);
-        });
-    }
-  }
-
-  async function search(overrideFilters?: SearchFilters) {
-    if (!query.trim()) return;
-    trackFirstSearch();
+  // Single runner behind every search entry point (typed search, filter
+  // change, karaoke toggle, suggestion tap): abort the in-flight request and
+  // reset the "Show more" window for the fresh result set.
+  function runSearch(rawQuery: string, activeFilters: SearchFilters, karaoke: boolean) {
     clearTimeout(debounceRef.current);
     abortRef.current?.abort();
     const controller = new AbortController();
@@ -251,14 +231,35 @@ const SongSearch: React.FC<SongSearchProps> = ({
 
     setSearching(true);
     setHasSearched(true);
-    const searchQuery = karaokeMode ? `${query.trim()} karaoke` : query.trim();
+    const searchQuery = karaoke ? `${rawQuery} karaoke` : rawQuery;
+    searchYoutube(searchQuery, activeFilters, controller.signal)
+      .then((res) => {
+        setResults(res);
+        setVisibleCount(INITIAL_RESULTS);
+      })
+      .catch((err) => {
+        if (err?.name !== 'AbortError') setResults([]);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setSearching(false);
+      });
+  }
+
+  function toggleKaraokeMode() {
+    const next = !karaokeMode;
+    setKaraokeMode(next);
     try {
-      const res = await searchYoutube(searchQuery, overrideFilters ?? filters, controller.signal);
-      setResults(res);
-    } catch (err: any) {
-      if (err?.name !== 'AbortError') setResults([]);
+      localStorage.setItem('karaoq_karaoke_mode', String(next));
+    } catch {}
+    if (hasSearched && query.trim()) {
+      runSearch(query.trim(), filters, next);
     }
-    if (!controller.signal.aborted) setSearching(false);
+  }
+
+  function search(overrideFilters?: SearchFilters) {
+    if (!query.trim()) return;
+    trackFirstSearch();
+    runSearch(query.trim(), overrideFilters ?? filters, karaokeMode);
   }
 
   // Return from search results to the browse view (song ideas + room boards).
@@ -278,20 +279,7 @@ const SongSearch: React.FC<SongSearchProps> = ({
     const next = { ...filters, [key]: value };
     setFilters(next);
     if (hasSearched && query.trim()) {
-      abortRef.current?.abort();
-      const controller = new AbortController();
-      abortRef.current = controller;
-
-      setSearching(true);
-      const searchQuery = karaokeMode ? `${query.trim()} karaoke` : query.trim();
-      searchYoutube(searchQuery, next, controller.signal)
-        .then(setResults)
-        .catch((err) => {
-          if (err?.name !== 'AbortError') setResults([]);
-        })
-        .finally(() => {
-          if (!controller.signal.aborted) setSearching(false);
-        });
+      runSearch(query.trim(), next, karaokeMode);
     }
   }
 
@@ -343,22 +331,7 @@ const SongSearch: React.FC<SongSearchProps> = ({
       songArtist: song.artist,
     });
 
-    clearTimeout(debounceRef.current);
-    abortRef.current?.abort();
-    const controller = new AbortController();
-    abortRef.current = controller;
-
-    setSearching(true);
-    setHasSearched(true);
-    const searchQuery = karaokeMode ? `${q} karaoke` : q;
-    searchYoutube(searchQuery, filters, controller.signal)
-      .then(setResults)
-      .catch((err) => {
-        if (err?.name !== 'AbortError') setResults([]);
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setSearching(false);
-      });
+    runSearch(q, filters, karaokeMode);
   }
 
   function handleSurpriseMe() {
@@ -532,80 +505,17 @@ const SongSearch: React.FC<SongSearchProps> = ({
         </button>
       )}
 
-      {hasSearched && !searching && results.length === 0 && (
-        <div className={styles.noResults}>
-          {t('search.noResults')}
-        </div>
-      )}
-
-      {/* Branded loading state for a fresh search: an animated equalizer plus
-          skeleton cards shaped exactly like real result rows, so the results
-          area holds its height and doesn't jump when songs arrive. */}
-      {searching && results.length === 0 && (
-        <div className={styles.results} aria-live="polite" aria-busy="true">
-          <div className={styles.loadingHeader}>
-            <span className={styles.eq} aria-hidden="true">
-              <span />
-              <span />
-              <span />
-              <span />
-              <span />
-            </span>
-            <span className={styles.loadingText}>{t('search.finding')}</span>
-          </div>
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className={styles.skeletonCard} aria-hidden="true">
-              <div className={styles.skeletonThumb} />
-              <div className={styles.skeletonLines}>
-                <div className={styles.skeletonLine} />
-                <div className={`${styles.skeletonLine} ${styles.skeletonLineShort}`} />
-              </div>
-              <div className={styles.skeletonAdd} />
-            </div>
-          ))}
-        </div>
-      )}
-
-      {results.length > 0 && (
-        <div className={styles.results}>
-          {results.map((song) => (
-            <div key={song.videoId} className={styles.resultCard}>
-              <button
-                type="button"
-                className={styles.resultPreviewBtn}
-                onClick={() => openConfirm(song, true)}
-                aria-label={t('search.previewAria')}
-                title={t('search.previewAria')}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element -- external YouTube thumbnails; Next optimization adds cost/latency without benefit */}
-                <img
-                  src={song.thumbnailUrl}
-                  alt=""
-                  className={styles.resultThumb}
-                />
-                <span className={styles.resultPlayIcon}>▶</span>
-              </button>
-              <div className={styles.resultInfo}>
-                <span className={styles.resultTitle}>{song.title}</span>
-              </div>
-              <button
-                className={styles.addBtn}
-                onClick={() => (onPick ? handlePick(song) : openConfirm(song, false))}
-                disabled={!canAdd}
-                title={
-                  !canAdd
-                    ? t('common.enterNameFirst')
-                    : onPick
-                    ? t('search.add.choose')
-                    : t('search.add.add')
-                }
-              >
-                +
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
+      <SearchResults
+        hasSearched={hasSearched}
+        searching={searching}
+        results={results}
+        visibleCount={visibleCount}
+        canAdd={canAdd}
+        pickMode={!!onPick}
+        onPreview={(song) => openConfirm(song, true)}
+        onAdd={(song) => (onPick ? handlePick(song) : openConfirm(song, false))}
+        onShowMore={() => setVisibleCount((c) => c + INITIAL_RESULTS)}
+      />
 
       {!hasSearched && results.length === 0 && !justAdded && (() => {
         const LANG_IDS = ['spanish', 'kpop', 'japanese'];

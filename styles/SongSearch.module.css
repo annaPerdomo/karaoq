@@ -267,6 +267,25 @@
   transition: background 0.12s ease;
 }
 
+/* Cascade newly arrived result rows in; per-row delay is set inline. React
+   keeps existing rows' DOM nodes on "Show more", so only new rows animate. */
+@media (prefers-reduced-motion: no-preference) {
+  .resultCard {
+    animation: resultIn 0.28s ease both;
+  }
+}
+
+@keyframes resultIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 .resultCard:hover {
   background: rgba(255, 255, 255, 0.04);
 }
@@ -318,9 +337,31 @@
   background: rgba(255, 45, 120, 0.75);
 }
 
+/* YouTube-style duration chip pinned to the thumbnail corner. */
+.durationBadge {
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.78);
+  color: #fff;
+  font-size: 0.6rem;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.2px;
+}
+
 .resultInfo {
   flex: 1;
   min-width: 0;
+}
+
+.resultViews {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.68rem;
+  color: var(--text-muted);
 }
 
 .resultTitle {

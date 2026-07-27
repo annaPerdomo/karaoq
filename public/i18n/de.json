@@ -56,6 +56,8 @@
   "search.backToIdeas": "Zurück zu den Song-Ideen",
   "search.noResults": "Keine Songs gefunden. Versuch eine andere Suche.",
   "search.finding": "Songs werden gesucht…",
+  "search.showMore": "Mehr Ergebnisse anzeigen",
+  "search.views": "{count} Aufrufe",
   "search.previewAria": "Diesen Song vorhören",
   "search.add.choose": "Diesen Song wählen",
   "search.add.add": "Zur Warteschlange hinzufügen",
