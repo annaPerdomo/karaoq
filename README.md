@@ -152,4 +152,8 @@ pnpm lint         # ESLint
 
 ## License
 
-Private
+**Source-available, not open source.** © 2022-2026 Anna Mendez Perdomo. All rights reserved.
+
+This repository is public so you can read it, learn from it, and evaluate the work. You're welcome to browse every line. You may **not** reuse the code in another project, deploy it, or build a product on it — commercially or otherwise — without written permission. See [LICENSE](LICENSE) for the full terms.
+
+Interested in a commercial license? [Open an issue](https://github.com/annaPerdomo/karaoq/issues).

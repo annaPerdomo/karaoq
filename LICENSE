@@ -1,0 +1,82 @@
+KaraoQ — Source-Available License
+
+Copyright (c) 2022-2026 Anna Perdomo. All rights reserved.
+
+This repository is published so that others can read it, learn from it, and
+evaluate the author's work. It is NOT open source, and no open-source license
+applies to it. Publishing the source publicly does not grant a license to use
+it.
+
+
+1. WHAT YOU MAY DO
+
+   You may:
+
+   a. View, read, and study the contents of this repository.
+
+   b. Fork the repository within GitHub, and clone it locally, for the purpose
+      of reading it. (Forking is a function of GitHub's platform and does not
+      by itself convey any license under this document.)
+
+   c. Quote short excerpts in reviews, articles, teaching materials, or
+      technical discussion, with attribution to Anna Perdomo and a link to
+      https://github.com/annaPerdomo/karaoq.
+
+
+2. WHAT YOU MAY NOT DO
+
+   Without prior written permission from Anna Perdomo, you may NOT:
+
+   a. Use this code, in whole or in part, in any other project, product, or
+      service, whether or not that project is commercial.
+
+   b. Copy, modify, translate, or create derivative works from this code.
+
+   c. Distribute, sublicense, sell, rent, or otherwise make this code or any
+      derivative of it available to others.
+
+   d. Deploy, host, or operate this software, or any derivative of it, as a
+      service — publicly or privately, free or paid.
+
+   e. Remove, alter, or obscure this license, any copyright notice, or any
+      authorship attribution.
+
+   These restrictions apply to automated reuse as well as manual reuse,
+   including incorporating this repository into a training corpus or emitting
+   substantial portions of it as generated output.
+
+
+3. PRIOR CONTRIBUTIONS
+
+   This repository began as a project built at the 2022 hack-in-the-heights
+   hackathon (https://github.com/hack-in-the-heights/karaoq). Copyright in
+   those early contributions remains with their respective authors, and this
+   license is not a claim over their work. The production application in this
+   repository — its architecture, features, and substantially all of its
+   current code — is the original work of Anna Perdomo and is licensed under
+   the terms above.
+
+
+4. NAME AND BRANDING
+
+   No rights are granted to the "KaraoQ" name, the karaoq.live domain, or any
+   associated logos, wordmarks, or visual identity. Nothing in this license
+   permits you to use them, or any confusingly similar name, to identify your
+   own product or service.
+
+
+5. NO WARRANTY
+
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL
+   THE AUTHOR BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN
+   AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF, OR IN
+   CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+
+6. PERMISSION AND LICENSING
+
+   Licenses for uses not permitted above — including commercial use — are
+   available. Open an issue at https://github.com/annaPerdomo/karaoq/issues or
+   contact the author to ask.
