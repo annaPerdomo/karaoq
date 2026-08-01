@@ -17,7 +17,7 @@ import { SITE_URL, localePath, type Locale } from './i18n/config';
  * `sponsored`, not the tag, so copy doesn't change when this is set).
  * Note: tags are per-marketplace; this one is for amazon.com only.
  */
-export const AMAZON_AFFILIATE_TAG = '';
+export const AMAZON_AFFILIATE_TAG = 'karaoq-20';
 
 /** Append the Associates tag to an Amazon URL (no-op while the tag is unset). */
 export function withAffiliateTag(href: string): string {
