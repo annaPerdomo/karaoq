@@ -22,12 +22,19 @@
   padding: 20px 24px;
 }
 
+/* Matches .navLogo in Home.module.css — keep the two in sync. */
 .wordmark {
   font-family: var(--font-brand);
-  font-size: 1.5rem;
+  font-weight: 400;
+  font-size: 1.4rem;
   color: #fff;
+  background: linear-gradient(135deg, #ff2d78, #00f0ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: 2px;
+  text-transform: uppercase;
   text-decoration: none;
-  letter-spacing: 0.5px;
 }
 
 .article {
@@ -128,6 +135,116 @@
 }
 
 .stepText {
+  font-size: 1.02rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* ── External-resource list (gear picks, channels) ── */
+
+.items { margin: 0 0 48px; }
+
+.itemsHeading {
+  font-family: var(--font-headline);
+  font-size: 1.05rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin: 0 0 16px;
+}
+
+.itemsIntro {
+  font-size: 1.02rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  margin: 0 0 12px;
+}
+
+.disclosure {
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+  margin: 0 0 20px;
+}
+
+.itemList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  counter-reset: guide-item;
+}
+
+.item {
+  padding: 20px 22px;
+  border-radius: 16px;
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.05), rgba(26, 26, 46, 0.5));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.itemName {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  font-family: var(--font-headline);
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #fff;
+  text-decoration: none;
+  margin: 0 0 8px;
+  transition: color 0.15s ease;
+}
+.itemName:hover { color: #ff2d78; }
+
+.itemArrow {
+  color: #ff2d78;
+  font-size: 0.95rem;
+}
+
+.itemBody {
+  font-size: 1.02rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* ── FAQ ── */
+
+.faq { margin: 0 0 48px; }
+
+.faqHeading {
+  font-family: var(--font-headline);
+  font-size: 1.05rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin: 0 0 20px;
+}
+
+.faqList {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.faqItem {
+  padding-left: 18px;
+  border-left: 3px solid rgba(0, 240, 255, 0.35);
+}
+
+.faqQ {
+  font-family: var(--font-headline);
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #fff;
+  margin: 0 0 8px;
+}
+
+.faqA {
   font-size: 1.02rem;
   line-height: 1.6;
   color: var(--text-secondary);
@@ -263,5 +380,5 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .back, .btnPrimary, .btnOutline, .relatedLink { transition: none; }
+  .back, .btnPrimary, .btnOutline, .relatedLink, .itemName { transition: none; }
 }

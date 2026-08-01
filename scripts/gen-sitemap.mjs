@@ -20,6 +20,8 @@ const GUIDE_SLUGS = [
   'karaoke-on-your-tv',
   'free-youtube-karaoke',
   'karaoke-for-bars-and-venues',
+  'cheap-home-karaoke-setup',
+  'best-youtube-karaoke-channels',
 ];
 
 // A page = a path suffix rendered in every locale. '' is the landing root.

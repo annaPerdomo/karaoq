@@ -13,7 +13,7 @@ import {
   isLocale,
   type Locale,
 } from '../../lib/i18n/config';
-import { GUIDE_SLUGS, STEP_INDICES, guideBySlug, guideUrl } from '../../lib/guides';
+import { GUIDE_SLUGS, indices, guideBySlug, guideUrl } from '../../lib/guides';
 import type { Catalog } from '../../lib/i18n/messages';
 
 interface GuidePageProps {
@@ -29,27 +29,62 @@ const GuidePage: NextPage<GuidePageProps> = ({ guideId, slug, pageLocale }) => {
   const loc = isLocale(pageLocale) ? pageLocale : DEFAULT_LOCALE;
   const url = guideUrl(slug, loc);
 
+  const guide = guideBySlug(slug);
+
   const g = (suffix: string) => t(`guide.${guideId}.${suffix}`);
   const title = g('title');
   const description = g('metaDesc');
 
-  const steps = STEP_INDICES.map((n) => ({
-    '@type': 'HowToStep',
-    position: n,
-    name: g(`step${n}.title`),
-    text: g(`step${n}.body`),
-    url: `${url}#step-${n}`,
-  }));
+  // Each JSON-LD block exists only when the matching visible section does, and
+  // both are sourced from the same guide.<id>.* keys so they can't drift.
+  const howTo =
+    guide && guide.stepCount > 0
+      ? {
+          '@context': 'https://schema.org',
+          '@type': 'HowTo',
+          name: g('h1'),
+          description: g('intro'),
+          inLanguage: loc,
+          step: indices(guide.stepCount).map((n) => ({
+            '@type': 'HowToStep',
+            position: n,
+            name: g(`step${n}.title`),
+            text: g(`step${n}.body`),
+            url: `${url}#step-${n}`,
+          })),
+          totalTime: 'PT5M',
+        }
+      : null;
 
-  const howTo = {
-    '@context': 'https://schema.org',
-    '@type': 'HowTo',
-    name: g('h1'),
-    description: g('intro'),
-    inLanguage: loc,
-    step: steps,
-    totalTime: 'PT5M',
-  };
+  const faq =
+    guide && guide.faqCount > 0
+      ? {
+          '@context': 'https://schema.org',
+          '@type': 'FAQPage',
+          inLanguage: loc,
+          mainEntity: indices(guide.faqCount).map((n) => ({
+            '@type': 'Question',
+            name: g(`faq${n}.q`),
+            acceptedAnswer: { '@type': 'Answer', text: g(`faq${n}.a`) },
+          })),
+        }
+      : null;
+
+  // External URLs go in untagged — affiliate params don't belong in schema.
+  const itemList =
+    guide && (guide.items?.length ?? 0) > 0
+      ? {
+          '@context': 'https://schema.org',
+          '@type': 'ItemList',
+          name: g('itemsHeading'),
+          itemListElement: (guide.items ?? []).map((item, i) => ({
+            '@type': 'ListItem',
+            position: i + 1,
+            name: g(`item${i + 1}.name`),
+            url: item.href,
+          })),
+        }
+      : null;
 
   const breadcrumb = {
     '@context': 'https://schema.org',
@@ -98,12 +133,27 @@ const GuidePage: NextPage<GuidePageProps> = ({ guideId, slug, pageLocale }) => {
         <meta name="twitter:description" content={description} />
         <meta name="twitter:image" content={OG_IMAGE} />
 
-        {/* JSON-LD: HowTo (the guide itself) + Breadcrumb, both mirroring the
-            visible, translated copy so structured data matches the page. */}
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(howTo) }}
-        />
+        {/* JSON-LD: HowTo / FAQPage / ItemList (whichever sections the guide
+            has) + Breadcrumb, all mirroring the visible, translated copy so
+            structured data matches the page. */}
+        {howTo && (
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{ __html: JSON.stringify(howTo) }}
+          />
+        )}
+        {faq && (
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{ __html: JSON.stringify(faq) }}
+          />
+        )}
+        {itemList && (
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{ __html: JSON.stringify(itemList) }}
+          />
+        )}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumb) }}
