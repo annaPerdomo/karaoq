@@ -8,11 +8,8 @@ import {
   songsThatFit,
 } from "../../lib/queueTime";
 
-/**
- * How long the queue will take, when it lands, and — when the room has a
- * wrap-up time — whether it still fits inside it. The line a host checks before
- * saying yes to one more request.
- */
+/** How long the queue will take, when it lands, and — when the room has a
+ * wrap-up time — whether it still fits inside it. */
 export function QueueTimeLine({
   estimate,
   sessionEndsAt,
@@ -23,16 +20,12 @@ export function QueueTimeLine({
   const { t, tn, locale } = useT();
   if (estimate.slots.length === 0) return null;
 
-  const overrunSeconds =
-    sessionEndsAt === null ? 0 : (estimate.endsAt - sessionEndsAt) / 1000;
-  const overrunning = overrunSeconds > 60;
-
-  // Room left for more songs is measured from the wrap-up time, not from now:
-  // what's already queued gets to run first.
+  // Measured from when the queue runs dry, not from now: what's already queued
+  // runs first. Both branches read this one number, so the bar can't offer room
+  // in a queue it knows runs long.
   const spareSeconds =
-    sessionEndsAt === null
-      ? 0
-      : (sessionEndsAt - Date.now()) / 1000 - estimate.totalSeconds;
+    sessionEndsAt === null ? 0 : (sessionEndsAt - estimate.endsAt) / 1000;
+  const overrunning = sessionEndsAt !== null && spareSeconds < 0;
 
   return (
     <div
@@ -62,7 +55,7 @@ export function QueueTimeLine({
           <span>
             {overrunning
               ? t("host.time.overBy", {
-                  over: formatApproxDuration(overrunSeconds, t),
+                  over: formatApproxDuration(-spareSeconds, t),
                 })
               : tn(
                   "host.time.fitsMore",

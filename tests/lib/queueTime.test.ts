@@ -230,10 +230,20 @@ describe("songsThatFit", () => {
     expect(songsThatFit(-60, 240)).toBe(0);
   });
 
-  it("gives back the changeover after the last song", () => {
-    // 240 + 30 + 240 = 510s of singing fits in 510s.
-    expect(songsThatFit(510, 240)).toBe(2);
-    expect(songsThatFit(509, 240)).toBe(1);
+  it("charges each song the changeover that gets it on stage", () => {
+    // The queue's own trailing changeover is already excluded from the time
+    // left, so an added song costs 30 + 240 and a second one costs that again.
+    expect(songsThatFit(270, 240)).toBe(1);
+    expect(songsThatFit(269, 240)).toBe(0);
+    expect(songsThatFit(540, 240)).toBe(2);
+    expect(songsThatFit(539, 240)).toBe(1);
+  });
+
+  it("agrees with the singer's warning about the same room", () => {
+    // What YourTurnCard asks: with this much room after the queue runs dry,
+    // does one more song fit? Host and singer must never answer differently.
+    expect(songsThatFit(271, 240)).toBeGreaterThan(0);
+    expect(songsThatFit(120, 240)).toBe(0);
   });
 });
 

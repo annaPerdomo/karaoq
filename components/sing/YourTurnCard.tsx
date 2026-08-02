@@ -5,11 +5,13 @@ import { QueueEntry } from '../../pages/api/types';
 import { sharesSinger } from '../../lib/fairQueue';
 import {
   CHANGEOVER_SECONDS,
+  IMMINENT_SECONDS,
   QueueEstimate,
   formatApproxDuration,
   formatClockTime,
   runsPastEnd,
   slotFor,
+  songsThatFit,
 } from '../../lib/queueTime';
 import { useT } from '../../lib/i18n/I18nProvider';
 
@@ -49,18 +51,15 @@ export function myTurnState(
     entry,
     secondsAway,
     onStage,
-    imminent: !onStage && secondsAway < 60,
+    imminent: !onStage && secondsAway < IMMINENT_SECONDS,
     afterEnd: runsPastEnd(slot, sessionEndsAt),
     // The song on stage isn't "ahead" of anyone — it's already happening.
     songsAhead: Math.max(0, ahead - (isPlaying ? 1 : 0)),
   };
 }
 
-/**
- * "You're up in ~12 min" — the one thing a singer actually wants from a queue
- * they can't reorder. With nothing queued it answers the other half of the
- * question: how long the wait would be if they added something now.
- */
+/** "You're up in ~12 min", or — with nothing of theirs queued — what adding a
+ * song right now would cost them. */
 const YourTurnCard = ({
   upcoming,
   userName,
@@ -91,8 +90,13 @@ const YourTurnCard = ({
             ),
           })}
         </span>
+        {/* Whether their song would *finish* in time, not merely start, through
+            the same helper the host's bar uses — the two must never disagree. */}
         {sessionEndsAt !== null &&
-          estimate.endsAt + CHANGEOVER_SECONDS * 1000 > sessionEndsAt && (
+          songsThatFit(
+            (sessionEndsAt - estimate.endsAt) / 1000,
+            estimate.assumedSongSeconds
+          ) === 0 && (
             <span className={styles.turnWarn}>{t('sing.eta.mayNotFit')}</span>
           )}
       </div>

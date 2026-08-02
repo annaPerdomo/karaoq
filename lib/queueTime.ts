@@ -15,8 +15,9 @@ export const DEFAULT_SONG_SECONDS = 255;
  * pleasant surprise, running late reads as a broken promise. */
 export const CHANGEOVER_SECONDS = 30;
 
-/** Below this an ETA is "any moment now" rather than a number. */
-const IMMINENT_SECONDS = 60;
+/** Below this an ETA is "any moment now" rather than a number. Exported so the
+ * list rows and the singer's card can't disagree about who is "up next". */
+export const IMMINENT_SECONDS = 60;
 
 /** A playStartedAt older than this is stale bookkeeping (a room left open
  * overnight), not a song that has genuinely been running for hours. */
@@ -195,9 +196,11 @@ export function songsThatFit(
   songSeconds: number
 ): number {
   if (secondsLeft <= 0) return 0;
+  // `secondsLeft` starts when the queue's last song ends, so each extra song
+  // costs the changeover that gets it on stage plus its own length — there is
+  // no trailing changeover left to give back.
   const perSong = Math.max(1, songSeconds + CHANGEOVER_SECONDS);
-  // The last song needs no changeover after it, so give that time back.
-  return Math.max(0, Math.floor((secondsLeft + CHANGEOVER_SECONDS) / perSong));
+  return Math.max(0, Math.floor(secondsLeft / perSong));
 }
 
 /**
