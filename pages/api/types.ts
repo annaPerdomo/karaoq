@@ -237,6 +237,9 @@ export interface Room {
   playPausedAt?: Date;
   /** Computed on GET, never stored. */
   displayConnected?: boolean;
+  /** The server's clock at response time, so viewers can measure elapsed
+   * playback against it instead of their own drifting one. Never stored. */
+  serverNow?: number;
   reactions?: Reaction[];
   singWithMe?: SingWithMePost[];
   suggestions?: SuggestedSong[];

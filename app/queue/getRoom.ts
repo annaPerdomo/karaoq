@@ -1,4 +1,5 @@
 import { Room } from "../../pages/api/types";
+import { recordServerTime } from "../../lib/clockSkew";
 
 // "notFound" is definitive (the server said 404); "error" is transient
 // (network drop, 5xx, 429). Callers must treat them differently — rendering
@@ -21,7 +22,9 @@ export default async function getRoom(
     const resp = await fetch(`/api/queue/${roomId}${suffix}`, { cache: "no-store" });
     if (resp.status === 404) return "notFound";
     if (!resp.ok) return "error";
-    return await resp.json();
+    const room = await resp.json();
+    recordServerTime(room?.serverNow);
+    return room;
   } catch {
     return "error";
   }

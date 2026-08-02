@@ -165,6 +165,7 @@ export default async function handler(
           fairMode: room.fairMode ?? false,
           displayConfig: room.displayConfig ?? DEFAULT_DISPLAY_CONFIG,
           reactions,
+          serverNow: now,
         });
       } else {
         res.status(404).json({ code: 404, message: "Not found." });

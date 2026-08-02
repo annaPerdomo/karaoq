@@ -239,6 +239,7 @@ describe("GET /api/queue/[id] - Room retrieval", () => {
       fairMode: false,
       displayConfig: DEFAULT_DISPLAY_CONFIG,
       reactions: [],
+      serverNow: expect.any(Number),
     });
     expect(mockCollection.updateOne).not.toHaveBeenCalled();
   });
