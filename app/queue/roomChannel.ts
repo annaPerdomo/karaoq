@@ -4,6 +4,10 @@ export interface RoomStateMessage {
   queue: QueueEntry[];
   activeVideoIndex: number;
   isPlaying: boolean;
+  /** When the current song started, ISO — a same-browser display counts down
+   * from the host's instant rather than guessing until its next poll. Absent
+   * from a pre-estimates sender. */
+  playStartedAt?: string | null;
   reactionsEnabled: boolean;
   reactions?: Reaction[];
   displayConfig?: DisplayConfig;

@@ -1,7 +1,12 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { trackEvent } from "../../../../lib/analytics";
 import { fairPushSpec, singerKeys } from "../../../../lib/fairQueue";
-import { isValidQueueEntry, MAX_QUEUE_LENGTH, rateLimit } from "../../../../lib/limits";
+import {
+  isValidQueueEntry,
+  MAX_QUEUE_LENGTH,
+  rateLimit,
+  sanitizeSongDuration,
+} from "../../../../lib/limits";
 import { getRoomsCollection } from "../../../../lib/mongodb";
 import { normalizeRoomId } from "../../../../lib/roomCode";
 
@@ -21,7 +26,13 @@ export default async function handler(
     return;
   }
 
-  let body: { entryId: string; userName: string; videoId: string; songTitle: string };
+  let body: {
+    entryId: string;
+    userName: string;
+    videoId: string;
+    songTitle: string;
+    durationSeconds?: unknown;
+  };
   try {
     const parsed = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
     if (!parsed || typeof parsed !== "object") throw new Error();
@@ -39,9 +50,17 @@ export default async function handler(
     return;
   }
 
+  // Implausible metadata is dropped, not rejected — the song still queues, it
+  // just falls back to the room's average length in the time estimate.
+  const durationSeconds = sanitizeSongDuration(body.durationSeconds);
+
   // Stamped server-side, never taken from the body: queue time decides the running order, so a
   // client must not be able to backdate itself to the front.
-  const entry = { ...base, addedAt: Date.now() };
+  const entry = {
+    ...base,
+    ...(durationSeconds !== undefined ? { durationSeconds } : {}),
+    addedAt: Date.now(),
+  };
 
   if (!rateLimit(req, "song-add", 15, 30_000)) {
     res.status(429).json({ code: 429, message: "Too many songs added, slow down." });

@@ -26,18 +26,43 @@ export default async function handler(
 
   try {
     const collection = await getRoomsCollection();
+    const now = new Date();
     const result = paused
       ? await collection.updateOne(
           { id: roomId, isPlaying: true },
-          { $set: { displayPaused: true, lastActivity: new Date() } }
+          // playPausedAt freezes the queue-time estimate: without it a pizza
+          // break keeps burning the on-stage song's clock, and every ETA in the
+          // room runs early by however long the room stood still.
+          { $set: { displayPaused: true, playPausedAt: now, lastActivity: now } }
         )
-      : await collection.updateOne(
-          { id: roomId },
+      : await collection.updateOne({ id: roomId }, [
+          // Pipeline update so the resume is one atomic write: push
+          // playStartedAt forward by however long the pause lasted, so the song
+          // reads as where it actually is rather than where it would have been.
           {
-            $set: { lastActivity: new Date() },
-            $unset: { displayPaused: "" },
-          }
-        );
+            $set: {
+              playStartedAt: {
+                $cond: [
+                  {
+                    $and: [
+                      { $ne: [{ $type: "$playPausedAt" }, "missing"] },
+                      { $ne: [{ $type: "$playStartedAt" }, "missing"] },
+                    ],
+                  },
+                  {
+                    $add: [
+                      "$playStartedAt",
+                      { $subtract: [now, "$playPausedAt"] },
+                    ],
+                  },
+                  "$playStartedAt",
+                ],
+              },
+              lastActivity: now,
+            },
+          },
+          { $unset: ["displayPaused", "playPausedAt"] },
+        ]);
 
     if (!paused && result.matchedCount === 0) {
       res.status(404).json({ code: 404, message: "Room not found." });

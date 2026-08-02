@@ -662,6 +662,25 @@
   letter-spacing: 0;
 }
 
+/* Time estimates read from across the room, so they stay quiet next to the
+   singer names rather than competing with them. */
+.upNextTotal {
+  margin-left: auto;
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  color: var(--text-muted);
+  text-transform: none;
+  white-space: nowrap;
+}
+
+.upNextEta {
+  font-size: 0.62rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
 .upNextList {
   flex: 1;
   overflow-y: auto;

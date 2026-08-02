@@ -84,6 +84,54 @@ describe("POST /api/queue/[id]/videos - Add song to queue", () => {
     );
   });
 
+  // The queue-time estimate is only as good as what gets stored here.
+  it("stores the song's length when the search knew it", async () => {
+    const room: Room = { id: "ROOM1", queue: [], activeVideoIndex: 0, isPlaying: false };
+    mockCollection.findOne.mockResolvedValue(room);
+    mockCollection.updateOne.mockResolvedValue({ matchedCount: 1, modifiedCount: 1 });
+
+    const req = createMockReq({
+      method: "POST",
+      query: { id: "ROOM1" },
+      body: {
+        entryId: "entry-1",
+        userName: "Anna",
+        videoId: "dQw4w9WgXcQ",
+        songTitle: "Song",
+        durationSeconds: 243,
+      },
+    });
+    await handler(req, createRes());
+
+    const [, update] = mockCollection.updateOne.mock.calls[0];
+    expect(update.$push.queue.durationSeconds).toBe(243);
+  });
+
+  it("queues the song anyway when the length is implausible", async () => {
+    const room: Room = { id: "ROOM1", queue: [], activeVideoIndex: 0, isPlaying: false };
+    mockCollection.findOne.mockResolvedValue(room);
+    mockCollection.updateOne.mockResolvedValue({ matchedCount: 1, modifiedCount: 1 });
+
+    const req = createMockReq({
+      method: "POST",
+      query: { id: "ROOM1" },
+      body: {
+        entryId: "entry-1",
+        userName: "Anna",
+        videoId: "dQw4w9WgXcQ",
+        songTitle: "Song",
+        // A 24/7 livestream would wreck every ETA in the room.
+        durationSeconds: 86_400,
+      },
+    });
+    const res = createRes();
+    await handler(req, res);
+
+    expect(res.getStatus()).toBe(200);
+    const [, update] = mockCollection.updateOne.mock.calls[0];
+    expect(update.$push.queue).not.toHaveProperty("durationSeconds");
+  });
+
   it("inserts at the fair index when the room is in fair mode", async () => {
     const entry = (id: string, userName: string) => ({
       id, userName, songTitle: `Song ${id}`, videoId: "dQw4w9WgXcQ",

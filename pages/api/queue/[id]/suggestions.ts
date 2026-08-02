@@ -4,6 +4,7 @@ import {
   MAX_SUGGESTIONS,
   isValidSuggestedSong,
   rateLimit,
+  sanitizeSongDuration,
 } from "../../../../lib/limits";
 import { getRoomsCollection } from "../../../../lib/mongodb";
 import { normalizeRoomId } from "../../../../lib/roomCode";
@@ -33,10 +34,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const anonymous = body.anonymous === true;
+  // Dropped rather than rejected when implausible — the request still goes up.
+  const durationSeconds = sanitizeSongDuration(body.durationSeconds);
   const suggestion: SuggestedSong = {
     id: body.id as string,
     songTitle: body.songTitle as string,
     videoId: body.videoId as string,
+    ...(durationSeconds !== undefined ? { durationSeconds } : {}),
     suggestedBy: anonymous ? "" : (body.suggestedBy as string) ?? "",
     anonymous,
     timestamp: Date.now(),

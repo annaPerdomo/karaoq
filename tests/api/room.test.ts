@@ -113,7 +113,12 @@ describe("POST /api/queue/[id] - Room creation", () => {
       { id: "ABC12" },
       {
         $set: { isPlaying: false, lastActivity: expect.any(Date) },
-        $unset: { playToken: "", displayPaused: "", playStartedAt: "" },
+        $unset: {
+          playToken: "",
+          displayPaused: "",
+          playStartedAt: "",
+          playPausedAt: "",
+        },
       }
     );
   });
@@ -234,6 +239,7 @@ describe("GET /api/queue/[id] - Room retrieval", () => {
       fairMode: false,
       displayConfig: DEFAULT_DISPLAY_CONFIG,
       reactions: [],
+      serverNow: expect.any(Number),
     });
     expect(mockCollection.updateOne).not.toHaveBeenCalled();
   });
@@ -266,7 +272,12 @@ describe("GET /api/queue/[id] - Room retrieval", () => {
       { id: "XYZ99", isPlaying: true },
       {
         $set: { isPlaying: false },
-        $unset: { playToken: "", displayPaused: "", playStartedAt: "" },
+        $unset: {
+          playToken: "",
+          displayPaused: "",
+          playStartedAt: "",
+          playPausedAt: "",
+        },
       }
     );
   });

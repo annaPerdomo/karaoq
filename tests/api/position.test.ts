@@ -64,7 +64,12 @@ describe("POST /api/queue/[id]/position - Advance song position", () => {
       { id: "ROOM1" },
       {
         $set: { activeVideoIndex: 2, isPlaying: false, lastActivity: expect.any(Date) },
-        $unset: { playToken: "", displayPaused: "", playStartedAt: "" },
+        $unset: {
+          playToken: "",
+          displayPaused: "",
+          playStartedAt: "",
+          playPausedAt: "",
+        },
       }
     );
   });

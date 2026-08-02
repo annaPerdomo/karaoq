@@ -22,6 +22,9 @@ import {
 } from "../app/queue/roomChannel";
 import setReactionsEnabled from "../app/queue/setReactionsEnabled";
 import setFairMode from "../app/queue/setFairMode";
+import setSessionEnd from "../app/queue/setSessionEnd";
+import { formatClockTime } from "../lib/queueTime";
+import { useRoomTiming } from "./hooks/useRoomTiming";
 import { fairInsertIndex, singerKeys } from "../lib/fairQueue";
 import postReaction from "../app/queue/postReaction";
 import { REACTION_COOLDOWN_MS } from "../app/queue/cheerConstants";
@@ -80,7 +83,7 @@ const Host = ({
   remote = false,
 }: { remote?: boolean } = {}): React.ReactElement => {
   const router = useRouter();
-  const { t, tn } = useT();
+  const { t, tn, locale } = useT();
   const joinCode = normalizeRoomId(router.query.joinCode) as string | undefined;
   // Analytics "Open as admin" — skips session tracking so an operator isn't counted.
   const adminPeek = router.query.admin === "1";
@@ -104,6 +107,12 @@ const Host = ({
   const [reactionsOn, setReactionsOn] = React.useState(true);
   const [boardsOnDisplay, setBoardsOnDisplayState] = React.useState(true);
   const [fairMode, setFairModeState] = React.useState(false);
+  const timing = useRoomTiming({
+    queue,
+    activeVideoIndex: activeIndex,
+    isPlaying,
+  });
+  const { sessionEndsAt, estimate } = timing;
   const [displayConfig, setDisplayConfigState] = React.useState<DisplayConfig>(DEFAULT_DISPLAY_CONFIG);
   const [hostConfig, setHostConfigState] = React.useState<HostConfig>(DEFAULT_HOST_CONFIG);
   const [reactionCooldown, setReactionCooldown] = React.useState(false);
@@ -366,6 +375,7 @@ const Host = ({
     setReactionsOn(room.reactionsEnabled ?? true);
     setBoardsOnDisplayState(room.boardsOnDisplay ?? true);
     setFairModeState(room.fairMode ?? false);
+    timing.adoptRoom(room);
     setDisplayConfigState(normalizeDisplayConfig(room.displayConfig));
     setHostConfigState(normalizeHostConfig(room.hostConfig));
     if (!remote && room.playMode) setPlayMode(room.playMode);
@@ -529,12 +539,20 @@ const Host = ({
     if (typeof room !== "string") applyRoomState(room);
   }
 
-  function broadcast(q: QueueEntry[], idx: number, playing: boolean) {
+  // The play path passes its own fresh stamp: state hasn't caught up in the
+  // same tick.
+  function broadcast(
+    q: QueueEntry[],
+    idx: number,
+    playing: boolean,
+    startedAt: string | null = timing.playStartedAt
+  ) {
     if (!joinCode) return;
     broadcastRoomState(joinCode, {
       queue: q,
       activeVideoIndex: idx,
       isPlaying: playing,
+      playStartedAt: playing ? startedAt : null,
       reactionsEnabled: reactionsOn,
       displayConfig,
     });
@@ -709,6 +727,23 @@ const Host = ({
     }
   }
 
+  async function updateSessionEnd(endsAt: number | null) {
+    if (!joinCode) return;
+    // Hold polling so an in-flight poll carrying the old value can't flip it back.
+    pausePolling();
+    timing.setSessionEndsAt(endsAt);
+    const ok = await setSessionEnd(joinCode, endsAt);
+    if (!ok) {
+      await resyncAfterFailedWrite();
+      return;
+    }
+    showToast(
+      endsAt === null
+        ? t("host.toast.endTimeCleared")
+        : t("host.toast.endTimeSet", { time: formatClockTime(endsAt, locale) })
+    );
+  }
+
   function handleSongAdded(entry: QueueEntry) {
     pausePolling();
     // Mirror the server: fair mode lands the song at its round-robin slot.
@@ -739,6 +774,7 @@ const Host = ({
     if (ok) {
       setActiveIndex(nextIndex);
       setIsPlaying(false);
+      timing.markStopped();
       broadcast(queue, nextIndex, false);
     }
   }
@@ -751,6 +787,7 @@ const Host = ({
     if (ok) {
       setActiveIndex(prevIndex);
       setIsPlaying(false);
+      timing.markStopped();
       broadcast(queue, prevIndex, false);
     }
   }
@@ -766,7 +803,7 @@ const Host = ({
       setServerPlayToken(token);
       storePlayToken(joinCode, token);
       setIsPlaying(true);
-      broadcast(queue, activeIndex, true);
+      broadcast(queue, activeIndex, true, timing.markStarted());
     }
   }
 
@@ -776,6 +813,7 @@ const Host = ({
     if (ok) {
       setServerPlayToken(null);
       setIsPlaying(false);
+      timing.markStopped();
       broadcast(queue, activeIndex, false);
     }
   }
@@ -1067,6 +1105,8 @@ const Host = ({
         onToggleReactions={toggleReactions}
         fairMode={fairMode}
         onToggleFairMode={toggleFairMode}
+        sessionEndsAt={sessionEndsAt}
+        onChangeSessionEnd={updateSessionEnd}
         hostName={hostName}
         onChangeName={() => {
           setSettingsOpen(false);
@@ -1170,6 +1210,8 @@ const Host = ({
           upNext={upNext}
           historyItems={historyItems}
           uniqueSingers={uniqueSingers}
+          estimate={estimate}
+          sessionEndsAt={sessionEndsAt}
           fairMode={fairMode}
           onToggleFairMode={toggleFairMode}
           editingId={editingId}

@@ -49,7 +49,14 @@ export default async function handler(
       { id: roomId, activeVideoIndex: endedIndex, isPlaying: true },
       {
         $set: { ...update, lastActivity: new Date() },
-        $unset: { playToken: "", displayPaused: "", playStartedAt: "" },
+        // playPausedAt goes with playStartedAt — a stamp that outlives its
+        // song freezes the next one's clock at a pause that already ended.
+        $unset: {
+          playToken: "",
+          displayPaused: "",
+          playStartedAt: "",
+          playPausedAt: "",
+        },
       }
     );
 

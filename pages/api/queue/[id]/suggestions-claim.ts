@@ -66,6 +66,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       userName,
       songTitle: suggestion.songTitle,
       videoId: suggestion.videoId,
+      // Carried from the request so the queue-time estimate knows this one.
+      ...(suggestion.durationSeconds !== undefined
+        ? { durationSeconds: suggestion.durationSeconds }
+        : {}),
       addedAt: Date.now(),
     };
 

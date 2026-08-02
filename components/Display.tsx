@@ -9,6 +9,7 @@ import reportDisplayPaused from '../app/queue/setDisplayPaused';
 import setPlaying from '../app/queue/setPlaying';
 import { normalizeRoomId } from '../lib/roomCode';
 import { onRoomState, onDisplayPause, broadcastVideoEnded } from '../app/queue/roomChannel';
+import { useRoomTiming } from './hooks/useRoomTiming';
 import { startSessionTracking } from '../app/queue/trackSession';
 import { startVisiblePolling } from '../app/queue/pollWhileVisible';
 import { isTextReaction } from '../app/queue/cheerConstants';
@@ -50,6 +51,12 @@ const Display = (): React.ReactElement => {
   const [boardsOn, setBoardsOn] = React.useState(true);
   const [activeIndex, setActiveIndex] = React.useState(0);
   const [isPlaying, setIsPlaying] = React.useState(false);
+  const timing = useRoomTiming({
+    queue,
+    activeVideoIndex: activeIndex,
+    isPlaying,
+  });
+  const { adoptBroadcast } = timing;
   const [displayPaused, setDisplayPaused] = React.useState(false);
   // Unset playMode (legacy rooms) is treated like "tv".
   const [playMode, setPlayMode] = React.useState<PlayMode | null>(null);
@@ -158,6 +165,7 @@ const Display = (): React.ReactElement => {
     setBoardsOn(room.boardsOnDisplay ?? true);
     setActiveIndex(room.activeVideoIndex);
     setIsPlaying(room.isPlaying ?? false);
+    timing.adoptRoom(room);
     let paused = room.displayPaused ?? false;
     const local = localPauseRef.current;
     if (local && paused !== local.paused && Date.now() - local.at < 3000) {
@@ -218,11 +226,14 @@ const Display = (): React.ReactElement => {
       setQueue(state.queue);
       setActiveIndex(state.activeVideoIndex);
       setIsPlaying(state.isPlaying);
+      adoptBroadcast(state.playStartedAt ?? null, state.isPlaying);
       setReactionsOn(state.reactionsEnabled);
       if (state.displayConfig) setDisplayConfig(normalizeDisplayConfig(state.displayConfig));
       processReactions(state.reactions);
     });
-  }, [joinCode]);
+    // adoptBroadcast is stable; depending on `timing` would resubscribe the
+    // channel on every render.
+  }, [joinCode, adoptBroadcast]);
 
   React.useEffect(() => {
     if (!joinCode) return;
@@ -369,6 +380,7 @@ const Display = (): React.ReactElement => {
   const upNext = currentSong && !isPlaying
     ? queue.slice(activeIndex)
     : queue.slice(activeIndex + 1);
+  const estimate = timing.estimate;
   const joinUrl = `${origin || 'https://karaoq.live'}/sing/${joinCode}`;
   const view = edit.view;
   // boardsView, not raw boardsOn: after a save that hides boards, the raw flag
@@ -599,6 +611,9 @@ const Display = (): React.ReactElement => {
           joinCode={joinCode || ''}
           origin={origin}
           upNext={upNext}
+          // Not while customizing: the list renders sample songs there, and a
+          // countdown against invented content would read as real.
+          estimate={edit.editing ? undefined : estimate}
           boardsOn={edit.boardsView}
           singWithMe={singWithMe}
           suggestions={suggestions}

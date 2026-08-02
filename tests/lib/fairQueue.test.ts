@@ -4,6 +4,7 @@ import {
   arrivalOrder,
   fairOrder,
   fairInsertIndex,
+  sharesSinger,
   singerKey,
   singerKeys,
   withArrivalTimes,
@@ -287,6 +288,35 @@ describe("singerKeys — duet names split into members", () => {
 
   it("keeps a symbol-only name on its whole-name identity", () => {
     expect(singerKeys("🎤")).toEqual([singerKey("🎤")]);
+  });
+});
+
+// "Is this song mine?" — asked by the singer page for the queue row, the
+// your-turn card and the drawer badge. Folding one side per-member and the
+// other whole-name silently answers "no" for every duet.
+describe("sharesSinger — do two credits name the same person", () => {
+  it("matches a name against itself, however it was typed", () => {
+    expect(sharesSinger("Anna", "anna.")).toBe(true);
+  });
+
+  it("matches a singer against the duet they're in", () => {
+    expect(sharesSinger("Anna & Bo", "Anna")).toBe(true);
+    expect(sharesSinger("Anna", "Anna & Bo")).toBe(true);
+  });
+
+  it("matches a duet against itself in every spelling", () => {
+    expect(sharesSinger("Anna & Bo", "Anna and Bo")).toBe(true);
+    expect(sharesSinger("Anna, Bo", "Bo+Anna")).toBe(true);
+  });
+
+  it("does not match strangers", () => {
+    expect(sharesSinger("Anna & Bo", "Cara")).toBe(false);
+    expect(sharesSinger("Sandy", "Randy")).toBe(false);
+  });
+
+  it("never matches on a blank name", () => {
+    expect(sharesSinger("", "")).toBe(false);
+    expect(sharesSinger("Anna", "   ")).toBe(false);
   });
 });
 

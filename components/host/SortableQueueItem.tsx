@@ -12,6 +12,8 @@ export function SortableQueueItem({
   index,
   isFirst,
   editing,
+  eta,
+  afterEnd = false,
   onMoveTop,
   onEdit,
   onEditSave,
@@ -21,6 +23,10 @@ export function SortableQueueItem({
   index: number;
   isFirst: boolean;
   editing: boolean;
+  /** "in ~12 min" / "up next" / "on stage". Absent while the queue is unknown. */
+  eta?: string;
+  /** This one is expected to still be running when the room's time is up. */
+  afterEnd?: boolean;
   onMoveTop: () => void;
   onEdit: () => void;
   onEditSave: (name: string) => void;
@@ -93,6 +99,16 @@ export function SortableQueueItem({
         <div className={styles.queueSong} title={formatSongTitle(item.songTitle)}>
           {formatSongTitle(item.songTitle)}
         </div>
+        {eta && (
+          <div className={styles.queueEta}>
+            {eta}
+            {afterEnd && (
+              <span className={styles.queueEtaOver}>
+                {t('queue.eta.afterEnd')}
+              </span>
+            )}
+          </div>
+        )}
       </div>
       <div className={styles.queueActions}>
         {!isFirst && (

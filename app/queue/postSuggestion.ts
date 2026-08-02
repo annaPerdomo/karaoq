@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from "uuid";
 export interface SuggestionInput {
   songTitle: string;
   videoId: string;
+  durationSeconds?: number;
   suggestedBy: string;
   anonymous: boolean;
 }

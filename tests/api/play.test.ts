@@ -55,7 +55,7 @@ describe("POST /api/queue/[id]/play - Set play state", () => {
       { id: "ROOM1" },
       {
         $set: { isPlaying: true, playStartedAt: expect.any(Date), lastActivity: expect.any(Date) },
-        $unset: { displayPaused: "" },
+        $unset: { displayPaused: "", playPausedAt: "" },
       }
     );
   });
@@ -76,7 +76,12 @@ describe("POST /api/queue/[id]/play - Set play state", () => {
       { id: "ROOM1" },
       {
         $set: { isPlaying: false, lastActivity: expect.any(Date) },
-        $unset: { playToken: "", displayPaused: "", playStartedAt: "" },
+        $unset: {
+          playToken: "",
+          displayPaused: "",
+          playStartedAt: "",
+          playPausedAt: "",
+        },
       }
     );
   });
@@ -98,7 +103,7 @@ describe("POST /api/queue/[id]/play - Set play state", () => {
       { id: "ROOM1" },
       {
         $set: { isPlaying: true, playToken: "tok-abc", playStartedAt: expect.any(Date), lastActivity: expect.any(Date) },
-        $unset: { displayPaused: "" },
+        $unset: { displayPaused: "", playPausedAt: "" },
       }
     );
   });

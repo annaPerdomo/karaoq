@@ -15,6 +15,8 @@ export interface SingWithMePost {
   id: string;
   songTitle: string;
   videoId: string;
+  /** Video length, carried onto the queue entry so time estimates stay honest. */
+  durationSeconds?: number;
   /** "" when anonymous. */
   createdBy: string;
   anonymous: boolean;
@@ -30,6 +32,8 @@ export interface SuggestedSong {
   id: string;
   songTitle: string;
   videoId: string;
+  /** Video length, carried onto the queue entry when the song is claimed. */
+  durationSeconds?: number;
   /** "" when anonymous. */
   suggestedBy: string;
   anonymous: boolean;
@@ -228,8 +232,14 @@ export interface Room {
   displayLastSeen?: Date;
   /** Grace window for a display to load before orphan-healing kicks in. */
   playStartedAt?: Date;
+  /** When the current pause began. Freezes the queue-time estimate while the
+   * room stands still; on resume, playStartedAt moves forward by its length. */
+  playPausedAt?: Date;
   /** Computed on GET, never stored. */
   displayConnected?: boolean;
+  /** The server's clock at response time, so viewers can measure elapsed
+   * playback against it instead of their own drifting one. Never stored. */
+  serverNow?: number;
   reactions?: Reaction[];
   singWithMe?: SingWithMePost[];
   suggestions?: SuggestedSong[];
@@ -239,6 +249,8 @@ export interface Room {
   fairMode?: boolean;
   displayConfig?: DisplayConfig;
   hostConfig?: HostConfig;
+  /** Wall-clock end of the booked slot / the night. Absent = open-ended. */
+  sessionEndsAt?: Date;
   createdAt?: Date;
   /** Bumped on every write; drives the TTL index. */
   lastActivity?: Date;
@@ -249,6 +261,10 @@ export interface QueueEntry {
   userName: string;
   songTitle: string;
   videoId: string;
+  /** Video length from search metadata. Absent on entries queued before this
+   * shipped, on degraded search results, and on board songs picked without it —
+   * lib/queueTime falls back to the room's own average. */
+  durationSeconds?: number;
   /** Epoch ms at queue time — the order fair-mode-off restores, since fair
    * rotation destroys array-position-as-arrival. Absent on legacy entries. */
   addedAt?: number;

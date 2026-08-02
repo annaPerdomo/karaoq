@@ -2,6 +2,7 @@ import * as React from "react";
 import styles from "../../styles/Host.module.css";
 import { useT } from "../../lib/i18n/I18nProvider";
 import { Icons } from "./icons";
+import { SessionEndSetting } from "./SessionEndSetting";
 
 export function SettingsPopover({
   isOpen,
@@ -11,6 +12,8 @@ export function SettingsPopover({
   onToggleReactions,
   fairMode,
   onToggleFairMode,
+  sessionEndsAt,
+  onChangeSessionEnd,
   hostName,
   onChangeName,
   onInviteCohost,
@@ -22,6 +25,8 @@ export function SettingsPopover({
   onToggleReactions: () => void;
   fairMode: boolean;
   onToggleFairMode: () => void;
+  sessionEndsAt: number | null;
+  onChangeSessionEnd: (endsAt: number | null) => void;
   hostName: string;
   onChangeName: () => void;
   onInviteCohost: () => void;
@@ -93,6 +98,11 @@ export function SettingsPopover({
               </div>
             </button>
           </div>
+          <div className={styles.spSep} />
+          <SessionEndSetting
+            sessionEndsAt={sessionEndsAt}
+            onChange={onChangeSessionEnd}
+          />
           <div className={styles.spSep} />
           <div className={styles.spGroup}>
             <div className={styles.spLabel}>{t('host.settings.cohosts')}</div>
