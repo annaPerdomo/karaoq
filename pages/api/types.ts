@@ -232,6 +232,9 @@ export interface Room {
   displayLastSeen?: Date;
   /** Grace window for a display to load before orphan-healing kicks in. */
   playStartedAt?: Date;
+  /** When the current pause began. Freezes the queue-time estimate while the
+   * room stands still; on resume, playStartedAt moves forward by its length. */
+  playPausedAt?: Date;
   /** Computed on GET, never stored. */
   displayConnected?: boolean;
   reactions?: Reaction[];

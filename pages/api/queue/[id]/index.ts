@@ -51,7 +51,12 @@ export default async function handler(
             { id: roomId },
             {
               $set: { isPlaying: false, lastActivity: new Date() },
-              $unset: { playToken: "", displayPaused: "", playStartedAt: "" },
+              $unset: {
+                playToken: "",
+                displayPaused: "",
+                playStartedAt: "",
+                playPausedAt: "",
+              },
             }
           );
           res.status(200).json({ ...existing, isPlaying: false });
@@ -133,7 +138,12 @@ export default async function handler(
               { id: roomId, isPlaying: true },
               {
                 $set: { isPlaying: false },
-                $unset: { playToken: "", displayPaused: "", playStartedAt: "" },
+                $unset: {
+                  playToken: "",
+                  displayPaused: "",
+                  playStartedAt: "",
+                  playPausedAt: "",
+                },
               }
             );
             isPlaying = false;

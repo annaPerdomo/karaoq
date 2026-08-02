@@ -531,7 +531,6 @@
   "time.hoursMinutes": "{hours}시간 {minutes}분",
   "queue.eta.in": "약 {time} 후",
   "queue.eta.upNext": "곧 시작",
-  "queue.eta.onStage": "무대 위",
   "queue.eta.afterEnd": "종료 시간 초과",
   "queue.eta.total": "전체 약 {time}",
   "queue.eta.note": "예상 시간입니다. 곡 길이와 교대 시간에 따라 달라집니다.",

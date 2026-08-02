@@ -23,7 +23,11 @@ import {
 import setReactionsEnabled from "../app/queue/setReactionsEnabled";
 import setFairMode from "../app/queue/setFairMode";
 import setSessionEnd from "../app/queue/setSessionEnd";
-import { estimateQueue, formatClockTime } from "../lib/queueTime";
+import {
+  estimateQueue,
+  formatClockTime,
+  normalizeSessionEnd,
+} from "../lib/queueTime";
 import { fairInsertIndex, singerKeys } from "../lib/fairQueue";
 import postReaction from "../app/queue/postReaction";
 import { REACTION_COOLDOWN_MS } from "../app/queue/cheerConstants";
@@ -110,6 +114,7 @@ const Host = ({
   // together they're what lib/queueTime needs to put a clock on the queue.
   const [sessionEndsAt, setSessionEndsAt] = React.useState<number | null>(null);
   const [playStartedAt, setPlayStartedAt] = React.useState<string | null>(null);
+  const [playPausedAt, setPlayPausedAt] = React.useState<string | null>(null);
   const [displayConfig, setDisplayConfigState] = React.useState<DisplayConfig>(DEFAULT_DISPLAY_CONFIG);
   const [hostConfig, setHostConfigState] = React.useState<HostConfig>(DEFAULT_HOST_CONFIG);
   const [reactionCooldown, setReactionCooldown] = React.useState(false);
@@ -372,11 +377,12 @@ const Host = ({
     setReactionsOn(room.reactionsEnabled ?? true);
     setBoardsOnDisplayState(room.boardsOnDisplay ?? true);
     setFairModeState(room.fairMode ?? false);
-    setSessionEndsAt(
-      room.sessionEndsAt ? new Date(room.sessionEndsAt).getTime() : null
-    );
+    setSessionEndsAt(normalizeSessionEnd(room.sessionEndsAt));
     setPlayStartedAt(
       room.playStartedAt ? new Date(room.playStartedAt).toISOString() : null
+    );
+    setPlayPausedAt(
+      room.playPausedAt ? new Date(room.playPausedAt).toISOString() : null
     );
     setDisplayConfigState(normalizeDisplayConfig(room.displayConfig));
     setHostConfigState(normalizeHostConfig(room.hostConfig));
@@ -983,6 +989,7 @@ const Host = ({
     activeVideoIndex: activeIndex,
     isPlaying,
     playStartedAt,
+    playPausedAt,
   });
 
   // hostView is the staged draft while customizing, the room's config otherwise.

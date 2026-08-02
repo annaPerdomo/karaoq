@@ -50,7 +50,15 @@ describe("POST /api/queue/[id]/display-paused - Display reports pause state", ()
     expect(res.getStatus()).toBe(200);
     expect(mockCollection.updateOne).toHaveBeenCalledWith(
       { id: "ROOM1", isPlaying: true },
-      { $set: { displayPaused: true, lastActivity: expect.any(Date) } }
+      {
+        $set: {
+          displayPaused: true,
+          // Stamped so the queue-time estimate stops counting down while the
+          // room stands still.
+          playPausedAt: expect.any(Date),
+          lastActivity: expect.any(Date),
+        },
+      }
     );
   });
 
@@ -65,13 +73,16 @@ describe("POST /api/queue/[id]/display-paused - Display reports pause state", ()
     await handler(req, res);
 
     expect(res.getStatus()).toBe(200);
-    expect(mockCollection.updateOne).toHaveBeenCalledWith(
-      { id: "ROOM1" },
-      {
-        $set: { lastActivity: expect.any(Date) },
-        $unset: { displayPaused: "" },
-      }
-    );
+    const [filter, update] = mockCollection.updateOne.mock.calls[0];
+    expect(filter).toEqual({ id: "ROOM1" });
+    // A pipeline update: playStartedAt moves forward by the length of the
+    // pause, so the song reads as where it actually is on resume.
+    expect(Array.isArray(update)).toBe(true);
+    expect(update[1]).toEqual({ $unset: ["displayPaused", "playPausedAt"] });
+    const shift = update[0].$set.playStartedAt.$cond[1];
+    expect(shift).toEqual({
+      $add: ["$playStartedAt", { $subtract: [expect.any(Date), "$playPausedAt"] }],
+    });
   });
 
   it("returns 404 when clearing on a non-existent room", async () => {

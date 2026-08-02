@@ -531,7 +531,6 @@
   "time.hoursMinutes": "{hours} oras {minutes} min",
   "queue.eta.in": "sa ~{time}",
   "queue.eta.upNext": "susunod na",
-  "queue.eta.onStage": "kumakanta na",
   "queue.eta.afterEnd": "lampas sa oras",
   "queue.eta.total": "~{time} ng mga kanta",
   "queue.eta.note": "Tantiya lang — nag-iiba ang haba ng kanta at ang pahinga sa pagitan.",

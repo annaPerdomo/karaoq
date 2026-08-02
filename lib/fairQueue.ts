@@ -38,6 +38,15 @@ export function singerKeys(userName: string): string[] {
   return members.length > 0 ? members : [singerKey(userName)];
 }
 
+/** True when two credits name at least one singer in common — "Anna" is in
+ * "Anna & Bo", and so is the pair itself. Both sides must be folded the same
+ * way: comparing a whole name against per-member keys never matches a duet. */
+export function sharesSinger(a: string, b: string): boolean {
+  if (!a.trim() || !b.trim()) return false;
+  const keys = new Set(singerKeys(b));
+  return singerKeys(a).some((key) => keys.has(key));
+}
+
 function sortByKey<T>(items: T[], keys: number[]): T[] {
   return items
     .map((item, i) => ({ item, key: keys[i], i }))

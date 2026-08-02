@@ -19,8 +19,7 @@ import LanguageSwitcher from './LanguageSwitcher';
 import SingSidebar from './sing/SingSidebar';
 import MobileQueueDrawer from './sing/MobileQueueDrawer';
 import { myTurnState } from './sing/YourTurnCard';
-import { estimateQueue } from '../lib/queueTime';
-import { singerKey } from '../lib/fairQueue';
+import { estimateQueue, normalizeSessionEnd } from '../lib/queueTime';
 
 
 const POLL_INTERVAL = 5000;
@@ -47,6 +46,7 @@ const Sing = (): React.ReactElement => {
   // Room-wide timing: when the on-stage song started, and when the room has to
   // be out. Both feed the "when am I up?" estimate.
   const [playStartedAt, setPlayStartedAt] = React.useState<string | null>(null);
+  const [playPausedAt, setPlayPausedAt] = React.useState<string | null>(null);
   const [sessionEndsAt, setSessionEndsAt] = React.useState<number | null>(null);
   const [reactionsOn, setReactionsOn] = React.useState(true);
   const [theme, setTheme] = React.useState<DisplayTheme>('classic');
@@ -155,9 +155,10 @@ const Sing = (): React.ReactElement => {
     setPlayStartedAt(
       room.playStartedAt ? new Date(room.playStartedAt).toISOString() : null
     );
-    setSessionEndsAt(
-      room.sessionEndsAt ? new Date(room.sessionEndsAt).getTime() : null
+    setPlayPausedAt(
+      room.playPausedAt ? new Date(room.playPausedAt).toISOString() : null
     );
+    setSessionEndsAt(normalizeSessionEnd(room.sessionEndsAt));
   }, []);
 
   React.useEffect(() => {
@@ -245,8 +246,8 @@ const Sing = (): React.ReactElement => {
     activeVideoIndex: activeIndex,
     isPlaying,
     playStartedAt,
+    playPausedAt,
   });
-  const myKey = username.trim() ? singerKey(username.trim()) : null;
   const myTurn = myTurnState(
     upcomingSongs,
     username,
@@ -310,7 +311,7 @@ const Sing = (): React.ReactElement => {
     username,
     estimate,
     sessionEndsAt,
-    mineKey: myKey,
+    viewerName: username,
     loading,
     onReaction: sendReaction,
     reactionCooldown,

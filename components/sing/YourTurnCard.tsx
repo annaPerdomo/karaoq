@@ -2,7 +2,7 @@ import * as React from 'react';
 import styles from '../../styles/Sing.module.css';
 import formatSongTitle from '../../lib/songTitle';
 import { QueueEntry } from '../../pages/api/types';
-import { singerKeys, singerKey } from '../../lib/fairQueue';
+import { sharesSinger } from '../../lib/fairQueue';
 import {
   CHANGEOVER_SECONDS,
   QueueEstimate,
@@ -37,10 +37,7 @@ export function myTurnState(
   isPlaying: boolean,
   sessionEndsAt: number | null
 ): MyTurn | null {
-  const name = userName.trim();
-  if (!name) return null;
-  const mine = singerKey(name);
-  const entry = upcoming.find((e) => singerKeys(e.userName).includes(mine));
+  const entry = upcoming.find((e) => sharesSinger(e.userName, userName));
   if (!entry) return null;
 
   const slot = slotFor(estimate, entry.id);

@@ -54,6 +54,7 @@ const Display = (): React.ReactElement => {
   // Lets the on-stage song count down instead of restarting the queue-time
   // estimate on every poll.
   const [playStartedAt, setPlayStartedAt] = React.useState<string | null>(null);
+  const [playPausedAt, setPlayPausedAt] = React.useState<string | null>(null);
   const [displayPaused, setDisplayPaused] = React.useState(false);
   // Unset playMode (legacy rooms) is treated like "tv".
   const [playMode, setPlayMode] = React.useState<PlayMode | null>(null);
@@ -164,6 +165,9 @@ const Display = (): React.ReactElement => {
     setIsPlaying(room.isPlaying ?? false);
     setPlayStartedAt(
       room.playStartedAt ? new Date(room.playStartedAt).toISOString() : null
+    );
+    setPlayPausedAt(
+      room.playPausedAt ? new Date(room.playPausedAt).toISOString() : null
     );
     let paused = room.displayPaused ?? false;
     const local = localPauseRef.current;
@@ -382,6 +386,7 @@ const Display = (): React.ReactElement => {
     activeVideoIndex: activeIndex,
     isPlaying,
     playStartedAt,
+    playPausedAt,
   });
   const joinUrl = `${origin || 'https://karaoq.live'}/sing/${joinCode}`;
   const view = edit.view;

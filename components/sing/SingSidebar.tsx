@@ -19,7 +19,7 @@ export interface SingQueueViewProps {
   username: string;
   estimate: QueueEstimate;
   sessionEndsAt: number | null;
-  mineKey: string | null;
+  viewerName: string;
   loading: boolean;
   onReaction: (emoji: string) => void;
   reactionCooldown: boolean;
@@ -38,7 +38,7 @@ const SingSidebar = (props: SingQueueViewProps): React.ReactElement => {
     username,
     estimate,
     sessionEndsAt,
-    mineKey,
+    viewerName,
     loading,
     onReaction,
     reactionCooldown,
@@ -88,7 +88,7 @@ const SingSidebar = (props: SingQueueViewProps): React.ReactElement => {
           items={queueItems}
           estimate={estimate}
           sessionEndsAt={sessionEndsAt}
-          mineKey={mineKey}
+          viewerName={viewerName}
           loading={loading}
           headerClass={styles.queueHeader}
           listClass={styles.queueList}

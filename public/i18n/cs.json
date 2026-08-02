@@ -531,7 +531,6 @@
   "time.hoursMinutes": "{hours} h {minutes} min",
   "queue.eta.in": "za ~{time}",
   "queue.eta.upNext": "hned teď",
-  "queue.eta.onStage": "na pódiu",
   "queue.eta.afterEnd": "po konci",
   "queue.eta.total": "~{time} písniček",
   "queue.eta.note": "Odhad — délka písniček a přestávky se liší.",

@@ -8,6 +8,7 @@ import {
   epochToClockInput,
   estimateQueue,
   formatApproxDuration,
+  normalizeSessionEnd,
   roundEtaSeconds,
   runsPastEnd,
   slotFor,
@@ -124,10 +125,9 @@ describe("estimateQueue", () => {
       now: NOW,
     });
     expect(est.slots.map((s) => s.id)).toEqual(["a", "b"]);
-    expect(est.slots[0].index).toBe(1);
   });
 
-  it("fills unknown lengths from the room average and flags the estimate", () => {
+  it("fills unknown lengths from the room average", () => {
     const est = estimateQueue({
       queue: [entry("a", 300), entry("b")],
       activeVideoIndex: 0,
@@ -136,18 +136,34 @@ describe("estimateQueue", () => {
     });
     expect(est.assumedSongSeconds).toBe(300);
     expect(est.slots[1].songSeconds).toBe(300);
-    expect(est.slots[1].knownLength).toBe(false);
-    expect(est.approximate).toBe(true);
   });
 
-  it("is not approximate when every upcoming song's length is known", () => {
-    const est = estimateQueue({
-      queue: [entry("a", 300), entry("b", 240)],
+  // A pause that keeps burning the on-stage song's clock makes every ETA in the
+  // room run early by the length of the break.
+  it("stops the clock while the room is paused", () => {
+    const paused = estimateQueue({
+      queue: [entry("a", 200), entry("b", 300)],
       activeVideoIndex: 0,
-      isPlaying: false,
+      isPlaying: true,
+      playStartedAt: new Date(NOW - 600_000).toISOString(),
+      // Paused 30s in, and standing still ever since.
+      playPausedAt: new Date(NOW - 570_000).toISOString(),
       now: NOW,
     });
-    expect(est.approximate).toBe(false);
+    expect(paused.slots[1].startsInSeconds).toBe(170 + CHANGEOVER_SECONDS);
+  });
+
+  it("ignores a pause stamp older than the song it belongs to", () => {
+    const est = estimateQueue({
+      queue: [entry("a", 200)],
+      activeVideoIndex: 0,
+      isPlaying: true,
+      playStartedAt: new Date(NOW - 60_000).toISOString(),
+      // Left over from a previous song; must not read as negative progress.
+      playPausedAt: new Date(NOW - 900_000).toISOString(),
+      now: NOW,
+    });
+    expect(est.totalSeconds).toBe(200);
   });
 
   it("looks a specific singer's entry up by id", () => {
@@ -159,6 +175,29 @@ describe("estimateQueue", () => {
     });
     expect(slotFor(est, "mine")?.startsInSeconds).toBe(200 + CHANGEOVER_SECONDS);
     expect(slotFor(est, "nope")).toBeNull();
+  });
+});
+
+describe("normalizeSessionEnd", () => {
+  it("keeps a wrap-up time that's still ahead", () => {
+    expect(normalizeSessionEnd(new Date(NOW + 3_600_000), NOW)).toBe(NOW + 3_600_000);
+  });
+
+  it("keeps a recently-passed one — that's who the overrun warning is for", () => {
+    expect(normalizeSessionEnd(new Date(NOW - 20 * 60_000), NOW)).toBe(NOW - 20 * 60_000);
+  });
+
+  // Room codes are reusable for 30 days; last weekend's 11pm must not flag
+  // every song in tonight's queue as overrunning.
+  it("discards one from a previous session", () => {
+    expect(normalizeSessionEnd(new Date(NOW - 7 * 24 * 3_600_000), NOW)).toBeNull();
+    expect(normalizeSessionEnd(new Date(NOW - 5 * 3_600_000), NOW)).toBeNull();
+  });
+
+  it("treats absent and unparseable values as no wrap-up time", () => {
+    expect(normalizeSessionEnd(null, NOW)).toBeNull();
+    expect(normalizeSessionEnd(undefined, NOW)).toBeNull();
+    expect(normalizeSessionEnd("not a date", NOW)).toBeNull();
   });
 });
 

@@ -37,7 +37,7 @@ const MobileQueueDrawer = ({
     username,
     estimate,
     sessionEndsAt,
-    mineKey,
+    viewerName,
     loading,
     onReaction,
     reactionCooldown,
@@ -199,7 +199,7 @@ const MobileQueueDrawer = ({
           items={queueItems}
           estimate={estimate}
           sessionEndsAt={sessionEndsAt}
-          mineKey={mineKey}
+          viewerName={viewerName}
           loading={loading}
           headerClass={styles.drawerQueueHeader}
           listClass={styles.drawerQueueList}

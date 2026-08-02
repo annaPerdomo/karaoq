@@ -531,7 +531,6 @@
   "time.hoursMinutes": "{hours} Std. {minutes} Min.",
   "queue.eta.in": "in ~{time}",
   "queue.eta.upNext": "gleich dran",
-  "queue.eta.onStage": "auf der Bühne",
   "queue.eta.afterEnd": "nach Schluss",
   "queue.eta.total": "~{time} Songs",
   "queue.eta.note": "Schätzung – Songlängen und Pausen schwanken.",

@@ -24,16 +24,12 @@ const MAX_ELAPSED_SECONDS = 2 * 60 * 60;
 
 export interface QueueSlot {
   id: string;
-  /** Index in the full room queue. */
-  index: number;
   /** Seconds from now until this entry starts. 0 for whatever is on stage. */
   startsInSeconds: number;
   /** Epoch ms this entry is expected to start. */
   startsAt: number;
   /** Length used for this entry, real or assumed. */
   songSeconds: number;
-  /** False when songSeconds was assumed rather than known. */
-  knownLength: boolean;
 }
 
 export interface QueueEstimate {
@@ -45,8 +41,6 @@ export interface QueueEstimate {
   endsAt: number;
   /** Length the estimate assumes for songs of unknown length. */
   assumedSongSeconds: number;
-  /** True when at least one slot leaned on the assumed length. */
-  approximate: boolean;
 }
 
 export interface QueueEstimateInput {
@@ -56,6 +50,9 @@ export interface QueueEstimateInput {
   /** The room's playStartedAt — lets the on-stage song count down instead of
    * restarting the whole estimate on every poll. */
   playStartedAt?: string | Date | null;
+  /** The room's playPausedAt. While the room is paused the clock stops here, so
+   * a break doesn't quietly eat the on-stage song. */
+  playPausedAt?: string | Date | null;
   now?: number;
 }
 
@@ -82,12 +79,16 @@ export function assumedSongSeconds(queue: QueueEntry[]): number {
 
 function elapsedSeconds(
   playStartedAt: string | Date | null | undefined,
+  playPausedAt: string | Date | null | undefined,
   now: number
 ): number | null {
   if (!playStartedAt) return null;
   const started = new Date(playStartedAt).getTime();
   if (!Number.isFinite(started)) return null;
-  const elapsed = (now - started) / 1000;
+  // A paused room's clock stopped when it paused, not now.
+  const pausedAt = playPausedAt ? new Date(playPausedAt).getTime() : NaN;
+  const until = Number.isFinite(pausedAt) ? Math.max(started, pausedAt) : now;
+  const elapsed = (until - started) / 1000;
   if (elapsed < 0 || elapsed > MAX_ELAPSED_SECONDS) return null;
   return elapsed;
 }
@@ -102,6 +103,7 @@ export function estimateQueue({
   activeVideoIndex,
   isPlaying,
   playStartedAt,
+  playPausedAt,
   now = Date.now(),
 }: QueueEstimateInput): QueueEstimate {
   const assumed = assumedSongSeconds(queue);
@@ -109,26 +111,25 @@ export function estimateQueue({
 
   const slots: QueueSlot[] = [];
   let cursor = 0;
-  let approximate = false;
 
   upcoming.forEach((entry, i) => {
-    const knownLength = plausible(entry.durationSeconds);
-    const songSeconds = knownLength ? entry.durationSeconds! : assumed;
-    if (!knownLength) approximate = true;
+    const songSeconds = plausible(entry.durationSeconds)
+      ? entry.durationSeconds!
+      : assumed;
 
     slots.push({
       id: entry.id,
-      index: Math.max(0, activeVideoIndex) + i,
       startsInSeconds: cursor,
       startsAt: now + cursor * 1000,
       songSeconds,
-      knownLength,
     });
 
     // Only the song actually on stage has already burned time; a stopped room
     // is treated as about to start, which is what the host is looking at.
     const played =
-      i === 0 && isPlaying ? (elapsedSeconds(playStartedAt, now) ?? 0) : 0;
+      i === 0 && isPlaying
+        ? (elapsedSeconds(playStartedAt, playPausedAt, now) ?? 0)
+        : 0;
     cursor += Math.max(0, songSeconds - played) + CHANGEOVER_SECONDS;
   });
 
@@ -141,8 +142,27 @@ export function estimateQueue({
     totalSeconds,
     endsAt: now + totalSeconds * 1000,
     assumedSongSeconds: assumed,
-    approximate,
   };
+}
+
+/**
+ * A wrap-up time is only meaningful for the session that set it. Room codes are
+ * reusable for 30 days ("what was that room code from last weekend?"), so a
+ * stored time from a previous night would flag every song as overrunning and
+ * report the queue as hours over — with nothing on screen to say it's stale.
+ * Well past is treated as absent; a recently-passed one stays, because a host
+ * running over is exactly who the overrun warning is for.
+ */
+const SESSION_END_STALE_MS = 4 * 60 * 60 * 1000;
+
+export function normalizeSessionEnd(
+  value: string | Date | null | undefined,
+  now: number = Date.now()
+): number | null {
+  if (!value) return null;
+  const endsAt = new Date(value).getTime();
+  if (!Number.isFinite(endsAt)) return null;
+  return now - endsAt > SESSION_END_STALE_MS ? null : endsAt;
 }
 
 /**

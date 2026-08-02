@@ -63,7 +63,7 @@ export default async function handler(
 
     // Minutes, not a wall-clock time: how long organizers book a room for is the
     // interesting signal, and it carries no timezone to leak.
-    trackEvent(req, "session_end_set", {
+    await trackEvent(req, "session_end_set", {
       roomId,
       minutesFromNow:
         endsAt === null ? null : Math.round((endsAt - Date.now()) / 60_000),

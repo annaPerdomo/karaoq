@@ -531,7 +531,6 @@
   "time.hoursMinutes": "{hours} h {minutes} min",
   "queue.eta.in": "em ~{time}",
   "queue.eta.upNext": "é agora",
-  "queue.eta.onStage": "no palco",
   "queue.eta.afterEnd": "passa do horário",
   "queue.eta.total": "~{time} de músicas",
   "queue.eta.note": "Estimativa — a duração das músicas e as pausas variam.",

@@ -531,7 +531,6 @@
   "time.hoursMinutes": "{hours} jam {minutes} mnt",
   "queue.eta.in": "~{time} lagi",
   "queue.eta.upNext": "sebentar lagi",
-  "queue.eta.onStage": "sedang tampil",
   "queue.eta.afterEnd": "lewat waktu selesai",
   "queue.eta.total": "~{time} lagu",
   "queue.eta.note": "Perkiraan — durasi lagu dan jeda antarpenyanyi bisa berbeda.",

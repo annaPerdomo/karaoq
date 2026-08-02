@@ -39,16 +39,16 @@ export default async function handler(
         isPlaying && playToken
           ? {
               $set: { isPlaying, playToken, playStartedAt: new Date(), lastActivity: new Date() },
-              $unset: { displayPaused: "" },
+              $unset: { displayPaused: "", playPausedAt: "" },
             }
           : isPlaying
             ? {
                 $set: { isPlaying, playStartedAt: new Date(), lastActivity: new Date() },
-                $unset: { displayPaused: "" },
+                $unset: { displayPaused: "", playPausedAt: "" },
               }
             : {
                 $set: { isPlaying, lastActivity: new Date() },
-                $unset: { playToken: "", displayPaused: "", playStartedAt: "" },
+                $unset: { playToken: "", displayPaused: "", playStartedAt: "", playPausedAt: "" },
               };
       await collection.updateOne({ id: roomId }, update);
       res.status(200).json({ code: 200, message: "Play state updated." });

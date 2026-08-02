@@ -15,7 +15,7 @@ const QueuePanel = ({
   items,
   estimate,
   sessionEndsAt,
-  mineKey,
+  viewerName,
   loading,
   headerClass,
   listClass,
@@ -23,7 +23,7 @@ const QueuePanel = ({
   items: QueueEntry[];
   estimate: QueueEstimate;
   sessionEndsAt: number | null;
-  mineKey: string | null;
+  viewerName: string;
   loading: boolean;
   headerClass: string;
   listClass: string;
@@ -66,7 +66,7 @@ const QueuePanel = ({
           estimate={estimate}
           sessionEndsAt={sessionEndsAt}
           className={listClass}
-          mineKey={mineKey}
+          viewerName={viewerName}
         />
       ) : (
         <div className={styles.emptyQueue}>

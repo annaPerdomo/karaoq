@@ -1,18 +1,5 @@
 import * as React from "react";
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
-} from "@dnd-kit/core";
-import {
-  SortableContext,
-  sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
+import { DragEndEvent } from "@dnd-kit/core";
 import styles from "../../styles/Host.module.css";
 import p from "../../styles/DisplayDesigner.module.css";
 import BoardsPanel from "../BoardsPanel";
@@ -21,16 +8,10 @@ import { HostConfig, QueueEntry } from "../../pages/api/types";
 import { Boards } from "../../app/queue/useBoards";
 import { useT } from "../../lib/i18n/I18nProvider";
 import { Icons } from "./icons";
-import { formatSongTitle } from "./utils";
-import { SortableQueueItem } from "./SortableQueueItem";
 import { SidebarSections, HostSidebarEdit } from "./SidebarSections";
-import { QueueTimeLine } from "./QueueTimeLine";
-import {
-  QueueEstimate,
-  etaLabel,
-  runsPastEnd,
-  slotFor,
-} from "../../lib/queueTime";
+import { UpNextTab } from "./UpNextTab";
+import { HistoryTab } from "./HistoryTab";
+import { QueueEstimate } from "../../lib/queueTime";
 
 export function QueueSidebar({
   remote,
@@ -136,13 +117,7 @@ export function QueueSidebar({
   widthDragProps?: React.ComponentProps<"button">;
   sideDragging?: boolean;
 }) {
-  const { t, tn } = useT();
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    }),
-  );
+  const { t } = useT();
 
   const queueNode = (
     <>
@@ -185,112 +160,28 @@ export function QueueSidebar({
       </button>
 
       {sidebarTab === "queue" && (
-        <>
-          <div className={styles.queueStats}>
-            {upNext.length > 0 && (
-              <>
-                <span>{tn('host.stats.songs', upNext.length)}</span>
-                <span className={styles.statDot} />
-                <span>{tn('host.stats.singers', uniqueSingers)}</span>
-              </>
-            )}
-            <button
-              className={`${styles.fairToggle} ${fairMode ? styles.fairToggleOn : ""}`}
-              onClick={onToggleFairMode}
-              aria-pressed={fairMode}
-              title={fairMode ? t('host.settings.fairOn') : t('host.settings.fairOff')}
-            >
-              {Icons.shuffle}
-              {t('host.settings.fair')}
-              <span
-                className={`${styles.fairSwitch} ${fairMode ? styles.fairSwitchOn : ""}`}
-              >
-                <span className={styles.fairSwitchThumb} />
-              </span>
-            </button>
-          </div>
-
-          <QueueTimeLine estimate={estimate} sessionEndsAt={sessionEndsAt} />
-
-          {upNext.length > 0 ? (
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              // onDragStart pauses polling — a poll landing mid-drag re-renders
-              // the SortableContext and the drop hits the wrong neighbor.
-              onDragStart={onDragStart}
-              onDragEnd={onDragEnd}
-            >
-              <SortableContext
-                items={upNext.map((e) => e.id)}
-                strategy={verticalListSortingStrategy}
-              >
-                <div className={styles.queueList}>
-                  {upNext.map((item, i) => {
-                    const slot = slotFor(estimate, item.id);
-                    return (
-                      <SortableQueueItem
-                        key={item.id}
-                        item={item}
-                        index={i}
-                        isFirst={i === 0}
-                        editing={editingId === item.id}
-                        eta={
-                          !slot
-                            ? undefined
-                            : isPlaying && item.id === currentSong?.id
-                              ? t('queue.eta.onStage')
-                              : etaLabel(slot.startsInSeconds, t)
-                        }
-                        afterEnd={runsPastEnd(slot, sessionEndsAt)}
-                        onMoveTop={() => onMoveTop(item.id)}
-                        onEdit={() => onToggleEdit(item.id)}
-                        onEditSave={(name) => onEditSave(item.id, name)}
-                        onRemove={() => onRequestRemove(item.id)}
-                      />
-                    );
-                  })}
-                </div>
-              </SortableContext>
-            </DndContext>
-          ) : (
-            <p className={styles.emptyQueue}>{t('host.sidebar.noQueued')}</p>
-          )}
-        </>
+        <UpNextTab
+          upNext={upNext}
+          uniqueSingers={uniqueSingers}
+          estimate={estimate}
+          sessionEndsAt={sessionEndsAt}
+          fairMode={fairMode}
+          onToggleFairMode={onToggleFairMode}
+          editingId={editingId}
+          onDragStart={onDragStart}
+          onDragEnd={onDragEnd}
+          onMoveTop={onMoveTop}
+          onToggleEdit={onToggleEdit}
+          onEditSave={onEditSave}
+          onRequestRemove={onRequestRemove}
+        />
       )}
 
       {sidebarTab === "history" && (
-        <div className={styles.historyList}>
-          {historyItems.length > 0 ? (
-            [...historyItems].reverse().map((item, i) => (
-              <div key={item.id} className={styles.historyItem}>
-                <span className={styles.historyNum}>{historyItems.length - i}</span>
-                <div className={styles.queueInfo}>
-                  <div className={styles.queueArtist} title={item.userName}>
-                    {item.userName}
-                  </div>
-                  <div
-                    className={styles.queueSong}
-                    title={formatSongTitle(item.songTitle)}
-                  >
-                    {formatSongTitle(item.songTitle)}
-                  </div>
-                </div>
-                <button
-                  className={styles.replayBtn}
-                  onClick={() => onReplayFromHistory(item.id)}
-                  title={t('host.history.restoreTitle')}
-                  aria-label={t('host.history.restoreTitle')}
-                >
-                  {Icons.replay}
-                  <span className={styles.replayBtnLabel}>{t('host.history.restore')}</span>
-                </button>
-              </div>
-            ))
-          ) : (
-            <p className={styles.emptyQueue}>{t('host.history.empty')}</p>
-          )}
-        </div>
+        <HistoryTab
+          historyItems={historyItems}
+          onReplayFromHistory={onReplayFromHistory}
+        />
       )}
     </>
   );

@@ -531,7 +531,6 @@
   "time.hoursMinutes": "{hours}時間{minutes}分",
   "queue.eta.in": "約{time}後",
   "queue.eta.upNext": "まもなく",
-  "queue.eta.onStage": "熱唱中",
   "queue.eta.afterEnd": "終了時刻を超過",
   "queue.eta.total": "全体で約{time}",
   "queue.eta.note": "目安です。曲の長さや交代時間によって変わります。",

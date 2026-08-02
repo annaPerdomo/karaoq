@@ -531,7 +531,6 @@
   "time.hoursMinutes": "{hours} hr {minutes} min",
   "queue.eta.in": "in ~{time}",
   "queue.eta.upNext": "up next",
-  "queue.eta.onStage": "on stage",
   "queue.eta.afterEnd": "past end time",
   "queue.eta.total": "~{time} of songs",
   "queue.eta.note": "Estimate — song lengths and breaks between singers vary.",
