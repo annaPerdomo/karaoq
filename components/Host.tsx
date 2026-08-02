@@ -23,11 +23,8 @@ import {
 import setReactionsEnabled from "../app/queue/setReactionsEnabled";
 import setFairMode from "../app/queue/setFairMode";
 import setSessionEnd from "../app/queue/setSessionEnd";
-import {
-  estimateQueue,
-  formatClockTime,
-  normalizeSessionEnd,
-} from "../lib/queueTime";
+import { formatClockTime } from "../lib/queueTime";
+import { useRoomTiming } from "./hooks/useRoomTiming";
 import { fairInsertIndex, singerKeys } from "../lib/fairQueue";
 import postReaction from "../app/queue/postReaction";
 import { REACTION_COOLDOWN_MS } from "../app/queue/cheerConstants";
@@ -110,11 +107,12 @@ const Host = ({
   const [reactionsOn, setReactionsOn] = React.useState(true);
   const [boardsOnDisplay, setBoardsOnDisplayState] = React.useState(true);
   const [fairMode, setFairModeState] = React.useState(false);
-  // Epoch ms the room has to be out by, and when the on-stage song started —
-  // together they're what lib/queueTime needs to put a clock on the queue.
-  const [sessionEndsAt, setSessionEndsAt] = React.useState<number | null>(null);
-  const [playStartedAt, setPlayStartedAt] = React.useState<string | null>(null);
-  const [playPausedAt, setPlayPausedAt] = React.useState<string | null>(null);
+  const timing = useRoomTiming({
+    queue,
+    activeVideoIndex: activeIndex,
+    isPlaying,
+  });
+  const { sessionEndsAt, estimate } = timing;
   const [displayConfig, setDisplayConfigState] = React.useState<DisplayConfig>(DEFAULT_DISPLAY_CONFIG);
   const [hostConfig, setHostConfigState] = React.useState<HostConfig>(DEFAULT_HOST_CONFIG);
   const [reactionCooldown, setReactionCooldown] = React.useState(false);
@@ -377,13 +375,7 @@ const Host = ({
     setReactionsOn(room.reactionsEnabled ?? true);
     setBoardsOnDisplayState(room.boardsOnDisplay ?? true);
     setFairModeState(room.fairMode ?? false);
-    setSessionEndsAt(normalizeSessionEnd(room.sessionEndsAt));
-    setPlayStartedAt(
-      room.playStartedAt ? new Date(room.playStartedAt).toISOString() : null
-    );
-    setPlayPausedAt(
-      room.playPausedAt ? new Date(room.playPausedAt).toISOString() : null
-    );
+    timing.adoptRoom(room);
     setDisplayConfigState(normalizeDisplayConfig(room.displayConfig));
     setHostConfigState(normalizeHostConfig(room.hostConfig));
     if (!remote && room.playMode) setPlayMode(room.playMode);
@@ -547,12 +539,20 @@ const Host = ({
     if (typeof room !== "string") applyRoomState(room);
   }
 
-  function broadcast(q: QueueEntry[], idx: number, playing: boolean) {
+  // The play path passes its own fresh stamp: state hasn't caught up in the
+  // same tick.
+  function broadcast(
+    q: QueueEntry[],
+    idx: number,
+    playing: boolean,
+    startedAt: string | null = timing.playStartedAt
+  ) {
     if (!joinCode) return;
     broadcastRoomState(joinCode, {
       queue: q,
       activeVideoIndex: idx,
       isPlaying: playing,
+      playStartedAt: playing ? startedAt : null,
       reactionsEnabled: reactionsOn,
       displayConfig,
     });
@@ -731,7 +731,7 @@ const Host = ({
     if (!joinCode) return;
     // Hold polling so an in-flight poll carrying the old value can't flip it back.
     pausePolling();
-    setSessionEndsAt(endsAt);
+    timing.setSessionEndsAt(endsAt);
     const ok = await setSessionEnd(joinCode, endsAt);
     if (!ok) {
       await resyncAfterFailedWrite();
@@ -774,6 +774,7 @@ const Host = ({
     if (ok) {
       setActiveIndex(nextIndex);
       setIsPlaying(false);
+      timing.markStopped();
       broadcast(queue, nextIndex, false);
     }
   }
@@ -786,6 +787,7 @@ const Host = ({
     if (ok) {
       setActiveIndex(prevIndex);
       setIsPlaying(false);
+      timing.markStopped();
       broadcast(queue, prevIndex, false);
     }
   }
@@ -801,7 +803,7 @@ const Host = ({
       setServerPlayToken(token);
       storePlayToken(joinCode, token);
       setIsPlaying(true);
-      broadcast(queue, activeIndex, true);
+      broadcast(queue, activeIndex, true, timing.markStarted());
     }
   }
 
@@ -811,6 +813,7 @@ const Host = ({
     if (ok) {
       setServerPlayToken(null);
       setIsPlaying(false);
+      timing.markStopped();
       broadcast(queue, activeIndex, false);
     }
   }
@@ -981,16 +984,6 @@ const Host = ({
 
   // Counted the way the rotation groups people — a duet entry counts each member.
   const uniqueSingers = new Set(upNext.flatMap((s) => singerKeys(s.userName))).size;
-
-  // Recomputed on every render rather than memoized: each poll lands a fresh
-  // queue array anyway, and that tick is what keeps the countdown moving.
-  const estimate = estimateQueue({
-    queue,
-    activeVideoIndex: activeIndex,
-    isPlaying,
-    playStartedAt,
-    playPausedAt,
-  });
 
   // hostView is the staged draft while customizing, the room's config otherwise.
   const customizing = !remote && hostEdit.editing;

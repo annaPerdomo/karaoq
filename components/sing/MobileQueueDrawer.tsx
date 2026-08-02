@@ -37,7 +37,6 @@ const MobileQueueDrawer = ({
     username,
     estimate,
     sessionEndsAt,
-    viewerName,
     loading,
     onReaction,
     reactionCooldown,
@@ -119,8 +118,7 @@ const MobileQueueDrawer = ({
           <span className={styles.drawerLabel}>{t('sing.drawer.queue')}</span>
         )}
         {/* Their own wait outranks the queue length: on a phone this handle is
-            often all a singer sees of the queue. */}
-        {myTurn ? (
+            often all a singer sees of the queue. */}        {myTurn ? (
           <span className={`${styles.drawerBadge} ${styles.drawerBadgeMine}`}>
             {myTurn.onStage
               ? t('sing.eta.yourTurnNow')
@@ -199,7 +197,7 @@ const MobileQueueDrawer = ({
           items={queueItems}
           estimate={estimate}
           sessionEndsAt={sessionEndsAt}
-          viewerName={viewerName}
+          viewerName={username}
           loading={loading}
           headerClass={styles.drawerQueueHeader}
           listClass={styles.drawerQueueList}

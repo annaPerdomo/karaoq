@@ -16,17 +16,16 @@ export interface SingQueueViewProps {
   currentSong: QueueEntry | undefined;
   isPlaying: boolean;
   reactionsOn: boolean;
+  /** The viewer's own name — highlights their rows and gates cheering. */
   username: string;
   estimate: QueueEstimate;
   sessionEndsAt: number | null;
-  viewerName: string;
   loading: boolean;
   onReaction: (emoji: string) => void;
   reactionCooldown: boolean;
   lastSentEmoji: string | null;
 }
 
-/** The desktop column: your turn, who's on, cheers, and the queue. */
 const SingSidebar = (props: SingQueueViewProps): React.ReactElement => {
   const { t } = useT();
   const {
@@ -38,7 +37,6 @@ const SingSidebar = (props: SingQueueViewProps): React.ReactElement => {
     username,
     estimate,
     sessionEndsAt,
-    viewerName,
     loading,
     onReaction,
     reactionCooldown,
@@ -88,7 +86,7 @@ const SingSidebar = (props: SingQueueViewProps): React.ReactElement => {
           items={queueItems}
           estimate={estimate}
           sessionEndsAt={sessionEndsAt}
-          viewerName={viewerName}
+          viewerName={username}
           loading={loading}
           headerClass={styles.queueHeader}
           listClass={styles.queueList}

@@ -12,14 +12,14 @@ import postReaction from '../app/queue/postReaction';
 import { REACTION_COOLDOWN_MS, isTextReaction } from '../app/queue/cheerConstants';
 import { startSessionTracking } from '../app/queue/trackSession';
 import { startVisiblePolling } from '../app/queue/pollWhileVisible';
-import { DisplayTheme, QueueEntry, Reaction, Room, normalizeDisplayConfig } from '../pages/api/types';
+import { DisplayTheme, QueueEntry, Reaction, normalizeDisplayConfig } from '../pages/api/types';
 import { useT } from '../lib/i18n/I18nProvider';
 import { getStoredName, setStoredName } from '../lib/username';
 import LanguageSwitcher from './LanguageSwitcher';
 import SingSidebar from './sing/SingSidebar';
 import MobileQueueDrawer from './sing/MobileQueueDrawer';
 import { myTurnState } from './sing/YourTurnCard';
-import { estimateQueue, normalizeSessionEnd } from '../lib/queueTime';
+import { useRoomTiming } from './hooks/useRoomTiming';
 
 
 const POLL_INTERVAL = 5000;
@@ -43,11 +43,6 @@ const Sing = (): React.ReactElement => {
   const [activeIndex, setActiveIndex] = React.useState(0);
   const [username, setUsername] = React.useState('');
   const [isPlaying, setIsPlaying] = React.useState(false);
-  // Room-wide timing: when the on-stage song started, and when the room has to
-  // be out. Both feed the "when am I up?" estimate.
-  const [playStartedAt, setPlayStartedAt] = React.useState<string | null>(null);
-  const [playPausedAt, setPlayPausedAt] = React.useState<string | null>(null);
-  const [sessionEndsAt, setSessionEndsAt] = React.useState<number | null>(null);
   const [reactionsOn, setReactionsOn] = React.useState(true);
   const [theme, setTheme] = React.useState<DisplayTheme>('classic');
   const [loading, setLoading] = React.useState(true);
@@ -150,16 +145,13 @@ const Sing = (): React.ReactElement => {
     [spawnReactionPops]
   );
 
-  // The initial load and every poll land the same timing fields.
-  const applyTiming = React.useCallback((room: Room) => {
-    setPlayStartedAt(
-      room.playStartedAt ? new Date(room.playStartedAt).toISOString() : null
-    );
-    setPlayPausedAt(
-      room.playPausedAt ? new Date(room.playPausedAt).toISOString() : null
-    );
-    setSessionEndsAt(normalizeSessionEnd(room.sessionEndsAt));
-  }, []);
+  const timing = useRoomTiming({
+    queue,
+    activeVideoIndex: activeIndex,
+    isPlaying,
+  });
+  const { estimate, sessionEndsAt } = timing;
+  const applyTiming = timing.adoptRoom;
 
   React.useEffect(() => {
     if (!joinCode) return;
@@ -240,14 +232,6 @@ const Sing = (): React.ReactElement => {
   const currentSong = queue[activeIndex];
   const mainClass = `${styles.main} ${THEME_CLASS[theme]}`;
 
-  // Recomputed each render; the 5s poll is what advances the countdown.
-  const estimate = estimateQueue({
-    queue,
-    activeVideoIndex: activeIndex,
-    isPlaying,
-    playStartedAt,
-    playPausedAt,
-  });
   const myTurn = myTurnState(
     upcomingSongs,
     username,
@@ -311,7 +295,6 @@ const Sing = (): React.ReactElement => {
     username,
     estimate,
     sessionEndsAt,
-    viewerName: username,
     loading,
     onReaction: sendReaction,
     reactionCooldown,
