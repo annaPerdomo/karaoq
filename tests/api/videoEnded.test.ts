@@ -70,7 +70,12 @@ describe("POST /api/queue/[id]/video-ended - Display reports a finished song", (
       { id: "ROOM1", activeVideoIndex: 0, isPlaying: true },
       {
         $set: { activeVideoIndex: 1, isPlaying: false, lastActivity: expect.any(Date) },
-        $unset: { playToken: "", displayPaused: "", playStartedAt: "" },
+        $unset: {
+          playToken: "",
+          displayPaused: "",
+          playStartedAt: "",
+          playPausedAt: "",
+        },
       }
     );
   });
@@ -91,7 +96,12 @@ describe("POST /api/queue/[id]/video-ended - Display reports a finished song", (
       { id: "ROOM1", activeVideoIndex: 2, isPlaying: true },
       {
         $set: { isPlaying: false, lastActivity: expect.any(Date) },
-        $unset: { playToken: "", displayPaused: "", playStartedAt: "" },
+        $unset: {
+          playToken: "",
+          displayPaused: "",
+          playStartedAt: "",
+          playPausedAt: "",
+        },
       }
     );
   });
