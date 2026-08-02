@@ -3,21 +3,24 @@ import { useRouter } from 'next/router';
 import { v4 as uuidv4 } from 'uuid';
 
 import styles from '../styles/Sing.module.css';
-import CheerBar from './CheerBar';
 import SongSearch from './SongSearch';
 import BoardsPanel from './BoardsPanel';
 import getRoom from '../app/queue/getRoom';
 import useBoards from '../app/queue/useBoards';
-import formatSongTitle from '../lib/songTitle';
 import { normalizeRoomId } from '../lib/roomCode';
 import postReaction from '../app/queue/postReaction';
-import { CHEER_EMOJIS, REACTION_COOLDOWN_MS, isTextReaction } from '../app/queue/cheerConstants';
+import { REACTION_COOLDOWN_MS, isTextReaction } from '../app/queue/cheerConstants';
 import { startSessionTracking } from '../app/queue/trackSession';
 import { startVisiblePolling } from '../app/queue/pollWhileVisible';
-import { DisplayTheme, QueueEntry, Reaction, normalizeDisplayConfig } from '../pages/api/types';
+import { DisplayTheme, QueueEntry, Reaction, Room, normalizeDisplayConfig } from '../pages/api/types';
 import { useT } from '../lib/i18n/I18nProvider';
 import { getStoredName, setStoredName } from '../lib/username';
 import LanguageSwitcher from './LanguageSwitcher';
+import SingSidebar from './sing/SingSidebar';
+import MobileQueueDrawer from './sing/MobileQueueDrawer';
+import { myTurnState } from './sing/YourTurnCard';
+import { estimateQueue } from '../lib/queueTime';
+import { singerKey } from '../lib/fairQueue';
 
 
 const POLL_INTERVAL = 5000;
@@ -41,6 +44,10 @@ const Sing = (): React.ReactElement => {
   const [activeIndex, setActiveIndex] = React.useState(0);
   const [username, setUsername] = React.useState('');
   const [isPlaying, setIsPlaying] = React.useState(false);
+  // Room-wide timing: when the on-stage song started, and when the room has to
+  // be out. Both feed the "when am I up?" estimate.
+  const [playStartedAt, setPlayStartedAt] = React.useState<string | null>(null);
+  const [sessionEndsAt, setSessionEndsAt] = React.useState<number | null>(null);
   const [reactionsOn, setReactionsOn] = React.useState(true);
   const [theme, setTheme] = React.useState<DisplayTheme>('classic');
   const [loading, setLoading] = React.useState(true);
@@ -51,9 +58,6 @@ const Sing = (): React.ReactElement => {
   const [reactionCooldown, setReactionCooldown] = React.useState(false);
   const [lastSentEmoji, setLastSentEmoji] = React.useState<string | null>(null);
   const [mobileQueueOpen, setMobileQueueOpen] = React.useState(false);
-  const [drawerDragHeight, setDrawerDragHeight] = React.useState<number | null>(null);
-  const drawerRef = React.useRef<HTMLDivElement>(null);
-  const drawerDrag = React.useRef({ startY: 0, startHeight: 0, delta: 0, dragging: false });
   const [showWelcome, setShowWelcome] = React.useState(true);
   const [showTipsBanner, setShowTipsBanner] = React.useState(false);
   const [welcomeName, setWelcomeName] = React.useState('');
@@ -146,6 +150,16 @@ const Sing = (): React.ReactElement => {
     [spawnReactionPops]
   );
 
+  // The initial load and every poll land the same timing fields.
+  const applyTiming = React.useCallback((room: Room) => {
+    setPlayStartedAt(
+      room.playStartedAt ? new Date(room.playStartedAt).toISOString() : null
+    );
+    setSessionEndsAt(
+      room.sessionEndsAt ? new Date(room.sessionEndsAt).getTime() : null
+    );
+  }, []);
+
   React.useEffect(() => {
     if (!joinCode) return;
 
@@ -162,6 +176,7 @@ const Sing = (): React.ReactElement => {
         applyBoards(room);
         setActiveIndex(room.activeVideoIndex);
         setIsPlaying(room.isPlaying ?? false);
+        applyTiming(room);
         setReactionsOn(room.reactionsEnabled ?? true);
         setTheme(normalizeDisplayConfig(room.displayConfig).theme);
         processReactions(room.reactions, false);
@@ -171,7 +186,7 @@ const Sing = (): React.ReactElement => {
     }
     init();
     return () => { cancelled = true; };
-  }, [joinCode, processReactions, initNonce, applyBoards]);
+  }, [joinCode, processReactions, initNonce, applyBoards, applyTiming]);
 
   React.useEffect(() => {
     if (!joinCode || error) return;
@@ -189,13 +204,14 @@ const Sing = (): React.ReactElement => {
       applyBoards(room);
       setActiveIndex(room.activeVideoIndex);
       setIsPlaying(room.isPlaying ?? false);
+      applyTiming(room);
       setReactionsOn(room.reactionsEnabled ?? true);
       setTheme(normalizeDisplayConfig(room.displayConfig).theme);
       processReactions(room.reactions);
       setLoadError(false);
       setLoading(false);
     }, POLL_INTERVAL);
-  }, [joinCode, error, processReactions, applyBoards]);
+  }, [joinCode, error, processReactions, applyBoards, applyTiming]);
 
   function handleSongAdded(entry: QueueEntry) {
     // Functional update: the click-closure `queue` can predate a poll that
@@ -219,47 +235,25 @@ const Sing = (): React.ReactElement => {
     if (!ok) setLastSentEmoji(null);
   }
 
-  const DRAG_START_PX = 8;
-  const DRAG_COMMIT_PX = 40;
-  const DRAWER_COLLAPSED_PX = 52; // matches the 3.25rem collapsed max-height
-
-  function handleDrawerTouchStart(e: React.TouchEvent) {
-    drawerDrag.current = {
-      startY: e.touches[0].clientY,
-      startHeight: drawerRef.current?.getBoundingClientRect().height ?? 0,
-      delta: 0,
-      dragging: false,
-    };
-  }
-
-  function handleDrawerTouchMove(e: React.TouchEvent) {
-    const drag = drawerDrag.current;
-    drag.delta = drag.startY - e.touches[0].clientY;
-    if (!drag.dragging && Math.abs(drag.delta) < DRAG_START_PX) return;
-    drag.dragging = true;
-    const maxHeight = window.innerHeight * 0.75; // matches the 75vh open max-height
-    setDrawerDragHeight(
-      Math.min(Math.max(drag.startHeight + drag.delta, DRAWER_COLLAPSED_PX), maxHeight)
-    );
-  }
-
-  function handleDrawerTouchEnd() {
-    const drag = drawerDrag.current;
-    if (!drag.dragging) return;
-    if (drag.delta > DRAG_COMMIT_PX) setMobileQueueOpen(true);
-    else if (drag.delta < -DRAG_COMMIT_PX) setMobileQueueOpen(false);
-    setDrawerDragHeight(null);
-  }
-
-  function handleDrawerHandleClick() {
-    // A drag can synthesize a click on release; only toggle on real taps.
-    if (drawerDrag.current.dragging) return;
-    setMobileQueueOpen(!mobileQueueOpen);
-  }
-
   const upcomingSongs = queue.slice(activeIndex);
   const currentSong = queue[activeIndex];
   const mainClass = `${styles.main} ${THEME_CLASS[theme]}`;
+
+  // Recomputed each render; the 5s poll is what advances the countdown.
+  const estimate = estimateQueue({
+    queue,
+    activeVideoIndex: activeIndex,
+    isPlaying,
+    playStartedAt,
+  });
+  const myKey = username.trim() ? singerKey(username.trim()) : null;
+  const myTurn = myTurnState(
+    upcomingSongs,
+    username,
+    estimate,
+    isPlaying,
+    sessionEndsAt
+  );
 
   if (!joinCode) {
     return <div className={styles.loadingScreen}><div className={styles.spinner} /></div>;
@@ -304,8 +298,24 @@ const Sing = (): React.ReactElement => {
 
   const showingNowPlaying = !!(currentSong && isPlaying);
   const queueItems = showingNowPlaying ? upcomingSongs.slice(1) : upcomingSongs;
-  const queueCount = queueItems.length;
-  const quickCheerVisible = showingNowPlaying && reactionsOn && !mobileQueueOpen;
+
+  // One object for both queue surfaces — the sidebar and the phone drawer show
+  // the same room, so they take the same props.
+  const queueView = {
+    upcoming: upcomingSongs,
+    queueItems,
+    currentSong,
+    isPlaying,
+    reactionsOn,
+    username,
+    estimate,
+    sessionEndsAt,
+    mineKey: myKey,
+    loading,
+    onReaction: sendReaction,
+    reactionCooldown,
+    lastSentEmoji,
+  };
 
   return (
     <main className={mainClass}>
@@ -365,185 +375,14 @@ const Sing = (): React.ReactElement => {
           )}
         </div>
 
-        <aside className={styles.sidebar}>
-          {currentSong && isPlaying && (
-            <div className={styles.nowPlaying}>
-              <div className={styles.nowHeader}>
-                <span className={styles.nowDot} />
-                <span className={styles.nowLabel}>{t('sing.nowPlaying')}</span>
-              </div>
-              <p className={styles.nowSinger}>{currentSong.userName}</p>
-              <p className={styles.nowSong}>
-                {formatSongTitle(currentSong.songTitle)}
-              </p>
-            </div>
-          )}
+        <SingSidebar {...queueView} />
 
-          {currentSong && isPlaying && reactionsOn ? (
-            <CheerBar
-              onReaction={sendReaction}
-              cooldown={reactionCooldown}
-              lastSentEmoji={lastSentEmoji}
-              disabled={!username.trim()}
-            />
-          ) : reactionsOn && queueItems.length > 0 && (
-            <div className={styles.cheerHint}>
-              {t('sing.cheerHint')}
-            </div>
-          )}
-
-          <div className={styles.queueSection}>
-            <div className={styles.queueHeader}>
-              <h3 className={styles.queueTitle}>{t('sing.upNext')}</h3>
-              {queueCount > 0 && (
-                <span className={styles.queueBadge}>{queueCount}</span>
-              )}
-            </div>
-            {loading ? (
-              <div className={styles.loadingQueue}>
-                <div className={styles.spinner} />
-              </div>
-            ) : queueItems.length > 0 ? (
-              <div className={styles.queueList}>
-                {queueItems.map((item, i) => (
-                  <div key={item.id} className={styles.queueItem}>
-                    <span className={styles.queueNum}>{i + 1}</span>
-                    <div className={styles.queueInfo}>
-                      <span className={styles.queueSinger}>
-                        {item.userName}
-                      </span>
-                      <span className={styles.queueSong}>
-                        {formatSongTitle(item.songTitle)}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className={styles.emptyQueue}>
-                <p>{t('sing.queue.emptyTitle')}</p>
-                <span>{t('sing.queue.emptyBody')}</span>
-              </div>
-            )}
-          </div>
-        </aside>
-
-        <div
-          ref={drawerRef}
-          className={`${styles.mobileDrawer} ${quickCheerVisible ? styles.mobileDrawerCheer : ''} ${mobileQueueOpen ? styles.mobileDrawerOpen : ''} ${drawerDragHeight !== null ? styles.mobileDrawerDragging : ''}`}
-          style={
-            drawerDragHeight !== null
-              ? { maxHeight: drawerDragHeight, transition: 'none' }
-              : undefined
-          }
-        >
-          <button
-            className={styles.drawerHandle}
-            onClick={handleDrawerHandleClick}
-            onTouchStart={handleDrawerTouchStart}
-            onTouchMove={handleDrawerTouchMove}
-            onTouchEnd={handleDrawerTouchEnd}
-            onTouchCancel={() => setDrawerDragHeight(null)}
-            aria-expanded={mobileQueueOpen}
-          >
-            <span className={styles.drawerGrabber} />
-            {currentSong && isPlaying ? (
-              <>
-                <span className={styles.nowDot} />
-                <div className={styles.drawerNowPlaying}>
-                  <span className={styles.drawerSinger}>{currentSong.userName}</span>
-                  <span className={styles.drawerSongTitle}>
-                    {formatSongTitle(currentSong.songTitle)}
-                  </span>
-                </div>
-              </>
-            ) : (
-              <span className={styles.drawerLabel}>{t('sing.drawer.queue')}</span>
-            )}
-            {queueCount > 0 && (
-              <span className={styles.drawerBadge}>{t('sing.drawer.upNext', { count: queueCount })}</span>
-            )}
-            <span className={`${styles.drawerChevron} ${mobileQueueOpen ? styles.drawerChevronOpen : ''}`}>
-              &#x25B2;
-            </span>
-          </button>
-
-          {quickCheerVisible && (
-            <div className={styles.quickCheerRow}>
-              {CHEER_EMOJIS.slice(0, 5).map((emoji) => (
-                <button
-                  key={emoji}
-                  className={`${styles.quickCheerBtn} ${reactionCooldown ? styles.quickCheerBtnCooldown : ''}`}
-                  onClick={() => sendReaction(emoji)}
-                  disabled={reactionCooldown || !username.trim()}
-                  aria-label={t('sing.cheer.sendAria', { emoji })}
-                >
-                  {emoji}
-                </button>
-              ))}
-              {lastSentEmoji ? (
-                <span className={styles.quickCheerSent}>{t('sing.quickCheer.sent', { emoji: lastSentEmoji })}</span>
-              ) : (
-                <button
-                  className={styles.quickCheerMore}
-                  onClick={() => setMobileQueueOpen(true)}
-                >
-                  {t('sing.quickCheer.more')}
-                </button>
-              )}
-            </div>
-          )}
-
-          <div className={styles.drawerBody}>
-            {currentSong && isPlaying && reactionsOn ? (
-              <CheerBar
-                onReaction={sendReaction}
-                cooldown={reactionCooldown}
-                lastSentEmoji={lastSentEmoji}
-                disabled={!username.trim()}
-                compact
-              />
-            ) : reactionsOn && queueItems.length > 0 && (
-              <div className={styles.cheerHint}>
-                {t('sing.cheerHint')}
-              </div>
-            )}
-
-            <div className={styles.drawerQueueHeader}>
-              <h3 className={styles.queueTitle}>{t('sing.upNext')}</h3>
-              {queueCount > 0 && (
-                <span className={styles.queueBadge}>{queueCount}</span>
-              )}
-            </div>
-
-            {loading ? (
-              <div className={styles.loadingQueue}>
-                <div className={styles.spinner} />
-              </div>
-            ) : queueItems.length > 0 ? (
-              <div className={styles.drawerQueueList}>
-                {queueItems.map((item, i) => (
-                  <div key={item.id} className={styles.queueItem}>
-                    <span className={styles.queueNum}>{i + 1}</span>
-                    <div className={styles.queueInfo}>
-                      <span className={styles.queueSinger}>
-                        {item.userName}
-                      </span>
-                      <span className={styles.queueSong}>
-                        {formatSongTitle(item.songTitle)}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className={styles.emptyQueue}>
-                <p>{t('sing.queue.emptyTitle')}</p>
-                <span>{t('sing.queue.emptyBody')}</span>
-              </div>
-            )}
-          </div>
-        </div>
+        <MobileQueueDrawer
+          {...queueView}
+          open={mobileQueueOpen}
+          onOpenChange={setMobileQueueOpen}
+          myTurn={myTurn}
+        />
       </div>
 
       {reactionsOn && visibleReactions.length > 0 && (

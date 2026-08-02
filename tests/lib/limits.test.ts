@@ -1,6 +1,41 @@
 import { describe, it, expect } from "vitest";
-import { isValidDisplayConfig, MAX_BANNER_LENGTH } from "../../lib/limits";
+import {
+  isValidDisplayConfig,
+  isValidQueueEntry,
+  MAX_BANNER_LENGTH,
+  sanitizeSongDuration,
+} from "../../lib/limits";
 import { DEFAULT_DISPLAY_CONFIG, DisplayConfig } from "../../pages/api/types";
+
+describe("sanitizeSongDuration", () => {
+  it("keeps a plausible song length, as whole seconds", () => {
+    expect(sanitizeSongDuration(245)).toBe(245);
+    expect(sanitizeSongDuration(245.6)).toBe(246);
+  });
+
+  it("drops lengths no karaoke track has", () => {
+    expect(sanitizeSongDuration(5)).toBeUndefined(); // a clip
+    expect(sanitizeSongDuration(86_400)).toBeUndefined(); // a livestream
+  });
+
+  it("drops anything that isn't a finite number", () => {
+    expect(sanitizeSongDuration(undefined)).toBeUndefined();
+    expect(sanitizeSongDuration("240")).toBeUndefined();
+    expect(sanitizeSongDuration(NaN)).toBeUndefined();
+  });
+
+  it("leaves a queue entry valid whether or not it carries a length", () => {
+    const entry = {
+      id: "e1",
+      userName: "Anna",
+      songTitle: "Song",
+      videoId: "dQw4w9WgXcQ",
+    };
+    expect(isValidQueueEntry(entry)).toBe(true);
+    expect(isValidQueueEntry({ ...entry, durationSeconds: 240 })).toBe(true);
+    expect(isValidQueueEntry({ ...entry, durationSeconds: 3 })).toBe(false);
+  });
+});
 
 describe("isValidDisplayConfig", () => {
   it("accepts the default config", () => {

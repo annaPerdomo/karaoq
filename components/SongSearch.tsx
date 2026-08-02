@@ -352,6 +352,11 @@ const SongSearch: React.FC<SongSearchProps> = ({
       userName: userName.trim(),
       songTitle: song.title,
       videoId: song.videoId,
+      // Feeds the queue-time estimate. Absent on degraded search results —
+      // the estimate falls back to the room's average.
+      ...(song.durationSeconds !== undefined
+        ? { durationSeconds: song.durationSeconds }
+        : {}),
     };
 
     setAdding(true);

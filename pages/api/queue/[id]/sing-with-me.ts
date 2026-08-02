@@ -4,6 +4,7 @@ import {
   MAX_SING_WITH_ME,
   isValidSingWithMePost,
   rateLimit,
+  sanitizeSongDuration,
 } from "../../../../lib/limits";
 import { getRoomsCollection } from "../../../../lib/mongodb";
 import { normalizeRoomId } from "../../../../lib/roomCode";
@@ -35,10 +36,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const anonymous = body.anonymous === true;
   const createdBy = anonymous ? "" : (body.createdBy as string) ?? "";
+  // Dropped rather than rejected when implausible — the post still goes up.
+  const durationSeconds = sanitizeSongDuration(body.durationSeconds);
   const post: SingWithMePost = {
     id: body.id as string,
     songTitle: body.songTitle as string,
     videoId: body.videoId as string,
+    ...(durationSeconds !== undefined ? { durationSeconds } : {}),
     createdBy,
     anonymous,
     minSingers: body.minSingers as number,

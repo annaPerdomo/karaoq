@@ -142,6 +142,57 @@
   margin-top: 0.1rem;
 }
 
+/* Wrap-up time: a clock field and its two actions on one row. */
+.spTimeRow {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+
+.spTimeInput {
+  flex: 1;
+  min-width: 0;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 6px;
+  color: var(--text-primary);
+  /* ≥16px or iOS Safari zooms in on focus and stays zoomed. */
+  font-size: 1rem;
+  font-family: inherit;
+  padding: 0.3rem 0.45rem;
+  outline: none;
+}
+
+.spTimeInput:focus {
+  border-color: rgba(0, 240, 255, 0.5);
+}
+
+.spTimeBtn,
+.spTimeClear {
+  font-size: 0.7rem;
+  font-weight: 600;
+  font-family: inherit;
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 240, 255, 0.35);
+  background: rgba(0, 240, 255, 0.1);
+  color: #00f0ff;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.spTimeBtn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.spTimeClear {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-muted);
+}
+
 .spToggleRow {
   display: flex;
   align-items: center;
@@ -539,6 +590,55 @@
   border-radius: 50%;
   background: var(--text-muted);
   opacity: 0.5;
+}
+
+/* Queue time estimate — deliberately quieter than the counts it sits beside;
+   it's a guide, not a promise. */
+.queueTimeLeft {
+  color: #00f0ff;
+  opacity: 0.85;
+  font-weight: 600;
+}
+
+.queueEndRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  padding: 0.35rem 1rem 0.5rem;
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  cursor: help;
+}
+
+.queueEndRow > span {
+  white-space: nowrap;
+}
+
+.queueEndRowWarn {
+  color: #ffb84d;
+}
+
+.queueEndRowWarn .statDot {
+  background: #ffb84d;
+}
+
+.queueEta {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.1rem;
+}
+
+.queueEtaOver {
+  color: #ffb84d;
+  border: 1px solid rgba(255, 184, 77, 0.35);
+  border-radius: 999px;
+  padding: 0 0.35rem;
+  white-space: nowrap;
 }
 
 .queueList {

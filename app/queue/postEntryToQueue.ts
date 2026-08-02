@@ -13,6 +13,7 @@ export default async function postEntryToQueue(
         userName: entry.userName,
         videoId: entry.videoId,
         songTitle: entry.songTitle,
+        durationSeconds: entry.durationSeconds,
       }),
     });
     return resp.ok;

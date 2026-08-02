@@ -76,6 +76,7 @@ const SocialBoards: React.FC<SocialBoardsProps> = ({
           ? postSingWithMe(roomId, {
               songTitle: draft.song.title,
               videoId: draft.song.videoId,
+              durationSeconds: draft.song.durationSeconds,
               createdBy: name,
               anonymous: draft.anonymous,
               minSingers: draft.minSingers,
@@ -84,6 +85,7 @@ const SocialBoards: React.FC<SocialBoardsProps> = ({
           : postSuggestion(roomId, {
               songTitle: draft.song.title,
               videoId: draft.song.videoId,
+              durationSeconds: draft.song.durationSeconds,
               suggestedBy: name,
               anonymous: draft.anonymous,
             }),
@@ -100,6 +102,7 @@ const SocialBoards: React.FC<SocialBoardsProps> = ({
           ? editSingWithMe(roomId, target.post.id, {
               songTitle: draft.song.title,
               videoId: draft.song.videoId,
+              durationSeconds: draft.song.durationSeconds,
               minSingers: draft.minSingers,
               maxSingers: draft.maxSingers,
               userName: isHost ? undefined : name,
@@ -107,6 +110,7 @@ const SocialBoards: React.FC<SocialBoardsProps> = ({
           : editSuggestion(roomId, target.post.id, {
               songTitle: draft.song.title,
               videoId: draft.song.videoId,
+              durationSeconds: draft.song.durationSeconds,
               userName: isHost ? undefined : name,
             }),
       () => setEditing(null)
@@ -122,6 +126,8 @@ const SocialBoards: React.FC<SocialBoardsProps> = ({
         title: target.post.songTitle,
         videoId: target.post.videoId,
         thumbnailUrl: `https://i.ytimg.com/vi/${target.post.videoId}/mqdefault.jpg`,
+        // Carried so an edit that doesn't change the song keeps its known length.
+        durationSeconds: target.post.durationSeconds,
       },
       anonymous: target.post.anonymous,
       minSingers: swm?.minSingers ?? 2,

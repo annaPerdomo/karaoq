@@ -1,6 +1,10 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { queueSingWithMeIfReady } from "../../../../lib/boards";
-import { isValidSingWithMePost, rateLimit } from "../../../../lib/limits";
+import {
+  isValidSingWithMePost,
+  rateLimit,
+  sanitizeSongDuration,
+} from "../../../../lib/limits";
 import { getRoomsCollection } from "../../../../lib/mongodb";
 import { normalizeRoomId } from "../../../../lib/roomCode";
 
@@ -84,6 +88,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return;
     }
 
+    // A swap to a different video must not inherit the old song's length — the
+    // queue-time estimate would quietly lie. No new length + same video keeps
+    // whatever was stored.
+    const nextDuration = sanitizeSongDuration(body.durationSeconds);
+    const dropStaleDuration =
+      nextDuration === undefined &&
+      edited.videoId !== target.videoId &&
+      target.durationSeconds !== undefined;
+
     // The queued guard rides on the write too — a join could have queued this
     // post between the read above and here.
     const result = await collection.updateOne(
@@ -94,8 +107,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           "singWithMe.$.videoId": edited.videoId,
           "singWithMe.$.minSingers": edited.minSingers,
           "singWithMe.$.maxSingers": edited.maxSingers,
+          ...(nextDuration !== undefined
+            ? { "singWithMe.$.durationSeconds": nextDuration }
+            : {}),
           lastActivity: new Date(),
         },
+        ...(dropStaleDuration
+          ? { $unset: { "singWithMe.$.durationSeconds": "" } }
+          : {}),
       }
     );
     if (result.matchedCount === 0) {

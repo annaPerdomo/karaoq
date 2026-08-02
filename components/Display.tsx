@@ -18,6 +18,7 @@ import { renderWithHeart } from '../lib/i18n/renderWithHeart';
 import LanguageSwitcher from './LanguageSwitcher';
 import FullscreenToggle from './FullscreenToggle';
 import formatSongTitle from '../lib/songTitle';
+import { estimateQueue } from '../lib/queueTime';
 import DisplaySidebar from './display/DisplaySidebar';
 import NowPlayingBar from './display/NowPlayingBar';
 import p from '../styles/DisplayDesigner.module.css';
@@ -50,6 +51,9 @@ const Display = (): React.ReactElement => {
   const [boardsOn, setBoardsOn] = React.useState(true);
   const [activeIndex, setActiveIndex] = React.useState(0);
   const [isPlaying, setIsPlaying] = React.useState(false);
+  // Lets the on-stage song count down instead of restarting the queue-time
+  // estimate on every poll.
+  const [playStartedAt, setPlayStartedAt] = React.useState<string | null>(null);
   const [displayPaused, setDisplayPaused] = React.useState(false);
   // Unset playMode (legacy rooms) is treated like "tv".
   const [playMode, setPlayMode] = React.useState<PlayMode | null>(null);
@@ -158,6 +162,9 @@ const Display = (): React.ReactElement => {
     setBoardsOn(room.boardsOnDisplay ?? true);
     setActiveIndex(room.activeVideoIndex);
     setIsPlaying(room.isPlaying ?? false);
+    setPlayStartedAt(
+      room.playStartedAt ? new Date(room.playStartedAt).toISOString() : null
+    );
     let paused = room.displayPaused ?? false;
     const local = localPauseRef.current;
     if (local && paused !== local.paused && Date.now() - local.at < 3000) {
@@ -369,6 +376,13 @@ const Display = (): React.ReactElement => {
   const upNext = currentSong && !isPlaying
     ? queue.slice(activeIndex)
     : queue.slice(activeIndex + 1);
+  // Recomputed each render; the 1.5s poll is what advances the countdown.
+  const estimate = estimateQueue({
+    queue,
+    activeVideoIndex: activeIndex,
+    isPlaying,
+    playStartedAt,
+  });
   const joinUrl = `${origin || 'https://karaoq.live'}/sing/${joinCode}`;
   const view = edit.view;
   // boardsView, not raw boardsOn: after a save that hides boards, the raw flag
@@ -599,6 +613,9 @@ const Display = (): React.ReactElement => {
           joinCode={joinCode || ''}
           origin={origin}
           upNext={upNext}
+          // Not while customizing: the list renders sample songs there, and a
+          // countdown against invented content would read as real.
+          estimate={edit.editing ? undefined : estimate}
           boardsOn={edit.boardsView}
           singWithMe={singWithMe}
           suggestions={suggestions}

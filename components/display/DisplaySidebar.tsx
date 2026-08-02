@@ -4,6 +4,7 @@ import p from '../../styles/DisplayDesigner.module.css';
 import QrJoinCard from '../QrJoinCard';
 import BoardsSummary from '../boards/BoardsSummary';
 import UpNextList from './UpNextList';
+import { QueueEstimate } from '../../lib/queueTime';
 import {
   DisplayConfig,
   QueueEntry,
@@ -43,6 +44,8 @@ interface DisplaySidebarProps {
   joinCode: string;
   origin: string;
   upNext: QueueEntry[];
+  /** Absent while customizing, where the list shows sample content. */
+  estimate?: QueueEstimate;
   boardsOn: boolean;
   singWithMe: SingWithMePost[];
   suggestions: SuggestedSong[];
@@ -55,6 +58,7 @@ const DisplaySidebar = ({
   joinCode,
   origin,
   upNext,
+  estimate,
   boardsOn,
   singWithMe,
   suggestions,
@@ -152,7 +156,7 @@ const DisplaySidebar = ({
       </p>
     ),
     upNext: visible.upNext && (
-      <UpNextList key="upNext" upNext={upNext} />
+      <UpNextList key="upNext" upNext={upNext} estimate={estimate} />
     ),
     boards: visible.boards && (
       <div key="boards" className={p.shrinkBlock}>

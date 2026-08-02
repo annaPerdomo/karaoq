@@ -16,10 +16,32 @@ export const MAX_BANNER_LENGTH = 80;
 // YouTube video IDs are exactly 11 URL-safe base64 characters.
 const VIDEO_ID_RE = /^[A-Za-z0-9_-]{11}$/;
 
+// Song lengths outside this range are never a karaoke track (a 5-second clip, a
+// 24/7 livestream) and would wreck the queue-time estimate, so they're dropped
+// rather than stored. Absent is fine — lib/queueTime falls back.
+export const MIN_SONG_SECONDS = 30;
+export const MAX_SONG_SECONDS = 1800;
+
+/** Whole seconds when plausible, undefined otherwise. Callers drop a bad value
+ * instead of rejecting the write — a song must never be lost to bad metadata. */
+export function sanitizeSongDuration(value: unknown): number | undefined {
+  if (typeof value !== "number" || !Number.isFinite(value)) return undefined;
+  const seconds = Math.round(value);
+  return seconds >= MIN_SONG_SECONDS && seconds <= MAX_SONG_SECONDS
+    ? seconds
+    : undefined;
+}
+
+/** Optional: absent stays absent, present must be a plausible song length. */
+export function isValidSongDuration(value: unknown): boolean {
+  return value === undefined || sanitizeSongDuration(value) !== undefined;
+}
+
 export function isValidQueueEntry(entry: unknown): entry is QueueEntry {
   if (!entry || typeof entry !== "object") return false;
   const e = entry as Record<string, unknown>;
   return (
+    isValidSongDuration(e.durationSeconds) &&
     typeof e.id === "string" &&
     e.id.length > 0 &&
     e.id.length <= MAX_ENTRY_ID_LENGTH &&
@@ -35,6 +57,7 @@ export function isValidQueueEntry(entry: unknown): entry is QueueEntry {
 
 function hasValidSongShape(e: Record<string, unknown>): boolean {
   return (
+    isValidSongDuration(e.durationSeconds) &&
     typeof e.id === "string" &&
     e.id.length > 0 &&
     e.id.length <= MAX_ENTRY_ID_LENGTH &&

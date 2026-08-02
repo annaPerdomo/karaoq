@@ -1,6 +1,8 @@
 export interface SingWithMeEdit {
   songTitle: string;
   videoId: string;
+  /** Length of the (possibly newly picked) song; omitted leaves the stored one. */
+  durationSeconds?: number;
   minSingers: number;
   maxSingers: number;
   /** Supplied when the poster edits their own post (enforced server-side);

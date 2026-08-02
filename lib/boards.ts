@@ -37,6 +37,10 @@ export async function queueSingWithMeIfReady(
       userName: creditNames(post.joinedSingers),
       songTitle: `🎤 ${post.songTitle}`,
       videoId: post.videoId,
+      // Carried from the board post so the queue-time estimate knows this one.
+      ...(post.durationSeconds !== undefined
+        ? { durationSeconds: post.durationSeconds }
+        : {}),
       addedAt: Date.now(),
     };
     const graduate = {

@@ -542,6 +542,89 @@
   border-radius: 10px;
 }
 
+.queueHeaderRight {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.queueTotalTime {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.queueEndNote {
+  padding: 0.45rem 1.2rem;
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+/* "You're up in ~12 min" — the singer's own answer, so it outranks the list. */
+.turnCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.85rem 1.2rem;
+  background: linear-gradient(135deg, rgba(0, 240, 255, 0.1), rgba(0, 240, 255, 0.03));
+  border-bottom: 1px solid rgba(0, 240, 255, 0.16);
+}
+
+.turnCardNow {
+  background: linear-gradient(135deg, rgba(255, 45, 120, 0.14), rgba(255, 45, 120, 0.04));
+  border-bottom-color: rgba(255, 45, 120, 0.24);
+}
+
+.turnLead {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--acc-b, #00f0ff);
+}
+
+.turnCardNow .turnLead {
+  color: var(--acc-a, #ff2d78);
+}
+
+.turnSong {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  line-height: 1.35;
+}
+
+.turnAhead {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+.turnWarn {
+  font-size: 0.7rem;
+  color: #ffb84d;
+}
+
+.queueItemMine {
+  background: rgba(0, 240, 255, 0.06);
+  box-shadow: inset 2px 0 0 var(--acc-b, #00f0ff);
+}
+
+.queueEta {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.queueEtaOver {
+  color: #ffb84d;
+  border: 1px solid rgba(255, 184, 77, 0.35);
+  border-radius: 999px;
+  padding: 0 0.35rem;
+}
+
 .queueList {
   flex: 1;
   overflow-y: auto;
@@ -952,6 +1035,14 @@
     padding: 0.15rem 0.5rem;
     border-radius: 10px;
     flex-shrink: 0;
+  }
+
+  /* The viewer's own turn — cyan, so it reads as "about you" rather than as
+     another count of the room's songs. */
+  .drawerBadgeMine {
+    background: rgba(0, 240, 255, 0.16);
+    color: var(--acc-b, #00f0ff);
+    white-space: nowrap;
   }
 
   .drawerChevron {

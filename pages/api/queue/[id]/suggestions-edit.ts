@@ -1,5 +1,9 @@
 import { NextApiRequest, NextApiResponse } from "next";
-import { isValidSuggestedSong, rateLimit } from "../../../../lib/limits";
+import {
+  isValidSuggestedSong,
+  rateLimit,
+  sanitizeSongDuration,
+} from "../../../../lib/limits";
 import { getRoomsCollection } from "../../../../lib/mongodb";
 import { normalizeRoomId } from "../../../../lib/roomCode";
 
@@ -67,14 +71,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return;
     }
 
+    // A swap to a different video must not inherit the old song's length — the
+    // queue-time estimate would quietly lie. No new length + same video keeps
+    // whatever was stored.
+    const nextDuration = sanitizeSongDuration(body.durationSeconds);
+    const dropStaleDuration =
+      nextDuration === undefined &&
+      edited.videoId !== target.videoId &&
+      target.durationSeconds !== undefined;
+
     const result = await collection.updateOne(
       { id: roomId, "suggestions.id": suggestionId },
       {
         $set: {
           "suggestions.$.songTitle": edited.songTitle,
           "suggestions.$.videoId": edited.videoId,
+          ...(nextDuration !== undefined
+            ? { "suggestions.$.durationSeconds": nextDuration }
+            : {}),
           lastActivity: new Date(),
         },
+        ...(dropStaleDuration
+          ? { $unset: { "suggestions.$.durationSeconds": "" } }
+          : {}),
       }
     );
     if (result.matchedCount === 0) {

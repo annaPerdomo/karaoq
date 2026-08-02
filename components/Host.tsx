@@ -22,6 +22,8 @@ import {
 } from "../app/queue/roomChannel";
 import setReactionsEnabled from "../app/queue/setReactionsEnabled";
 import setFairMode from "../app/queue/setFairMode";
+import setSessionEnd from "../app/queue/setSessionEnd";
+import { estimateQueue, formatClockTime } from "../lib/queueTime";
 import { fairInsertIndex, singerKeys } from "../lib/fairQueue";
 import postReaction from "../app/queue/postReaction";
 import { REACTION_COOLDOWN_MS } from "../app/queue/cheerConstants";
@@ -80,7 +82,7 @@ const Host = ({
   remote = false,
 }: { remote?: boolean } = {}): React.ReactElement => {
   const router = useRouter();
-  const { t, tn } = useT();
+  const { t, tn, locale } = useT();
   const joinCode = normalizeRoomId(router.query.joinCode) as string | undefined;
   // Analytics "Open as admin" — skips session tracking so an operator isn't counted.
   const adminPeek = router.query.admin === "1";
@@ -104,6 +106,10 @@ const Host = ({
   const [reactionsOn, setReactionsOn] = React.useState(true);
   const [boardsOnDisplay, setBoardsOnDisplayState] = React.useState(true);
   const [fairMode, setFairModeState] = React.useState(false);
+  // Epoch ms the room has to be out by, and when the on-stage song started —
+  // together they're what lib/queueTime needs to put a clock on the queue.
+  const [sessionEndsAt, setSessionEndsAt] = React.useState<number | null>(null);
+  const [playStartedAt, setPlayStartedAt] = React.useState<string | null>(null);
   const [displayConfig, setDisplayConfigState] = React.useState<DisplayConfig>(DEFAULT_DISPLAY_CONFIG);
   const [hostConfig, setHostConfigState] = React.useState<HostConfig>(DEFAULT_HOST_CONFIG);
   const [reactionCooldown, setReactionCooldown] = React.useState(false);
@@ -366,6 +372,12 @@ const Host = ({
     setReactionsOn(room.reactionsEnabled ?? true);
     setBoardsOnDisplayState(room.boardsOnDisplay ?? true);
     setFairModeState(room.fairMode ?? false);
+    setSessionEndsAt(
+      room.sessionEndsAt ? new Date(room.sessionEndsAt).getTime() : null
+    );
+    setPlayStartedAt(
+      room.playStartedAt ? new Date(room.playStartedAt).toISOString() : null
+    );
     setDisplayConfigState(normalizeDisplayConfig(room.displayConfig));
     setHostConfigState(normalizeHostConfig(room.hostConfig));
     if (!remote && room.playMode) setPlayMode(room.playMode);
@@ -709,6 +721,23 @@ const Host = ({
     }
   }
 
+  async function updateSessionEnd(endsAt: number | null) {
+    if (!joinCode) return;
+    // Hold polling so an in-flight poll carrying the old value can't flip it back.
+    pausePolling();
+    setSessionEndsAt(endsAt);
+    const ok = await setSessionEnd(joinCode, endsAt);
+    if (!ok) {
+      await resyncAfterFailedWrite();
+      return;
+    }
+    showToast(
+      endsAt === null
+        ? t("host.toast.endTimeCleared")
+        : t("host.toast.endTimeSet", { time: formatClockTime(endsAt, locale) })
+    );
+  }
+
   function handleSongAdded(entry: QueueEntry) {
     pausePolling();
     // Mirror the server: fair mode lands the song at its round-robin slot.
@@ -947,6 +976,15 @@ const Host = ({
   // Counted the way the rotation groups people — a duet entry counts each member.
   const uniqueSingers = new Set(upNext.flatMap((s) => singerKeys(s.userName))).size;
 
+  // Recomputed on every render rather than memoized: each poll lands a fresh
+  // queue array anyway, and that tick is what keeps the countdown moving.
+  const estimate = estimateQueue({
+    queue,
+    activeVideoIndex: activeIndex,
+    isPlaying,
+    playStartedAt,
+  });
+
   // hostView is the staged draft while customizing, the room's config otherwise.
   const customizing = !remote && hostEdit.editing;
 
@@ -1067,6 +1105,8 @@ const Host = ({
         onToggleReactions={toggleReactions}
         fairMode={fairMode}
         onToggleFairMode={toggleFairMode}
+        sessionEndsAt={sessionEndsAt}
+        onChangeSessionEnd={updateSessionEnd}
         hostName={hostName}
         onChangeName={() => {
           setSettingsOpen(false);
@@ -1170,6 +1210,8 @@ const Host = ({
           upNext={upNext}
           historyItems={historyItems}
           uniqueSingers={uniqueSingers}
+          estimate={estimate}
+          sessionEndsAt={sessionEndsAt}
           fairMode={fairMode}
           onToggleFairMode={toggleFairMode}
           editingId={editingId}

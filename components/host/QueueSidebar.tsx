@@ -24,6 +24,13 @@ import { Icons } from "./icons";
 import { formatSongTitle } from "./utils";
 import { SortableQueueItem } from "./SortableQueueItem";
 import { SidebarSections, HostSidebarEdit } from "./SidebarSections";
+import { QueueTimeLine } from "./QueueTimeLine";
+import {
+  QueueEstimate,
+  etaLabel,
+  runsPastEnd,
+  slotFor,
+} from "../../lib/queueTime";
 
 export function QueueSidebar({
   remote,
@@ -40,6 +47,8 @@ export function QueueSidebar({
   upNext,
   historyItems,
   uniqueSingers,
+  estimate,
+  sessionEndsAt,
   fairMode,
   onToggleFairMode,
   editingId,
@@ -88,6 +97,10 @@ export function QueueSidebar({
   upNext: QueueEntry[];
   historyItems: QueueEntry[];
   uniqueSingers: number;
+  /** Running order with a clock against it — see lib/queueTime. */
+  estimate: QueueEstimate;
+  /** Epoch ms the room has to be out by; null when open-ended. */
+  sessionEndsAt: number | null;
   fairMode: boolean;
   onToggleFairMode: () => void;
   editingId: string | null;
@@ -197,6 +210,8 @@ export function QueueSidebar({
             </button>
           </div>
 
+          <QueueTimeLine estimate={estimate} sessionEndsAt={sessionEndsAt} />
+
           {upNext.length > 0 ? (
             <DndContext
               sensors={sensors}
@@ -211,19 +226,30 @@ export function QueueSidebar({
                 strategy={verticalListSortingStrategy}
               >
                 <div className={styles.queueList}>
-                  {upNext.map((item, i) => (
-                    <SortableQueueItem
-                      key={item.id}
-                      item={item}
-                      index={i}
-                      isFirst={i === 0}
-                      editing={editingId === item.id}
-                      onMoveTop={() => onMoveTop(item.id)}
-                      onEdit={() => onToggleEdit(item.id)}
-                      onEditSave={(name) => onEditSave(item.id, name)}
-                      onRemove={() => onRequestRemove(item.id)}
-                    />
-                  ))}
+                  {upNext.map((item, i) => {
+                    const slot = slotFor(estimate, item.id);
+                    return (
+                      <SortableQueueItem
+                        key={item.id}
+                        item={item}
+                        index={i}
+                        isFirst={i === 0}
+                        editing={editingId === item.id}
+                        eta={
+                          !slot
+                            ? undefined
+                            : isPlaying && item.id === currentSong?.id
+                              ? t('queue.eta.onStage')
+                              : etaLabel(slot.startsInSeconds, t)
+                        }
+                        afterEnd={runsPastEnd(slot, sessionEndsAt)}
+                        onMoveTop={() => onMoveTop(item.id)}
+                        onEdit={() => onToggleEdit(item.id)}
+                        onEditSave={(name) => onEditSave(item.id, name)}
+                        onRemove={() => onRequestRemove(item.id)}
+                      />
+                    );
+                  })}
                 </div>
               </SortableContext>
             </DndContext>

@@ -19,7 +19,8 @@ export type EventType =
   | "suggestion_claimed"
   | "display_config_saved"
   | "host_config_saved"
-  | "fair_mode_toggled";
+  | "fair_mode_toggled"
+  | "session_end_set";
 
 export interface AnalyticsEvent {
   type: EventType;
@@ -48,6 +49,9 @@ export interface AnalyticsEvent {
   hostConfig?: HostConfig;
   // State switched TO on fair_mode_toggled; starting value on room_created. Absent pre-flag.
   fairMode?: boolean;
+  // session_end_set: how far out the host set the end, or null when they cleared
+  // it. A duration, not a wall-clock time — no timezone rides along.
+  minutesFromNow?: number | null;
   locale?: Locale;
 }
 
