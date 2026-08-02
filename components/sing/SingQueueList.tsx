@@ -11,10 +11,8 @@ import {
 import { sharesSinger } from '../../lib/fairQueue';
 import { useT } from '../../lib/i18n/I18nProvider';
 
-/**
- * The upcoming list as a singer sees it, with a "when" against each song. Same
- * markup on the sidebar and in the mobile drawer, so the two can't drift.
- */
+/** The upcoming list as a singer sees it, with a "when" against each song. Same
+ * markup on the sidebar and in the drawer, so the two can't drift. */
 const SingQueueList = ({
   items,
   estimate,

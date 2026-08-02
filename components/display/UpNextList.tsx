@@ -26,8 +26,6 @@ const UpNextList = ({ upNext, estimate }: UpNextListProps): React.ReactElement =
         {upNext.length > 0 && (
           <span className={styles.upNextCount}>{upNext.length}</span>
         )}
-        {/* The whole room reads this off the TV — it answers "have we got time
-            for one more?" without anyone asking the host. */}
         {estimate && estimate.slots.length > 0 && (
           <span className={styles.upNextTotal}>
             {t('queue.eta.total', {

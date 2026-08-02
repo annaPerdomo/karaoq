@@ -7,11 +7,8 @@ import {
   formatClockTime,
 } from "../../lib/queueTime";
 
-/**
- * When the room has to be out. A set-once pref, so it lives in the gear menu
- * with the other ones — but unlike them it's shared with every phone in the
- * room, because "how long have we got?" is everyone's question, not the host's.
- */
+/** When the room has to be out. Unlike its neighbours in the gear menu this is
+ * shared with every phone in the room, not a host-local pref. */
 export function SessionEndSetting({
   sessionEndsAt,
   onChange,

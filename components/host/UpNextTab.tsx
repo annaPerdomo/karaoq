@@ -21,7 +21,6 @@ import { Icons } from "./icons";
 import { SortableQueueItem } from "./SortableQueueItem";
 import { QueueTimeLine } from "./QueueTimeLine";
 
-/** The running order the host reorders: counts, timing, and the sortable list. */
 export function UpNextTab({
   upNext,
   uniqueSingers,

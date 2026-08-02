@@ -9,8 +9,7 @@ import {
 } from '../../lib/queueTime';
 import { useT } from '../../lib/i18n/I18nProvider';
 
-/** "Up next", how long it all runs, and when the room has to be out. Shared by
- * the sidebar and the mobile drawer so the two can't drift. */
+/** Shared by the sidebar and the mobile drawer so the two can't drift. */
 const QueuePanel = ({
   items,
   estimate,
