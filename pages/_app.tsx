@@ -5,15 +5,17 @@ import { useRouter } from 'next/router'
 import { Analytics } from '@vercel/analytics/next'
 import { I18nProvider, useT } from '../lib/i18n/I18nProvider'
 import { renderWithHeart } from '../lib/i18n/renderWithHeart'
+import FeedbackTrigger from '../components/feedback/FeedbackTrigger'
 
 function AppFooter() {
   const { t } = useT();
   return (
     <footer className="app-footer">
       <span className="app-footer-logo">KaraoQ</span>
-      <a href="https://variationsonastring.com" target="_blank" rel="noopener noreferrer" className="app-footer-link">
+      <a href="https://variationsonastring.com" target="_blank" rel="noopener noreferrer" className="app-footer-link app-footer-credit">
         {renderWithHeart(t('footer.credit'), 'app-footer-heart')}
       </a>
+      <FeedbackTrigger className="app-footer-link app-footer-feedback" />
     </footer>
   );
 }

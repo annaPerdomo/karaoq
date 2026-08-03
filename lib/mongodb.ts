@@ -1,5 +1,5 @@
 import { MongoClient, type Collection, type Db } from "mongodb";
-import type { Room } from "../pages/api/types";
+import type { FeedbackEntry, Room } from "../pages/api/types";
 
 // Reuse one connected client per serverless instance instead of opening and
 // closing a fresh TCP+TLS connection on every request/tracked event. Stored on
@@ -109,6 +109,27 @@ export async function getSuggestionCacheCollection(): Promise<Collection<Suggest
     });
   }
   return db.collection<SuggestionCacheDoc>("suggestion_cache");
+}
+
+let feedbackIndexesEnsured = false;
+
+// No TTL on purpose: every other collection expires, but a bug report is the
+// one thing worth keeping indefinitely.
+export async function getFeedbackCollection(): Promise<Collection<FeedbackEntry>> {
+  const client = await getMongoClient();
+  const db = client.db(process.env.MONGODB_DB);
+  if (!feedbackIndexesEnsured) {
+    feedbackIndexesEnsured = true;
+    Promise.all([
+      db.collection("feedback").createIndex({ createdAt: -1 }),
+      // Serves the unhandled count and the panel's default newest-first view.
+      db.collection("feedback").createIndex({ handled: 1, createdAt: -1 }),
+    ]).catch((e) => {
+      console.error("Feedback index creation failed:", e);
+      feedbackIndexesEnsured = false;
+    });
+  }
+  return db.collection<FeedbackEntry>("feedback");
 }
 
 // Heartbeats are high-volume noise once a session is over; every other event

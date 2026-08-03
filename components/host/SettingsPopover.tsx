@@ -17,6 +17,7 @@ export function SettingsPopover({
   hostName,
   onChangeName,
   onInviteCohost,
+  onSendFeedback,
 }: {
   isOpen: boolean;
   onClose: () => void;
@@ -30,6 +31,7 @@ export function SettingsPopover({
   hostName: string;
   onChangeName: () => void;
   onInviteCohost: () => void;
+  onSendFeedback: () => void;
 }) {
   const { t } = useT();
   const ref = React.useRef<HTMLDivElement>(null);
@@ -126,6 +128,18 @@ export function SettingsPopover({
           <div>
             <div className={styles.spBtnTitle}>{hostName}</div>
             <div className={styles.spBtnDesc}>{t('host.settings.changeName')}</div>
+          </div>
+        </button>
+      </div>
+      <div className={styles.spSep} />
+      {/* Outside the !remote block on purpose — a cohost hits the same bugs. */}
+      <div className={styles.spGroup}>
+        <div className={styles.spLabel}>{t('feedback.settingsGroup')}</div>
+        <button className={styles.spBtn} onClick={onSendFeedback}>
+          {Icons.megaphone}
+          <div>
+            <div className={styles.spBtnTitle}>{t('feedback.host.title')}</div>
+            <div className={styles.spBtnDesc}>{t('feedback.host.desc')}</div>
           </div>
         </button>
       </div>

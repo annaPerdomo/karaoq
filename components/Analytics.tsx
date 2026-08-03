@@ -3,6 +3,7 @@ import styles from '../styles/Analytics.module.css';
 import BarChart from './analytics/BarChart';
 import LanguagesPanel, { type LanguageData } from './analytics/LanguagesPanel';
 import RoomDetail from './analytics/RoomDetail';
+import FeedbackPanel from './analytics/FeedbackPanel';
 import {
   languageMixShort,
   languageMixTitle,
@@ -311,7 +312,8 @@ const Analytics = (): React.ReactElement => {
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [data, setData] = React.useState<AnalyticsData | null>(null);
-  const [activeTab, setActiveTab] = React.useState<'overview' | 'geo' | 'languages' | 'songs' | 'suggestions' | 'social' | 'rotation' | 'customize' | 'rooms'>('overview');
+  const [activeTab, setActiveTab] = React.useState<'overview' | 'geo' | 'languages' | 'songs' | 'suggestions' | 'social' | 'rotation' | 'customize' | 'rooms' | 'feedback'>('overview');
+  const [feedbackUnhandled, setFeedbackUnhandled] = React.useState(0);
   const [rooms, setRooms] = React.useState<RoomRow[]>([]);
   const [roomsHasMore, setRoomsHasMore] = React.useState(false);
   const [roomsLoading, setRoomsLoading] = React.useState(false);
@@ -342,6 +344,15 @@ const Analytics = (): React.ReactElement => {
       setData(json);
       setAuthenticated(true);
       localStorage.setItem('karaoq_analytics_secret', s);
+      // Count only: the badge has to be right before the tab is ever opened.
+      fetch('/api/analytics/feedback?limit=1', {
+        headers: { 'x-analytics-secret': s },
+      })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((j) => {
+          if (j) setFeedbackUnhandled(j.unhandled);
+        })
+        .catch(() => {});
     } catch {
       setError('Failed to load analytics data');
     }
@@ -535,13 +546,16 @@ const Analytics = (): React.ReactElement => {
       )}
 
       <nav className={styles.tabs}>
-        {(['overview', 'geo', 'languages', 'songs', 'suggestions', 'social', 'rotation', 'customize', 'rooms'] as const).map((tab) => (
+        {(['overview', 'geo', 'languages', 'songs', 'suggestions', 'social', 'rotation', 'customize', 'rooms', 'feedback'] as const).map((tab) => (
           <button
             key={tab}
             className={`${styles.tab} ${activeTab === tab ? styles.tabActive : ''}`}
             onClick={() => setActiveTab(tab)}
           >
             {tab.charAt(0).toUpperCase() + tab.slice(1)}
+            {tab === 'feedback' && feedbackUnhandled > 0 && (
+              <span className={styles.tabBadge}>{feedbackUnhandled}</span>
+            )}
           </button>
         ))}
       </nav>
@@ -1171,6 +1185,10 @@ const Analytics = (): React.ReactElement => {
             )}
           </section>
         </div>
+      )}
+
+      {activeTab === 'feedback' && (
+        <FeedbackPanel secret={secret} onUnhandledChange={setFeedbackUnhandled} />
       )}
 
       {detailRoom && (

@@ -1,0 +1,222 @@
+/* Self-contained on purpose: this modal mounts on the landing, host and singer
+   screens, so it can't lean on any one screen's module. */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 400;
+  animation: fbFadeIn 0.15s;
+}
+
+@keyframes fbFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  background: var(--bg-secondary);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 1.6rem 1.5rem 1.4rem;
+  width: 100%;
+  max-width: 440px;
+  /* Tall keyboards on small phones: the panel scrolls, the page never does. */
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: fbSlideUp 0.2s ease;
+}
+
+@keyframes fbSlideUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overlay,
+  .panel {
+    animation: none;
+  }
+}
+
+.close {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.75rem;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.6rem;
+  line-height: 1;
+  padding: 0.2rem 0.4rem;
+  border-radius: 8px;
+}
+
+.close:hover {
+  color: var(--text-primary);
+}
+
+.title {
+  font-family: var(--font-headline);
+  font-size: 1.25rem;
+  color: var(--text-primary);
+  padding-right: 1.5rem;
+}
+
+.lede {
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.kinds {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.kind {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 0.55rem 0.4rem;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.kind:hover {
+  color: var(--text-primary);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.kindActive,
+.kindActive:hover {
+  background: rgba(255, 45, 120, 0.14);
+  border-color: #ff2d78;
+  color: #fff;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.textarea,
+.input {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 0.9rem;
+  padding: 0.65rem 0.75rem;
+}
+
+.textarea {
+  min-height: 120px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.textarea:focus,
+.input:focus {
+  outline: none;
+  border-color: #00f0ff;
+}
+
+.textarea::placeholder,
+.input::placeholder {
+  color: var(--text-muted);
+}
+
+.counter {
+  align-self: flex-end;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.hint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.error {
+  font-size: 0.8rem;
+  color: #ff8095;
+}
+
+.submit {
+  background: linear-gradient(135deg, #ff2d78, #e01b50);
+  border: none;
+  border-radius: 10px;
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 700;
+  padding: 0.7rem 1rem;
+}
+
+.submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.sent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  text-align: center;
+  padding: 1rem 0 0.4rem;
+}
+
+.sentIcon {
+  font-size: 2.2rem;
+}
+
+.sentTitle {
+  font-family: var(--font-headline);
+  font-size: 1.15rem;
+}
+
+.sentBody {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+/* ─── Default trigger look, for surfaces with no button style of their own ─── */
+
+.trigger {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 0.82rem;
+  padding: 0.35rem 0;
+  transition: color 0.15s;
+}
+
+.trigger:hover {
+  color: var(--text-primary);
+}

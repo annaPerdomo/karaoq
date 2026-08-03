@@ -3,6 +3,7 @@ import { QueueEntry } from "../../pages/api/types";
 import { useT } from "../../lib/i18n/I18nProvider";
 import { renderWithHeart } from "../../lib/i18n/renderWithHeart";
 import FullscreenToggle from "../FullscreenToggle";
+import FeedbackTrigger from "../feedback/FeedbackTrigger";
 import { Icons } from "./icons";
 import { formatSongTitle } from "./utils";
 
@@ -10,6 +11,7 @@ import { formatSongTitle } from "./utils";
 // cluster branches by where the video plays: TV display (pause/stop), here
 // (pause-toggle/stop), or idle/takeover (a single Play).
 export function TransportBar({
+  roomId,
   roomEmpty,
   currentSong,
   isPlaying,
@@ -27,6 +29,7 @@ export function TransportBar({
   onStart,
   onNext,
 }: {
+  roomId?: string;
   roomEmpty: boolean;
   currentSong: QueueEntry | undefined;
   isPlaying: boolean;
@@ -170,6 +173,11 @@ export function TransportBar({
         >
           {renderWithHeart(t('footer.credit'), styles.transportHeart)}
         </a>
+        <FeedbackTrigger
+          className={styles.transportFeedback}
+          role="host"
+          roomId={roomId}
+        />
       </div>
     </div>
   );
