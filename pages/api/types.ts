@@ -1,6 +1,30 @@
+import type { Locale } from "../../lib/i18n/config";
+
 export interface ApiError {
   code: number;
   message: string;
+}
+
+export type FeedbackKind = "bug" | "idea" | "other";
+
+export const FEEDBACK_KINDS: FeedbackKind[] = ["bug", "idea", "other"];
+
+/** Its own collection, deliberately outside analytics: read one at a time by a
+ * human, and never expired. */
+export interface FeedbackEntry {
+  kind: FeedbackKind;
+  message: string;
+  /** "" when they left no address. */
+  contact: string;
+  roomId?: string;
+  role?: "host" | "singer";
+  /** Separates a landing-page suggestion from an in-room bug. */
+  page?: string;
+  locale?: Locale;
+  country?: string;
+  userAgent?: string;
+  handled?: boolean;
+  createdAt: Date;
 }
 
 export interface Reaction {

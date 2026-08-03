@@ -3,6 +3,9 @@ import {
   isValidDisplayConfig,
   isValidQueueEntry,
   MAX_BANNER_LENGTH,
+  MAX_FEEDBACK_CONTACT_LENGTH,
+  MAX_FEEDBACK_LENGTH,
+  sanitizeFeedback,
   sanitizeSongDuration,
 } from "../../lib/limits";
 import { DEFAULT_DISPLAY_CONFIG, DisplayConfig } from "../../pages/api/types";
@@ -151,5 +154,62 @@ describe("isValidDisplayConfig", () => {
 
   it("rejects unknown extra keys", () => {
     expect(isValidDisplayConfig({ ...DEFAULT_DISPLAY_CONFIG, extra: true })).toBe(false);
+  });
+});
+
+describe("sanitizeFeedback", () => {
+  it("keeps a full submission, trimmed", () => {
+    expect(
+      sanitizeFeedback({
+        kind: "bug",
+        message: "  The queue froze mid-song  ",
+        contact: " anna@example.com ",
+        roomId: "ABC123",
+        role: "host",
+        page: "/host/ABC123",
+      })
+    ).toEqual({
+      kind: "bug",
+      message: "The queue froze mid-song",
+      contact: "anna@example.com",
+      roomId: "ABC123",
+      role: "host",
+      page: "/host/ABC123",
+    });
+  });
+
+  it("rejects a submission with nothing to read", () => {
+    expect(sanitizeFeedback({ kind: "bug", message: "   " })).toBeNull();
+    expect(sanitizeFeedback({ kind: "bug" })).toBeNull();
+    expect(sanitizeFeedback(null)).toBeNull();
+  });
+
+  it("rejects an over-long message rather than truncating someone's report", () => {
+    expect(
+      sanitizeFeedback({ message: "x".repeat(MAX_FEEDBACK_LENGTH + 1) })
+    ).toBeNull();
+    expect(
+      sanitizeFeedback({ message: "x".repeat(MAX_FEEDBACK_LENGTH) })
+    ).not.toBeNull();
+  });
+
+  it("falls back on every other field instead of losing the message", () => {
+    expect(
+      sanitizeFeedback({
+        kind: "nonsense",
+        message: "hi",
+        contact: "x".repeat(MAX_FEEDBACK_CONTACT_LENGTH + 1),
+        roomId: 42,
+        role: "display",
+        page: "",
+      })
+    ).toEqual({
+      kind: "other",
+      message: "hi",
+      contact: "",
+      roomId: undefined,
+      role: undefined,
+      page: undefined,
+    });
   });
 });

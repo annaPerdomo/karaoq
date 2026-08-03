@@ -1,6 +1,6 @@
 import type { NextApiRequest } from "next";
-import type { DisplayConfig, HostConfig, QueueEntry, SingWithMePost, SuggestedSong } from "../pages/api/types";
-import { DISPLAY_THEMES as DISPLAY_THEME_LIST } from "../pages/api/types";
+import type { DisplayConfig, FeedbackKind, HostConfig, QueueEntry, SingWithMePost, SuggestedSong } from "../pages/api/types";
+import { DISPLAY_THEMES as DISPLAY_THEME_LIST, FEEDBACK_KINDS } from "../pages/api/types";
 
 // Server-side caps on anonymous writes: the UI enforces friendlier limits; these stop curl from
 // ballooning a room document or filling the 512MB Atlas free tier.
@@ -12,6 +12,49 @@ export const MAX_SING_WITH_ME = 30;
 export const MAX_SUGGESTIONS = 50;
 export const MAX_SINGERS = 20;
 export const MAX_BANNER_LENGTH = 80;
+export const MAX_FEEDBACK_LENGTH = 2000;
+export const MAX_FEEDBACK_CONTACT_LENGTH = 120;
+export const MAX_FEEDBACK_PAGE_LENGTH = 200;
+// Headers arrive uncapped where the body fields don't. Truncating rather than
+// dropping still leaves the model/OS, which is all the panel reads.
+export const MAX_FEEDBACK_UA_LENGTH = 256;
+
+export interface SanitizedFeedback {
+  kind: FeedbackKind;
+  message: string;
+  contact: string;
+  roomId?: string;
+  role?: "host" | "singer";
+  page?: string;
+}
+
+/** The message is the only field that can reject a submission; the rest fall
+ * back rather than lose someone's words to a bad room code. An over-long
+ * message 400s rather than truncating, so the sender learns it didn't land. */
+export function sanitizeFeedback(body: unknown): SanitizedFeedback | null {
+  if (!body || typeof body !== "object") return null;
+  const e = body as Record<string, unknown>;
+
+  if (typeof e.message !== "string") return null;
+  const message = e.message.trim();
+  if (message.length === 0 || message.length > MAX_FEEDBACK_LENGTH) return null;
+
+  const capped = (value: unknown, max: number): string | undefined =>
+    typeof value === "string" && value.trim().length > 0 && value.length <= max
+      ? value.trim()
+      : undefined;
+
+  return {
+    kind: FEEDBACK_KINDS.includes(e.kind as FeedbackKind)
+      ? (e.kind as FeedbackKind)
+      : "other",
+    message,
+    contact: capped(e.contact, MAX_FEEDBACK_CONTACT_LENGTH) ?? "",
+    roomId: capped(e.roomId, MAX_ENTRY_ID_LENGTH),
+    role: e.role === "host" || e.role === "singer" ? e.role : undefined,
+    page: capped(e.page, MAX_FEEDBACK_PAGE_LENGTH),
+  };
+}
 
 // YouTube video IDs are exactly 11 URL-safe base64 characters.
 const VIDEO_ID_RE = /^[A-Za-z0-9_-]{11}$/;
