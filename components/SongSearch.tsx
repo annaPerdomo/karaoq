@@ -9,6 +9,7 @@ import searchYoutube, {
   SortOrder,
 } from '../app/queue/searchYoutube';
 import postEntryToQueue from '../app/queue/postEntryToQueue';
+import FeedbackTrigger from './feedback/FeedbackTrigger';
 import { QueueEntry } from '../pages/api/types';
 import {
   SONG_SECTIONS,
@@ -709,6 +710,11 @@ const SongSearch: React.FC<SongSearchProps> = ({
                   <a href="https://variationsonastring.com" target="_blank" rel="noopener noreferrer" className={styles.inlineFooterLink}>
                     {renderWithHeart(t('footer.credit'), styles.inlineFooterHeart)}
                   </a>
+                  <FeedbackTrigger
+                    className={styles.inlineFooterFeedback}
+                    roomId={roomId}
+                    role={role === "display" ? undefined : role}
+                  />
                 </div>
               </>
             )}

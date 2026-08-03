@@ -12,6 +12,7 @@ import styles from '../styles/Home.module.css';
 import { useT } from '../lib/i18n/I18nProvider';
 import { renderWithHeart } from '../lib/i18n/renderWithHeart';
 import LanguageSwitcher from './LanguageSwitcher';
+import FeedbackTrigger from './feedback/FeedbackTrigger';
 
 // FAQ content, exported so the landing page can mirror it in FAQPage structured data.
 // Google requires the JSON-LD text to match the visible answers, so keep both
@@ -1298,6 +1299,7 @@ const Home = (): React.ReactElement => {
           <a href="https://variationsonastring.com" target="_blank" rel="noopener noreferrer" className={styles.footerLink}>
             {renderWithHeart(t('footer.credit'), styles.footerHeart)}
           </a>
+          <FeedbackTrigger className={styles.footerFeedback} />
         </div>
       </footer>
     </>

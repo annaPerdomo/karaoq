@@ -58,6 +58,7 @@ import {
 import { ReactionOverlay } from "./host/ReactionOverlay";
 import { MobileFooter } from "./host/MobileFooter";
 import { CohostInviteModal } from "./host/CohostInviteModal";
+import FeedbackModal from "./feedback/FeedbackModal";
 import { QrModal } from "./host/QrModal";
 import { ConfirmRemoveModal } from "./host/ConfirmRemoveModal";
 import { WelcomePrompt } from "./host/WelcomePrompt";
@@ -200,6 +201,7 @@ const Host = ({
   const [settingsOpen, setSettingsOpen] = React.useState(false);
   const [modeMenuOpen, setModeMenuOpen] = React.useState(false);
   const [cohostOpen, setCohostOpen] = React.useState(false);
+  const [feedbackOpen, setFeedbackOpen] = React.useState(false);
   // Starts closed to avoid a flash on narrow screens; the restore effect below opens it.
   const [qrShelfOpen, setQrShelfOpen] = React.useState(false);
   const [qrModalOpen, setQrModalOpen] = React.useState(false);
@@ -990,6 +992,7 @@ const Host = ({
 
   const transportBar = (
     <TransportBar
+      roomId={joinCode}
       roomEmpty={roomEmpty}
       currentSong={currentSong}
       isPlaying={isPlaying}
@@ -1116,6 +1119,10 @@ const Host = ({
         onInviteCohost={() => {
           setSettingsOpen(false);
           setCohostOpen(true);
+        }}
+        onSendFeedback={() => {
+          setSettingsOpen(false);
+          setFeedbackOpen(true);
         }}
         onBrandClick={() => router.push("/")}
       />
@@ -1281,7 +1288,7 @@ const Host = ({
         />
       )}
 
-      {!remote && !customizing && <MobileFooter />}
+      {!remote && !customizing && <MobileFooter roomId={joinCode} />}
 
       {cohostOpen && (
         <CohostInviteModal
@@ -1289,6 +1296,14 @@ const Host = ({
           cohostDisplayUrl={cohostDisplayUrl}
           onClose={() => setCohostOpen(false)}
           onCopyLink={copyCohostLink}
+        />
+      )}
+
+      {feedbackOpen && (
+        <FeedbackModal
+          onClose={() => setFeedbackOpen(false)}
+          roomId={joinCode}
+          role="host"
         />
       )}
 

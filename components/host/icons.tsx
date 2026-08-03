@@ -241,6 +241,21 @@ export const Icons = {
       <line x1="3" y1="8" x2="13" y2="8" />
     </svg>
   ),
+  megaphone: (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 18 18"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M15 3v12L6.5 12H4a2 2 0 01-2-2V8a2 2 0 012-2h2.5L15 3z" />
+      <path d="M6 12.5V15a1.5 1.5 0 003 0v-1.8" />
+    </svg>
+  ),
   caret: (
     <svg width="10" height="6" viewBox="0 0 10 6" fill="currentColor">
       <path d="M0 0l5 6 5-6z" />
