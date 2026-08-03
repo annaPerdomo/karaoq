@@ -59,7 +59,7 @@ incrementally — one seam at a time, not one giant edit):
 
 ```
 npx tsc --noEmit -p tsconfig.json     # must stay clean
-pnpm exec vitest run                  # must stay green (currently 236 passing)
+pnpm exec vitest run                  # must stay green (currently 634 passing)
 ```
 
 The `git diff` should read as moves + wiring only — no changed logic, class
