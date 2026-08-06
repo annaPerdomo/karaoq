@@ -23,9 +23,15 @@ export default function HomeFooter() {
         </ul>
       </nav>
       <div className={styles.footerInner}>
-        <Link href="/privacy" className={`${styles.footerLink} ${styles.footerPrivacy}`}>
-          {t('footer.privacy')}
-        </Link>
+        <div className={styles.footerLegal}>
+          <Link href="/privacy" className={styles.footerLink}>
+            {t('footer.privacy')}
+          </Link>
+          <span className={styles.footerLegalSep} aria-hidden="true">·</span>
+          <Link href="/terms" className={styles.footerLink}>
+            {t('footer.terms')}
+          </Link>
+        </div>
         <a
           href="https://variationsonastring.com"
           target="_blank"

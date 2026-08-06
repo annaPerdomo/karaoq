@@ -3056,10 +3056,18 @@
 
 /* Placed, not auto-flowed: the credit stays optically centered even though
    its neighbors differ in width. */
-.footerPrivacy {
+.footerLegal {
   grid-column: 1;
   justify-self: start;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   white-space: nowrap;
+}
+
+.footerLegalSep {
+  font-size: 0.85rem;
+  color: rgba(200, 180, 255, 0.2);
 }
 
 .footerCredit {
@@ -3249,7 +3257,7 @@
     gap: 0.5rem;
     text-align: center;
   }
-  .footerPrivacy, .footerCredit, .footerFeedback {
+  .footerLegal, .footerCredit, .footerFeedback {
     grid-column: 1;
     justify-self: center;
   }

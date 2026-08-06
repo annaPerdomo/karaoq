@@ -30,12 +30,15 @@ const DiscoveryFooter: React.FC<DiscoveryFooterProps> = ({
       </div>
 
       <div className={styles.inlineFooter}>
-        <Link
-          href="/privacy"
-          className={`${styles.inlineFooterLink} ${styles.inlineFooterPrivacy}`}
-        >
-          {t('footer.privacy')}
-        </Link>
+        <div className={styles.inlineFooterLegal}>
+          <Link href="/privacy" className={styles.inlineFooterLink}>
+            {t('footer.privacy')}
+          </Link>
+          <span className={styles.inlineFooterLegalSep} aria-hidden="true">·</span>
+          <Link href="/terms" className={styles.inlineFooterLink}>
+            {t('footer.terms')}
+          </Link>
+        </div>
         <a href="https://variationsonastring.com" target="_blank" rel="noopener noreferrer" className={styles.inlineFooterLink}>
           {renderWithHeart(t('footer.credit'), styles.inlineFooterHeart)}
         </a>
