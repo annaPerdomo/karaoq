@@ -1,4 +1,5 @@
 import * as React from 'react';
+import Link from 'next/link';
 import { v4 as uuidv4 } from 'uuid';
 
 import styles from '../styles/SongSearch.module.css';
@@ -731,6 +732,12 @@ const SongSearch: React.FC<SongSearchProps> = ({
                 </div>
 
                 <div className={styles.inlineFooter}>
+                  <Link
+                    href="/privacy"
+                    className={`${styles.inlineFooterLink} ${styles.inlineFooterPrivacy}`}
+                  >
+                    {t('footer.privacy')}
+                  </Link>
                   <a href="https://variationsonastring.com" target="_blank" rel="noopener noreferrer" className={styles.inlineFooterLink}>
                     {renderWithHeart(t('footer.credit'), styles.inlineFooterHeart)}
                   </a>

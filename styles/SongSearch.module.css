@@ -1096,6 +1096,14 @@
   color: #ec4899;
 }
 
+/* Fills the track .inlineFooterLink's grid-column: 2 leaves empty. Must stay
+   below that rule — same specificity, so source order decides. */
+.inlineFooterPrivacy {
+  grid-column: 1;
+  justify-self: start;
+  white-space: nowrap;
+}
+
 .inlineFooterFeedback {
   grid-column: 3;
   justify-self: end;
@@ -1112,6 +1120,24 @@
 
 .inlineFooterFeedback:hover {
   color: rgba(200, 180, 255, 0.7);
+}
+
+/* Three items plus the credit string overflow one line on a small phone; the
+   placed grid-columns have to be reset or they keep their own tracks. */
+@media (max-width: 420px) {
+  .inlineFooter {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.35rem 0.75rem;
+  }
+
+  .inlineFooterLink,
+  .inlineFooterPrivacy,
+  .inlineFooterFeedback {
+    grid-column: auto;
+    justify-self: auto;
+  }
 }
 
 @keyframes footerHeartbeat {

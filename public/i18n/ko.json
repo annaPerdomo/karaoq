@@ -12,6 +12,7 @@
   "common.fullscreen": "전체 화면",
   "common.exitFullscreen": "전체 화면 종료",
   "footer.credit": "made with ♥ by variations on a string",
+  "footer.privacy": "개인정보",
   "feedback.trigger": "의견 보내기",
   "feedback.title": "의견을 들려주세요",
   "feedback.lede": "버그를 발견하셨거나 KaraoQ에 바라는 기능이 있나요? 알려주세요! 모든 메시지를 읽고 있습니다.",
