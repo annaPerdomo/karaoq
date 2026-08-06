@@ -3322,21 +3322,79 @@
   color: rgba(160, 140, 220, 0.17);
 }
 
-.reachGlow {
+/* The entrance sweep. Each band animates its stroke-width up from nothing,
+   which on a round linecap reads as its dots growing into place. WorldDotMap
+   sets the per-band delay from longitude, so the wave crosses west to east.
+   The `to` widths must match the strokeWidth each path renders with, since an
+   animated property outranks the presentation attribute for good.
+
+   The bands mount with the page and rest invisible; .reachPlaying arrives when
+   the section scrolls in and is what starts the sweep. Gate the animation, not
+   the markup — building ~3,400 path commands on the scroll frame costs a frame
+   right where the user is looking. */
+.reachLand {
   opacity: 0;
-  animation: reachGlowIn 1.4s ease 0.5s forwards;
 }
-@keyframes reachGlowIn {
-  to { opacity: 0.5; }
+.reachPlaying .reachLand {
+  animation: reachLandIn 0.7s ease-out forwards;
+}
+@keyframes reachLandIn {
+  from { opacity: 0; stroke-width: 0; }
+  to { opacity: 1; stroke-width: 0.58; }
 }
 
-.reachLit {
-  opacity: 0;
-  animation: reachLitIn 0.5s ease forwards;
+/* The halo's strength lives on the group, above the per-band blurs, so it costs
+   nothing to animate the bands under it. */
+.reachGlow {
+  opacity: 0.5;
 }
-@keyframes reachLitIn {
+.reachGlowBand {
+  opacity: 0;
+}
+.reachPlaying .reachGlowBand {
+  animation: reachGlowIn 1.1s ease-out forwards;
+}
+@keyframes reachGlowIn {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+
+/* Keep the duration in step with LIT_DURATION_MS in lib/home/worldMapAnim —
+   it dates the twinkle off the end of this animation. */
+.reachLit {
+  opacity: 0;
+}
+.reachPlaying .reachLit {
+  animation: reachLitIn 0.8s cubic-bezier(0.22, 1.2, 0.36, 1) forwards;
+}
+/* The 55% overshoot is the flare a country lands with — the beat the whole
+   section is built around, not a value to round off. */
+@keyframes reachLitIn {
+  from { opacity: 0; stroke-width: 0; }
+  55% { opacity: 1; stroke-width: 1.5; }
+  to { opacity: 1; stroke-width: 0.82; }
+}
+
+/* The idle twinkle, once the sweep has landed. WorldDotMap varies the period
+   and offset per dot, so a few are always mid-flare and the map never pulses
+   as one. */
+.reachTwinkle {
+  opacity: 0;
+}
+.reachPlaying .reachTwinkle {
+  animation-name: reachTwinkle;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+/* This one never ends, and stroke-width can't be composited: left running it
+   repaints every frame for as long as the tab is open, wherever the reader has
+   scrolled to. */
+.reachParked .reachTwinkle {
+  animation-play-state: paused;
+}
+@keyframes reachTwinkle {
+  0%, 30%, 100% { opacity: 0; stroke-width: 0.82; }
+  65% { opacity: 0.9; stroke-width: 1.4; }
 }
 
 .reachStats {
@@ -3386,7 +3444,13 @@
 
 @media (prefers-reduced-motion: reduce) {
   .reachInner { transition: none; opacity: 1; transform: none; }
-  .reachGlow { animation: none; opacity: 0.5; }
-  .reachLit { animation: none; opacity: 1; }
+  /* Matched on .reachPlaying so these outrank the rules that start the sweep —
+     the map still appears when it scrolls in, it just appears all at once. */
+  .reachPlaying .reachLand,
+  .reachPlaying .reachLit,
+  .reachPlaying .reachGlowBand { animation: none; opacity: 1; }
+  /* The twinkle is pure decoration layered over a dot that's already lit, so it
+     just goes away rather than resting in its flared state. */
+  .reachPlaying .reachTwinkle { animation: none; opacity: 0; }
 }
 

@@ -90,6 +90,7 @@ export default function GlobalReach({ stats }: GlobalReachProps) {
             <WorldDotMap
               countryCodes={stats.countryCodes}
               label={t('home.reach.mapLabel', { count: stats.countries! })}
+              play={inView}
             />
           </div>
         )}

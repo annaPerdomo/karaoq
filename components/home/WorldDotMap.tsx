@@ -1,102 +1,51 @@
 import * as React from 'react';
 import styles from '../../styles/Home.module.css';
-import { GRID, WORLD_DOTS_RLE, SHARED_DOTS } from '../../lib/home/worldDots';
-
-interface Dot {
-  x: number;
-  y: number;
-}
-
-interface DecodedWorld {
-  /** Every land cell, in row-major order. */
-  land: Dot[];
-  /** ISO-2 → indices into `land`. */
-  byCountry: Map<string, number[]>;
-}
-
-let decoded: DecodedWorld | null = null;
-
-// Lazily unpacks the RLE grid — ~10k cheap iterations, but no reason to pay
-// them at module-evaluation time on the server. Exported for direct testing.
-export function decodeWorld(): DecodedWorld {
-  if (decoded) return decoded;
-  const land: Dot[] = [];
-  const byCountry = new Map<string, number[]>();
-  const landIndexByCell = new Map<number, number>();
-
-  let cell = 0;
-  for (const run of WORLD_DOTS_RLE.split(',')) {
-    const code = run.slice(0, 2);
-    const isSea = code[0] === '-';
-    const length = Number(isSea ? run.slice(1) : run.slice(2));
-    if (isSea) {
-      cell += length;
-      continue;
-    }
-    let indices = byCountry.get(code);
-    if (!indices) {
-      indices = [];
-      byCountry.set(code, indices);
-    }
-    for (let i = 0; i < length; i++, cell++) {
-      indices.push(land.length);
-      landIndexByCell.set(cell, land.length);
-      land.push({ x: (cell % GRID.cols) + 0.5, y: Math.floor(cell / GRID.cols) + 0.5 });
-    }
-  }
-
-  // Microstates that were too small to win a cell of their own borrow their
-  // neighbour's dot, so they light up like everyone else.
-  for (const [code, cellIndex] of Object.entries(SHARED_DOTS)) {
-    const landIndex = landIndexByCell.get(cellIndex);
-    if (landIndex == null) continue;
-    const existing = byCountry.get(code);
-    if (existing) existing.push(landIndex);
-    else byCountry.set(code, [landIndex]);
-  }
-
-  decoded = { land, byCountry };
-  return decoded;
-}
-
-/** A dot's `d` command — a zero-length line that a round linecap turns into a dot. */
-const dotPath = (d: Dot): string => `M${d.x} ${d.y}h.01`;
+import { GRID } from '../../lib/home/worldDots';
+import {
+  buildBands,
+  bandDelay,
+  dotPath,
+  hash01,
+  ENTRANCE_END_MS,
+  LIT_LAG_MS,
+  NO_BANDS,
+  TWINKLE_SPREAD_MS,
+} from '../../lib/home/worldMapAnim';
+import useOnScreen from './hooks/useOnScreen';
 
 export interface WorldDotMapProps {
   /** ISO-3166-1 alpha-2 codes to light up. */
   countryCodes: string[];
   /** Accessible description of what the map is showing. */
   label: string;
+  /** Flips true when the section scrolls into view; runs the entrance. */
+  play: boolean;
 }
 
 // The world as a dot grid, with the countries KaraoQ has been sung in lit in the
-// brand gradient. The land layer is a single <path> (3,400 dots as one node);
-// only the lit dots — a few dozen at most — get their own element, so each can
-// fade in on its own beat.
-export default function WorldDotMap({ countryCodes, label }: WorldDotMapProps) {
-  // Rendered after mount only: it's decorative, and keeping ~3,400 path
-  // commands out of the server HTML matters more than having it in first paint.
+// brand gradient — banded west to east so the whole map can sweep into place.
+export default function WorldDotMap({ countryCodes, label, play }: WorldDotMapProps) {
+  const [svgRef, onScreen] = useOnScreen<SVGSVGElement>();
+
+  // Built after mount rather than during render: it's decorative, so keeping
+  // ~3,400 path commands out of the server HTML is worth more than having them
+  // in first paint — but building them on the scroll frame that flips `play`
+  // would hand the user one long frame exactly when they're looking at it. The
+  // bands mount invisible and CSS starts the sweep off `play` instead.
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => setMounted(true), []);
 
-  const { landPath, litDots } = React.useMemo(() => {
-    if (!mounted) return { landPath: '', litDots: [] as Dot[] };
-    const world = decodeWorld();
-    const lit = new Set<number>();
-    for (const code of countryCodes) {
-      for (const index of world.byCountry.get(code.toUpperCase()) ?? []) lit.add(index);
-    }
-    return {
-      landPath: world.land.map(dotPath).join(''),
-      // Ordered west to east so the light sweeps across the map rather than
-      // popping on in whatever order the country list happened to arrive in.
-      litDots: Array.from(lit, (i) => world.land[i]).sort((a, b) => a.x - b.x),
-    };
-  }, [mounted, countryCodes]);
+  const { landBands, litBands, twinkles } = React.useMemo(
+    () => (mounted ? buildBands(countryCodes) : NO_BANDS),
+    [mounted, countryCodes]
+  );
 
   return (
     <svg
-      className={styles.reachMap}
+      ref={svgRef}
+      className={`${styles.reachMap} ${play ? styles.reachPlaying : ''} ${
+        onScreen ? '' : styles.reachParked
+      }`}
       viewBox={`0 0 ${GRID.cols} ${GRID.rows}`}
       role="img"
       aria-label={label}
@@ -118,42 +67,97 @@ export default function WorldDotMap({ countryCodes, label }: WorldDotMapProps) {
           <stop offset="45%" stopColor="#9d4edd" />
           <stop offset="100%" stopColor="#00d9ff" />
         </linearGradient>
-        <filter id="reachGlow" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="0.9" />
-        </filter>
+        {/* One blur per band, sized to that band's own dots. A filter's input is
+            whatever its subtree renders, so a single filter over the whole glow
+            group re-runs a map-sized Gaussian blur on every frame any one band
+            is fading; per band, a fade dirties only its own strip and the bands
+            that have landed keep their rasterised halo. userSpaceOnUse again —
+            a band one column wide has a zero-width bounding box. */}
+        {litBands.map((band, i) =>
+          band ? (
+            <filter
+              key={`glowf-${i}`}
+              id={`reachGlow${i}`}
+              filterUnits="userSpaceOnUse"
+              {...band.glowRegion}
+            >
+              <feGaussianBlur stdDeviation="0.9" />
+            </filter>
+          ) : null
+        )}
       </defs>
 
-      {landPath && (
-        <path
-          d={landPath}
-          stroke="currentColor"
-          strokeWidth="0.58"
-          strokeLinecap="round"
-          fill="none"
-        />
-      )}
-
-      <g filter="url(#reachGlow)" className={styles.reachGlow}>
-        {litDots.map((d) => (
+      {landBands.map((d, band) =>
+        d ? (
           <path
-            key={`glow-${d.x}-${d.y}`}
-            d={dotPath(d)}
-            stroke="url(#reachGradient)"
-            strokeWidth="1.9"
+            key={`land-${band}`}
+            className={styles.reachLand}
+            style={{ animationDelay: `${bandDelay(band)}ms` }}
+            d={d}
+            stroke="currentColor"
+            strokeWidth="0.58"
             strokeLinecap="round"
             fill="none"
           />
-        ))}
+        ) : null
+      )}
+
+      {/* The halo rides the same bands as the lit layer — one fade for the whole
+          group would put a blurred glow over countries whose dots hadn't
+          arrived yet, which reads as the map leaking ahead of its own wave. */}
+      <g className={styles.reachGlow}>
+        {litBands.map((band, i) =>
+          band ? (
+            <path
+              key={`glow-${i}`}
+              className={styles.reachGlowBand}
+              // The fade sits on the filtered element itself, not inside it, so
+              // it composites over the blur rather than invalidating it.
+              filter={`url(#reachGlow${i})`}
+              style={{ animationDelay: `${bandDelay(i) + LIT_LAG_MS}ms` }}
+              d={band.d}
+              stroke="url(#reachGradient)"
+              strokeWidth="1.9"
+              strokeLinecap="round"
+              fill="none"
+            />
+          ) : null
+        )}
       </g>
-      {litDots.map((d, i) => (
+
+      {litBands.map((band, i) =>
+        band ? (
+          <path
+            key={`lit-${i}`}
+            className={styles.reachLit}
+            // Delay comes from the band's longitude, not its place in the country
+            // list, so a country ignites when the wave reaches it — the
+            // choreography holds however many countries come back, in any order.
+            style={{ animationDelay: `${bandDelay(i) + LIT_LAG_MS}ms` }}
+            d={band.d}
+            stroke="url(#reachGradient)"
+            strokeWidth="0.82"
+            strokeLinecap="round"
+            fill="none"
+          />
+        ) : null
+      )}
+
+      {twinkles.map((d) => (
         <path
-          key={`lit-${d.x}-${d.y}`}
-          className={styles.reachLit}
-          // Staggered west-to-east, capped so a wide country list still finishes
-          // its sweep in about a second rather than trickling in for a minute.
-          style={{ animationDelay: `${Math.min(i * 22, 900)}ms` }}
+          key={`twinkle-${d.x}-${d.y}`}
+          className={styles.reachTwinkle}
+          style={{
+            animationDelay: `${ENTRANCE_END_MS + hash01(d.y, d.x) * TWINKLE_SPREAD_MS}ms`,
+            // Varied per dot as well as offset: matching periods would drift
+            // back into lockstep however far apart they started.
+            animationDuration: `${3400 + hash01(d.x + 7, d.y + 3) * 2800}ms`,
+          }}
           d={dotPath(d)}
-          stroke="url(#reachGradient)"
+          // White rather than the gradient: over a dot that's already magenta or
+          // cyan, a bloom in its own colour barely registers, where a white core
+          // reads as light catching on it.
+          stroke="#fff"
           strokeWidth="0.82"
           strokeLinecap="round"
           fill="none"

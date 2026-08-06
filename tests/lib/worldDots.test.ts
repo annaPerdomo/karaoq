@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { GRID, WORLD_DOTS_RLE, SHARED_DOTS } from "../../lib/home/worldDots";
-import { decodeWorld } from "../../components/home/WorldDotMap";
+import { decodeWorld } from "../../lib/home/worldMapAnim";
 
 // The map data is generated (scripts/gen-world-dots.mjs), so these guard the
 // encoding contract the component decodes against — a regenerated grid that
