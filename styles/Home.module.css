@@ -2940,6 +2940,19 @@
   color: rgba(200, 180, 255, 0.62);
 }
 
+.faqGuideLink {
+  display: inline-block;
+  margin: -0.35rem 1.5rem 1.25rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #c4a2ff;
+  text-decoration: none;
+}
+.faqGuideLink:hover {
+  color: #fff;
+  text-decoration: underline;
+}
+
 /* ═══════════════════════════════════════════
    Final CTA
    ═══════════════════════════════════════════ */
@@ -2948,7 +2961,7 @@
   text-align: center;
   background:
     radial-gradient(ellipse at 50% 50%, rgba(139, 92, 246, 0.2) 0%, transparent 60%),
-    linear-gradient(to bottom, #0d0d1f, #1a0030, #0f0f23);
+    linear-gradient(to bottom, #0f0f23, #1a0030, #0f0f23);
 }
 
 .ctaTitle {
@@ -3223,3 +3236,131 @@
     text-align: center;
   }
 }
+
+/* ═══════════════════════════════════════════
+   Global reach — the proof band right after the hero
+   No cards or borders on purpose — the section's own background is the
+   container. Flat #0f0f23 because both neighbors (hero's gradient end,
+   how-it-works' gradient start) meet this section at that exact color.
+   ═══════════════════════════════════════════ */
+.reachSection {
+  padding: 5.5rem 2rem 4rem;
+  background: #0f0f23;
+  overflow: hidden;
+}
+
+.reachInner {
+  max-width: 900px;
+  margin: 0 auto;
+  text-align: center;
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity 0.7s ease, transform 0.7s ease;
+}
+.reachInnerVisible {
+  opacity: 1;
+  transform: none;
+}
+
+.reachTitle {
+  font-family: var(--font-headline);
+  font-weight: 700;
+  font-size: clamp(1.5rem, 3.4vw, 2.2rem);
+  color: #fff;
+  letter-spacing: -0.02em;
+  line-height: 1.06;
+  margin-bottom: 0.5rem;
+}
+
+.reachSub {
+  color: rgba(200, 180, 255, 0.6);
+  font-size: 0.98rem;
+  max-width: 480px;
+  margin: 0 auto 2.25rem;
+}
+
+.reachMapWrap {
+  /* The map fades at both edges so it reads as a lit field rather than a chart
+     someone cropped — there's no frame, so it needs no hard edge either. */
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent);
+  mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent);
+  margin-bottom: 2.5rem;
+}
+
+.reachMap {
+  display: block;
+  width: 100%;
+  height: auto;
+  /* Unlit land: present enough to read as a world, quiet enough that the lit
+     countries are the only thing the eye lands on. */
+  color: rgba(160, 140, 220, 0.17);
+}
+
+.reachGlow {
+  opacity: 0;
+  animation: reachGlowIn 1.4s ease 0.5s forwards;
+}
+@keyframes reachGlowIn {
+  to { opacity: 0.5; }
+}
+
+.reachLit {
+  opacity: 0;
+  animation: reachLitIn 0.5s ease forwards;
+}
+@keyframes reachLitIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.reachStats {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: clamp(1.75rem, 7vw, 5rem);
+  flex-wrap: wrap;
+}
+
+.reachStat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.reachValue {
+  font-family: var(--font-headline);
+  font-weight: 700;
+  font-size: clamp(1.9rem, 5vw, 2.7rem);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  /* Tabular figures so a counting-up number doesn't jitter its own width. */
+  font-variant-numeric: tabular-nums;
+  background: linear-gradient(100deg, #da2eff 8%, #9d4edd 42%, #00d9ff 94%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.reachLabel {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: #8a8aa5;
+}
+
+@media (max-width: 600px) {
+  .reachSection { padding: 4rem 1.25rem 3rem; }
+  .reachSub { margin-bottom: 1.75rem; }
+  .reachMapWrap { margin-bottom: 2rem; }
+  .reachLabel { font-size: 0.6rem; letter-spacing: 1px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reachInner { transition: none; opacity: 1; transform: none; }
+  .reachGlow { animation: none; opacity: 0.5; }
+  .reachLit { animation: none; opacity: 1; }
+}
+
