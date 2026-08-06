@@ -148,6 +148,9 @@ function ensureAnalyticsIndexes(db: Db): void {
     Promise.all([
       db.collection("analytics_events").createIndex({ type: 1, timestamp: -1 }),
       db.collection("analytics_events").createIndex({ roomId: 1, type: 1 }),
+      // The landing page's country roll-up groups every event by country; on a
+      // collection this size that has to be an index scan, not a table scan.
+      db.collection("analytics_events").createIndex({ country: 1 }),
       db.collection("analytics_sessions").createIndex({ sessionKey: 1 }),
       db.collection("analytics_sessions").createIndex({ roomId: 1, role: 1 }),
       db.collection("analytics_events").createIndex(
