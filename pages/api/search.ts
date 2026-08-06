@@ -3,12 +3,6 @@ import { getSearchCacheCollection } from "../../lib/mongodb";
 import { rateLimit } from "../../lib/limits";
 import { parseIso8601Duration } from "../../lib/duration";
 
-const INVIDIOUS_INSTANCES = [
-  "https://invidious.materialio.us",
-  "https://inv.nadeko.net",
-  "https://invidious.nerdvpn.de",
-];
-
 const VALID_DURATIONS = new Set(["any", "short", "medium", "long"]);
 const VALID_SORTS = new Set(["relevance", "viewCount", "date", "rating"]);
 const MAX_QUERY_LENGTH = 200;
@@ -23,14 +17,34 @@ interface SearchResult {
 
 // Song searches repeat heavily across rooms ("bohemian rhapsody karaoke"),
 // and each uncached YouTube API search burns 100 of the 10,000 daily quota
-// units. Cached results are served from Mongo for 24h (TTL index in
-// lib/mongodb.ts), which stretches the quota from ~100 searches/day to
-// ~100 *distinct* searches/day.
-async function readCache(cacheKey: string): Promise<SearchResult[] | null> {
+// units. Cached results are served from Mongo, which stretches the quota from
+// ~100 searches/day to ~100 *distinct* searches/day.
+//
+// Entries stay readable for 14 days (TTL index in lib/mongodb.ts) but are only
+// served outright while under FRESH_CACHE_MS old. Past that a live search runs
+// first and refreshes them; the aging copy is used only when YouTube is
+// unreachable or out of quota, so a spent quota degrades to slightly-stale
+// results instead of an error page.
+const FRESH_CACHE_MS = 24 * 60 * 60 * 1000;
+
+interface CacheHit {
+  results: SearchResult[];
+  ageMs: number;
+}
+
+async function readCache(cacheKey: string): Promise<CacheHit | null> {
   try {
     const cache = await getSearchCacheCollection();
     const hit = await cache.findOne({ key: cacheKey });
-    return hit ? hit.results : null;
+    if (!hit) return null;
+    // A doc with no usable createdAt reads as infinitely old, so it's kept as
+    // a fallback but never served as fresh.
+    const writtenAt =
+      hit.createdAt instanceof Date ? hit.createdAt.getTime() : 0;
+    return {
+      results: hit.results as SearchResult[],
+      ageMs: Date.now() - writtenAt,
+    };
   } catch {
     return null; // cache is best-effort; fall through to a live search
   }
@@ -46,6 +60,35 @@ function writeCache(cacheKey: string, results: SearchResult[]): void {
       )
     )
     .catch(() => {});
+}
+
+/** A YouTube API failure, flagged when the cause is a spent quota so callers
+ * can say when search comes back rather than "try again shortly". */
+class YoutubeApiError extends Error {
+  quotaExceeded: boolean;
+  constructor(message: string, quotaExceeded: boolean) {
+    super(message);
+    this.name = "YoutubeApiError";
+    this.quotaExceeded = quotaExceeded;
+  }
+}
+
+// The daily quota resets at midnight Pacific, which is what YouTube bills
+// against regardless of where the singer is.
+function quotaResetsAt(): string {
+  const now = new Date();
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Los_Angeles",
+    hour12: false,
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).formatToParts(now);
+  const part = (type: string) =>
+    Number(parts.find((p) => p.type === type)?.value ?? 0);
+  const secondsIntoDay =
+    (part("hour") % 24) * 3600 + part("minute") * 60 + part("second");
+  return new Date(now.getTime() + (86400 - secondsIntoDay) * 1000).toISOString();
 }
 
 async function searchWithYoutubeApi(
@@ -74,13 +117,27 @@ async function searchWithYoutubeApi(
     "https://www.googleapis.com/youtube/v3/search?" + params,
     { signal: AbortSignal.timeout(8000) }
   );
-  if (!resp.ok) throw new Error(`YouTube API ${resp.status}`);
-
-  const data = await resp.json();
-  if (data.error) throw new Error(data.error.message || "YouTube API error");
+  // Parse the body even on a non-2xx: the reason code is the only way to tell
+  // "out of quota for today" apart from a key/config problem, and YouTube
+  // reports an exhausted quota as either 403 quotaExceeded or 429
+  // rateLimitExceeded / RESOURCE_EXHAUSTED depending which limit tripped.
+  const data = await resp.json().catch(() => null);
+  const apiError = data?.error;
+  if (!resp.ok || apiError) {
+    const reason = apiError?.errors?.[0]?.reason ?? "";
+    const exhausted =
+      reason === "quotaExceeded" ||
+      reason === "rateLimitExceeded" ||
+      apiError?.status === "RESOURCE_EXHAUSTED" ||
+      resp.status === 429;
+    throw new YoutubeApiError(
+      apiError?.message || `YouTube API ${resp.status}`,
+      exhausted
+    );
+  }
 
   const results: SearchResult[] =
-    data.items
+    data?.items
       ?.filter((item: any) => item.id?.videoId)
       .map((item: any) => ({
         title: item.snippet.title ?? "",
@@ -135,62 +192,6 @@ async function enrichWithVideoDetails(
   }
 }
 
-async function searchWithInvidious(q: string): Promise<SearchResult[] | null> {
-  for (const instance of INVIDIOUS_INSTANCES) {
-    try {
-      const params = new URLSearchParams({ q, type: "video" });
-      const resp = await fetch(`${instance}/api/v1/search?${params}`, {
-        signal: AbortSignal.timeout(5000),
-      });
-      if (!resp.ok) continue;
-
-      const data = await resp.json();
-      if (!Array.isArray(data) || data.length === 0) continue;
-
-      const candidates = data
-        .filter((item: any) => item.type === "video" && item.videoId)
-        .slice(0, 24)
-        .map((item: any) => ({
-          title: item.title ?? "",
-          thumbnailUrl: `https://i.ytimg.com/vi/${item.videoId}/mqdefault.jpg`,
-          videoId: item.videoId,
-          // Invidious ships these in the search response itself — no extra calls.
-          ...(Number.isFinite(item.lengthSeconds) && item.lengthSeconds > 0
-            ? { durationSeconds: item.lengthSeconds }
-            : {}),
-          ...(Number.isFinite(item.viewCount) && item.viewCount > 0
-            ? { viewCount: item.viewCount }
-            : {}),
-        }));
-
-      // Check embeddability via YouTube oEmbed (401 = not embeddable)
-      const checks = await Promise.all(
-        candidates.map(async (r: any) => {
-          try {
-            const oembedResp = await fetch(
-              `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${r.videoId}&format=json`,
-              { method: "HEAD", signal: AbortSignal.timeout(3000) }
-            );
-            return oembedResp.ok ? r : null;
-          } catch {
-            return null;
-          }
-        })
-      );
-
-      const embeddable = checks.filter(Boolean).slice(0, 24);
-      // All candidates failing the oEmbed check is this instance (or the
-      // check) having a bad minute, not a real "no results" — move on rather
-      // than handing back an empty list that would get cached for 24h.
-      if (embeddable.length === 0) continue;
-      return embeddable;
-    } catch {
-      // Try next instance
-    }
-  }
-  return null;
-}
-
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -218,14 +219,25 @@ export default async function handler(
   const cacheKey = `${q.trim().toLowerCase()}|${duration}|${sortBy}`;
 
   const cached = await readCache(cacheKey);
-  if (cached) {
-    res.status(200).json(cached);
+  if (cached && cached.ageMs < FRESH_CACHE_MS) {
+    res.setHeader("x-karaoq-search-cache", "fresh");
+    res.status(200).json(cached.results);
     return;
   }
 
-  // Only uncached searches hit the rate limit: cache reads are cheap, but
-  // each miss burns 100 YouTube quota units.
+  // An aging entry that found nothing is worthless as a fallback: replaying it
+  // would tell someone their song doesn't exist when we simply couldn't look.
+  const staleFallback =
+    cached && cached.results.length > 0 ? cached.results : null;
+
+  // Only searches that would go live hit the rate limit: cache hits are cheap,
+  // but each miss burns one of the day's YouTube searches.
   if (!rateLimit(req, "search", 10, 60_000)) {
+    if (staleFallback) {
+      res.setHeader("x-karaoq-search-cache", "stale");
+      res.status(200).json(staleFallback);
+      return;
+    }
     res.status(429).json({ code: 429, message: "Too many searches, slow down." });
     return;
   }
@@ -233,21 +245,30 @@ export default async function handler(
   try {
     const results = await searchWithYoutubeApi(q, duration, sortBy);
     writeCache(cacheKey, results);
+    res.setHeader("x-karaoq-search-cache", "miss");
     res.status(200).json(results);
     return;
   } catch (e: any) {
-    console.warn("YouTube API search failed, trying Invidious:", e?.message);
-  }
+    console.warn("YouTube API search failed:", e?.message);
 
-  // Invidious ignores duration/sort filters, but degraded results beat none.
-  const fallback = await searchWithInvidious(q);
-  if (fallback) {
-    // Never cache an empty fallback: a degraded backend must not blank this
-    // query for a full cache TTL.
-    if (fallback.length > 0) writeCache(cacheKey, fallback);
-    res.status(200).json(fallback);
-    return;
-  }
+    // Serving a stale copy beats telling someone their song doesn't exist
+    // because we're out of quota.
+    if (staleFallback) {
+      res.setHeader("x-karaoq-search-cache", "stale");
+      res.status(200).json(staleFallback);
+      return;
+    }
 
-  res.status(502).json({ code: 502, message: "All search backends unavailable." });
+    if (e instanceof YoutubeApiError && e.quotaExceeded) {
+      res.status(503).json({
+        code: 503,
+        reason: "quota",
+        resetsAt: quotaResetsAt(),
+        message: "Daily search limit reached.",
+      });
+      return;
+    }
+
+    res.status(502).json({ code: 502, message: "Search is temporarily unavailable." });
+  }
 }

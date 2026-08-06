@@ -1,13 +1,18 @@
 import * as React from 'react';
 
 import styles from '../../styles/SongSearch.module.css';
-import { YoutubeResult } from '../../app/queue/searchYoutube';
+import { YoutubeResult, SearchFailure } from '../../app/queue/searchYoutube';
 import { formatDuration } from '../../lib/duration';
 import { useT } from '../../lib/i18n/I18nProvider';
+import FeedbackTrigger from '../feedback/FeedbackTrigger';
 
 interface SearchResultsProps {
   hasSearched: boolean;
   searching: boolean;
+  /** Set when the last search failed backend-side (quota/rate-limit/outage) —
+   * distinct from a real zero-result search, so we don't tell someone their
+   * song doesn't exist when it's actually our server having a bad minute. */
+  searchError: SearchFailure | null;
   results: YoutubeResult[];
   /** How many results are revealed; the rest sit behind "Show more". */
   visibleCount: number;
@@ -17,6 +22,8 @@ interface SearchResultsProps {
   onPreview: (song: YoutubeResult) => void;
   onAdd: (song: YoutubeResult) => void;
   onShowMore: () => void;
+  roomId?: string;
+  role?: 'host' | 'singer';
 }
 
 const SKELETON_COUNT = 8;
@@ -28,6 +35,7 @@ const STAGGER_STEP_MS = 45;
 const SearchResults: React.FC<SearchResultsProps> = ({
   hasSearched,
   searching,
+  searchError,
   results,
   visibleCount,
   canAdd,
@@ -35,6 +43,8 @@ const SearchResults: React.FC<SearchResultsProps> = ({
   onPreview,
   onAdd,
   onShowMore,
+  roomId,
+  role,
 }) => {
   const { t, locale } = useT();
   const compactViews = React.useMemo(
@@ -45,6 +55,32 @@ const SearchResults: React.FC<SearchResultsProps> = ({
       }),
     [locale]
   );
+
+  if (hasSearched && !searching && results.length === 0 && searchError) {
+    // Round up so "58 minutes left" never reads as "0h".
+    const hoursLeft = searchError.resetsAt
+      ? Math.max(
+          1,
+          Math.ceil(
+            (new Date(searchError.resetsAt).getTime() - Date.now()) / 3_600_000
+          )
+        )
+      : null;
+    return (
+      <div className={styles.unavailable}>
+        <span className={styles.unavailableEmoji} aria-hidden="true">🎤</span>
+        <p className={styles.unavailableTitle}>{t('search.unavailable.title')}</p>
+        <p className={styles.unavailableBody}>
+          {searchError.quota && hoursLeft
+            ? t('search.unavailable.quotaBody', { hours: hoursLeft })
+            : t('search.unavailable.body')}
+        </p>
+        <FeedbackTrigger className={styles.unavailableFeedback} roomId={roomId} role={role}>
+          {t('search.unavailable.feedback')}
+        </FeedbackTrigger>
+      </div>
+    );
+  }
 
   if (hasSearched && !searching && results.length === 0) {
     return <div className={styles.noResults}>{t('search.noResults')}</div>;
@@ -132,6 +168,20 @@ const SearchResults: React.FC<SearchResultsProps> = ({
           </button>
         </div>
       ))}
+      <div className={styles.resultsSource}>
+        <span className={styles.resultsSourceIcon} aria-hidden="true">
+          {/* Official YouTube play-icon geometry (not a hand-drawn stand-in);
+              white triangle painted first so it shows through the cutout. */}
+          <svg width="17" height="12" viewBox="0 3.5 24 17" role="presentation" focusable="false">
+            <path d="M9.545 15.568V8.432L15.818 12z" fill="#fff" />
+            <path
+              d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"
+              fill="#FF0000"
+            />
+          </svg>
+        </span>
+        <span className={styles.resultsSourceText}>{t('search.resultsSource')}</span>
+      </div>
       {results.length > visibleCount && (
         <button className={styles.showMoreBtn} onClick={onShowMore}>
           {t('search.showMore')}

@@ -459,6 +459,97 @@
   100% { transform: translateX(320%); }
 }
 
+/* YouTube API attribution, required by YouTube's API Developer Policies
+   ("must make clear YouTube is the source"). Deliberately not pill-shaped, so
+   it can't be mistaken for a button like "Back to song ideas". Its hairlines
+   double as the separator above "Show more", which is why .showMoreBtn
+   carries no border-top of its own. */
+.resultsSource {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0.9rem 0 0.1rem;
+}
+
+.resultsSource::before,
+.resultsSource::after {
+  content: '';
+  height: 1px;
+  flex: 1;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.12));
+}
+
+.resultsSource::after {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.12), transparent);
+}
+
+.resultsSourceIcon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  opacity: 0.9;
+}
+
+.resultsSourceIcon svg {
+  display: block;
+}
+
+.resultsSourceText {
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* ─── Search backend unavailable (quota/rate-limit/outage) ─── */
+
+.unavailable {
+  padding: 2rem 1.25rem;
+  text-align: center;
+}
+
+.unavailableEmoji {
+  display: block;
+  font-size: 1.8rem;
+  margin-bottom: 0.6rem;
+}
+
+.unavailableTitle {
+  font-family: var(--font-headline);
+  font-size: 1.02rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 6px;
+}
+
+.unavailableBody {
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+  margin: 0 0 16px;
+  max-width: 32ch;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.unavailableFeedback {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 18px;
+  border-radius: 999px;
+  background: none;
+  border: 1.5px solid rgba(255, 45, 120, 0.4);
+  color: #ff2d78;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+.unavailableFeedback:hover {
+  background: rgba(255, 45, 120, 0.08);
+  border-color: #ff2d78;
+}
+
 /* Karaoke-flavoured "finding songs" header: five bouncing equalizer bars in
    the brand gradient. */
 .loadingHeader {
@@ -911,7 +1002,6 @@
   padding: 0.7rem 1rem;
   background: none;
   border: none;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
   color: #ff2d78;
   font-size: 0.78rem;
   font-weight: 600;
@@ -1006,6 +1096,14 @@
   color: #ec4899;
 }
 
+/* Fills the track .inlineFooterLink's grid-column: 2 leaves empty. Must stay
+   below that rule — same specificity, so source order decides. */
+.inlineFooterPrivacy {
+  grid-column: 1;
+  justify-self: start;
+  white-space: nowrap;
+}
+
 .inlineFooterFeedback {
   grid-column: 3;
   justify-self: end;
@@ -1022,6 +1120,24 @@
 
 .inlineFooterFeedback:hover {
   color: rgba(200, 180, 255, 0.7);
+}
+
+/* Three items plus the credit string overflow one line on a small phone; the
+   placed grid-columns have to be reset or they keep their own tracks. */
+@media (max-width: 420px) {
+  .inlineFooter {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.35rem 0.75rem;
+  }
+
+  .inlineFooterLink,
+  .inlineFooterPrivacy,
+  .inlineFooterFeedback {
+    grid-column: auto;
+    justify-self: auto;
+  }
 }
 
 @keyframes footerHeartbeat {

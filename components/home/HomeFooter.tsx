@@ -23,7 +23,15 @@ export default function HomeFooter() {
         </ul>
       </nav>
       <div className={styles.footerInner}>
-        <a href="https://variationsonastring.com" target="_blank" rel="noopener noreferrer" className={styles.footerLink}>
+        <Link href="/privacy" className={`${styles.footerLink} ${styles.footerPrivacy}`}>
+          {t('footer.privacy')}
+        </Link>
+        <a
+          href="https://variationsonastring.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`${styles.footerLink} ${styles.footerCredit}`}
+        >
           {renderWithHeart(t('footer.credit'), styles.footerHeart)}
         </a>
         <FeedbackTrigger className={styles.footerFeedback} />

@@ -1,0 +1,51 @@
+/* ═══════════════════════════════════════════
+   Legal pages (privacy, terms)
+   Reuses the Guide.module.css page/topbar/article shell; adds
+   plain body typography for prose sections.
+   ═══════════════════════════════════════════ */
+
+.updated {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  margin: 0 0 40px;
+}
+
+.section {
+  margin: 0 0 36px;
+}
+
+.h2 {
+  font-family: var(--font-headline);
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: #fff;
+  margin: 0 0 14px;
+}
+
+.p {
+  font-size: 1.02rem;
+  line-height: 1.65;
+  color: var(--text-secondary);
+  margin: 0 0 14px;
+}
+
+.list {
+  margin: 0 0 14px;
+  padding-left: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.list li {
+  font-size: 1.02rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.link {
+  color: #00c8ff;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.link:hover { color: #00f0ff; }

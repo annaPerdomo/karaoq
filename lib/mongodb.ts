@@ -31,7 +31,11 @@ export function getMongoClient(): Promise<MongoClient> {
 // accumulate against the Atlas free-tier storage cap.
 export const ROOM_EXPIRY_SECONDS = 30 * 24 * 60 * 60;
 
-const SEARCH_CACHE_TTL_SECONDS = 24 * 60 * 60;
+// Entries are only *served* for 24h (FRESH_CACHE_MS in pages/api/search.ts);
+// they're retained well past that purely as a fallback for when YouTube is
+// unreachable or the daily search quota is spent. YouTube's Developer Policies
+// cap storage of non-authorized API data at 30 days, so stay comfortably under.
+const SEARCH_CACHE_TTL_SECONDS = 14 * 24 * 60 * 60;
 
 let roomIndexesEnsured = false;
 
@@ -45,10 +49,31 @@ function ensureRoomIndexes(db: Db): void {
         { lastActivity: 1 },
         { expireAfterSeconds: ROOM_EXPIRY_SECONDS }
       ),
-      db.collection("search_cache").createIndex(
-        { createdAt: 1 },
-        { expireAfterSeconds: SEARCH_CACHE_TTL_SECONDS }
-      ),
+      // createIndex won't change expireAfterSeconds on an index that already
+      // exists (it errors with IndexOptionsConflict), so fall back to collMod
+      // to retune the TTL in place — otherwise a changed retention window
+      // silently never reaches a database that's already been indexed.
+      // Swallowed rather than rejected: a failed retune leaves the old TTL
+      // working, whereas failing the batch un-latches roomIndexesEnsured and
+      // makes every polled request re-issue the whole batch.
+      db
+        .collection("search_cache")
+        .createIndex(
+          { createdAt: 1 },
+          { expireAfterSeconds: SEARCH_CACHE_TTL_SECONDS }
+        )
+        .catch(() =>
+          db.command({
+            collMod: "search_cache",
+            index: {
+              keyPattern: { createdAt: 1 },
+              expireAfterSeconds: SEARCH_CACHE_TTL_SECONDS,
+            },
+          })
+        )
+        .catch((e) => {
+          console.error("search_cache TTL retune failed:", e);
+        }),
       db.collection("search_cache").createIndex({ key: 1 }, { unique: true }),
     ]).catch((e) => {
       console.error("Room index creation failed:", e);

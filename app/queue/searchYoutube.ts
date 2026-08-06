@@ -10,6 +10,30 @@ export interface YoutubeResult {
   viewCount?: number;
 }
 
+/** Thrown when /api/search responds non-2xx (quota exhausted, rate-limited,
+ * etc.) so callers can tell "backend is down" apart from "no results". */
+export class SearchUnavailableError extends Error {
+  status: number;
+  /** 'quota' once the day's YouTube search budget is spent. */
+  reason?: string;
+  /** ISO time the quota frees up, when the server knows it. */
+  resetsAt?: string;
+  constructor(status: number, detail?: { reason?: string; resetsAt?: string }) {
+    super(`Search unavailable (${status})`);
+    this.name = 'SearchUnavailableError';
+    this.status = status;
+    this.reason = detail?.reason;
+    this.resetsAt = detail?.resetsAt;
+  }
+}
+
+export interface SearchFailure {
+  /** Day's YouTube search budget is spent, as opposed to a transient blip. */
+  quota: boolean;
+  /** ISO time the quota frees up, when the server knows it. */
+  resetsAt?: string;
+}
+
 export type VideoDuration = 'any' | 'short' | 'medium' | 'long';
 export type SortOrder = 'relevance' | 'viewCount' | 'date' | 'rating';
 
@@ -31,7 +55,13 @@ export default async function searchYoutube(
     sortBy: filters.sortBy,
   });
   const resp = await fetch(`/api/search?${params}`, signal ? { signal } : undefined);
-  if (!resp.ok) return [];
+  if (!resp.ok) {
+    const detail = await resp.json().catch(() => null);
+    throw new SearchUnavailableError(resp.status, {
+      reason: detail?.reason,
+      resetsAt: detail?.resetsAt,
+    });
+  }
   const data = await resp.json();
   return Array.isArray(data)
     ? data.map((item: any) => ({

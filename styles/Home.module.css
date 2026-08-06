@@ -3041,8 +3041,6 @@
 }
 
 .footerLink {
-  /* Explicit: auto-placement would drop the credit into the empty first track. */
-  grid-column: 2;
   font-size: 0.85rem;
   color: rgba(200, 180, 255, 0.35);
   text-decoration: none;
@@ -3054,6 +3052,20 @@
 }
 .footerLink:hover .footerHeart {
   color: #ec4899;
+}
+
+/* Placed, not auto-flowed: the credit stays optically centered even though
+   its neighbors differ in width. */
+.footerPrivacy {
+  grid-column: 1;
+  justify-self: start;
+  white-space: nowrap;
+}
+
+.footerCredit {
+  grid-column: 2;
+  justify-self: center;
+  text-align: center;
 }
 
 .footerHeart {
@@ -3230,10 +3242,16 @@
   /* One card per row: at half-width the copy wrapped nearly one word per
      line. The cards are short, so a single column stays scannable. */
   .useCasesGrid { grid-template-columns: 1fr; }
+  /* Stacked: the placed grid-columns have to be reset or the items keep
+     their own tracks. */
   .footerInner {
-    flex-direction: column;
+    grid-template-columns: 1fr;
     gap: 0.5rem;
     text-align: center;
+  }
+  .footerPrivacy, .footerCredit, .footerFeedback {
+    grid-column: 1;
+    justify-self: center;
   }
 }
 

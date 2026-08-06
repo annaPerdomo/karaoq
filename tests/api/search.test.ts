@@ -32,13 +32,20 @@ import handler from "../../pages/api/search";
 function createRes() {
   let statusCode = 200;
   let body: unknown = null;
+  const headers: Record<string, string> = {};
   const res = {
     status(code: number) { statusCode = code; return res; },
     json(data: unknown) { body = data; return res; },
+    setHeader(name: string, value: string) { headers[name] = value; return res; },
     getStatus: () => statusCode,
     getBody: () => body,
+    getHeader: (name: string) => headers[name],
   };
-  return res as unknown as NextApiResponse & { getStatus: () => number; getBody: () => unknown };
+  return res as unknown as NextApiResponse & {
+    getStatus: () => number;
+    getBody: () => unknown;
+    getHeader: (name: string) => string | undefined;
+  };
 }
 
 function jsonResponse(data: unknown, ok = true, status = 200) {
@@ -72,9 +79,13 @@ afterEach(() => {
 });
 
 describe("GET /api/search", () => {
-  it("serves cached results without touching any backend", async () => {
+  it("serves fresh cached results without touching any backend", async () => {
     const cached = [{ title: "Cached", thumbnailUrl: "t", videoId: "abc" }];
-    mockCollection.findOne.mockResolvedValue({ key: "q|any|relevance", results: cached });
+    mockCollection.findOne.mockResolvedValue({
+      key: "q|any|relevance",
+      results: cached,
+      createdAt: new Date(),
+    });
 
     const res = createRes();
     await handler(createMockReq({ query: { q: "q" } }), res);
@@ -83,6 +94,92 @@ describe("GET /api/search", () => {
     expect(res.getBody()).toEqual(cached);
     expect(fetchMock).not.toHaveBeenCalled();
     expect(rateLimitMock).not.toHaveBeenCalled();
+  });
+
+  it("re-searches a stale entry and refreshes it when YouTube answers", async () => {
+    const stale = [{ title: "Stale", thumbnailUrl: "t", videoId: "old" }];
+    mockCollection.findOne.mockResolvedValue({
+      key: "q|any|relevance",
+      results: stale,
+      createdAt: new Date(Date.now() - 48 * 60 * 60 * 1000),
+    });
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url.includes("/youtube/v3/search")) return jsonResponse(searchItems(["new"]));
+      if (url.includes("/youtube/v3/videos")) return jsonResponse({ items: [] });
+      throw new Error("unexpected fetch " + url);
+    });
+
+    const res = createRes();
+    await handler(createMockReq({ query: { q: "q" } }), res);
+
+    expect(res.getStatus()).toBe(200);
+    expect(res.getBody()).toEqual([
+      { title: "Song new", thumbnailUrl: "https://i.ytimg.com/vi/new/mq.jpg", videoId: "new" },
+    ]);
+    await vi.waitFor(() => expect(mockCollection.updateOne).toHaveBeenCalled());
+  });
+
+  it("falls back to a stale entry when the quota is spent", async () => {
+    const stale = [{ title: "Stale", thumbnailUrl: "t", videoId: "old" }];
+    mockCollection.findOne.mockResolvedValue({
+      key: "q|any|relevance",
+      results: stale,
+      createdAt: new Date(Date.now() - 48 * 60 * 60 * 1000),
+    });
+    fetchMock.mockImplementation(async () =>
+      jsonResponse(
+        { error: { message: "Quota exceeded", errors: [{ reason: "quotaExceeded" }] } },
+        false,
+        403
+      )
+    );
+
+    const res = createRes();
+    await handler(createMockReq({ query: { q: "q" } }), res);
+
+    expect(res.getStatus()).toBe(200);
+    expect(res.getBody()).toEqual(stale);
+    expect(res.getHeader("x-karaoq-search-cache")).toBe("stale");
+  });
+
+  it("reports the outage rather than replaying an empty stale entry", async () => {
+    mockCollection.findOne.mockResolvedValue({
+      key: "q|any|relevance",
+      results: [],
+      createdAt: new Date(Date.now() - 48 * 60 * 60 * 1000),
+    });
+    fetchMock.mockImplementation(async () =>
+      jsonResponse(
+        { error: { message: "Quota exceeded", errors: [{ reason: "quotaExceeded" }] } },
+        false,
+        403
+      )
+    );
+
+    const res = createRes();
+    await handler(createMockReq({ query: { q: "q" } }), res);
+
+    expect(res.getStatus()).toBe(503);
+    expect((res.getBody() as { reason: string }).reason).toBe("quota");
+  });
+
+  it("reports a spent quota with a reset time when nothing is cached", async () => {
+    fetchMock.mockImplementation(async () =>
+      jsonResponse(
+        { error: { message: "Quota exceeded", errors: [{ reason: "quotaExceeded" }] } },
+        false,
+        403
+      )
+    );
+
+    const res = createRes();
+    await handler(createMockReq({ query: { q: "test" } }), res);
+
+    expect(res.getStatus()).toBe(503);
+    const body = res.getBody() as { reason: string; resetsAt: string };
+    expect(body.reason).toBe("quota");
+    expect(new Date(body.resetsAt).getTime()).toBeGreaterThan(Date.now());
+    expect(mockCollection.updateOne).not.toHaveBeenCalled();
   });
 
   it("requests 25 results and enriches them with duration and view count", async () => {
@@ -140,31 +237,17 @@ describe("GET /api/search", () => {
     ]);
   });
 
-  it("falls back to Invidious and maps its inline duration/view metadata", async () => {
+  it("returns 502 without caching anything when the YouTube API fails", async () => {
     fetchMock.mockImplementation(async (url: string) => {
       if (url.includes("/youtube/v3/search")) return jsonResponse({}, false, 500);
-      if (url.includes("/api/v1/search")) {
-        return jsonResponse([
-          { type: "video", videoId: "inv1", title: "Fallback", lengthSeconds: 240, viewCount: 5000 },
-        ]);
-      }
-      if (url.includes("youtube.com/oembed")) return jsonResponse({});
       throw new Error("unexpected fetch " + url);
     });
 
     const res = createRes();
     await handler(createMockReq({ query: { q: "test" } }), res);
 
-    expect(res.getStatus()).toBe(200);
-    expect(res.getBody()).toEqual([
-      {
-        title: "Fallback",
-        thumbnailUrl: "https://i.ytimg.com/vi/inv1/mqdefault.jpg",
-        videoId: "inv1",
-        durationSeconds: 240,
-        viewCount: 5000,
-      },
-    ]);
+    expect(res.getStatus()).toBe(502);
+    expect(mockCollection.updateOne).not.toHaveBeenCalled();
   });
 
   it("rate-limits only uncached searches", async () => {
