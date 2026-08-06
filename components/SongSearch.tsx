@@ -7,6 +7,8 @@ import searchYoutube, {
   SearchFilters,
   VideoDuration,
   SortOrder,
+  SearchUnavailableError,
+  SearchFailure,
 } from '../app/queue/searchYoutube';
 import postEntryToQueue from '../app/queue/postEntryToQueue';
 import FeedbackTrigger from './feedback/FeedbackTrigger';
@@ -95,6 +97,9 @@ const SongSearch: React.FC<SongSearchProps> = ({
   const [searching, setSearching] = React.useState(false);
   const [karaokeMode, setKaraokeMode] = React.useState(true);
   const [hasSearched, setHasSearched] = React.useState(false);
+  // null = search is fine. Set only on a backend failure (quota/outage/rate
+  // limit) so a real zero-result search still reads as "no songs found".
+  const [searchError, setSearchError] = React.useState<SearchFailure | null>(null);
   const [justAdded, setJustAdded] = React.useState<string | null>(null);
   const [addError, setAddError] = React.useState<string | null>(null);
   // In-flight guard: on a slow connection a double-tapped Add would $push
@@ -211,6 +216,7 @@ const SongSearch: React.FC<SongSearchProps> = ({
       setSearching(false);
       setHasSearched(false);
       setResults([]);
+      setSearchError(null);
     }
   }, [query, hasSearched]);
 
@@ -232,6 +238,7 @@ const SongSearch: React.FC<SongSearchProps> = ({
 
     setSearching(true);
     setHasSearched(true);
+    setSearchError(null);
     const searchQuery = karaoke ? `${rawQuery} karaoke` : rawQuery;
     searchYoutube(searchQuery, activeFilters, controller.signal)
       .then((res) => {
@@ -239,7 +246,18 @@ const SongSearch: React.FC<SongSearchProps> = ({
         setVisibleCount(INITIAL_RESULTS);
       })
       .catch((err) => {
-        if (err?.name !== 'AbortError') setResults([]);
+        // An aborted body read surfaces as a SearchUnavailableError, not an
+        // AbortError, so a superseded search would stamp a stale failure onto
+        // the new result set.
+        if (err?.name === 'AbortError' || controller.signal.aborted) return;
+        setResults([]);
+        // Every non-abort failure, including a bare fetch TypeError: a dropped
+        // connection must not render as "your song isn't on YouTube".
+        setSearchError(
+          err instanceof SearchUnavailableError
+            ? { quota: err.reason === 'quota', resetsAt: err.resetsAt }
+            : { quota: false }
+        );
       })
       .finally(() => {
         if (!controller.signal.aborted) setSearching(false);
@@ -271,6 +289,7 @@ const SongSearch: React.FC<SongSearchProps> = ({
     setQuery('');
     setHasSearched(false);
     setSearching(false);
+    setSearchError(null);
   }
 
   function updateFilter<K extends keyof SearchFilters>(
@@ -374,6 +393,7 @@ const SongSearch: React.FC<SongSearchProps> = ({
       setResults([]);
       setQuery('');
       setHasSearched(false);
+      setSearchError(null);
       setConfirmSong(null);
       setAddError(null);
       setJustAdded(entry.songTitle);
@@ -399,6 +419,7 @@ const SongSearch: React.FC<SongSearchProps> = ({
     setResults([]);
     setQuery('');
     setHasSearched(false);
+    setSearchError(null);
     setConfirmSong(null);
   }
 
@@ -514,6 +535,7 @@ const SongSearch: React.FC<SongSearchProps> = ({
       <SearchResults
         hasSearched={hasSearched}
         searching={searching}
+        searchError={searchError}
         results={results}
         visibleCount={visibleCount}
         canAdd={canAdd}
@@ -521,6 +543,8 @@ const SongSearch: React.FC<SongSearchProps> = ({
         onPreview={(song) => openConfirm(song, true)}
         onAdd={(song) => (onPick ? handlePick(song) : openConfirm(song, false))}
         onShowMore={() => setVisibleCount((c) => c + INITIAL_RESULTS)}
+        roomId={roomId}
+        role={role === 'display' ? undefined : role}
       />
 
       {!hasSearched && results.length === 0 && !justAdded && (() => {
