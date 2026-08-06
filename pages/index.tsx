@@ -15,15 +15,19 @@ import {
   type Locale,
 } from '../lib/i18n/config';
 import type { Catalog } from '../lib/i18n/messages';
+import { fetchPublicStats } from '../lib/publicStatsServer';
+import { EMPTY_STATS, type PublicStats } from '../lib/publicStats';
 
 interface HomePageProps {
   /** Locale this page was rendered for (the route's locale). */
   pageLocale: Locale;
+  /** Social-proof figures, baked in at revalidation time. */
+  stats: PublicStats;
 }
 
 const OG_IMAGE = `${SITE_URL}/og-image.png`;
 
-const HomePage: NextPage<HomePageProps> = ({ pageLocale }) => {
+const HomePage: NextPage<HomePageProps> = ({ pageLocale, stats }) => {
   const { t } = useT();
   const loc = isLocale(pageLocale) ? pageLocale : DEFAULT_LOCALE;
   const isEn = loc === DEFAULT_LOCALE;
@@ -133,10 +137,15 @@ const HomePage: NextPage<HomePageProps> = ({ pageLocale }) => {
           }}
         />
       </Head>
-      <Home />
+      <Home stats={stats} />
     </>
   );
 };
+
+// Stats are refreshed at most hourly. They're rounded down to two significant
+// digits anyway, so an hour of drift is invisible — and this way the figures
+// ship inside the HTML instead of costing every visitor a request.
+const STATS_REVALIDATE_SECONDS = 60 * 60;
 
 // One page, generated once per locale by Next's i18n routing. For non-English
 // locales we ship the matching catalog so the provider renders localized HTML
@@ -150,12 +159,17 @@ export const getStaticProps: GetStaticProps<
     const file = path.join(process.cwd(), 'public', 'i18n', `${pageLocale}.json`);
     i18nCatalog = JSON.parse(fs.readFileSync(file, 'utf8')) as Catalog;
   }
+  // A build with no database reachable still has to produce a page; the proof
+  // section just doesn't render until the first successful revalidation.
+  const stats = await fetchPublicStats().catch(() => EMPTY_STATS);
   return {
     props: {
       pageLocale,
+      stats,
       i18nLocale: pageLocale === DEFAULT_LOCALE ? null : pageLocale,
       i18nCatalog,
     },
+    revalidate: STATS_REVALIDATE_SECONDS,
   };
 };
 

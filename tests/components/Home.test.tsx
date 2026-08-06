@@ -56,11 +56,17 @@ describe("Home component", () => {
     const hostBtns = screen.getAllByRole("button", { name: /Host a Session/i });
     fireEvent.click(hostBtns[0]);
 
+    // Other effects (e.g. the last-hosted-room check) can also call fetch on
+    // mount, so filter for the room call specifically.
+    const queueCalls = () =>
+      (fetch as ReturnType<typeof vi.fn>).mock.calls.filter(([url]) =>
+        String(url).startsWith("/api/queue/")
+      );
     await waitFor(() => {
-      expect(fetch).toHaveBeenCalledTimes(1);
+      expect(queueCalls()).toHaveLength(1);
     });
 
-    const fetchCall = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const fetchCall = queueCalls()[0];
     expect(fetchCall[0]).toMatch(/^\/api\/queue\/[A-Z2-9]{5}$/);
     expect(fetchCall[1]).toMatchObject({ method: "POST" });
 
