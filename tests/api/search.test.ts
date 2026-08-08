@@ -19,9 +19,28 @@ vi.mock("mongodb", () => ({
 }));
 
 const rateLimitMock = vi.fn(() => true);
+// True = "first rejection of this window", which is when a failure is recorded.
+const markNotifiedMock = vi.fn(() => true);
 vi.mock("../../lib/limits", () => ({
   rateLimit: (...args: unknown[]) => rateLimitMock(...args),
+  markRateLimitNotified: (...args: unknown[]) => markNotifiedMock(...args),
 }));
+
+const trackEventMock = vi.fn(async (..._args: unknown[]) => {});
+vi.mock("../../lib/analytics", () => ({
+  trackEvent: (...args: unknown[]) => trackEventMock(...args),
+  isAnalyticsExempt: () => false,
+}));
+
+const sendQuotaAlertMock = vi.fn(async (..._args: unknown[]) => {});
+vi.mock("../../lib/alerts", () => ({
+  sendQuotaAlertOnce: (...args: unknown[]) => sendQuotaAlertMock(...args),
+}));
+
+function failureEvent(): Record<string, unknown> | null {
+  const call = trackEventMock.mock.calls.find((args) => args[1] === "search_failed");
+  return call ? (call[2] as Record<string, unknown>) : null;
+}
 
 process.env.MONGODB_URI = "mongodb://test";
 process.env.MONGODB_DB = "test-db";
@@ -69,6 +88,7 @@ function searchItems(ids: string[]) {
 beforeEach(() => {
   vi.clearAllMocks();
   rateLimitMock.mockReturnValue(true);
+  markNotifiedMock.mockReturnValue(true);
   mockCollection.findOne.mockResolvedValue(null);
   mockCollection.updateOne.mockResolvedValue({});
   vi.stubGlobal("fetch", fetchMock);
@@ -258,5 +278,150 @@ describe("GET /api/search", () => {
 
     expect(res.getStatus()).toBe(429);
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("search_failed tracking", () => {
+  const quotaFailure = () =>
+    jsonResponse(
+      { error: { message: "Quota exceeded", errors: [{ reason: "quotaExceeded" }] } },
+      false,
+      403
+    );
+
+  it("records a spent quota the user saw an error for", async () => {
+    fetchMock.mockImplementation(async () => quotaFailure());
+
+    const res = createRes();
+    await handler(createMockReq({ query: { q: "test" } }), res);
+
+    expect(res.getStatus()).toBe(503);
+    expect(failureEvent()).toMatchObject({
+      failReason: "quota",
+      searchOutcome: "error",
+    });
+  });
+
+  it("records a spent quota the cache covered for", async () => {
+    mockCollection.findOne.mockResolvedValue({
+      key: "q|any|relevance",
+      results: [{ title: "Stale", thumbnailUrl: "t", videoId: "old" }],
+      createdAt: new Date(Date.now() - 48 * 60 * 60 * 1000),
+    });
+    fetchMock.mockImplementation(async () => quotaFailure());
+
+    const res = createRes();
+    await handler(createMockReq({ query: { q: "q" } }), res);
+
+    expect(res.getStatus()).toBe(200);
+    expect(failureEvent()).toMatchObject({
+      failReason: "quota",
+      searchOutcome: "stale",
+    });
+  });
+
+  it("separates an unreachable YouTube from a spent quota", async () => {
+    fetchMock.mockImplementation(async () => jsonResponse({}, false, 500));
+
+    const res = createRes();
+    await handler(createMockReq({ query: { q: "test" } }), res);
+
+    expect(res.getStatus()).toBe(502);
+    expect(failureEvent()).toMatchObject({
+      failReason: "upstream",
+      searchOutcome: "error",
+    });
+  });
+
+  it("records the 429 a rate-limited singer actually sees", async () => {
+    rateLimitMock.mockReturnValue(false);
+
+    const res = createRes();
+    await handler(createMockReq({ query: { q: "test" } }), res);
+
+    expect(res.getStatus()).toBe(429);
+    expect(failureEvent()).toMatchObject({
+      failReason: "rate_limited",
+      searchOutcome: "error",
+    });
+  });
+
+  it("records a throttled window once, not once per rejected request", async () => {
+    rateLimitMock.mockReturnValue(false);
+    markNotifiedMock.mockReturnValue(false);
+
+    const res = createRes();
+    await handler(createMockReq({ query: { q: "test" } }), res);
+
+    expect(res.getStatus()).toBe(429);
+    expect(failureEvent()).toBeNull();
+  });
+
+  it("stays quiet when a stale copy carries a rate-limited search", async () => {
+    rateLimitMock.mockReturnValue(false);
+    mockCollection.findOne.mockResolvedValue({
+      key: "q|any|relevance",
+      results: [{ title: "Stale", thumbnailUrl: "t", videoId: "old" }],
+      createdAt: new Date(Date.now() - 48 * 60 * 60 * 1000),
+    });
+
+    const res = createRes();
+    await handler(createMockReq({ query: { q: "q" } }), res);
+
+    expect(res.getStatus()).toBe(200);
+    expect(failureEvent()).toBeNull();
+  });
+
+  it("stays quiet on a fresh cache hit", async () => {
+    mockCollection.findOne.mockResolvedValue({
+      key: "q|any|relevance",
+      results: [{ title: "Cached", thumbnailUrl: "t", videoId: "abc" }],
+      createdAt: new Date(),
+    });
+
+    const res = createRes();
+    await handler(createMockReq({ query: { q: "q" } }), res);
+
+    expect(res.getStatus()).toBe(200);
+    expect(failureEvent()).toBeNull();
+  });
+
+  it("pages on a spent quota, even when the cache covers for it", async () => {
+    mockCollection.findOne.mockResolvedValue({
+      key: "q|any|relevance",
+      results: [{ title: "Stale", thumbnailUrl: "t", videoId: "old" }],
+      createdAt: new Date(Date.now() - 48 * 60 * 60 * 1000),
+    });
+    fetchMock.mockImplementation(async () => quotaFailure());
+
+    const res = createRes();
+    await handler(createMockReq({ query: { q: "q" } }), res);
+
+    expect(res.getStatus()).toBe(200);
+    expect(sendQuotaAlertMock).toHaveBeenCalledOnce();
+  });
+
+  it("does not page when YouTube is merely unreachable", async () => {
+    fetchMock.mockImplementation(async () => jsonResponse({}, false, 500));
+
+    const res = createRes();
+    await handler(createMockReq({ query: { q: "test" } }), res);
+
+    expect(res.getStatus()).toBe(502);
+    expect(sendQuotaAlertMock).not.toHaveBeenCalled();
+  });
+
+  it("stays quiet on a successful live search", async () => {
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url.includes("/youtube/v3/search")) return jsonResponse(searchItems(["a"]));
+      if (url.includes("/youtube/v3/videos")) return jsonResponse({ items: [] });
+      throw new Error("unexpected fetch " + url);
+    });
+
+    const res = createRes();
+    await handler(createMockReq({ query: { q: "test" } }), res);
+
+    expect(res.getStatus()).toBe(200);
+    expect(failureEvent()).toBeNull();
   });
 });

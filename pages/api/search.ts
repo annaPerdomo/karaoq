@@ -1,7 +1,10 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { getSearchCacheCollection } from "../../lib/mongodb";
-import { rateLimit } from "../../lib/limits";
+import { markRateLimitNotified, rateLimit } from "../../lib/limits";
 import { parseIso8601Duration } from "../../lib/duration";
+import { trackEvent } from "../../lib/analytics";
+import { sendQuotaAlertOnce } from "../../lib/alerts";
+import { quotaResetsAt } from "../../lib/pacificTime";
 
 const VALID_DURATIONS = new Set(["any", "short", "medium", "long"]);
 const VALID_SORTS = new Set(["relevance", "viewCount", "date", "rating"]);
@@ -71,24 +74,6 @@ class YoutubeApiError extends Error {
     this.name = "YoutubeApiError";
     this.quotaExceeded = quotaExceeded;
   }
-}
-
-// The daily quota resets at midnight Pacific, which is what YouTube bills
-// against regardless of where the singer is.
-function quotaResetsAt(): string {
-  const now = new Date();
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/Los_Angeles",
-    hour12: false,
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  }).formatToParts(now);
-  const part = (type: string) =>
-    Number(parts.find((p) => p.type === type)?.value ?? 0);
-  const secondsIntoDay =
-    (part("hour") % 24) * 3600 + part("minute") * 60 + part("second");
-  return new Date(now.getTime() + (86400 - secondsIntoDay) * 1000).toISOString();
 }
 
 async function searchWithYoutubeApi(
@@ -238,6 +223,17 @@ export default async function handler(
       res.status(200).json(staleFallback);
       return;
     }
+    // Guarded so holding the limiter down can't fill the free tier with
+    // never-expiring docs (see markRateLimitNotified). Awaited, not
+    // fire-and-forget: the response freezes the function, and a failure we
+    // never recorded is one we can't see on /admin.
+    if (markRateLimitNotified(req, "search")) {
+      await trackEvent(req, "search_failed", {
+        roomId: "",
+        failReason: "rate_limited",
+        searchOutcome: "error",
+      });
+    }
     res.status(429).json({ code: 429, message: "Too many searches, slow down." });
     return;
   }
@@ -251,15 +247,33 @@ export default async function handler(
   } catch (e: any) {
     console.warn("YouTube API search failed:", e?.message);
 
+    const quotaExceeded = e instanceof YoutubeApiError && e.quotaExceeded;
+    const failReason = quotaExceeded ? "quota" : "upstream";
+
+    // Ahead of the stale-fallback return, so the day the cache quietly covers
+    // for a spent quota still pages someone. Never throws.
+    if (quotaExceeded) await sendQuotaAlertOnce(req);
+
     // Serving a stale copy beats telling someone their song doesn't exist
     // because we're out of quota.
     if (staleFallback) {
+      await trackEvent(req, "search_failed", {
+        roomId: "",
+        failReason,
+        searchOutcome: "stale",
+      });
       res.setHeader("x-karaoq-search-cache", "stale");
       res.status(200).json(staleFallback);
       return;
     }
 
-    if (e instanceof YoutubeApiError && e.quotaExceeded) {
+    await trackEvent(req, "search_failed", {
+      roomId: "",
+      failReason,
+      searchOutcome: "error",
+    });
+
+    if (quotaExceeded) {
       res.status(503).json({
         code: 503,
         reason: "quota",

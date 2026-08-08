@@ -15,9 +15,10 @@ export const MAX_BANNER_LENGTH = 80;
 export const MAX_FEEDBACK_LENGTH = 2000;
 export const MAX_FEEDBACK_CONTACT_LENGTH = 120;
 export const MAX_FEEDBACK_PAGE_LENGTH = 200;
-// Headers arrive uncapped where the body fields don't. Truncating rather than
-// dropping still leaves the model/OS, which is all the panel reads.
-export const MAX_FEEDBACK_UA_LENGTH = 256;
+// Headers arrive uncapped where body fields don't, and every store this applies
+// to keeps its docs indefinitely — an uncapped UA is an uncapped doc. Truncating
+// rather than dropping still leaves the model/OS, which is all the panels read.
+export const MAX_STORED_UA_LENGTH = 256;
 
 export interface SanitizedFeedback {
   kind: FeedbackKind;
@@ -282,8 +283,29 @@ export function isValidHostConfig(value: unknown): value is HostConfig {
 
 // In-memory, per serverless instance: the effective global limit is (limit × warm instances).
 // Abuse protection, not fairness.
-const buckets = new Map<string, { count: number; resetAt: number }>();
+const buckets = new Map<string, { count: number; resetAt: number; notified?: boolean }>();
 const MAX_BUCKETS = 10000;
+
+function bucketKey(req: NextApiRequest, scope: string): string {
+  const forwarded = req.headers["x-forwarded-for"];
+  const ip =
+    (typeof forwarded === "string" ? forwarded.split(",")[0].trim() : null) ||
+    req.socket?.remoteAddress ||
+    "unknown";
+  return `${scope}:${ip}`;
+}
+
+// True once per throttled window, for callers that want to *record* being
+// throttled. Recording every rejection would make exceeding the limit more
+// expensive for us than staying under it: rejections are the unbounded requests,
+// and analytics docs never expire. A fresh window resets the bucket, so the next
+// burst is reportable again.
+export function markRateLimitNotified(req: NextApiRequest, scope: string): boolean {
+  const bucket = buckets.get(bucketKey(req, scope));
+  if (!bucket || bucket.notified) return false;
+  bucket.notified = true;
+  return true;
+}
 
 export function rateLimit(
   req: NextApiRequest,
@@ -291,12 +313,7 @@ export function rateLimit(
   limit: number,
   windowMs: number
 ): boolean {
-  const forwarded = req.headers["x-forwarded-for"];
-  const ip =
-    (typeof forwarded === "string" ? forwarded.split(",")[0].trim() : null) ||
-    req.socket?.remoteAddress ||
-    "unknown";
-  const key = `${scope}:${ip}`;
+  const key = bucketKey(req, scope);
   const now = Date.now();
 
   const bucket = buckets.get(key);

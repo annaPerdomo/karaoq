@@ -136,6 +136,38 @@ export async function getSuggestionCacheCollection(): Promise<Collection<Suggest
   return db.collection<SuggestionCacheDoc>("suggestion_cache");
 }
 
+// One doc per alert already sent, so a paging condition that keeps tripping only
+// wakes Anna once. Worthless after the day passes; a week is a short audit trail.
+const OPS_ALERT_TTL_SECONDS = 7 * 24 * 60 * 60;
+
+export interface OpsAlertDoc {
+  /** e.g. "quota:2026-08-07" — see the mutex note below. */
+  _id: string;
+  sentAt: Date;
+}
+
+let opsAlertIndexesEnsured = false;
+
+export async function getOpsAlertsCollection(): Promise<Collection<OpsAlertDoc>> {
+  const client = await getMongoClient();
+  const db = client.db(process.env.MONGODB_DB);
+  if (!opsAlertIndexesEnsured) {
+    opsAlertIndexesEnsured = true;
+    // Don't add a unique index on the alert key: the dedupe mutex rides on
+    // `_id` because index creation here is fire-and-forget, so the first alert
+    // of all time would race its own index, let duplicates in, and poison every
+    // later createIndex with E11000 — dedupe inert, paging on every failed
+    // search, until the TTL cleared them. `_id` needs no build.
+    db.collection("ops_alerts")
+      .createIndex({ sentAt: 1 }, { expireAfterSeconds: OPS_ALERT_TTL_SECONDS })
+      .catch((e) => {
+        console.error("Ops alert index creation failed:", e);
+        opsAlertIndexesEnsured = false;
+      });
+  }
+  return db.collection<OpsAlertDoc>("ops_alerts");
+}
+
 let feedbackIndexesEnsured = false;
 
 // No TTL on purpose: every other collection expires, but a bug report is the

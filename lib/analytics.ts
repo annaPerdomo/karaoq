@@ -1,5 +1,6 @@
 import type { NextApiRequest } from "next";
 import type { DisplayConfig, HostConfig } from "../pages/api/types";
+import { MAX_STORED_UA_LENGTH } from "./limits";
 import { getAnalyticsDb } from "./mongodb";
 import type { Locale } from "./i18n/config";
 import { asLocale, LOCALE_HEADER, type LocaleSource } from "./i18n/activeLocale";
@@ -20,7 +21,8 @@ export type EventType =
   | "display_config_saved"
   | "host_config_saved"
   | "fair_mode_toggled"
-  | "session_end_set";
+  | "session_end_set"
+  | "search_failed";
 
 export interface AnalyticsEvent {
   type: EventType;
@@ -52,6 +54,11 @@ export interface AnalyticsEvent {
   // session_end_set: how far out the host set the end, or null when they cleared
   // it. A duration, not a wall-clock time — no timezone rides along.
   minutesFromNow?: number | null;
+  // search_failed: why /api/search couldn't run a live search…
+  failReason?: "quota" | "upstream" | "rate_limited";
+  // …and whether the cache covered for it. These events carry roomId "" —
+  // /api/search has no room context — so geo roll-ups must exclude them.
+  searchOutcome?: "stale" | "error";
   locale?: Locale;
 }
 
@@ -61,6 +68,10 @@ const SESSION_GAP_MS = 30 * 60 * 1000;
 function headerString(value: string | string[] | undefined): string | undefined {
   if (Array.isArray(value)) return value[0];
   return value || undefined;
+}
+
+function storedUserAgent(req: NextApiRequest): string | undefined {
+  return headerString(req.headers["user-agent"])?.slice(0, MAX_STORED_UA_LENGTH);
 }
 
 // Demo tooling sends this on every request so its rooms never reach analytics, even against production.
@@ -104,7 +115,7 @@ export async function trackEvent(
     const event: AnalyticsEvent = {
       type,
       timestamp: new Date(),
-      userAgent: headerString(req.headers["user-agent"]),
+      userAgent: storedUserAgent(req),
       ...geo,
       ...(locale ? { locale } : {}),
       ...data,
@@ -128,7 +139,7 @@ export async function trackSessionHeartbeat(
   try {
     const db = await getAnalyticsDb();
     const geo = extractGeo(req);
-    const userAgent = headerString(req.headers["user-agent"]);
+    const userAgent = storedUserAgent(req);
     const now = new Date();
     // Key on the stable clientId so name edits update the same doc; userName fallback for old clients.
     const sessionKey = `${roomId}:${clientId || userName}:${role}`;

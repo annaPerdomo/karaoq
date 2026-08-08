@@ -3,7 +3,7 @@ import { NextApiRequest, NextApiResponse } from "next";
 import { localeFromRequest } from "../../lib/analytics";
 import { getFeedbackCollection } from "../../lib/mongodb";
 import {
-  MAX_FEEDBACK_UA_LENGTH,
+  MAX_STORED_UA_LENGTH,
   rateLimit,
   sanitizeFeedback,
 } from "../../lib/limits";
@@ -48,7 +48,7 @@ export default async function handler(
   const country = headerString(req.headers["x-vercel-ip-country"]);
   const userAgent = headerString(req.headers["user-agent"])?.slice(
     0,
-    MAX_FEEDBACK_UA_LENGTH
+    MAX_STORED_UA_LENGTH
   );
   const entry: FeedbackEntry = {
     kind: feedback.kind,

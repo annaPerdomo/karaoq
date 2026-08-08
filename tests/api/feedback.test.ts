@@ -23,7 +23,7 @@ process.env.MONGODB_URI = "mongodb://test";
 process.env.MONGODB_DB = "test-db";
 
 import handler from "../../pages/api/feedback";
-import { MAX_FEEDBACK_UA_LENGTH } from "../../lib/limits";
+import { MAX_STORED_UA_LENGTH } from "../../lib/limits";
 
 function createRes() {
   let statusCode = 200;
@@ -106,7 +106,7 @@ describe("POST /api/feedback", () => {
 
     expect(res.getStatus()).toBe(200);
     const { userAgent } = mockInsertOne.mock.calls[0][0];
-    expect(userAgent).toHaveLength(MAX_FEEDBACK_UA_LENGTH);
+    expect(userAgent).toHaveLength(MAX_STORED_UA_LENGTH);
     expect(userAgent.startsWith("iPhone")).toBe(true);
   });
 

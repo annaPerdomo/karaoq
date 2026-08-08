@@ -30,13 +30,15 @@ export async function fetchPublicStats(): Promise<PublicStats> {
       events.countDocuments({ type: 'song_added' }),
       events.countDocuments({ type: 'reaction_sent' }),
       // Every event type counts toward the country ranking, so it reflects
-      // where people actually spend time, not just one action. The `country`
-      // index (see lib/mongodb.ts) turns this from a collection scan into an
-      // index scan; no explicit hint, because index creation is best-effort and
-      // hinting a not-yet-built index is a hard error.
+      // where people actually spend time, not just one action — except
+      // search_failed, which any unauthenticated caller can emit by tripping
+      // the rate limiter, and this ranking lights the public world map. The
+      // `country` index (see lib/mongodb.ts) turns this from a collection scan
+      // into an index scan; no explicit hint, because index creation is
+      // best-effort and hinting a not-yet-built index is a hard error.
       events
         .aggregate<{ _id: string }>([
-          { $match: { country: { $nin: [null, ''] } } },
+          { $match: { type: { $ne: 'search_failed' }, country: { $nin: [null, ''] } } },
           { $group: { _id: '$country', n: { $sum: 1 } } },
           { $sort: { n: -1 } },
         ])

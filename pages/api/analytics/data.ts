@@ -40,6 +40,7 @@ export default async function handler(
     const sessions = db.collection("analytics_sessions");
 
     const now = new Date();
+    const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
     const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     const dayKey = { format: "%Y-%m-%d", date: "$timestamp", timezone: tz };
@@ -97,6 +98,9 @@ export default async function handler(
       localeByCountry,
       uniqueLocaleRooms,
       nonEnglishLocaleRooms,
+      searchFailuresByDay,
+      searchFailureTotals,
+      searchFailuresLast24h,
     ] = await Promise.all([
       events.countDocuments({ type: "room_created" }),
 
@@ -124,9 +128,12 @@ export default async function handler(
         ])
         .toArray(),
 
+      // search_failed is excluded from both geo roll-ups: those events carry
+      // roomId "", which $addToSet counts as a room, inflating every country
+      // and city that has real ones.
       events
         .aggregate([
-          { $match: { country: { $exists: true, $ne: null } } },
+          { $match: { type: { $ne: "search_failed" }, country: { $exists: true, $ne: null } } },
           { $group: { _id: "$country", rooms: { $addToSet: "$roomId" } } },
           { $project: { count: { $size: "$rooms" } } },
           { $sort: { count: -1 } },
@@ -136,7 +143,7 @@ export default async function handler(
 
       events
         .aggregate([
-          { $match: { city: { $exists: true, $ne: null } } },
+          { $match: { type: { $ne: "search_failed" }, city: { $exists: true, $ne: null } } },
           {
             $group: {
               _id: { city: "$city", country: "$country", region: "$region" },
@@ -608,6 +615,32 @@ export default async function handler(
           role: { $ne: "display" },
         })
         .then((ids) => ids.length),
+
+      events
+        .aggregate([
+          { $match: { type: "search_failed", timestamp: { $gte: thirtyDaysAgo } } },
+          { $group: { _id: { $dateToString: dayKey }, count: { $sum: 1 } } },
+          { $sort: { _id: 1 } },
+        ])
+        .toArray(),
+
+      events
+        .aggregate([
+          { $match: { type: "search_failed", timestamp: { $gte: thirtyDaysAgo } } },
+          {
+            $group: {
+              _id: { failReason: "$failReason", searchOutcome: "$searchOutcome" },
+              count: { $sum: 1 },
+            },
+          },
+          { $sort: { count: -1 } },
+        ])
+        .toArray(),
+
+      events.countDocuments({
+        type: "search_failed",
+        timestamp: { $gte: dayAgo },
+      }),
     ]);
 
     const sessionStats = sessionData[0] || {
@@ -734,6 +767,11 @@ export default async function handler(
         fairRooms: fairStats.rooms,
         fairEndedOn: fairStats.endedOn,
         fairToggled: fairStats.toggled,
+      },
+      searchHealth: {
+        byDay: searchFailuresByDay,
+        totals: searchFailureTotals,
+        last24h: searchFailuresLast24h,
       },
       meta: {
         timezone: tz,

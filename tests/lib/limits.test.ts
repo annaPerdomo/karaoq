@@ -2,13 +2,59 @@ import { describe, it, expect } from "vitest";
 import {
   isValidDisplayConfig,
   isValidQueueEntry,
+  markRateLimitNotified,
   MAX_BANNER_LENGTH,
   MAX_FEEDBACK_CONTACT_LENGTH,
   MAX_FEEDBACK_LENGTH,
+  rateLimit,
   sanitizeFeedback,
   sanitizeSongDuration,
 } from "../../lib/limits";
+import { createMockReq } from "../helpers/mockRequest";
 import { DEFAULT_DISPLAY_CONFIG, DisplayConfig } from "../../pages/api/types";
+
+describe("markRateLimitNotified", () => {
+  // Distinct IPs per test: the bucket map is module state.
+  const reqFrom = (ip: string) =>
+    createMockReq({ headers: { "x-forwarded-for": ip } });
+
+  it("fires once for a bucket, then stays quiet", () => {
+    const req = reqFrom("203.0.113.1");
+    rateLimit(req, "notify-test", 1, 60_000);
+
+    expect(markRateLimitNotified(req, "notify-test")).toBe(true);
+    expect(markRateLimitNotified(req, "notify-test")).toBe(false);
+    expect(markRateLimitNotified(req, "notify-test")).toBe(false);
+  });
+
+  it("does not fire for an IP that has no bucket yet", () => {
+    expect(markRateLimitNotified(reqFrom("203.0.113.2"), "notify-test")).toBe(false);
+  });
+
+  it("keeps one caller's silence from muting another", () => {
+    const a = reqFrom("203.0.113.3");
+    const b = reqFrom("203.0.113.4");
+    rateLimit(a, "notify-test", 1, 60_000);
+    rateLimit(b, "notify-test", 1, 60_000);
+
+    expect(markRateLimitNotified(a, "notify-test")).toBe(true);
+    expect(markRateLimitNotified(b, "notify-test")).toBe(true);
+  });
+
+  it("becomes reportable again once the window rolls over", () => {
+    const req = reqFrom("203.0.113.5");
+    rateLimit(req, "notify-test", 1, 1); // 1ms window
+    expect(markRateLimitNotified(req, "notify-test")).toBe(true);
+
+    return new Promise<void>((resolve) =>
+      setTimeout(() => {
+        rateLimit(req, "notify-test", 1, 60_000);
+        expect(markRateLimitNotified(req, "notify-test")).toBe(true);
+        resolve();
+      }, 5)
+    );
+  });
+});
 
 describe("sanitizeSongDuration", () => {
   it("keeps a plausible song length, as whole seconds", () => {

@@ -4,16 +4,13 @@ import BarChart from './analytics/BarChart';
 import LanguagesPanel, { type LanguageData } from './analytics/LanguagesPanel';
 import RoomDetail from './analytics/RoomDetail';
 import FeedbackPanel from './analytics/FeedbackPanel';
+import SearchHealthPanel, { type SearchHealthData } from './analytics/SearchHealthPanel';
+import { fillDays, type DayCount } from './analytics/chartData';
 import {
   languageMixShort,
   languageMixTitle,
   type LocaleCount,
 } from './analytics/roomDetailLabels';
-
-interface DayCount {
-  _id: string;
-  count: number;
-}
 
 interface AnalyticsData {
   overview: {
@@ -108,6 +105,8 @@ interface AnalyticsData {
     fairEndedOn: number;
     fairToggled: number;
   };
+  // Absent on a dashboard served by a deploy from before failure tracking.
+  searchHealth?: SearchHealthData;
   meta?: {
     timezone: string;
     generatedAt: string;
@@ -206,33 +205,6 @@ function viewerTimezone(): string {
   } catch {
     return 'UTC';
   }
-}
-
-// new Date('YYYY-MM-DD') would parse as UTC midnight, shifting labels back a
-// day for viewers west of Greenwich.
-function formatDate(day: string): string {
-  const [y, m, d] = day.split('-').map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-}
-
-function localDayKey(d: Date): string {
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${d.getFullYear()}-${m}-${day}`;
-}
-
-// The server omits days with no events.
-function fillDays(rows: DayCount[], days: number): { label: string; value: number }[] {
-  if (rows.length === 0) return [];
-  const byKey = new Map(rows.map((r) => [r._id, r.count]));
-  const now = new Date();
-  const filled: { label: string; value: number }[] = [];
-  for (let i = days - 1; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
-    const key = localDayKey(d);
-    filled.push({ label: formatDate(key), value: byKey.get(key) ?? 0 });
-  }
-  return filled;
 }
 
 function fillHours(rows: { _id: number; count: number }[]): { label: string; value: number }[] {
@@ -512,7 +484,7 @@ const Analytics = (): React.ReactElement => {
     );
   }
 
-  const { overview, charts, geo, languages, rankings, devices, suggestions, funnel, engagement, social, display, hostSurface, rotation } = data;
+  const { overview, charts, geo, languages, rankings, devices, suggestions, funnel, engagement, social, display, hostSurface, rotation, searchHealth } = data;
 
   const mobileCount = devices.find((d) => d._id === 'Mobile')?.count || 0;
   const desktopCount = devices.find((d) => d._id === 'Desktop')?.count || 0;
@@ -616,6 +588,14 @@ const Analytics = (): React.ReactElement => {
                 </>
               )}
             </section>
+          )}
+
+          {searchHealth && (
+            <SearchHealthPanel
+              byDay={searchHealth.byDay}
+              totals={searchHealth.totals}
+              last24h={searchHealth.last24h}
+            />
           )}
 
           {engagement && (
