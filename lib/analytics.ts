@@ -1,7 +1,8 @@
 import type { NextApiRequest } from "next";
 import type { DisplayConfig, HostConfig } from "../pages/api/types";
 import { MAX_STORED_UA_LENGTH } from "./limits";
-import { getAnalyticsDb } from "./mongodb";
+import { getAnalyticsDb, getYoutubeSongDataCollection } from "./mongodb";
+import { splitYoutubeSongData } from "./youtubeRetention";
 import type { Locale } from "./i18n/config";
 import { asLocale, LOCALE_HEADER, type LocaleSource } from "./i18n/activeLocale";
 
@@ -60,6 +61,9 @@ export interface AnalyticsEvent {
   // /api/search has no room context — so geo roll-ups must exclude them.
   searchOutcome?: "stale" | "error";
   locale?: Locale;
+  // Key of the youtube_song_data doc holding this event's title/video id until
+  // it expires at 30 days. Absent on events from before the split.
+  songDataId?: string;
 }
 
 // Heartbeat gap beyond which the next beat starts a fresh session; 30 min tolerates throttled background-tab timers.
@@ -112,15 +116,34 @@ export async function trackEvent(
     const db = await getAnalyticsDb();
     const geo = extractGeo(req);
     const locale = localeFromRequest(req);
+    const timestamp = new Date();
     const event: AnalyticsEvent = {
       type,
-      timestamp: new Date(),
+      timestamp,
       userAgent: storedUserAgent(req),
       ...geo,
       ...(locale ? { locale } : {}),
       ...data,
     };
-    await db.collection("analytics_events").insertOne(event);
+
+    // A YouTube title or id may not touch the event doc, which is kept forever:
+    // it goes to youtube_song_data, which expires it at 30 days (lib/mongodb).
+    // The event keeps a pointer, so the dashboard still shows which row *had* a
+    // song once the song itself is gone.
+    const songData = splitYoutubeSongData(event);
+    if (songData) {
+      event.songDataId = songData.dataId;
+      delete event.songTitle;
+      delete event.songArtist;
+      delete event.videoId;
+    }
+
+    await Promise.all([
+      db.collection("analytics_events").insertOne(event),
+      songData
+        ? getYoutubeSongDataCollection().then((c) => c.insertOne(songData))
+        : Promise.resolve(),
+    ]);
   } catch (e) {
     console.error("Analytics tracking error:", e);
   }

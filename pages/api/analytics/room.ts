@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from "next";
-import { getAnalyticsDb } from "../../../lib/mongodb";
+import { getAnalyticsDb, getYoutubeSongDataCollection } from "../../../lib/mongodb";
 import type { AnalyticsEvent } from "../../../lib/analytics";
 import { CHOSEN_LOCALE_SOURCES } from "../../../lib/i18n/activeLocale";
 import {
@@ -55,7 +55,26 @@ async function handleGet(
     .toArray()
     .then((docs) => docs.reverse());
 
-  const [sessions, events] = await Promise.all([sessionsPromise, eventsPromise]);
+  // Titles live in their own collection, expiring at 30 days (lib/mongodb.ts),
+  // and are joined back by songDataId. The event rows outlive that expiry, so
+  // an old room still shows *that* a song was added, just not which one.
+  const songDataPromise = getYoutubeSongDataCollection().then((c) =>
+    c.find({ roomId }).limit(2000).toArray()
+  );
+
+  const [sessions, events, songDataDocs] = await Promise.all([
+    sessionsPromise,
+    eventsPromise,
+    songDataPromise,
+  ]);
+
+  const songDataById = new Map(songDataDocs.map((d) => [d.dataId, d]));
+  // Pre-split events still carry their own fields, until the one-time
+  // migration (scripts/split-youtube-song-data.mjs) clears them.
+  const titleOf = (e: AnalyticsEvent): string | null =>
+    (e.songDataId ? songDataById.get(e.songDataId)?.songTitle : e.songTitle) ?? null;
+  const videoIdOf = (e: AnalyticsEvent): string | null =>
+    (e.songDataId ? songDataById.get(e.songDataId)?.videoId : e.videoId) ?? null;
 
   const people = sessions.map((s) => ({
     userName: s.userName ?? null,
@@ -102,8 +121,8 @@ async function handleGet(
       case "song_added":
         songs.push({
           userName: e.userName ?? null,
-          songTitle: e.songTitle ?? null,
-          videoId: e.videoId ?? null,
+          songTitle: titleOf(e),
+          videoId: videoIdOf(e),
           via: e.via ?? "search",
           timestamp: e.timestamp,
         });
@@ -111,8 +130,8 @@ async function handleGet(
       case "song_suggested":
         requests.push({
           userName: e.userName ?? null,
-          songTitle: e.songTitle ?? null,
-          videoId: e.videoId ?? null,
+          songTitle: titleOf(e),
+          videoId: videoIdOf(e),
           timestamp: e.timestamp,
         });
         break;
@@ -122,8 +141,8 @@ async function handleGet(
         singWithMe.push({
           kind: e.type.replace("singwithme_", ""),
           userName: e.userName ?? null,
-          songTitle: e.songTitle ?? null,
-          videoId: e.videoId ?? null,
+          songTitle: titleOf(e),
+          videoId: videoIdOf(e),
           timestamp: e.timestamp,
         });
         break;

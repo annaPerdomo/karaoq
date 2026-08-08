@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { CHOSEN_LOCALE_SOURCES } from "../../../lib/i18n/activeLocale";
-import { getAnalyticsDb } from "../../../lib/mongodb";
+import { getAnalyticsDb, getYoutubeSongDataCollection } from "../../../lib/mongodb";
 import {
   buildSongsHistogram,
   median,
@@ -38,6 +38,7 @@ export default async function handler(
     const db = await getAnalyticsDb();
     const events = db.collection("analytics_events");
     const sessions = db.collection("analytics_sessions");
+    const songData = await getYoutubeSongDataCollection();
 
     const now = new Date();
     const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
@@ -183,7 +184,10 @@ export default async function handler(
         ])
         .toArray(),
 
-      events
+      // Reads youtube_song_data, not the events: it expires at 30 days on its
+      // own (lib/mongodb.ts), which is why this panel is a 30-day ranking and
+      // why it can't show YouTube data older than the policies allow.
+      songData
         .aggregate([
           { $match: { type: "song_added", songTitle: { $exists: true } } },
           {

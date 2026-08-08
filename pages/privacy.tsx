@@ -8,7 +8,7 @@ import styles from '../styles/Legal.module.css';
 import { SITE_URL } from '../lib/i18n/config';
 
 const CONTACT_EMAIL = 'variationsonastring@gmail.com';
-const LAST_UPDATED = 'August 5, 2026';
+const LAST_UPDATED = 'August 7, 2026';
 
 /**
  * Deliberately static English rather than the t() catalog: legal copy has to
@@ -93,6 +93,109 @@ const PrivacyPage: NextPage = () => {
           </section>
 
           <section className={styles.section}>
+            <h2 className={styles.h2}>How we use and process your information</h2>
+            <p className={styles.p}>
+              We use the data above only for the purposes listed here, and for nothing else:
+            </p>
+            <ul className={styles.list}>
+              <li>
+                <strong>To run the room you&rsquo;re in</strong> — your queue additions, singer
+                name, song requests, and reactions are stored so every other device in the room
+                (phones, the host&rsquo;s screen, the TV display) can show the same live queue.
+                Processing here is automatic: our servers write your action to our database and
+                every device in that room polls it back.
+              </li>
+              <li>
+                <strong>To search for songs</strong> — your search text is sent to the YouTube
+                Data API, and the results it returns are cached under that text so the same
+                search doesn&rsquo;t have to be repeated. See &ldquo;YouTube API
+                Services&rdquo; below.
+              </li>
+              <li>
+                <strong>To remember your choices on your own device</strong> — your display name,
+                language, and per-room view preferences are stored in your browser so you
+                don&rsquo;t re-enter them. See &ldquo;Cookies and storage on your device&rdquo;
+                below.
+              </li>
+              <li>
+                <strong>To understand how KaraoQ is used</strong> — usage events and coarse
+                location are aggregated into counts (rooms created, songs added, which countries
+                and languages, where people drop off) on a private admin dashboard. We read them
+                as totals, not as individual histories, and they are tied to a room code rather
+                than to a person.
+              </li>
+              <li>
+                <strong>To fix bugs and answer you</strong> — feedback you send, plus the page and
+                device context attached to it, is read by us to reproduce the problem and, if you
+                left an address, to reply.
+              </li>
+              <li>
+                <strong>To keep the service up</strong> — request metadata is used for rate
+                limiting and abuse prevention, and to alert us when the service is degraded (for
+                example, when the daily YouTube search quota runs out). Those alerts contain
+                service status only, never your data.
+              </li>
+            </ul>
+            <p className={styles.p}>
+              We do not sell your information, do not use it for advertising, do not build
+              advertising or marketing profiles, and do not use it to make automated decisions
+              about you. We do not combine it with data from other sources, and we never use
+              YouTube API data for anything beyond the search-and-play flow described here.
+            </p>
+          </section>
+
+          <section className={styles.section}>
+            <h2 className={styles.h2}>Cookies and storage on your device</h2>
+            <p className={styles.p}>
+              KaraoQ stores and reads a small amount of information directly on your device, using
+              cookies and your browser&rsquo;s local and session storage. We use no advertising,
+              analytics, or cross-site tracking cookies, and we do not allow any third party to
+              place one through KaraoQ.
+            </p>
+            <ul className={styles.list}>
+              <li>
+                <strong>Cookie</strong> — the display name you type is written to a first-party
+                cookie (expiring after one year) as well as to local storage, because private
+                browsing and in-app browsers routinely drop local storage between visits. It
+                holds only the name you chose.
+              </li>
+              <li>
+                <strong>Local storage</strong> — your display name, chosen language, country (used
+                to pick song suggestions), a randomly generated device id that lets repeat visits
+                count as one session instead of many, the code of the room you last hosted, and
+                per-room view preferences such as play mode, QR visibility, and whether tips have
+                been seen. This stays on your device until you clear your browser data.
+              </li>
+              <li>
+                <strong>Session storage</strong> — a token identifying the browser tab that
+                started playback, so a host with two tabs open doesn&rsquo;t interrupt their own
+                song. It is discarded when the tab closes.
+              </li>
+              <li>
+                <strong>Third-party (YouTube)</strong> — videos play through YouTube&rsquo;s
+                embedded player, which is loaded from YouTube&rsquo;s own domain. When a video
+                plays, YouTube may itself set, read, or recognise cookies and similar storage on
+                your device, and may collect information about your playback. That storage is
+                placed by YouTube, not by us, is not readable by KaraoQ, and is governed by the{' '}
+                <a
+                  href="https://policies.google.com/privacy"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={styles.link}
+                >
+                  Google Privacy Policy
+                </a>
+                .
+              </li>
+            </ul>
+            <p className={styles.p}>
+              You can clear or block all of the above in your browser&rsquo;s settings. Blocking
+              storage doesn&rsquo;t lock you out — KaraoQ works without it; you&rsquo;ll just be
+              asked for your name again on each visit.
+            </p>
+          </section>
+
+          <section className={styles.section}>
             <h2 className={styles.h2}>YouTube API Services</h2>
             <p className={styles.p}>
               KaraoQ uses the YouTube API Services to search for and embed karaoke videos. By
@@ -115,12 +218,40 @@ const PrivacyPage: NextPage = () => {
               >
                 Google Privacy Policy
               </a>
-              . Search results (video title, thumbnail, duration, and view count) are cached to
+              . KaraoQ uses a server-side API key only: we never ask you to sign in to YouTube or
+              Google, never request access to your YouTube account, and therefore hold no
+              authorized YouTube user data. You can review and revoke third-party access to your
+              Google account at any time at{' '}
+              <a
+                href="https://myaccount.google.com/permissions"
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.link}
+              >
+                Google&rsquo;s security settings
+              </a>
+              .
+            </p>
+            <p className={styles.p}>
+              Search results (video title, thumbnail, duration, and view count) are cached to
               reduce redundant lookups. A cached result is served directly for its first 24
               hours; after that we look the search up again and keep the aging copy only as a
               fallback for when YouTube is unreachable or our daily API quota is spent. The
               cache is keyed by your search text, so both the results and that text are deleted
               14 days after the search.
+            </p>
+            <p className={styles.p}>
+              No data obtained from the YouTube API — video ids, titles, thumbnails, durations,
+              or view counts — is stored for longer than 30 days anywhere in KaraoQ, whether it
+              was cached from a search, queued into a room, or recorded in a usage event. Our
+              database enforces this itself, on an expiry clock attached to the data rather than a
+              cleanup job that could fail to run: cached results expire, rooms expire, and song
+              titles and video ids are stored apart from our usage records specifically so they can
+              expire on their own — the anonymous &ldquo;a song was added&rdquo; count is kept, what
+              the song was is not. In a room still in use past 30 days, entries and song requests
+              older than that are removed from it as it&rsquo;s used. Videos always play through
+              YouTube&rsquo;s own embedded player, and we never download, copy, or store the videos
+              themselves.
             </p>
           </section>
 
@@ -130,7 +261,9 @@ const PrivacyPage: NextPage = () => {
               <li>
                 Rooms (and their queues, singer names, reactions) auto-delete 30 days after
                 their last activity — not 30 days after they were created, so a room you keep
-                using keeps its contents.
+                using keeps its contents. In a room that stays in use past 30 days, individual
+                queue entries and song requests older than 30 days are removed from it as the
+                room is used.
               </li>
               <li>Cached search results (and the search text keying them) auto-delete after 14 days.</li>
               <li>Cached song suggestions auto-delete after 7 days.</li>
@@ -141,7 +274,9 @@ const PrivacyPage: NextPage = () => {
               <li>
                 Other usage analytics events (a room created, a song added, a display setting
                 changed) are kept indefinitely, because they&rsquo;re what we read to see how
-                the product is used over time.
+                the product is used over time. The song title and video id are not kept with them:
+                those live separately and auto-delete after 30 days, leaving the count without the
+                song.
               </li>
               <li>
                 Feedback you send us is kept until we delete it by hand — a bug report is worth
@@ -158,21 +293,49 @@ const PrivacyPage: NextPage = () => {
 
           <section className={styles.section}>
             <h2 className={styles.h2}>Who we share data with</h2>
+            <p className={styles.p}>
+              <strong>Inside KaraoQ.</strong> KaraoQ is built and run by one person, who is the
+              only one with access to the database and to the private admin dashboard where usage
+              totals and feedback are read. That dashboard sits behind a secret, is never public,
+              and is used to see how the product is performing and to reproduce reported bugs.
+              There is no other internal team, affiliate, or group we pass your information to.
+            </p>
+            <p className={styles.p}>
+              <strong>Inside your room.</strong> Anything you put into a room — your singer name,
+              the songs you queue or request, your reactions — is shown to everyone else in that
+              room and on its display, by design. Anyone holding the room code can see it.
+            </p>
+            <p className={styles.p}>
+              <strong>Outside parties.</strong> We use these service providers, each processing
+              data only to provide their service to us, and none of them receives your
+              information to use for their own marketing:
+            </p>
             <ul className={styles.list}>
               <li>
-                <strong>Google / YouTube</strong> — receives your search text to return video
-                results, as described above.
+                <strong>Google / YouTube</strong> — receives your search text (and, when a video
+                plays, the request your browser makes to YouTube&rsquo;s embedded player) in
+                order to return and play video results, as described above.
               </li>
               <li>
-                <strong>Vercel</strong> — our hosting provider, which processes requests and
-                provides the coarse location data described above.
+                <strong>Vercel</strong> — our hosting provider, which processes every request to
+                KaraoQ and provides the coarse location data described above.
               </li>
               <li>
-                <strong>MongoDB Atlas</strong> — our database provider, which stores room and
-                analytics data described above.
+                <strong>MongoDB Atlas</strong> — our database provider, which stores the room,
+                analytics, and feedback data described above.
+              </li>
+              <li>
+                <strong>ntfy.sh</strong> — the push service that alerts us when KaraoQ is
+                degraded. It receives service status only (for example &ldquo;the daily search
+                quota is spent&rdquo;) and never receives your information.
               </li>
             </ul>
-            <p className={styles.p}>We do not sell data, and we do not use it for advertising.</p>
+            <p className={styles.p}>
+              We do not sell data, we do not share it for advertising or marketing by anyone, and
+              we do not transfer it to any other party — with one exception: if we were ever
+              legally required to disclose something (a valid legal request), or needed to
+              disclose it to investigate abuse of the service, we would.
+            </p>
           </section>
 
           <section className={styles.section}>

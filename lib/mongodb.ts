@@ -1,5 +1,7 @@
 import { MongoClient, type Collection, type Db } from "mongodb";
 import type { FeedbackEntry, Room } from "../pages/api/types";
+import type { EventType } from "./analytics";
+import { YOUTUBE_DATA_MAX_AGE_DAYS } from "./youtubeRetention";
 
 // Reuse one connected client per serverless instance instead of opening and
 // closing a fresh TCP+TLS connection on every request/tracked event. Stored on
@@ -134,6 +136,72 @@ export async function getSuggestionCacheCollection(): Promise<Collection<Suggest
     });
   }
   return db.collection<SuggestionCacheDoc>("suggestion_cache");
+}
+
+// What an analytics event knows about a *YouTube video* lives here rather than
+// on the event, because the two have opposite lifetimes: the event is kept
+// forever (the long-term funnel counts it), while YouTube's Developer Policies
+// (III.E.4) cap API data at 30 days. Split, a TTL index does the enforcing — no
+// job that can fail to run, and no query that can read expired data, since it
+// is gone.
+const YOUTUBE_SONG_DATA_TTL_SECONDS = YOUTUBE_DATA_MAX_AGE_DAYS * 24 * 60 * 60;
+
+export interface YoutubeSongDataDoc {
+  /** Matches `songDataId` on the analytics event this belongs to. */
+  dataId: string;
+  roomId: string;
+  type: EventType;
+  /** Mirrors the event's country so per-country trending can be computed here. */
+  country?: string;
+  songTitle?: string;
+  songArtist?: string;
+  videoId?: string;
+  /** Drives the TTL index; mirrors the event's own timestamp. */
+  timestamp: Date;
+}
+
+let songDataIndexesEnsured = false;
+
+export async function getYoutubeSongDataCollection(): Promise<Collection<YoutubeSongDataDoc>> {
+  const client = await getMongoClient();
+  const db = client.db(process.env.MONGODB_DB);
+  if (!songDataIndexesEnsured) {
+    songDataIndexesEnsured = true;
+    // Index setup is best-effort and must never take the write down with it:
+    // an event losing its song is a worse outcome than a missing index.
+    try {
+      Promise.all([
+        db.collection("youtube_song_data").createIndex({ dataId: 1 }, { unique: true }),
+        db.collection("youtube_song_data").createIndex({ roomId: 1 }),
+        // Serves both the top-songs ranking and per-country trending.
+        db.collection("youtube_song_data").createIndex({ type: 1, timestamp: -1 }),
+        // Policy compliance, not housekeeping — see above. createIndex won't
+        // change the window on an existing index, so collMod retunes it, for
+        // the same reason search_cache does.
+        db
+          .collection("youtube_song_data")
+          .createIndex({ timestamp: 1 }, { expireAfterSeconds: YOUTUBE_SONG_DATA_TTL_SECONDS })
+          .catch(() =>
+            db.command({
+              collMod: "youtube_song_data",
+              index: {
+                keyPattern: { timestamp: 1 },
+                expireAfterSeconds: YOUTUBE_SONG_DATA_TTL_SECONDS,
+              },
+            })
+          )
+          .catch((e) => {
+            console.error("youtube_song_data TTL retune failed:", e);
+          }),
+      ]).catch((e) => {
+        console.error("Song data index creation failed:", e);
+        songDataIndexesEnsured = false;
+      });
+    } catch (e) {
+      console.error("Song data index creation failed:", e);
+    }
+  }
+  return db.collection<YoutubeSongDataDoc>("youtube_song_data");
 }
 
 // One doc per alert already sent, so a paging condition that keeps tripping only

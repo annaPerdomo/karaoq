@@ -10,6 +10,7 @@ import {
   locationLabel,
   roomLanguageLabel,
   roomLanguageTitle,
+  songTitleLabel,
   SWM_LABELS,
   VIA_LABELS,
   type RoomDetailData,
@@ -149,7 +150,7 @@ const RoomDetail = ({
                 <DetailRows
                   empty="No songs added."
                   rows={data.songs.map((s) => ({
-                    title: s.songTitle || 'Untitled',
+                    title: songTitleLabel(s.songTitle, s.timestamp),
                     badge: VIA_LABELS[s.via] || s.via,
                     meta: [s.userName || 'Anonymous', formatTime(s.timestamp)],
                   }))}
@@ -160,7 +161,7 @@ const RoomDetail = ({
                 <DetailRows
                   empty="No requests posted."
                   rows={data.requests.map((r) => ({
-                    title: r.songTitle || 'Untitled',
+                    title: songTitleLabel(r.songTitle, r.timestamp),
                     meta: [r.userName || 'Anonymous', formatTime(r.timestamp)],
                   }))}
                 />
@@ -170,7 +171,7 @@ const RoomDetail = ({
                 <DetailRows
                   empty="No sing-with-me activity."
                   rows={data.singWithMe.map((s) => ({
-                    title: s.songTitle || 'Untitled',
+                    title: songTitleLabel(s.songTitle, s.timestamp),
                     badge: SWM_LABELS[s.kind] || s.kind,
                     meta: [s.userName || 'Anonymous', formatTime(s.timestamp)],
                   }))}

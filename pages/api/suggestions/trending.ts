@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import {
-  getAnalyticsDb,
   getSuggestionCacheCollection,
+  getYoutubeSongDataCollection,
   type SuggestionCacheDoc,
 } from "../../../lib/mongodb";
 
@@ -29,7 +29,6 @@ export function cleanSongTitle(raw: string): string {
 }
 
 async function computeTrending(country: string | null) {
-  const db = await getAnalyticsDb();
   const since = new Date(Date.now() - WINDOW_DAYS * 24 * 60 * 60 * 1000);
   const match: Record<string, unknown> = {
     type: "song_added",
@@ -37,8 +36,10 @@ async function computeTrending(country: string | null) {
   };
   if (country) match.country = country;
 
-  const rows = await db
-    .collection("analytics_events")
+  // Titles come from youtube_song_data, which holds at most 30 days of them
+  // (lib/mongodb.ts) — comfortably wider than this 14-day window.
+  const songData = await getYoutubeSongDataCollection();
+  const rows = await songData
     .aggregate<{ _id: string; count: number; title: string }>([
       { $match: match },
       { $project: { songTitle: 1 } },

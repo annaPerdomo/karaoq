@@ -1,5 +1,6 @@
 import type { DisplayConfig, HostConfig } from '../../pages/api/types';
 import { LOCALE_LABELS, isLocale } from '../../lib/i18n/config';
+import { YOUTUBE_DATA_MAX_AGE_MS } from '../../lib/youtubeRetention';
 import {
   CHOSEN_LOCALE_SOURCES,
   type LocaleSource,
@@ -106,6 +107,20 @@ export function formatTime(iso: string | null): string {
   return d.toLocaleDateString('en-US', {
     month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
   });
+}
+
+/**
+ * Songs lose their title at 30 days (lib/youtubeRetention), so an old room would
+ * otherwise read as a pile of "Untitled" — a bug, rather than the retention rule
+ * working. Dated off the event, not the room: a long-lived room holds both sides
+ * of the cutoff.
+ */
+export function songTitleLabel(title: string | null, iso: string): string {
+  if (title) return title;
+  const at = new Date(iso).getTime();
+  return Number.isFinite(at) && Date.now() - at > YOUTUBE_DATA_MAX_AGE_MS
+    ? 'Song data expired (30-day YouTube limit)'
+    : 'Untitled';
 }
 
 export function fairLabel(f: RoomDetailData['fairRotation']): string {

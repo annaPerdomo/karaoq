@@ -4,6 +4,7 @@ import { trackEvent } from "../../../../lib/analytics";
 import { rateLimit } from "../../../../lib/limits";
 import { getRoomsCollection } from "../../../../lib/mongodb";
 import { normalizeRoomId } from "../../../../lib/roomCode";
+import { pruneRoomYoutubeData, roomPruneUpdate } from "../../../../lib/youtubeRetention";
 
 const REACTION_TTL_MS = 30000;
 
@@ -155,8 +156,26 @@ export default async function handler(
         const reactions = (room.reactions ?? []).filter(
           (r) => now - r.timestamp < REACTION_TTL_MS
         );
+
+        // A room that goes quiet is deleted outright by its TTL index; one
+        // still in use is pruned here, on the path every live room polls. The
+        // check is in-memory and almost always false, so it costs a write only
+        // on the poll where something crosses the 30-day line.
+        const pruned = pruneRoomYoutubeData(room, now);
+        if (pruned) {
+          await collection.updateOne({ id: roomId }, roomPruneUpdate(pruned));
+        }
+
         res.status(200).json({
           ...room,
+          ...(pruned
+            ? {
+                queue: pruned.queue,
+                activeVideoIndex: pruned.activeVideoIndex,
+                singWithMe: pruned.singWithMe,
+                suggestions: pruned.suggestions,
+              }
+            : {}),
           isPlaying,
           displayConnected,
           reactionsEnabled: room.reactionsEnabled ?? true,

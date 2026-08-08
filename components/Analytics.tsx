@@ -727,9 +727,11 @@ const Analytics = (): React.ReactElement => {
       {activeTab === 'songs' && (
         <div className={styles.tabContent}>
           <section className={styles.section}>
-            <h2 className={styles.sectionTitle}>Most Queued Songs</h2>
+            {/* Not all-time: YouTube's policies cap how long API data may be
+                stored at all (see lib/youtubeRetention). */}
+            <h2 className={styles.sectionTitle}>Most Queued Songs (last 30 days)</h2>
             {rankings.topSongs.length === 0 ? (
-              <p className={styles.empty}>No songs queued yet</p>
+              <p className={styles.empty}>No songs queued in the last 30 days</p>
             ) : (
               <div className={styles.songList}>
                 {rankings.topSongs.map((s, i) => (
