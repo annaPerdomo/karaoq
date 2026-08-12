@@ -83,3 +83,41 @@ export function summarizeFunnel(rooms: FunnelRoom[]): FunnelSummary {
     p90MinutesToFirstSong: percentile(timings, 0.9),
   };
 }
+
+export interface LinkLookupRow {
+  _id: { src?: string | null; lookupOutcome?: string | null };
+  count: number;
+}
+
+export interface LinkLookupSummary {
+  total: number;
+  bySrc: { _id: string; count: number }[];
+  byOutcome: { _id: string; count: number }[];
+}
+
+/**
+ * Folds the one (src × outcome) aggregation into the two breakdowns and the
+ * total /admin shows. Derived rather than queried three times: one 30-day scan
+ * of link_lookup answers all three, and the numbers can't disagree.
+ *
+ * Rows written before a field existed group under "unknown" rather than
+ * vanishing, so the breakdowns always sum to the total.
+ */
+export function summarizeLinkLookups(rows: LinkLookupRow[]): LinkLookupSummary {
+  const bySrc = new Map<string, number>();
+  const byOutcome = new Map<string, number>();
+  let total = 0;
+  for (const row of rows) {
+    const count = row.count ?? 0;
+    total += count;
+    const src = row._id?.src || "unknown";
+    const outcome = row._id?.lookupOutcome || "unknown";
+    bySrc.set(src, (bySrc.get(src) ?? 0) + count);
+    byOutcome.set(outcome, (byOutcome.get(outcome) ?? 0) + count);
+  }
+  const toSorted = (m: Map<string, number>) =>
+    Array.from(m, ([_id, count]) => ({ _id, count })).sort(
+      (a, b) => b.count - a.count
+    );
+  return { total, bySrc: toSorted(bySrc), byOutcome: toSorted(byOutcome) };
+}

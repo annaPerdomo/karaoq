@@ -146,6 +146,7 @@ const Admin = (): React.ReactElement => {
         <ErrorsView
           errors={errors}
           searchHealth={data.searchHealth}
+          linkLookups={data.linkLookups}
           loading={errorsLoading}
           onRetry={() => fetchErrors(secret)}
           onOpenRoom={openRoom}

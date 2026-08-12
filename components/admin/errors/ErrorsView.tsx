@@ -1,6 +1,6 @@
 import * as React from 'react';
 import styles from '../../../styles/Admin.module.css';
-import type { ErrorsData, SearchHealthData } from '../types';
+import type { ErrorsData, LinkLookupData, SearchHealthData } from '../types';
 import { ERROR_SOURCE_LABELS, formatTimestamp } from '../format';
 import StatTile from '../charts/StatTile';
 import ErrorGroup from './ErrorGroup';
@@ -10,12 +10,14 @@ import SearchHealthCard from './SearchHealthCard';
 export default function ErrorsView({
   errors,
   searchHealth,
+  linkLookups,
   loading,
   onRetry,
   onOpenRoom,
 }: {
   errors: ErrorsData | null;
   searchHealth?: SearchHealthData;
+  linkLookups?: LinkLookupData;
   loading: boolean;
   onRetry: () => void;
   onOpenRoom: (roomId: string) => void;
@@ -120,7 +122,9 @@ export default function ErrorsView({
             </section>
           )}
 
-          {searchHealth && <SearchHealthCard health={searchHealth} />}
+          {searchHealth && (
+            <SearchHealthCard health={searchHealth} links={linkLookups} />
+          )}
         </>
       )}
     </div>

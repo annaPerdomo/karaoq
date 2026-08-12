@@ -100,6 +100,7 @@ export interface AnalyticsData {
     fairToggled: number;
   };
   searchHealth?: SearchHealthData;
+  linkLookups?: LinkLookupData;
   meta?: { timezone: string; generatedAt: string };
 }
 
@@ -114,6 +115,13 @@ export interface SearchHealthData {
   byDay: DayCount[];
   totals: { _id: { failReason?: string; searchOutcome?: string }; count: number }[];
   last24h: number;
+}
+
+/** Pasted-link usage over 30 days — is anyone actually using the paste path? */
+export interface LinkLookupData {
+  total: number;
+  bySrc: { _id: string; count: number }[];
+  byOutcome: { _id: string; count: number }[];
 }
 
 /** One row of GET /api/analytics/rooms. */

@@ -7,7 +7,9 @@ import {
   median,
   resolveTimezone,
   summarizeFunnel,
+  summarizeLinkLookups,
   type FunnelRoom,
+  type LinkLookupRow,
 } from "../../../lib/analyticsStats";
 
 const FUNNEL_WINDOW_DAYS = 30;
@@ -100,6 +102,7 @@ export default async function handler(
       searchFailuresByDay,
       searchFailureTotals,
       searchFailuresLast24h,
+      linkLookupRows,
       activityGrid,
     ] = await Promise.all([
       events.countDocuments({ type: "room_created" }),
@@ -593,6 +596,21 @@ export default async function handler(
         timestamp: { $gte: dayAgo },
       }),
 
+      // Pasted-link usage over the same 30 days. Grouped on both fields at once
+      // so summarizeLinkLookups can derive the total and both breakdowns from
+      // one scan (lib/analyticsStats).
+      events
+        .aggregate([
+          { $match: { type: "link_lookup", timestamp: { $gte: thirtyDaysAgo } } },
+          {
+            $group: {
+              _id: { src: "$src", lookupOutcome: "$lookupOutcome" },
+              count: { $sum: 1 },
+            },
+          },
+        ])
+        .toArray(),
+
       // Weekday × hour activity heatmap. Heartbeats aren't events and
       // search_failed carries no room, so neither says when rooms are alive.
       events
@@ -741,6 +759,7 @@ export default async function handler(
         totals: searchFailureTotals,
         last24h: searchFailuresLast24h,
       },
+      linkLookups: summarizeLinkLookups(linkLookupRows as LinkLookupRow[]),
       meta: {
         timezone: tz,
         generatedAt: now.toISOString(),

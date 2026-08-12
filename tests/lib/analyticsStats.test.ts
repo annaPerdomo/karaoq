@@ -5,6 +5,7 @@ import {
   percentile,
   resolveTimezone,
   summarizeFunnel,
+  summarizeLinkLookups,
 } from "../../lib/analyticsStats";
 
 describe("resolveTimezone", () => {
@@ -110,5 +111,59 @@ describe("summarizeFunnel", () => {
       { searches: 1, songs: 1, minutesToFirstSong: 6 },
     ]);
     expect(summary.medianMinutesToFirstSong).toBe(6);
+  });
+});
+
+describe("summarizeLinkLookups", () => {
+  const rows = [
+    { _id: { src: "paste", lookupOutcome: "hit" }, count: 30 },
+    { _id: { src: "trending", lookupOutcome: "hit" }, count: 8 },
+    { _id: { src: "paste", lookupOutcome: "not_found" }, count: 3 },
+    { _id: { src: "paste", lookupOutcome: "not_embeddable" }, count: 1 },
+  ];
+
+  it("folds one grouped scan into a total and both breakdowns", () => {
+    const summary = summarizeLinkLookups(rows);
+
+    expect(summary.total).toBe(42);
+    expect(summary.bySrc).toEqual([
+      { _id: "paste", count: 34 },
+      { _id: "trending", count: 8 },
+    ]);
+    expect(summary.byOutcome).toEqual([
+      { _id: "hit", count: 38 },
+      { _id: "not_found", count: 3 },
+      { _id: "not_embeddable", count: 1 },
+    ]);
+  });
+
+  it("keeps each breakdown summing to the total", () => {
+    const summary = summarizeLinkLookups(rows);
+    const sum = (rs: { count: number }[]) => rs.reduce((n, r) => n + r.count, 0);
+
+    expect(sum(summary.bySrc)).toBe(summary.total);
+    expect(sum(summary.byOutcome)).toBe(summary.total);
+  });
+
+  it("groups rows missing a field under 'unknown' rather than dropping them", () => {
+    const summary = summarizeLinkLookups([
+      { _id: {}, count: 2 },
+      { _id: { src: null, lookupOutcome: "hit" }, count: 1 },
+    ]);
+
+    expect(summary.total).toBe(3);
+    expect(summary.bySrc).toEqual([{ _id: "unknown", count: 3 }]);
+    expect(summary.byOutcome).toEqual([
+      { _id: "unknown", count: 2 },
+      { _id: "hit", count: 1 },
+    ]);
+  });
+
+  it("reports an explicit zero when nobody pasted a link", () => {
+    expect(summarizeLinkLookups([])).toEqual({
+      total: 0,
+      bySrc: [],
+      byOutcome: [],
+    });
   });
 });

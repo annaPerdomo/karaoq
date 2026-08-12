@@ -1,17 +1,20 @@
 import * as React from 'react';
 import styles from '../../../styles/Admin.module.css';
-import type { SearchHealthData } from '../types';
-import { searchFailLabel } from '../format';
+import type { LinkLookupData, SearchHealthData } from '../types';
+import { lookupOutcomeParts, searchFailLabel } from '../format';
 import { fillDays } from '../chartData';
 import ColumnChart from '../charts/ColumnChart';
 import BarList from '../charts/BarList';
 import { STATUS } from '../charts/palette';
 
-/** YouTube search failures (quota, upstream, rate limiting) over 30 days. */
+/** YouTube search failures (quota, upstream, rate limiting) over 30 days, plus
+ * how much of the quota the 1-unit paste-a-link path is carrying. */
 export default function SearchHealthCard({
   health,
+  links,
 }: {
   health: SearchHealthData;
+  links?: LinkLookupData;
 }): React.ReactElement {
   const total = health.totals.reduce((sum, t) => sum + t.count, 0);
 
@@ -43,6 +46,17 @@ export default function SearchHealthCard({
             />
           </div>
         </>
+      )}
+      {links && (
+        // Always rendered, zero included: "nobody pasted a link in 30 days" is
+        // the answer this row exists to give.
+        <p className={styles.cardNote}>
+          {[
+            `Link lookups (30d): ${links.total}`,
+            ...lookupOutcomeParts(links.byOutcome),
+            ...links.bySrc.map((s) => `${s.count} from ${s._id}`),
+          ].join(' · ')}
+        </p>
       )}
     </section>
   );
