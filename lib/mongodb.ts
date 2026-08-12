@@ -204,6 +204,48 @@ export async function getYoutubeSongDataCollection(): Promise<Collection<Youtube
   return db.collection<YoutubeSongDataDoc>("youtube_song_data");
 }
 
+// Client-side error reports (lib/errorReporting.ts → /api/analytics/error).
+// Expire on the same 90-day clock as heartbeats: an error nobody looked at in
+// three months describes a build that no longer exists.
+const CLIENT_ERROR_TTL_SECONDS = 90 * 24 * 60 * 60;
+
+export interface ClientErrorDoc {
+  message: string;
+  source: "window" | "promise" | "react";
+  /** "" when the error happened outside a room page. */
+  roomId: string;
+  stack?: string;
+  page?: string;
+  userAgent?: string;
+  country?: string;
+  region?: string;
+  city?: string;
+  locale?: string;
+  timestamp: Date;
+}
+
+let clientErrorIndexesEnsured = false;
+
+export async function getClientErrorsCollection(): Promise<Collection<ClientErrorDoc>> {
+  const client = await getMongoClient();
+  const db = client.db(process.env.MONGODB_DB);
+  if (!clientErrorIndexesEnsured) {
+    clientErrorIndexesEnsured = true;
+    Promise.all([
+      // Serves the per-room error panel and the rooms-list error badge.
+      db.collection("client_errors").createIndex({ roomId: 1, timestamp: -1 }),
+      db.collection("client_errors").createIndex(
+        { timestamp: 1 },
+        { expireAfterSeconds: CLIENT_ERROR_TTL_SECONDS }
+      ),
+    ]).catch((e) => {
+      console.error("Client error index creation failed:", e);
+      clientErrorIndexesEnsured = false;
+    });
+  }
+  return db.collection<ClientErrorDoc>("client_errors");
+}
+
 // One doc per alert already sent, so a paging condition that keeps tripping only
 // wakes Anna once. Worthless after the day passes; a week is a short audit trail.
 const OPS_ALERT_TTL_SECONDS = 7 * 24 * 60 * 60;

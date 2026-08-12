@@ -1,10 +1,12 @@
 import '../styles/globals.css'
+import { useEffect } from 'react'
 import type { AppProps } from 'next/app'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
 import { Analytics } from '@vercel/analytics/next'
 import { I18nProvider, useT } from '../lib/i18n/I18nProvider'
 import { renderWithHeart } from '../lib/i18n/renderWithHeart'
+import { installErrorReporting } from '../lib/errorReporting'
 import FeedbackTrigger from '../components/feedback/FeedbackTrigger'
 
 function AppFooter() {
@@ -22,6 +24,9 @@ function AppFooter() {
 
 function MyApp({ Component, pageProps }: AppProps) {
   const router = useRouter();
+  useEffect(() => {
+    installErrorReporting();
+  }, []);
   const isLanding = router.pathname === '/';
   const isDisplay = router.pathname.startsWith('/display');
   const isHost = router.pathname.startsWith('/host');
