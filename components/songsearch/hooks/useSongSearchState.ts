@@ -6,7 +6,24 @@ import searchYoutube, {
   SearchUnavailableError,
   SearchFailure,
 } from '../../../app/queue/searchYoutube';
+import lookupVideo from '../../../app/queue/lookupVideo';
+import { classifySearchInput } from '../../../lib/videoLink';
 import { INITIAL_RESULTS } from '../constants';
+
+/** A failed lookup, mapped to what the user should be told. 404 and 422 are
+ * about the link they pasted; everything else is our backend. */
+function lookupFailure(err: unknown): SearchFailure {
+  if (err instanceof SearchUnavailableError) {
+    if (err.status === 404) return { quota: false, source: 'lookup', link: 'not_found' };
+    if (err.status === 422) {
+      return { quota: false, source: 'lookup', link: 'not_embeddable' };
+    }
+    if (err.reason === 'quota') {
+      return { quota: true, resetsAt: err.resetsAt, source: 'lookup' };
+    }
+  }
+  return { quota: false, source: 'lookup' };
+}
 
 interface UseSongSearchStateArgs {
   roomId: string;
@@ -26,6 +43,10 @@ export function useSongSearchState({ roomId, role }: UseSongSearchStateArgs) {
   // null = search is fine. Set only on a backend failure (quota/outage/rate
   // limit) so a real zero-result search still reads as "no songs found".
   const [searchError, setSearchError] = React.useState<SearchFailure | null>(null);
+  // The current view came from a pasted link, not a text search. The query box
+  // then holds a URL, so re-running it as a search would spend a full 101-unit
+  // search on a garbage query — the filter and karaoke controls must sit still.
+  const [lookupMode, setLookupMode] = React.useState(false);
   const [filters, setFilters] = React.useState<SearchFilters>({
     duration: 'any',
     sortBy: 'relevance',
@@ -46,6 +67,13 @@ export function useSongSearchState({ roomId, role }: UseSongSearchStateArgs) {
       setSearchError(null);
     }
   }, [query, hasSearched]);
+
+  // Editing the box always ends lookup mode: whatever is in there now hasn't
+  // been classified yet, so the next search() decides afresh. Setting the flag
+  // inside search() doesn't touch `query`, so this can't undo it.
+  React.useEffect(() => {
+    setLookupMode(false);
+  }, [query]);
 
   React.useEffect(() => {
     try {
@@ -82,13 +110,71 @@ export function useSongSearchState({ roomId, role }: UseSongSearchStateArgs) {
         // connection must not render as "your song isn't on YouTube".
         setSearchError(
           err instanceof SearchUnavailableError
-            ? { quota: err.reason === 'quota', resetsAt: err.resetsAt }
-            : { quota: false }
+            ? { quota: err.reason === 'quota', resetsAt: err.resetsAt, source: 'search' }
+            : { quota: false, source: 'search' }
         );
       })
       .finally(() => {
         if (!controller.signal.aborted) setSearching(false);
       });
+  }
+
+  // The pasted-link counterpart of runSearch: one videos.list lookup, no
+  // karaoke suffix and no filters — the singer already told us the exact video.
+  function runLookup(videoId: string, from: 'url' | 'bare', rawQuery: string) {
+    clearTimeout(debounceRef.current);
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    setSearching(true);
+    setHasSearched(true);
+    setSearchError(null);
+    setLookupMode(true);
+    lookupVideo(videoId, 'paste', controller.signal, roomId)
+      .then((result) => {
+        setResults([result]);
+        setVisibleCount(INITIAL_RESULTS);
+      })
+      .catch((err) => {
+        // Same caveat as runSearch: an aborted body read surfaces as a
+        // SearchUnavailableError, not an AbortError, so a superseded lookup
+        // would stamp a stale failure onto the new result set.
+        if (err?.name === 'AbortError' || controller.signal.aborted) return;
+        // An 11-character *word* that isn't a video id is far likelier to be a
+        // real query than a typo'd id, so a bare miss falls through to the
+        // search it would have been. A URL that misses never does — searching
+        // the URL string is guaranteed garbage at 101 units.
+        if (
+          from === 'bare' &&
+          err instanceof SearchUnavailableError &&
+          err.status === 404
+        ) {
+          setLookupMode(false);
+          // Aborts this controller, so the finally below leaves `searching`
+          // alone — runSearch owns it from here.
+          runSearch(rawQuery, filters, karaokeMode);
+          return;
+        }
+        setResults([]);
+        setSearchError(lookupFailure(err));
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setSearching(false);
+      });
+  }
+
+  // A link we can tell isn't a single video before spending anything: a
+  // playlist, a channel, a Vimeo URL. Never searched — the input keeps its text
+  // so the singer can fix the link.
+  function failLink(link: 'no_video' | 'not_youtube') {
+    clearTimeout(debounceRef.current);
+    abortRef.current?.abort();
+    setSearching(false);
+    setHasSearched(true);
+    setLookupMode(true);
+    setResults([]);
+    setSearchError({ quota: false, source: 'lookup', link });
   }
 
   function toggleKaraokeMode() {
@@ -97,15 +183,27 @@ export function useSongSearchState({ roomId, role }: UseSongSearchStateArgs) {
     try {
       localStorage.setItem('karaoq_karaoke_mode', String(next));
     } catch {}
-    if (hasSearched && query.trim()) {
+    if (hasSearched && !lookupMode && query.trim()) {
       runSearch(query.trim(), filters, next);
     }
   }
 
   function search(overrideFilters?: SearchFilters) {
-    if (!query.trim()) return;
+    const raw = query.trim();
+    if (!raw) return;
+    // A pasted link is still "this room searched".
     trackFirstSearch();
-    runSearch(query.trim(), overrideFilters ?? filters, karaokeMode);
+
+    const input = classifySearchInput(raw);
+    if (input.kind === 'video') {
+      runLookup(input.id, input.from, raw);
+      return;
+    }
+    if (input.kind === 'youtube-url' || input.kind === 'url') {
+      failLink(input.kind === 'url' ? 'not_youtube' : 'no_video');
+      return;
+    }
+    runSearch(raw, overrideFilters ?? filters, karaokeMode);
   }
 
   // Return from search results to the browse view (song ideas + room boards).
@@ -117,6 +215,7 @@ export function useSongSearchState({ roomId, role }: UseSongSearchStateArgs) {
     setHasSearched(false);
     setSearching(false);
     setSearchError(null);
+    setLookupMode(false);
   }
 
   // Same reset as clearSearch(), used after a song is successfully added or
@@ -126,6 +225,7 @@ export function useSongSearchState({ roomId, role }: UseSongSearchStateArgs) {
     setQuery('');
     setHasSearched(false);
     setSearchError(null);
+    setLookupMode(false);
   }
 
   function updateFilter<K extends keyof SearchFilters>(
@@ -134,7 +234,7 @@ export function useSongSearchState({ roomId, role }: UseSongSearchStateArgs) {
   ) {
     const next = { ...filters, [key]: value };
     setFilters(next);
-    if (hasSearched && query.trim()) {
+    if (hasSearched && !lookupMode && query.trim()) {
       runSearch(query.trim(), next, karaokeMode);
     }
   }
@@ -167,6 +267,7 @@ export function useSongSearchState({ roomId, role }: UseSongSearchStateArgs) {
     searching,
     hasSearched,
     searchError,
+    lookupMode,
     karaokeMode,
     filters,
     runSearch,

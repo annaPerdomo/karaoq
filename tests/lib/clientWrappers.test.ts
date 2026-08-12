@@ -244,4 +244,74 @@ describe("Client API wrappers", () => {
       expect(result).toBe(false);
     });
   });
+
+  describe("lookupVideo", () => {
+    const VIDEO = {
+      title: "Rick Astley &amp; friends",
+      thumbnailUrl: "https://i.ytimg.com/vi/dQw4w9WgXcQ/mq.jpg",
+      videoId: "dQw4w9WgXcQ",
+      durationSeconds: 213,
+      viewCount: 1500000000,
+    };
+
+    it("asks /api/video-lookup for one id and decodes the title", async () => {
+      mockFetch.mockResolvedValue({ ok: true, json: async () => [VIDEO] });
+      const { default: lookupVideo } = await import("../../app/queue/lookupVideo");
+
+      const result = await lookupVideo("dQw4w9WgXcQ", "paste", undefined, "ROOM1");
+
+      expect(result).toEqual({ ...VIDEO, title: "Rick Astley & friends" });
+      const url = String(mockFetch.mock.calls[0][0]);
+      expect(url).toContain("/api/video-lookup?");
+      expect(url).toContain("id=dQw4w9WgXcQ");
+      expect(url).toContain("src=paste");
+      expect(url).toContain("roomId=ROOM1");
+    });
+
+    it("forwards the trending source distinctly", async () => {
+      mockFetch.mockResolvedValue({ ok: true, json: async () => [VIDEO] });
+      const { default: lookupVideo } = await import("../../app/queue/lookupVideo");
+
+      await lookupVideo("dQw4w9WgXcQ", "trending");
+
+      expect(String(mockFetch.mock.calls[0][0])).toContain("src=trending");
+    });
+
+    it.each([
+      [404, "not_found"],
+      [422, "not_embeddable"],
+      [503, "quota"],
+    ])("surfaces a %i as reason %s", async (status, reason) => {
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status,
+        json: async () => ({ reason, resetsAt: "2026-08-13T07:00:00.000Z" }),
+      });
+      const { default: lookupVideo } = await import("../../app/queue/lookupVideo");
+      const { SearchUnavailableError } = await import("../../app/queue/searchYoutube");
+
+      const err = await lookupVideo("dQw4w9WgXcQ", "paste").catch((e) => e);
+
+      expect(err).toBeInstanceOf(SearchUnavailableError);
+      expect(err.status).toBe(status);
+      expect(err.reason).toBe(reason);
+    });
+
+    it("treats an empty 200 as a missing video rather than a crash", async () => {
+      mockFetch.mockResolvedValue({ ok: true, json: async () => [] });
+      const { default: lookupVideo } = await import("../../app/queue/lookupVideo");
+
+      const err = await lookupVideo("dQw4w9WgXcQ", "paste").catch((e) => e);
+
+      expect(err.status).toBe(404);
+      expect(err.reason).toBe("not_found");
+    });
+
+    it("propagates a dropped connection instead of inventing a result", async () => {
+      mockFetch.mockRejectedValue(new TypeError("Failed to fetch"));
+      const { default: lookupVideo } = await import("../../app/queue/lookupVideo");
+
+      await expect(lookupVideo("dQw4w9WgXcQ", "paste")).rejects.toThrow(TypeError);
+    });
+  });
 });

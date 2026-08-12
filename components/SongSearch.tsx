@@ -66,6 +66,7 @@ const SongSearch: React.FC<SongSearchProps> = ({
     searching,
     hasSearched,
     searchError,
+    lookupMode,
     karaokeMode,
     filters,
     runSearch,
@@ -145,7 +146,9 @@ const SongSearch: React.FC<SongSearchProps> = ({
       <SearchOptions
         karaokeMode={karaokeMode}
         onToggleKaraoke={toggleKaraokeMode}
-        showFilters={showFilters}
+        // Duration and sort don't apply to a link the singer already picked —
+        // leaving the chips up would imply they filter it.
+        showFilters={showFilters && !lookupMode}
         filters={filters}
         onUpdateFilter={updateFilter}
       />

@@ -27,6 +27,14 @@ interface SearchResultsProps {
 }
 
 const SKELETON_COUNT = 8;
+// Pasted-link outcomes. These are about what the singer typed, not about our
+// backend, so they replace the "we're popular right now" framing entirely.
+const LINK_MESSAGE_KEYS: Record<NonNullable<SearchFailure['link']>, string> = {
+  not_found: 'search.linkNotFound',
+  not_embeddable: 'search.linkNotEmbeddable',
+  no_video: 'search.linkNoVideo',
+  not_youtube: 'search.linkNotYoutube',
+};
 // Stagger resets each "Show more" batch so newly revealed rows animate in
 // from the top of the batch instead of waiting out the full list's delays.
 const STAGGER_BATCH = 8;
@@ -66,6 +74,17 @@ const SearchResults: React.FC<SearchResultsProps> = ({
           )
         )
       : null;
+    const linkKey = searchError.link ? LINK_MESSAGE_KEYS[searchError.link] : null;
+    // A link that didn't resolve is the singer's to fix, so it gets neither the
+    // apology title nor the "tell us what happened" prompt.
+    if (linkKey) {
+      return (
+        <div className={styles.unavailable}>
+          <span className={styles.unavailableEmoji} aria-hidden="true">🔗</span>
+          <p className={styles.unavailableBody}>{t(linkKey)}</p>
+        </div>
+      );
+    }
     return (
       <div className={styles.unavailable}>
         <span className={styles.unavailableEmoji} aria-hidden="true">🎤</span>
@@ -75,6 +94,12 @@ const SearchResults: React.FC<SearchResultsProps> = ({
             ? t('search.unavailable.quotaBody', { hours: hoursLeft })
             : t('search.unavailable.body')}
         </p>
+        {/* A spent quota still leaves the 1-unit lookups working for a while,
+            so a *searcher* is told to paste a link. Someone whose paste just
+            hit the same quota isn't — that would loop them. */}
+        {searchError.quota && searchError.source !== 'lookup' && (
+          <p className={styles.unavailableBody}>{t('search.quotaPasteHint')}</p>
+        )}
         <FeedbackTrigger className={styles.unavailableFeedback} roomId={roomId} role={role}>
           {t('search.unavailable.feedback')}
         </FeedbackTrigger>

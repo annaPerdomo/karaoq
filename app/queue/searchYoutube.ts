@@ -32,6 +32,27 @@ export interface SearchFailure {
   quota: boolean;
   /** ISO time the quota frees up, when the server knows it. */
   resetsAt?: string;
+  /** Which flow failed — the quota message differs, because telling someone to
+   * paste a link when pasting a link is what just failed would loop them. */
+  source?: 'search' | 'lookup';
+  /** Link-specific outcomes; unset for ordinary search failures. */
+  link?: 'not_found' | 'not_embeddable' | 'no_video' | 'not_youtube';
+}
+
+/** One /api/search or /api/video-lookup row → a YoutubeResult. Optional fields
+ * are dropped rather than kept at 0, so the UI's `> 0` badge checks hold. */
+export function toYoutubeResult(item: any): YoutubeResult {
+  return {
+    title: decodeHtml(item?.title ?? ''),
+    thumbnailUrl: item?.thumbnailUrl ?? '',
+    videoId: item?.videoId ?? '',
+    ...(typeof item?.durationSeconds === 'number' && item.durationSeconds > 0
+      ? { durationSeconds: item.durationSeconds }
+      : {}),
+    ...(typeof item?.viewCount === 'number' && item.viewCount > 0
+      ? { viewCount: item.viewCount }
+      : {}),
+  };
 }
 
 export type VideoDuration = 'any' | 'short' | 'medium' | 'long';
@@ -67,17 +88,5 @@ export default async function searchYoutube(
     });
   }
   const data = await resp.json();
-  return Array.isArray(data)
-    ? data.map((item: any) => ({
-        title: decodeHtml(item.title ?? ''),
-        thumbnailUrl: item.thumbnailUrl ?? '',
-        videoId: item.videoId ?? '',
-        ...(typeof item.durationSeconds === 'number' && item.durationSeconds > 0
-          ? { durationSeconds: item.durationSeconds }
-          : {}),
-        ...(typeof item.viewCount === 'number' && item.viewCount > 0
-          ? { viewCount: item.viewCount }
-          : {}),
-      }))
-    : [];
+  return Array.isArray(data) ? data.map(toYoutubeResult) : [];
 }
