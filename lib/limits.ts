@@ -1,6 +1,9 @@
 import type { NextApiRequest } from "next";
 import type { DisplayConfig, FeedbackKind, HostConfig, QueueEntry, SingWithMePost, SuggestedSong } from "../pages/api/types";
 import { DISPLAY_THEMES as DISPLAY_THEME_LIST, FEEDBACK_KINDS } from "../pages/api/types";
+// Canonical YouTube video-id shape; re-exported here so the API-side validators
+// that already import from lib/limits keep their single import.
+import { VIDEO_ID_RE } from "./videoLink";
 
 // Server-side caps on anonymous writes: the UI enforces friendlier limits; these stop curl from
 // ballooning a room document or filling the 512MB Atlas free tier.
@@ -57,8 +60,7 @@ export function sanitizeFeedback(body: unknown): SanitizedFeedback | null {
   };
 }
 
-// YouTube video IDs are exactly 11 URL-safe base64 characters.
-const VIDEO_ID_RE = /^[A-Za-z0-9_-]{11}$/;
+export { VIDEO_ID_RE };
 
 // Song lengths outside this range are never a karaoke track (a 5-second clip, a
 // 24/7 livestream) and would wreck the queue-time estimate, so they're dropped
