@@ -67,7 +67,7 @@ export function useSongSearchState({ roomId, role }: UseSongSearchStateArgs) {
     setHasSearched(true);
     setSearchError(null);
     const searchQuery = karaoke ? `${rawQuery} karaoke` : rawQuery;
-    searchYoutube(searchQuery, activeFilters, controller.signal)
+    searchYoutube(searchQuery, activeFilters, controller.signal, roomId)
       .then((res) => {
         setResults(res);
         setVisibleCount(INITIAL_RESULTS);

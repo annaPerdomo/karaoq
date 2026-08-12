@@ -21,7 +21,9 @@ vi.mock("mongodb", () => ({
 const rateLimitMock = vi.fn(() => true);
 // True = "first rejection of this window", which is when a failure is recorded.
 const markNotifiedMock = vi.fn(() => true);
-vi.mock("../../lib/limits", () => ({
+vi.mock("../../lib/limits", async (importOriginal) => ({
+  // Real constants (MAX_ENTRY_ID_LENGTH); only the stateful limiter is mocked.
+  ...(await importOriginal<typeof import("../../lib/limits")>()),
   rateLimit: (...args: unknown[]) => rateLimitMock(...args),
   markRateLimitNotified: (...args: unknown[]) => markNotifiedMock(...args),
 }));
@@ -423,5 +425,26 @@ describe("search_failed tracking", () => {
 
     expect(res.getStatus()).toBe(200);
     expect(failureEvent()).toBeNull();
+  });
+
+  it("attributes the failure to the searching room, uppercased", async () => {
+    fetchMock.mockImplementation(async () => quotaFailure());
+
+    const res = createRes();
+    await handler(createMockReq({ query: { q: "test", roomId: "abcd1" } }), res);
+
+    expect(failureEvent()).toMatchObject({ roomId: "ABCD1" });
+  });
+
+  it("drops an implausible roomId to '' instead of storing it", async () => {
+    fetchMock.mockImplementation(async () => quotaFailure());
+
+    const res = createRes();
+    await handler(
+      createMockReq({ query: { q: "test", roomId: "R".repeat(65) } }),
+      res
+    );
+
+    expect(failureEvent()).toMatchObject({ roomId: "" });
   });
 });

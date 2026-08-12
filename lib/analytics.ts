@@ -57,8 +57,9 @@ export interface AnalyticsEvent {
   minutesFromNow?: number | null;
   // search_failed: why /api/search couldn't run a live search…
   failReason?: "quota" | "upstream" | "rate_limited";
-  // …and whether the cache covered for it. These events carry roomId "" —
-  // /api/search has no room context — so geo roll-ups must exclude them.
+  // …and whether the cache covered for it. roomId is the room whose singer was
+  // searching, or "" from clients predating the field — and either way the
+  // failure is the API's, not the room's, so geo roll-ups must exclude these.
   searchOutcome?: "stale" | "error";
   locale?: Locale;
   // Key of the youtube_song_data doc holding this event's title/video id until

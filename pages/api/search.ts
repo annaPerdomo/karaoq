@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { getSearchCacheCollection } from "../../lib/mongodb";
-import { markRateLimitNotified, rateLimit } from "../../lib/limits";
+import { MAX_ENTRY_ID_LENGTH, markRateLimitNotified, rateLimit } from "../../lib/limits";
+import { normalizeRoomId } from "../../lib/roomCode";
 import { parseIso8601Duration } from "../../lib/duration";
 import { trackEvent } from "../../lib/analytics";
 import { sendQuotaAlertOnce } from "../../lib/alerts";
@@ -192,6 +193,15 @@ export default async function handler(
     return;
   }
 
+  // Diagnostic only — which room's singers saw a failed search. Never touches
+  // the cache key or the results; "" when the client predates the field or the
+  // value is implausible.
+  const rawRoomId = normalizeRoomId(req.query.roomId);
+  const roomId =
+    typeof rawRoomId === "string" && rawRoomId.length <= MAX_ENTRY_ID_LENGTH
+      ? rawRoomId
+      : "";
+
   const duration =
     typeof req.query.duration === "string" && VALID_DURATIONS.has(req.query.duration)
       ? req.query.duration
@@ -229,7 +239,7 @@ export default async function handler(
     // never recorded is one we can't see on /admin.
     if (markRateLimitNotified(req, "search")) {
       await trackEvent(req, "search_failed", {
-        roomId: "",
+        roomId,
         failReason: "rate_limited",
         searchOutcome: "error",
       });
@@ -258,7 +268,7 @@ export default async function handler(
     // because we're out of quota.
     if (staleFallback) {
       await trackEvent(req, "search_failed", {
-        roomId: "",
+        roomId,
         failReason,
         searchOutcome: "stale",
       });
@@ -268,7 +278,7 @@ export default async function handler(
     }
 
     await trackEvent(req, "search_failed", {
-      roomId: "",
+      roomId,
       failReason,
       searchOutcome: "error",
     });

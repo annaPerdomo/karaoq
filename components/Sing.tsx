@@ -101,10 +101,14 @@ const Sing = (): React.ReactElement => {
     return () => clearTimeout(timer);
   }, [username]);
 
+  // Same contract as Host's adminPeek: /sing/CODE?admin=1 is Anna checking on
+  // a room from /admin, so she must not register as a participant or mark the
+  // room live.
+  const adminPeek = router.query.admin === '1';
   React.useEffect(() => {
-    if (!joinCode || !trackedName || showWelcome) return;
+    if (!joinCode || !trackedName || showWelcome || adminPeek) return;
     return startSessionTracking(joinCode, trackedName, 'singer');
-  }, [joinCode, trackedName, showWelcome]);
+  }, [joinCode, trackedName, showWelcome, adminPeek]);
 
   React.useEffect(() => {
     const timers = reactionTimers.current;

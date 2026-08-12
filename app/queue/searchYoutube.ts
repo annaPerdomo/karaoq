@@ -47,13 +47,17 @@ export interface SearchFilters {
 export default async function searchYoutube(
   query: string,
   filters: SearchFilters = { duration: 'any', sortBy: 'relevance' },
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  // Purely diagnostic: lets a failed search be attributed to the room that ran
+  // it on /admin. Results are unaffected (the cache key ignores it).
+  roomId?: string
 ): Promise<YoutubeResult[]> {
   const params = new URLSearchParams({
     q: query,
     duration: filters.duration,
     sortBy: filters.sortBy,
   });
+  if (roomId) params.set('roomId', roomId);
   const resp = await fetch(`/api/search?${params}`, signal ? { signal } : undefined);
   if (!resp.ok) {
     const detail = await resp.json().catch(() => null);
