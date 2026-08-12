@@ -514,6 +514,15 @@
   margin-bottom: 0.6rem;
 }
 
+/* Sibling of .unavailableEmoji for the drawn icons: an SVG takes a box, not a
+   font size, but sits on the same baseline rhythm. */
+.unavailableIcon {
+  display: block;
+  width: 36px;
+  height: 36px;
+  margin: 0 auto 0.6rem;
+}
+
 .unavailableTitle {
   font-family: var(--font-headline);
   font-size: 1.02rem;

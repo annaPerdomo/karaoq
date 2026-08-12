@@ -5,6 +5,7 @@ import { YoutubeResult, SearchFailure } from '../../app/queue/searchYoutube';
 import { formatDuration } from '../../lib/duration';
 import { useT } from '../../lib/i18n/I18nProvider';
 import FeedbackTrigger from '../feedback/FeedbackTrigger';
+import BrokenLinkIcon from './BrokenLinkIcon';
 
 interface SearchResultsProps {
   hasSearched: boolean;
@@ -80,7 +81,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({
     if (linkKey) {
       return (
         <div className={styles.unavailable}>
-          <span className={styles.unavailableEmoji} aria-hidden="true">🔗</span>
+          <BrokenLinkIcon className={styles.unavailableIcon} />
           <p className={styles.unavailableBody}>{t(linkKey)}</p>
         </div>
       );
