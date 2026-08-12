@@ -7,7 +7,7 @@ import {
   roomLanguageTitle,
   type Person,
   type RoomLanguages,
-} from "../../components/analytics/roomDetailLabels";
+} from "../../components/admin/roomDetailLabels";
 
 function person(over: Partial<Person> = {}): Person {
   return {

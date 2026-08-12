@@ -1,16 +1,16 @@
 import type { NextPage } from 'next';
 import Head from 'next/head';
 
-import Analytics from '../../components/Analytics';
+import Admin from '../../components/Admin';
 
 const AdminPage: NextPage = () => {
   return (
     <>
       <Head>
-        <title>KaraoQ — Analytics</title>
+        <title>KaraoQ — Mission Control</title>
         <meta name="robots" content="noindex, nofollow" />
       </Head>
-      <Analytics />
+      <Admin />
     </>
   );
 };

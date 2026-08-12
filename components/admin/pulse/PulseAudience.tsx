@@ -1,0 +1,102 @@
+import * as React from 'react';
+import styles from '../../../styles/Admin.module.css';
+import type { AnalyticsData } from '../types';
+import { countryFlag, pct, safeDecode } from '../format';
+import { localeName } from '../roomDetailLabels';
+import BarList from '../charts/BarList';
+import { SERIES } from '../charts/palette';
+
+export default function PulseAudience({
+  data,
+}: {
+  data: AnalyticsData;
+}): React.ReactElement {
+  const { geo, languages, devices } = data;
+
+  const mobile = devices.find((d) => d._id === 'Mobile')?.count ?? 0;
+  const desktop = devices.find((d) => d._id === 'Desktop')?.count ?? 0;
+  const totalDevices = mobile + desktop;
+
+  const totalChosen =
+    languages?.bySession.reduce((sum, l) => sum + l.chosen, 0) ?? 0;
+  const totalSessions =
+    languages?.bySession.reduce((sum, l) => sum + l.sessions, 0) ?? 0;
+
+  return (
+    <>
+      <div className={styles.cardPair}>
+        <section className={styles.card}>
+          <h2 className={styles.cardTitle}>Top countries (by rooms)</h2>
+          <BarList
+            data={geo.countries.map((d) => ({
+              label: d._id,
+              prefix: countryFlag(d._id),
+              value: d.count,
+            }))}
+            maxRows={12}
+          />
+        </section>
+        <section className={styles.card}>
+          <h2 className={styles.cardTitle}>Top cities (by rooms)</h2>
+          <BarList
+            color={SERIES[2]}
+            data={geo.cities.map((d) => ({
+              label: `${safeDecode(d._id.city)}, ${safeDecode(d._id.region || d._id.country)}`,
+              prefix: countryFlag(d._id.country),
+              value: d.count,
+            }))}
+            maxRows={12}
+          />
+        </section>
+      </div>
+
+      {languages && languages.bySession.length > 0 && (
+        <section className={styles.card}>
+          <h2 className={styles.cardTitle}>Languages (by rooms)</h2>
+          <p className={styles.cardNote}>
+            {languages.bySession.length} languages seen · non-English rooms:{' '}
+            {languages.nonEnglishRooms} of {languages.uniqueRooms} (
+            {pct(languages.nonEnglishRooms, languages.uniqueRooms)}%) · picked
+            deliberately: {pct(totalChosen, totalSessions)}% of sessions
+          </p>
+          <BarList
+            data={languages.bySession.map((l) => ({
+              label: `${localeName(l._id)} (${l._id})`,
+              value: l.rooms,
+              title: `${localeName(l._id)}: ${l.rooms} rooms · ${l.sessions} sessions · ${l.hosts} hosts · ${l.singers} singers · chosen by ${pct(l.chosen, l.sessions)}%`,
+            }))}
+          />
+        </section>
+      )}
+
+      {languages && languages.byCountry.length > 0 && (
+        <section className={styles.card}>
+          <h2 className={styles.cardTitle}>Language by country (by rooms)</h2>
+          <p className={styles.cardNote}>
+            Which language a country actually runs its rooms in — the signal
+            behind which packs are worth building next.
+          </p>
+          <BarList
+            color={SERIES[1]}
+            data={languages.byCountry.map((d) => ({
+              label: `${d._id.country} → ${localeName(d._id.locale)} (${d._id.locale})`,
+              prefix: countryFlag(d._id.country),
+              value: d.count,
+            }))}
+            maxRows={15}
+          />
+        </section>
+      )}
+
+      {totalDevices > 0 && (
+        <section className={styles.card}>
+          <h2 className={styles.cardTitle}>Devices</h2>
+          <p className={styles.cardNote}>
+            {pct(mobile, totalDevices)}% mobile · {pct(desktop, totalDevices)}%
+            desktop · {totalDevices} sessions
+          </p>
+        </section>
+      )}
+    </>
+  );
+}

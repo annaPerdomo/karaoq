@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { ObjectId, type Filter } from "mongodb";
 
+import { isAuthorizedAdmin } from "../../../lib/adminAuth";
 import { getFeedbackCollection } from "../../../lib/mongodb";
 import { FEEDBACK_KINDS, type FeedbackEntry } from "../types";
 
@@ -24,8 +25,7 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  const secret = req.headers["x-analytics-secret"] as string;
-  if (!process.env.ANALYTICS_SECRET || secret !== process.env.ANALYTICS_SECRET) {
+  if (!isAuthorizedAdmin(req)) {
     res.status(401).json({ code: 401, message: "Unauthorized." });
     return;
   }

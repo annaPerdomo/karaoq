@@ -1,4 +1,5 @@
 import { NextApiRequest, NextApiResponse } from "next";
+import { isAuthorizedAdmin } from "../../../lib/adminAuth";
 import { CHOSEN_LOCALE_SOURCES } from "../../../lib/i18n/activeLocale";
 import { getAnalyticsDb, getYoutubeSongDataCollection } from "../../../lib/mongodb";
 import {
@@ -24,8 +25,7 @@ export default async function handler(
     return;
   }
 
-  const secret = req.headers["x-analytics-secret"] as string;
-  if (!process.env.ANALYTICS_SECRET || secret !== process.env.ANALYTICS_SECRET) {
+  if (!isAuthorizedAdmin(req)) {
     res.status(401).json({ code: 401, message: "Unauthorized." });
     return;
   }
@@ -56,7 +56,6 @@ export default async function handler(
       songsByDay,
       countryCounts,
       cityCounts,
-      hourlyActivity,
       dayOfWeekSongs,
       topSongs,
       topUsers,
@@ -64,7 +63,6 @@ export default async function handler(
       songsPerRoom,
       userAgentData,
       totalQrPrints,
-      qrPrintsByDay,
       suggestionTotal,
       suggestionBySource,
       suggestionBySection,
@@ -72,15 +70,12 @@ export default async function handler(
       suggestionTopSongs,
       suggestionsByDay,
       funnelRooms,
-      reactionsByEmoji,
       hostRetention,
       singWithMePosted,
       singWithMeJoined,
       singWithMeQueued,
-      singWithMeByDay,
       boardSuggested,
       boardClaimed,
-      boardSuggestedByDay,
       addsByVia,
       displaySaves,
       displayRoomsCustomized,
@@ -95,13 +90,13 @@ export default async function handler(
       singerSizeCounts,
       fairRoomStats,
       sessionsByLocale,
-      roomsCreatedByLocale,
       localeByCountry,
       uniqueLocaleRooms,
       nonEnglishLocaleRooms,
       searchFailuresByDay,
       searchFailureTotals,
       searchFailuresLast24h,
+      activityGrid,
     ] = await Promise.all([
       events.countDocuments({ type: "room_created" }),
 
@@ -129,9 +124,10 @@ export default async function handler(
         ])
         .toArray(),
 
-      // search_failed is excluded from both geo roll-ups: those events carry
-      // roomId "", which $addToSet counts as a room, inflating every country
-      // and city that has real ones.
+      // search_failed is excluded from both geo roll-ups: a failed search says
+      // nothing about where rooms happen, and the ones from before the client
+      // sent its room code carry roomId "", which $addToSet counts as a room —
+      // inflating every country and city that has real ones.
       events
         .aggregate([
           { $match: { type: { $ne: "search_failed" }, country: { $exists: true, $ne: null } } },
@@ -154,19 +150,6 @@ export default async function handler(
           { $project: { count: { $size: "$rooms" } } },
           { $sort: { count: -1 } },
           { $limit: 20 },
-        ])
-        .toArray(),
-
-      events
-        .aggregate([
-          { $match: { timestamp: { $gte: thirtyDaysAgo } } },
-          {
-            $group: {
-              _id: { $hour: { date: "$timestamp", timezone: tz } },
-              count: { $sum: 1 },
-            },
-          },
-          { $sort: { _id: 1 } },
         ])
         .toArray(),
 
@@ -288,14 +271,6 @@ export default async function handler(
 
       events.countDocuments({ type: "qr_printed" }),
 
-      events
-        .aggregate([
-          { $match: { type: "qr_printed", timestamp: { $gte: thirtyDaysAgo } } },
-          { $group: { _id: { $dateToString: dayKey }, count: { $sum: 1 } } },
-          { $sort: { _id: 1 } },
-        ])
-        .toArray(),
-
       events.countDocuments({ type: "suggestion_used" }),
 
       events
@@ -392,15 +367,6 @@ export default async function handler(
         ])
         .toArray(),
 
-      events
-        .aggregate([
-          { $match: { type: "reaction_sent", emoji: { $exists: true, $ne: null } } },
-          { $group: { _id: "$emoji", count: { $sum: 1 } } },
-          { $sort: { count: -1 } },
-          { $limit: 10 },
-        ])
-        .toArray(),
-
       sessions
         .aggregate([
           { $match: { role: "host", clientId: { $type: "string" } } },
@@ -421,23 +387,9 @@ export default async function handler(
       events.countDocuments({ type: "singwithme_posted" }),
       events.countDocuments({ type: "singwithme_joined" }),
       events.countDocuments({ type: "singwithme_queued" }),
-      events
-        .aggregate([
-          { $match: { type: "singwithme_posted", timestamp: { $gte: thirtyDaysAgo } } },
-          { $group: { _id: { $dateToString: dayKey }, count: { $sum: 1 } } },
-          { $sort: { _id: 1 } },
-        ])
-        .toArray(),
 
       events.countDocuments({ type: "song_suggested" }),
       events.countDocuments({ type: "suggestion_claimed" }),
-      events
-        .aggregate([
-          { $match: { type: "song_suggested", timestamp: { $gte: thirtyDaysAgo } } },
-          { $group: { _id: { $dateToString: dayKey }, count: { $sum: 1 } } },
-          { $sort: { _id: 1 } },
-        ])
-        .toArray(),
 
       // Events from before the via field are search adds, hence the $ifNull.
       events
@@ -579,15 +531,6 @@ export default async function handler(
         ])
         .toArray(),
 
-      // Covers rooms that never got a heartbeat's worth of use.
-      events
-        .aggregate([
-          { $match: { type: "room_created", locale: { $type: "string" } } },
-          { $group: { _id: "$locale", count: { $sum: 1 } } },
-          { $sort: { count: -1 } },
-        ])
-        .toArray(),
-
       sessions
         .aggregate([
           {
@@ -645,6 +588,28 @@ export default async function handler(
         type: "search_failed",
         timestamp: { $gte: dayAgo },
       }),
+
+      // Weekday × hour activity heatmap. Heartbeats aren't events and
+      // search_failed carries no room, so neither says when rooms are alive.
+      events
+        .aggregate([
+          {
+            $match: {
+              timestamp: { $gte: thirtyDaysAgo },
+              type: { $nin: ["session_heartbeat", "search_failed"] },
+            },
+          },
+          {
+            $group: {
+              _id: {
+                dow: { $dayOfWeek: { date: "$timestamp", timezone: tz } },
+                hour: { $hour: { date: "$timestamp", timezone: tz } },
+              },
+              count: { $sum: 1 },
+            },
+          },
+        ])
+        .toArray(),
     ]);
 
     const sessionStats = sessionData[0] || {
@@ -697,9 +662,8 @@ export default async function handler(
       charts: {
         roomsByDay,
         songsByDay,
-        hourlyActivity,
-        qrPrintsByDay,
         dayOfWeekSongs,
+        activityGrid,
       },
       geo: {
         countries: countryCounts,
@@ -707,7 +671,6 @@ export default async function handler(
       },
       languages: {
         bySession: sessionsByLocale,
-        roomsCreated: roomsCreatedByLocale,
         byCountry: localeByCountry,
         uniqueRooms: uniqueLocaleRooms,
         nonEnglishRooms: nonEnglishLocaleRooms,
@@ -735,12 +698,10 @@ export default async function handler(
           posted: singWithMePosted,
           joined: singWithMeJoined,
           queued: singWithMeQueued,
-          byDay: singWithMeByDay,
         },
         board: {
           suggested: boardSuggested,
           claimed: boardClaimed,
-          byDay: boardSuggestedByDay,
         },
       },
       engagement: {
@@ -748,7 +709,6 @@ export default async function handler(
           (songStats.distribution || []) as number[],
           totalRooms
         ),
-        reactionsByEmoji,
         hosts: retention.hosts,
         repeatHosts: retention.repeatHosts,
       },

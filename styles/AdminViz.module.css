@@ -1,0 +1,358 @@
+/* Chart primitives for the admin. Data marks carry the (validated) series
+ * colors; every piece of text stays on the ink tokens. Grid and axes are
+ * solid hairlines one step off the card surface. */
+
+.chartEmpty {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  padding: 0.75rem 0;
+}
+
+/* ─── Stat tile ─── */
+
+.tile {
+  background: var(--bg-secondary);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 14px;
+  padding: 0.9rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.tileTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+  min-height: 1.1rem;
+}
+
+.tileLabel {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.tileDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.tileSpark {
+  flex-shrink: 0;
+  line-height: 0;
+}
+
+.tileValue {
+  color: var(--text-primary);
+  font-size: 1.65rem;
+  font-weight: 650;
+  line-height: 1.1;
+}
+
+.tileSub {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+/* ─── Shared tooltip ─── */
+
+.chartTip {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #0a0a18;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  padding: 0.35rem 0.55rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.05rem;
+  white-space: nowrap;
+  z-index: 5;
+  pointer-events: none;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+}
+
+.chartTipValue {
+  color: var(--text-primary);
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.chartTipLabel {
+  color: var(--text-secondary);
+  font-size: 0.7rem;
+}
+
+/* ─── Column chart ─── */
+
+.colChart {
+  width: 100%;
+}
+
+.colPlot {
+  position: relative;
+  margin-top: 0.5rem;
+}
+
+.colGridline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.colTick {
+  position: absolute;
+  right: 0;
+  top: -0.95rem;
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.colBaseline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.colCells {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.colCell {
+  position: relative;
+  flex: 1;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  min-width: 0;
+  border-radius: 4px 4px 0 0;
+  outline: none;
+}
+
+.colCell:hover,
+.colCell:focus-visible {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.colFill {
+  width: 100%;
+  max-width: 24px;
+  border-radius: 4px 4px 0 0;
+  min-height: 0;
+  transition: opacity 0.15s;
+}
+
+.colCell:hover .colFill,
+.colCell:focus-visible .colFill {
+  opacity: 0.85;
+}
+
+.colXLabels {
+  display: flex;
+  gap: 2px;
+  margin-top: 0.35rem;
+}
+
+.colXLabel {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  /* Sparse labeling leaves neighbors empty, so a label may spill past its own
+   * narrow band instead of truncating to "12…". */
+  overflow: visible;
+  white-space: nowrap;
+}
+
+/* ─── Bar list ─── */
+
+.barList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.barRow {
+  display: grid;
+  grid-template-columns: minmax(90px, 220px) 1fr auto;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.barLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+}
+
+.barPrefix {
+  flex-shrink: 0;
+}
+
+.barLabelText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.barTrack {
+  position: relative;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.barFill {
+  display: block;
+  height: 100%;
+  border-radius: 0 4px 4px 0;
+  min-width: 2px;
+}
+
+.barValue {
+  color: var(--text-primary);
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  min-width: 2ch;
+  text-align: right;
+}
+
+/* ─── Heatmap ─── */
+
+.heatmap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.hmGrid {
+  display: grid;
+  grid-template-columns: 2.2rem repeat(24, minmax(14px, 1fr));
+  gap: 2px;
+  min-width: 480px;
+}
+
+.hmColLabel {
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  text-align: left;
+  padding-bottom: 2px;
+}
+
+.hmRowLabel {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+}
+
+.hmCell {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.03);
+  outline: none;
+}
+
+.hmCell:hover,
+.hmCell:focus-visible {
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.35);
+}
+
+.hmLegend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 0.6rem;
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.hmLegendStep {
+  width: 18px;
+  height: 8px;
+  border-radius: 2px;
+}
+
+/* ─── Funnel ─── */
+
+.funnel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.funnelRow {
+  display: grid;
+  grid-template-columns: minmax(90px, 150px) 1fr auto;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.funnelLabel {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.funnelTrack {
+  height: 14px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.funnelFill {
+  display: block;
+  height: 100%;
+  border-radius: 0 4px 4px 0;
+  min-width: 2px;
+}
+
+.funnelValue {
+  color: var(--text-primary);
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  min-width: 5.5ch;
+  justify-content: flex-end;
+}
+
+.funnelPct {
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  min-width: 3.5ch;
+  text-align: right;
+}

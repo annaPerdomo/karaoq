@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   displayBlocks,
   hostBlocks,
-} from "../../components/analytics/LayoutPreview";
+} from "../../components/admin/LayoutPreview";
 import {
   DEFAULT_DISPLAY_CONFIG,
   DEFAULT_HOST_CONFIG,

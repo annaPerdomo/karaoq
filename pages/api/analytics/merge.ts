@@ -1,5 +1,10 @@
 import { NextApiRequest, NextApiResponse } from "next";
-import { getAnalyticsDb } from "../../../lib/mongodb";
+import { isAuthorizedAdmin } from "../../../lib/adminAuth";
+import {
+  getAnalyticsDb,
+  getClientErrorsCollection,
+  getYoutubeSongDataCollection,
+} from "../../../lib/mongodb";
 
 // Merge the analytics for `source` into `target`, then remove `source`.
 // Use this when a single real event ended up split across multiple room codes
@@ -13,8 +18,7 @@ export default async function handler(
     return;
   }
 
-  const secret = req.headers["x-analytics-secret"] as string;
-  if (!process.env.ANALYTICS_SECRET || secret !== process.env.ANALYTICS_SECRET) {
+  if (!isAuthorizedAdmin(req)) {
     res.status(401).json({ code: 401, message: "Unauthorized." });
     return;
   }
@@ -61,6 +65,17 @@ export default async function handler(
       { $set: { roomId: target } }
     );
     await events.deleteMany({ roomId: source, type: "room_created" });
+
+    // Error reports and the song-title join docs key on roomId too — left
+    // behind, the merged room's dossier would lose its titles and its errors.
+    await Promise.all([
+      getClientErrorsCollection().then((c) =>
+        c.updateMany({ roomId: source }, { $set: { roomId: target } })
+      ),
+      getYoutubeSongDataCollection().then((c) =>
+        c.updateMany({ roomId: source }, { $set: { roomId: target } })
+      ),
+    ]);
 
     // Fold source sessions into target, deduping on (clientId|userName, role)
     // so the same person across both codes is counted once.

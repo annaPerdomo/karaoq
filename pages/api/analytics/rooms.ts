@@ -1,8 +1,37 @@
 import { NextApiRequest, NextApiResponse } from "next";
+import { isAuthorizedAdmin } from "../../../lib/adminAuth";
 import { getAnalyticsDb } from "../../../lib/mongodb";
 
 const DEFAULT_LIMIT = 25;
 const MAX_LIMIT = 100;
+const MAX_QUERY_LENGTH = 24;
+
+/** Count of one event type out of the grouped-counts lookup below. */
+function countOfType(type: string) {
+  return {
+    $ifNull: [
+      {
+        $arrayElemAt: [
+          {
+            $map: {
+              input: {
+                $filter: {
+                  input: "$eventCounts",
+                  as: "c",
+                  cond: { $eq: ["$$c._id", type] },
+                },
+              },
+              as: "c",
+              in: "$$c.n",
+            },
+          },
+          0,
+        ],
+      },
+      0,
+    ],
+  };
+}
 
 export default async function handler(
   req: NextApiRequest,
@@ -13,8 +42,7 @@ export default async function handler(
     return;
   }
 
-  const secret = req.headers["x-analytics-secret"] as string;
-  if (!process.env.ANALYTICS_SECRET || secret !== process.env.ANALYTICS_SECRET) {
+  if (!isAuthorizedAdmin(req)) {
     res.status(401).json({ code: 401, message: "Unauthorized." });
     return;
   }
@@ -26,6 +54,19 @@ export default async function handler(
     MAX_LIMIT,
     Math.max(1, parseInt(req.query.limit as string, 10) || DEFAULT_LIMIT)
   );
+  const q =
+    typeof req.query.q === "string"
+      ? req.query.q.trim().slice(0, MAX_QUERY_LENGTH)
+      : "";
+
+  const createdMatch: Record<string, unknown> = { type: "room_created" };
+  if (q) {
+    // Prefix match on the room code; escaped so "." can't widen the search.
+    createdMatch.roomId = {
+      $regex: `^${q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`,
+      $options: "i",
+    };
+  }
 
   try {
     const db = await getAnalyticsDb();
@@ -33,24 +74,52 @@ export default async function handler(
 
     const docs = await events
       .aggregate([
-        { $match: { type: "room_created" } },
+        { $match: createdMatch },
         { $sort: { timestamp: -1 } },
         { $skip: skip },
         { $limit: limit + 1 },
         {
+          // Every per-room event tally in one indexed lookup ({roomId, type})
+          // rather than one lookup per stat. Duets ride on the song_added group.
           $lookup: {
             from: "analytics_events",
             let: { rid: "$roomId" },
             pipeline: [
-              { $match: { $expr: { $and: [{ $eq: ["$roomId", "$$rid"] }, { $eq: ["$type", "song_added"] }] } } },
-              { $count: "total" },
+              {
+                $match: {
+                  $expr: { $eq: ["$roomId", "$$rid"] },
+                  type: {
+                    $in: [
+                      "song_added",
+                      "reaction_sent",
+                      "song_suggested",
+                      // All three, because the dossier's boards section lists
+                      // all three — the card's number has to be the same number.
+                      "singwithme_posted",
+                      "singwithme_joined",
+                      "singwithme_queued",
+                      "search_performed",
+                    ],
+                  },
+                },
+              },
+              {
+                $group: {
+                  _id: "$type",
+                  n: { $sum: 1 },
+                  duets: {
+                    $sum: { $cond: [{ $gte: ["$singers", 2] }, 1, 0] },
+                  },
+                },
+              },
             ],
-            as: "songCount",
+            as: "eventCounts",
           },
         },
         {
           // Non-display session docs only, for the real head count. Grouped by locale rather than
-          // counted so the head count and the language mix come from one lookup, not two.
+          // counted so the head count and the language mix come from one lookup, not two; the
+          // per-group max(lastSeen) rolls up into the room's last-activity stamp.
           $lookup: {
             from: "analytics_sessions",
             let: { rid: "$roomId" },
@@ -75,6 +144,7 @@ export default async function handler(
                     ],
                   },
                   people: { $sum: 1 },
+                  lastSeen: { $max: "$lastSeen" },
                 },
               },
             ],
@@ -105,14 +175,40 @@ export default async function handler(
           },
         },
         {
+          $lookup: {
+            from: "client_errors",
+            let: { rid: "$roomId" },
+            pipeline: [
+              { $match: { $expr: { $eq: ["$roomId", "$$rid"] } } },
+              { $count: "total" },
+            ],
+            as: "errorCount",
+          },
+        },
+        {
           $project: {
             _id: 0,
             roomId: 1,
             timestamp: 1,
             country: 1,
             city: 1,
-            songs: { $ifNull: [{ $arrayElemAt: ["$songCount.total", 0] }, 0] },
+            songs: countOfType("song_added"),
+            cheers: countOfType("reaction_sent"),
+            requests: countOfType("song_suggested"),
+            singWithMe: {
+              $add: [
+                countOfType("singwithme_posted"),
+                countOfType("singwithme_joined"),
+                countOfType("singwithme_queued"),
+              ],
+            },
+            searches: countOfType("search_performed"),
+            duets: { $sum: "$eventCounts.duets" },
+            errors: {
+              $ifNull: [{ $arrayElemAt: ["$errorCount.total", 0] }, 0],
+            },
             participants: { $sum: "$participantLocales.people" },
+            lastSeen: { $max: "$participantLocales.lastSeen" },
             // Last toggle wins, else the created value; null on rooms predating both.
             fairMode: {
               $ifNull: [

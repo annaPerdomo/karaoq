@@ -1,5 +1,10 @@
 import { NextApiRequest, NextApiResponse } from "next";
-import { getAnalyticsDb, getYoutubeSongDataCollection } from "../../../lib/mongodb";
+import { isAuthorizedAdmin } from "../../../lib/adminAuth";
+import {
+  getAnalyticsDb,
+  getClientErrorsCollection,
+  getYoutubeSongDataCollection,
+} from "../../../lib/mongodb";
 import type { AnalyticsEvent } from "../../../lib/analytics";
 import { CHOSEN_LOCALE_SOURCES } from "../../../lib/i18n/activeLocale";
 import {
@@ -8,6 +13,8 @@ import {
   type DisplayConfig,
   type HostConfig,
 } from "../types";
+
+const MAX_ERROR_ROWS = 200;
 
 async function handleGet(
   req: NextApiRequest,
@@ -41,12 +48,16 @@ async function handleGet(
           "singwithme_queued",
           "reaction_sent",
           "search_performed",
+          // Attributed to a room since the client began sending its code with
+          // the search request; older failures carry roomId "" and never match.
+          "search_failed",
           // Fair rotation's starting value rides on room_created.
           "room_created",
           "fair_mode_toggled",
           // Each carries the whole saved config, so the last one is the layout the room ended on.
           "display_config_saved",
           "host_config_saved",
+          "session_end_set",
         ],
       },
     })
@@ -62,11 +73,35 @@ async function handleGet(
     c.find({ roomId }).limit(2000).toArray()
   );
 
-  const [sessions, events, songDataDocs] = await Promise.all([
-    sessionsPromise,
-    eventsPromise,
-    songDataPromise,
-  ]);
+  // Raw occurrences: the dossier interleaves them with the song timeline,
+  // because *when* an error hit relative to the room's activity is the
+  // diagnostic fact — a count per message hides it. Newest-first + reverse for
+  // the same reason as the events above: the cap must trim the start of the
+  // night, not the errors that are still happening.
+  const errorsPromise = getClientErrorsCollection().then((c) =>
+    c
+      .find({ roomId })
+      .sort({ timestamp: -1 })
+      .limit(MAX_ERROR_ROWS)
+      .project({ _id: 0, message: 1, source: 1, page: 1, timestamp: 1 })
+      .toArray()
+      .then((docs) => docs.reverse())
+  );
+
+  // Counted separately so the dossier's total agrees with the room card's
+  // uncapped badge instead of silently reporting the cap.
+  const errorTotalPromise = getClientErrorsCollection().then((c) =>
+    c.countDocuments({ roomId })
+  );
+
+  const [sessions, events, songDataDocs, errorRows, errorTotal] =
+    await Promise.all([
+      sessionsPromise,
+      eventsPromise,
+      songDataPromise,
+      errorsPromise,
+      errorTotalPromise,
+    ]);
 
   const songDataById = new Map(songDataDocs.map((d) => [d.dataId, d]));
   // Pre-split events still carry their own fields, until the one-time
@@ -106,7 +141,14 @@ async function handleGet(
   const songs: unknown[] = [];
   const requests: unknown[] = [];
   const singWithMe: unknown[] = [];
+  const searchFails: {
+    failReason: string | null;
+    searchOutcome: string | null;
+    timestamp: Date;
+  }[] = [];
   const fairToggles: { enabled: boolean; timestamp: Date }[] = [];
+  const cheersByEmoji = new Map<string, number>();
+  const cheersByUser = new Map<string, number>();
   let reactions = 0;
   let searches = 0;
   // undefined = the room predates the flag, so we genuinely don't know.
@@ -115,6 +157,8 @@ async function handleGet(
   let hostConfig: HostConfig | null = null;
   let displaySaves = 0;
   let hostSaves = 0;
+  // Last write wins, same as the queue's own behavior; null = cleared or never set.
+  let sessionEnd: { minutesFromNow: number | null; timestamp: Date } | null = null;
 
   for (const e of events) {
     switch (e.type) {
@@ -124,6 +168,7 @@ async function handleGet(
           songTitle: titleOf(e),
           videoId: videoIdOf(e),
           via: e.via ?? "search",
+          singers: typeof e.singers === "number" ? e.singers : null,
           timestamp: e.timestamp,
         });
         break;
@@ -148,9 +193,22 @@ async function handleGet(
         break;
       case "reaction_sent":
         reactions += 1;
+        if (e.emoji) {
+          cheersByEmoji.set(e.emoji, (cheersByEmoji.get(e.emoji) ?? 0) + 1);
+        }
+        if (e.userName) {
+          cheersByUser.set(e.userName, (cheersByUser.get(e.userName) ?? 0) + 1);
+        }
         break;
       case "search_performed":
         searches += 1;
+        break;
+      case "search_failed":
+        searchFails.push({
+          failReason: e.failReason ?? null,
+          searchOutcome: e.searchOutcome ?? null,
+          timestamp: e.timestamp,
+        });
         break;
       case "room_created":
         if (typeof e.fairMode === "boolean") fairStarted = e.fairMode;
@@ -173,6 +231,12 @@ async function handleGet(
         hostSaves += 1;
         if (e.hostConfig) hostConfig = normalizeHostConfig(e.hostConfig);
         break;
+      case "session_end_set":
+        sessionEnd = {
+          minutesFromNow: e.minutesFromNow ?? null,
+          timestamp: e.timestamp,
+        };
+        break;
     }
   }
 
@@ -181,12 +245,28 @@ async function handleGet(
     ? fairToggles[fairToggles.length - 1].enabled
     : fairStarted;
 
+  const byCountDesc = (a: { count: number }, b: { count: number }) =>
+    b.count - a.count;
+
   res.status(200).json({
     roomId,
     people,
     songs,
     requests,
     singWithMe,
+    cheers: {
+      total: reactions,
+      byEmoji: Array.from(cheersByEmoji, ([emoji, count]) => ({ emoji, count }))
+        .sort(byCountDesc),
+      topCheerers: Array.from(cheersByUser, ([userName, count]) => ({
+        userName,
+        count,
+      }))
+        .sort(byCountDesc)
+        .slice(0, 8),
+    },
+    errors: errorRows,
+    searchFails,
     fairRotation: {
       started: fairStarted ?? null,
       final: fairFinal ?? null,
@@ -203,6 +283,16 @@ async function handleGet(
       created: createdLocale,
       byLocale: languages,
     },
+    // The night's bounds as analytics saw them; the caps above can trim the
+    // start of a marathon room, in which case this is the observed span.
+    span:
+      events.length > 0
+        ? {
+            first: events[0].timestamp,
+            last: events[events.length - 1].timestamp,
+          }
+        : null,
+    sessionEnd,
     counts: {
       people: people.length,
       songs: songs.length,
@@ -210,6 +300,7 @@ async function handleGet(
       singWithMe: singWithMe.length,
       reactions,
       searches,
+      errors: errorTotal,
     },
   });
 }
@@ -220,15 +311,21 @@ async function handleDelete(
 ) {
   const db = await getAnalyticsDb();
 
-  const [events, sessions] = await Promise.all([
+  const [events, sessions, errors, songData] = await Promise.all([
     db.collection("analytics_events").deleteMany({ roomId }),
     db.collection("analytics_sessions").deleteMany({ roomId }),
+    getClientErrorsCollection().then((c) => c.deleteMany({ roomId })),
+    // The TTL would clear these anyway; deleting now keeps "delete all data
+    // for this room" honest.
+    getYoutubeSongDataCollection().then((c) => c.deleteMany({ roomId })),
   ]);
 
   res.status(200).json({
     deleted: {
       events: events.deletedCount,
       sessions: sessions.deletedCount,
+      errors: errors.deletedCount,
+      songData: songData.deletedCount,
     },
   });
 }
@@ -242,8 +339,7 @@ export default async function handler(
     return;
   }
 
-  const secret = req.headers["x-analytics-secret"] as string;
-  if (!process.env.ANALYTICS_SECRET || secret !== process.env.ANALYTICS_SECRET) {
+  if (!isAuthorizedAdmin(req)) {
     res.status(401).json({ code: 401, message: "Unauthorized." });
     return;
   }
