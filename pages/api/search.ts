@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from "next";
-import { getSearchCacheCollection } from "../../lib/mongodb";
+import { readCache, writeCache, SearchResult } from "../../lib/searchCache";
+import { fetchYoutubeApi, YoutubeApiError } from "../../lib/youtubeApi";
 import { MAX_ENTRY_ID_LENGTH, markRateLimitNotified, rateLimit } from "../../lib/limits";
 import { normalizeRoomId } from "../../lib/roomCode";
 import { parseIso8601Duration } from "../../lib/duration";
@@ -11,71 +12,10 @@ const VALID_DURATIONS = new Set(["any", "short", "medium", "long"]);
 const VALID_SORTS = new Set(["relevance", "viewCount", "date", "rating"]);
 const MAX_QUERY_LENGTH = 200;
 
-interface SearchResult {
-  title: string;
-  thumbnailUrl: string;
-  videoId: string;
-  durationSeconds?: number;
-  viewCount?: number;
-}
-
-// Song searches repeat heavily across rooms ("bohemian rhapsody karaoke"),
-// and each uncached YouTube API search burns 100 of the 10,000 daily quota
-// units. Cached results are served from Mongo, which stretches the quota from
-// ~100 searches/day to ~100 *distinct* searches/day.
-//
-// Entries stay readable for 14 days (TTL index in lib/mongodb.ts) but are only
-// served outright while under FRESH_CACHE_MS old. Past that a live search runs
-// first and refreshes them; the aging copy is used only when YouTube is
-// unreachable or out of quota, so a spent quota degrades to slightly-stale
-// results instead of an error page.
+// Search results are only served outright while under a day old; past that a
+// live search refreshes them and the aging copy becomes the outage fallback
+// (see lib/searchCache).
 const FRESH_CACHE_MS = 24 * 60 * 60 * 1000;
-
-interface CacheHit {
-  results: SearchResult[];
-  ageMs: number;
-}
-
-async function readCache(cacheKey: string): Promise<CacheHit | null> {
-  try {
-    const cache = await getSearchCacheCollection();
-    const hit = await cache.findOne({ key: cacheKey });
-    if (!hit) return null;
-    // A doc with no usable createdAt reads as infinitely old, so it's kept as
-    // a fallback but never served as fresh.
-    const writtenAt =
-      hit.createdAt instanceof Date ? hit.createdAt.getTime() : 0;
-    return {
-      results: hit.results as SearchResult[],
-      ageMs: Date.now() - writtenAt,
-    };
-  } catch {
-    return null; // cache is best-effort; fall through to a live search
-  }
-}
-
-function writeCache(cacheKey: string, results: SearchResult[]): void {
-  getSearchCacheCollection()
-    .then((cache) =>
-      cache.updateOne(
-        { key: cacheKey },
-        { $set: { key: cacheKey, results, createdAt: new Date() } },
-        { upsert: true }
-      )
-    )
-    .catch(() => {});
-}
-
-/** A YouTube API failure, flagged when the cause is a spent quota so callers
- * can say when search comes back rather than "try again shortly". */
-class YoutubeApiError extends Error {
-  quotaExceeded: boolean;
-  constructor(message: string, quotaExceeded: boolean) {
-    super(message);
-    this.name = "YoutubeApiError";
-    this.quotaExceeded = quotaExceeded;
-  }
-}
 
 async function searchWithYoutubeApi(
   q: string,
@@ -99,28 +39,10 @@ async function searchWithYoutubeApi(
   });
   if (duration !== "any") params.set("videoDuration", duration);
 
-  const resp = await fetch(
+  const data = await fetchYoutubeApi(
     "https://www.googleapis.com/youtube/v3/search?" + params,
-    { signal: AbortSignal.timeout(8000) }
+    8000
   );
-  // Parse the body even on a non-2xx: the reason code is the only way to tell
-  // "out of quota for today" apart from a key/config problem, and YouTube
-  // reports an exhausted quota as either 403 quotaExceeded or 429
-  // rateLimitExceeded / RESOURCE_EXHAUSTED depending which limit tripped.
-  const data = await resp.json().catch(() => null);
-  const apiError = data?.error;
-  if (!resp.ok || apiError) {
-    const reason = apiError?.errors?.[0]?.reason ?? "";
-    const exhausted =
-      reason === "quotaExceeded" ||
-      reason === "rateLimitExceeded" ||
-      apiError?.status === "RESOURCE_EXHAUSTED" ||
-      resp.status === 429;
-    throw new YoutubeApiError(
-      apiError?.message || `YouTube API ${resp.status}`,
-      exhausted
-    );
-  }
 
   const results: SearchResult[] =
     data?.items

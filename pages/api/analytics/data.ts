@@ -12,6 +12,10 @@ import {
 
 const FUNNEL_WINDOW_DAYS = 30;
 
+// Operational telemetry, not audience data: these say how the YouTube API
+// behaved, not that a room happened somewhere, and their roomId is often "".
+const NON_ROOM_EVENTS = ["search_failed", "link_lookup"];
+
 // Cap on a session's counted length: anything above it is the legacy revisit artifact
 // (firstSeen anchored days before lastSeen) on pre-fix docs.
 const MAX_SESSION_MINUTES = 360;
@@ -124,13 +128,13 @@ export default async function handler(
         ])
         .toArray(),
 
-      // search_failed is excluded from both geo roll-ups: a failed search says
-      // nothing about where rooms happen, and the ones from before the client
-      // sent its room code carry roomId "", which $addToSet counts as a room —
+      // search_failed and link_lookup are excluded from both geo roll-ups:
+      // they're operational telemetry, saying nothing about where rooms happen,
+      // and the ones carrying roomId "" would count as a room under $addToSet —
       // inflating every country and city that has real ones.
       events
         .aggregate([
-          { $match: { type: { $ne: "search_failed" }, country: { $exists: true, $ne: null } } },
+          { $match: { type: { $nin: NON_ROOM_EVENTS }, country: { $exists: true, $ne: null } } },
           { $group: { _id: "$country", rooms: { $addToSet: "$roomId" } } },
           { $project: { count: { $size: "$rooms" } } },
           { $sort: { count: -1 } },
@@ -140,7 +144,7 @@ export default async function handler(
 
       events
         .aggregate([
-          { $match: { type: { $ne: "search_failed" }, city: { $exists: true, $ne: null } } },
+          { $match: { type: { $nin: NON_ROOM_EVENTS }, city: { $exists: true, $ne: null } } },
           {
             $group: {
               _id: { city: "$city", country: "$country", region: "$region" },
