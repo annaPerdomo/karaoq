@@ -286,6 +286,12 @@ export function isValidHostConfig(value: unknown): value is HostConfig {
 const buckets = new Map<string, { count: number; resetAt: number; notified?: boolean }>();
 const MAX_BUCKETS = 10000;
 
+// Tests only, and deliberately has no production caller: `buckets` is module
+// state, so without this a test file silently runs out of its own rate budget.
+export function __resetRateLimits(): void {
+  buckets.clear();
+}
+
 function bucketKey(req: NextApiRequest, scope: string): string {
   const forwarded = req.headers["x-forwarded-for"];
   const ip =

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextApiResponse } from "next";
 import { Room } from "../../pages/api/types";
-import { MAX_QUEUE_LENGTH } from "../../lib/limits";
+import { MAX_QUEUE_LENGTH, __resetRateLimits } from "../../lib/limits";
 import { createMockReq } from "../helpers/mockRequest";
 
 const mockCollection = {
@@ -39,7 +39,10 @@ function createRes() {
 }
 
 describe("POST /api/queue/[id]/videos - Add song to queue", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    __resetRateLimits();
+  });
 
   it("adds a song to an existing room's queue", async () => {
     const room: Room = { id: "ROOM1", queue: [], activeVideoIndex: 0, isPlaying: false };
