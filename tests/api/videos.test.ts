@@ -405,4 +405,47 @@ describe("POST /api/queue/[id]/videos - Add song to queue", () => {
       expect(await addAs("Sandy")).toBe(1);
     });
   });
+
+  describe("via on the song_added event", () => {
+    async function addVia(via: unknown) {
+      vi.clearAllMocks();
+      const room: Room = { id: "ROOM1", queue: [], activeVideoIndex: 0, isPlaying: false };
+      mockCollection.findOne.mockResolvedValue(room);
+      mockCollection.updateOne.mockResolvedValue({ matchedCount: 1, modifiedCount: 1 });
+      mockCollection.insertOne.mockResolvedValue({});
+
+      const req = createMockReq({
+        method: "POST",
+        query: { id: "ROOM1" },
+        // A production host — localhost would be analytics-exempt.
+        headers: { host: "karaoq.live" },
+        body: {
+          entryId: "entry-1",
+          userName: "Anna",
+          videoId: "dQw4w9WgXcQ",
+          songTitle: "Never Gonna Give You Up",
+          ...(via !== undefined ? { via } : {}),
+        },
+      });
+      await handler(req, createRes());
+      // The analytics write isn't awaited — it lands a tick after the handler resolves.
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      const event = mockCollection.insertOne.mock.calls[0][0];
+      expect(event.type).toBe("song_added");
+      return event.via as string;
+    }
+
+    it("records a pasted-link add as via paste", async () => {
+      expect(await addVia("paste")).toBe("paste");
+    });
+
+    it("defaults to search when the client sends nothing", async () => {
+      expect(await addVia(undefined)).toBe("search");
+    });
+
+    it("collapses unrecognized values to search", async () => {
+      expect(await addVia("board_claim")).toBe("search");
+    });
+  });
 });

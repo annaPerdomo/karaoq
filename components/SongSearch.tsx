@@ -67,6 +67,7 @@ const SongSearch: React.FC<SongSearchProps> = ({
     hasSearched,
     searchError,
     lookupMode,
+    resultsVia,
     karaokeMode,
     filters,
     runSearch,
@@ -117,7 +118,15 @@ const SongSearch: React.FC<SongSearchProps> = ({
     handlePick,
     closeConfirm,
     playPreview,
-  } = useSongAddFlow({ roomId, userName, requireName, onSongAdded, onPick, resetSearch });
+  } = useSongAddFlow({
+    roomId,
+    userName,
+    requireName,
+    onSongAdded,
+    onPick,
+    resetSearch,
+    via: resultsVia,
+  });
 
   const publicRole = role === 'display' ? undefined : role;
 

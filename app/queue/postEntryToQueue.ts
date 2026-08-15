@@ -2,7 +2,8 @@ import { QueueEntry } from "../../pages/api/types";
 
 export default async function postEntryToQueue(
   roomId: string,
-  entry: QueueEntry
+  entry: QueueEntry,
+  via?: "search" | "paste"
 ): Promise<boolean> {
   try {
     const resp = await fetch(`/api/queue/${roomId}/videos`, {
@@ -14,6 +15,7 @@ export default async function postEntryToQueue(
         videoId: entry.videoId,
         songTitle: entry.songTitle,
         durationSeconds: entry.durationSeconds,
+        ...(via ? { via } : {}),
       }),
     });
     return resp.ok;

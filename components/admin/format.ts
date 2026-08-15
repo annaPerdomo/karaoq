@@ -19,6 +19,7 @@ export const SECTION_LABELS: Record<string, string> = {
 
 export const VIA_LABELS: Record<string, string> = {
   search: 'Search',
+  paste: 'Pasted link',
   board_claim: 'Request board',
   singwithme: 'Sing with me',
 };

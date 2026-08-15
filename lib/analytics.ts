@@ -44,7 +44,8 @@ export interface AnalyticsEvent {
   sectionId?: string;
   categoryId?: string;
   // Absent on events from before this field existed, which were all search adds.
-  via?: "search" | "board_claim" | "singwithme";
+  // "paste" is newer than "search": pastes before it shipped are in the search bucket.
+  via?: "search" | "paste" | "board_claim" | "singwithme";
   // song_added: singers credited, counted the way fair rotation splits the name; absent pre-duets.
   singers?: number;
   // display_config_saved: fields differing from DEFAULT_DISPLAY_CONFIG.

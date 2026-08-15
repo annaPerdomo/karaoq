@@ -112,6 +112,20 @@ describe("Client API wrappers", () => {
         songTitle: "Never Gonna Give You Up",
       });
     });
+
+    it("sends via when the caller provides one", async () => {
+      mockFetch.mockResolvedValue({ ok: true });
+      const { default: postEntryToQueue } = await import("../../app/queue/postEntryToQueue");
+
+      await postEntryToQueue(
+        "ROOM1",
+        { id: "entry-1", userName: "Anna", videoId: "dQw4w9WgXcQ", songTitle: "Song" },
+        "paste"
+      );
+
+      const [, options] = mockFetch.mock.calls[0];
+      expect(JSON.parse(options.body).via).toBe("paste");
+    });
   });
 
   describe("updatePosition", () => {

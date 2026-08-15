@@ -45,6 +45,9 @@ export function useSongSearchState({ roomId, role }: UseSongSearchStateArgs) {
   // control that would re-search it must sit still, or we spend 101 units on
   // guaranteed-garbage results.
   const [lookupMode, setLookupMode] = React.useState(false);
+  // Moves with the results, not with the box: lookupMode is set when a lookup
+  // starts and cleared on any keystroke, so deriving via from it misattributes adds.
+  const [resultsVia, setResultsVia] = React.useState<'search' | 'paste'>('search');
   const [filters, setFilters] = React.useState<SearchFilters>({
     duration: 'any',
     sortBy: 'relevance',
@@ -95,6 +98,7 @@ export function useSongSearchState({ roomId, role }: UseSongSearchStateArgs) {
     searchYoutube(searchQuery, activeFilters, controller.signal, roomId)
       .then((res) => {
         setResults(res);
+        setResultsVia('search');
         setVisibleCount(INITIAL_RESULTS);
       })
       .catch((err) => {
@@ -129,6 +133,7 @@ export function useSongSearchState({ roomId, role }: UseSongSearchStateArgs) {
     lookupVideo(videoId, 'paste', controller.signal, roomId)
       .then((result) => {
         setResults([result]);
+        setResultsVia('paste');
         setVisibleCount(INITIAL_RESULTS);
       })
       .catch((err) => {
@@ -258,6 +263,7 @@ export function useSongSearchState({ roomId, role }: UseSongSearchStateArgs) {
     hasSearched,
     searchError,
     lookupMode,
+    resultsVia,
     karaokeMode,
     filters,
     runSearch,

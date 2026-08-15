@@ -32,6 +32,7 @@ export default async function handler(
     videoId: string;
     songTitle: string;
     durationSeconds?: unknown;
+    via?: unknown;
   };
   try {
     const parsed = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
@@ -53,6 +54,10 @@ export default async function handler(
   // Implausible metadata is dropped, not rejected — the song still queues, it
   // just falls back to the room's average length in the time estimate.
   const durationSeconds = sanitizeSongDuration(body.durationSeconds);
+
+  // Only the search box posts here — board claims and Sing-with-me have their
+  // own endpoints — so an unrecognized or absent value is "search", not spoofable.
+  const via = body.via === "paste" ? "paste" : "search";
 
   // Stamped server-side, never taken from the body: queue time decides the running order, so a
   // client must not be able to backdate itself to the front.
@@ -142,7 +147,7 @@ export default async function handler(
         userName,
         songTitle,
         videoId,
-        via: "search",
+        via,
         singers: singerKeys(userName).length,
       });
       res.status(200).json({ code: 200, message: "Song added." });

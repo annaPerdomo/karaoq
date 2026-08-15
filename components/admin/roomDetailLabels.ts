@@ -83,6 +83,7 @@ export interface RoomDetailData {
 
 export const VIA_LABELS: Record<string, string> = {
   search: 'Search',
+  paste: 'Link',
   board_claim: 'Request',
   singwithme: 'Sing With Me',
 };
