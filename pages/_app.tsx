@@ -3,7 +3,10 @@ import { useEffect } from 'react'
 import type { AppProps } from 'next/app'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
-import { Analytics } from '@vercel/analytics/next'
+// The /react entry, not /next: the /next one is App-Router-only — it renders a
+// <Suspense> boundary that pages-router route updates can hit before it
+// hydrates, which crashes slow phones with React error #421.
+import { Analytics } from '@vercel/analytics/react'
 import { I18nProvider, useT } from '../lib/i18n/I18nProvider'
 import { renderWithHeart } from '../lib/i18n/renderWithHeart'
 import { installErrorReporting } from '../lib/errorReporting'
@@ -44,7 +47,11 @@ function MyApp({ Component, pageProps }: AppProps) {
       </Head>
       <Component {...pageProps} />
       {showFooter && <AppFooter />}
-      <Analytics />
+      {/* Passing route turns the script's own auto-tracking off, which would
+          otherwise send raw pathnames — and a join code is the whole key to a
+          room. Gated on isReady: room pages are statically optimized, so
+          asPath settles a tick late and would bill one visit as two. */}
+      {router.isReady && <Analytics route={router.pathname} path={router.asPath} />}
     </I18nProvider>
   );
 }
