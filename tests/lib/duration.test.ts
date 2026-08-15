@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseIso8601Duration, formatDuration } from "../../lib/duration";
+import { parseIso8601Duration, formatDuration, formatCountdown } from "../../lib/duration";
 
 describe("parseIso8601Duration", () => {
   it("parses minutes and seconds", () => {
@@ -43,5 +43,35 @@ describe("formatDuration", () => {
 
   it("clamps negatives to zero", () => {
     expect(formatDuration(-5)).toBe("0:00");
+  });
+});
+
+describe("formatCountdown", () => {
+  const t = (key: string, vars?: Record<string, string | number>) =>
+    key === "time.hoursMinutes"
+      ? `${vars!.hours} hr ${vars!.minutes} min`
+      : key === "time.hours"
+      ? `${vars!.count} hr`
+      : `${vars!.count} min`;
+
+  it("shows hours and minutes together", () => {
+    expect(formatCountdown(2 * 3600 + 15 * 60, t)).toBe("2 hr 15 min");
+  });
+
+  it("omits minutes on an exact hour", () => {
+    expect(formatCountdown(3 * 3600, t)).toBe("3 hr");
+  });
+
+  it("shows minutes only under an hour", () => {
+    expect(formatCountdown(45 * 60, t)).toBe("45 min");
+  });
+
+  it("rounds up to the next minute rather than underestimating", () => {
+    expect(formatCountdown(90, t)).toBe("2 min");
+  });
+
+  it("never reports zero, even for a reset that's already due", () => {
+    expect(formatCountdown(0, t)).toBe("1 min");
+    expect(formatCountdown(-10, t)).toBe("1 min");
   });
 });

@@ -19,3 +19,21 @@ export function formatDuration(totalSeconds: number): string {
   const ss = String(s).padStart(2, "0");
   return h > 0 ? `${h}:${String(m).padStart(2, "0")}:${ss}` : `${m}:${ss}`;
 }
+
+export type Translate = (key: string, vars?: Record<string, string | number>) => string;
+
+/** The single place the time.* keys are dispatched, so a locale that adds real
+ * plural forms is taught once and every duration surface picks it up. */
+export function formatHoursMinutes(totalMinutes: number, t: Translate): string {
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours > 0 && minutes > 0) return t("time.hoursMinutes", { hours, minutes });
+  if (hours > 0) return t("time.hours", { count: hours });
+  return t("time.minutes", { count: minutes });
+}
+
+/** Rounded UP, unlike a queue ETA (see roundEtaSeconds): a quota reset is a
+ * hard deadline, and rounding down makes the app wrong once the clock passes. */
+export function formatCountdown(seconds: number, t: Translate): string {
+  return formatHoursMinutes(Math.max(1, Math.ceil(seconds / 60)), t);
+}

@@ -60,6 +60,12 @@
   transition: border-color 0.15s ease;
 }
 
+/* Placeholder only — typed queries keep the full 1rem. Sized between the
+   input text and the 0.75rem labels around it so the hint reads as a hint. */
+.searchInput::placeholder {
+  font-size: 0.85rem;
+}
+
 .searchInput:focus {
   border-color: rgba(255, 45, 120, 0.4);
 }
@@ -508,14 +514,6 @@
   text-align: center;
 }
 
-.unavailableEmoji {
-  display: block;
-  font-size: 1.8rem;
-  margin-bottom: 0.6rem;
-}
-
-/* Sibling of .unavailableEmoji for the drawn icons: an SVG takes a box, not a
-   font size, but sits on the same baseline rhythm. */
 .unavailableIcon {
   display: block;
   width: 36px;
@@ -539,24 +537,6 @@
   max-width: 32ch;
   margin-left: auto;
   margin-right: auto;
-}
-
-.unavailableFeedback {
-  display: inline-flex;
-  align-items: center;
-  padding: 8px 18px;
-  border-radius: 999px;
-  background: none;
-  border: 1.5px solid rgba(255, 45, 120, 0.4);
-  color: #ff2d78;
-  font-size: 0.78rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.12s ease, border-color 0.12s ease;
-}
-.unavailableFeedback:hover {
-  background: rgba(255, 45, 120, 0.08);
-  border-color: #ff2d78;
 }
 
 /* Karaoke-flavoured "finding songs" header: five bouncing equalizer bars in

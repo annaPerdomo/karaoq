@@ -2,10 +2,10 @@ import * as React from 'react';
 
 import styles from '../../styles/SongSearch.module.css';
 import { YoutubeResult, SearchFailure } from '../../app/queue/searchYoutube';
-import { formatDuration } from '../../lib/duration';
+import { formatCountdown, formatDuration } from '../../lib/duration';
 import { useT } from '../../lib/i18n/I18nProvider';
-import FeedbackTrigger from '../feedback/FeedbackTrigger';
 import BrokenLinkIcon from './BrokenLinkIcon';
+import NotesIcon from './NotesIcon';
 
 interface SearchResultsProps {
   hasSearched: boolean;
@@ -23,13 +23,10 @@ interface SearchResultsProps {
   onPreview: (song: YoutubeResult) => void;
   onAdd: (song: YoutubeResult) => void;
   onShowMore: () => void;
-  roomId?: string;
-  role?: 'host' | 'singer';
 }
 
 const SKELETON_COUNT = 8;
-// Pasted-link outcomes. These are about what the singer typed, not about our
-// backend, so they replace the "we're popular right now" framing entirely.
+// About what the singer typed, so these replace the "we're popular" framing.
 const LINK_MESSAGE_KEYS: Record<NonNullable<SearchFailure['link']>, string> = {
   not_found: 'search.linkNotFound',
   not_embeddable: 'search.linkNotEmbeddable',
@@ -52,8 +49,6 @@ const SearchResults: React.FC<SearchResultsProps> = ({
   onPreview,
   onAdd,
   onShowMore,
-  roomId,
-  role,
 }) => {
   const { t, locale } = useT();
   const compactViews = React.useMemo(
@@ -66,18 +61,14 @@ const SearchResults: React.FC<SearchResultsProps> = ({
   );
 
   if (hasSearched && !searching && results.length === 0 && searchError) {
-    // Round up so "58 minutes left" never reads as "0h".
-    const hoursLeft = searchError.resetsAt
-      ? Math.max(
-          1,
-          Math.ceil(
-            (new Date(searchError.resetsAt).getTime() - Date.now()) / 3_600_000
-          )
-        )
-      : null;
+    // An unparseable resetsAt stays null rather than becoming NaN, so a mangled
+    // error body falls back to the generic copy, not "resets in about NaN min".
+    const msLeft = searchError.resetsAt
+      ? new Date(searchError.resetsAt).getTime() - Date.now()
+      : NaN;
+    const secondsLeft = Number.isFinite(msLeft) ? Math.max(0, msLeft / 1000) : null;
     const linkKey = searchError.link ? LINK_MESSAGE_KEYS[searchError.link] : null;
-    // A link that didn't resolve is the singer's to fix, so it gets neither the
-    // apology title nor the "tell us what happened" prompt.
+    // No apology title: a link that didn't resolve isn't our mistake to own.
     if (linkKey) {
       return (
         <div className={styles.unavailable}>
@@ -86,24 +77,23 @@ const SearchResults: React.FC<SearchResultsProps> = ({
         </div>
       );
     }
+    const quotaMessage = searchError.quota && secondsLeft !== null;
     return (
       <div className={styles.unavailable}>
-        <span className={styles.unavailableEmoji} aria-hidden="true">🎤</span>
-        <p className={styles.unavailableTitle}>{t('search.unavailable.title')}</p>
+        <NotesIcon className={styles.unavailableIcon} />
+        <p className={styles.unavailableTitle}>
+          {quotaMessage ? t('search.unavailable.quotaTitle') : t('search.unavailable.title')}
+        </p>
         <p className={styles.unavailableBody}>
-          {searchError.quota && hoursLeft
-            ? t('search.unavailable.quotaBody', { hours: hoursLeft })
+          {quotaMessage
+            ? t('search.unavailable.quotaBody', { time: formatCountdown(secondsLeft, t) })
             : t('search.unavailable.body')}
         </p>
-        {/* A spent quota still leaves the 1-unit lookups working for a while,
-            so a *searcher* is told to paste a link. Someone whose paste just
-            hit the same quota isn't — that would loop them. */}
+        {/* A spent quota still leaves the 1-unit lookups working, so a searcher
+            is told to paste a link. Someone whose paste hit it isn't. */}
         {searchError.quota && searchError.source !== 'lookup' && (
           <p className={styles.unavailableBody}>{t('search.quotaPasteHint')}</p>
         )}
-        <FeedbackTrigger className={styles.unavailableFeedback} roomId={roomId} role={role}>
-          {t('search.unavailable.feedback')}
-        </FeedbackTrigger>
       </div>
     );
   }

@@ -1,4 +1,5 @@
 import { QueueEntry } from "../pages/api/types";
+import { formatHoursMinutes, type Translate } from "./duration";
 import { MAX_SONG_SECONDS, MIN_SONG_SECONDS } from "./limits";
 
 // How long the queue will take, honestly approximate. Two things are unknown at
@@ -215,8 +216,6 @@ export function roundEtaSeconds(seconds: number): number {
   return Math.round(minutes / 10) * 10 * 60;
 }
 
-type Translate = (key: string, vars?: Record<string, string | number>) => string;
-
 /**
  * "<1 min" / "25 min" / "1 hr 20 min". Rounded per roundEtaSeconds — callers
  * add the "~" through their own copy so a locale can place it correctly.
@@ -224,11 +223,7 @@ type Translate = (key: string, vars?: Record<string, string | number>) => string
 export function formatApproxDuration(seconds: number, t: Translate): string {
   const rounded = roundEtaSeconds(Math.max(0, seconds));
   if (rounded <= 0) return t("time.lessThanMinute");
-  const hours = Math.floor(rounded / 3600);
-  const minutes = Math.round((rounded % 3600) / 60);
-  if (hours > 0 && minutes > 0) return t("time.hoursMinutes", { hours, minutes });
-  if (hours > 0) return t("time.hours", { count: hours });
-  return t("time.minutes", { count: minutes });
+  return formatHoursMinutes(rounded / 60, t);
 }
 
 /**

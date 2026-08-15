@@ -146,8 +146,6 @@ const SongSearch: React.FC<SongSearchProps> = ({
       <SearchOptions
         karaokeMode={karaokeMode}
         onToggleKaraoke={toggleKaraokeMode}
-        // Duration and sort don't apply to a link the singer already picked —
-        // leaving the chips up would imply they filter it.
         showFilters={showFilters && !lookupMode}
         filters={filters}
         onUpdateFilter={updateFilter}
@@ -183,8 +181,6 @@ const SongSearch: React.FC<SongSearchProps> = ({
         onPreview={(song) => openConfirm(song, true)}
         onAdd={(song) => (onPick ? handlePick(song) : openConfirm(song, false))}
         onShowMore={() => setVisibleCount((c) => c + INITIAL_RESULTS)}
-        roomId={roomId}
-        role={publicRole}
       />
 
       {!hasSearched && results.length === 0 && !justAdded && (
