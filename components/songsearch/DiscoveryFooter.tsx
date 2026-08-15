@@ -30,6 +30,9 @@ const DiscoveryFooter: React.FC<DiscoveryFooterProps> = ({
       </div>
 
       <div className={styles.inlineFooter}>
+        {/* Legal stays on every role — nothing else on /host links privacy or
+            terms, and _app's AppFooter is suppressed there. Only credit and
+            feedback would duplicate the host transport bar. */}
         <div className={styles.inlineFooterLegal}>
           <Link href="/privacy" className={styles.inlineFooterLink}>
             {t('footer.privacy')}
@@ -39,14 +42,18 @@ const DiscoveryFooter: React.FC<DiscoveryFooterProps> = ({
             {t('footer.terms')}
           </Link>
         </div>
-        <a href="https://variationsonastring.com" target="_blank" rel="noopener noreferrer" className={styles.inlineFooterLink}>
-          {renderWithHeart(t('footer.credit'), styles.inlineFooterHeart)}
-        </a>
-        <FeedbackTrigger
-          className={styles.inlineFooterFeedback}
-          roomId={roomId}
-          role={role}
-        />
+        {role !== 'host' && (
+          <>
+            <a href="https://variationsonastring.com" target="_blank" rel="noopener noreferrer" className={styles.inlineFooterLink}>
+              {renderWithHeart(t('footer.credit'), styles.inlineFooterHeart)}
+            </a>
+            <FeedbackTrigger
+              className={styles.inlineFooterFeedback}
+              roomId={roomId}
+              role={role}
+            />
+          </>
+        )}
       </div>
     </>
   );
