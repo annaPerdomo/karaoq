@@ -117,7 +117,7 @@ export interface SearchHealthData {
   last24h: number;
 }
 
-/** Pasted-link usage over 30 days — is anyone actually using the paste path? */
+/** Pasted-link usage over 30 days. */
 export interface LinkLookupData {
   total: number;
   bySrc: { _id: string; count: number }[];

@@ -8,19 +8,15 @@ export interface SearchResult {
   viewCount?: number;
 }
 
-// Song searches repeat heavily across rooms ("bohemian rhapsody karaoke"),
-// and each uncached YouTube API search burns 100 of the 10,000 daily quota
-// units. Cached results are served from Mongo, which stretches the quota from
-// ~100 searches/day to ~100 *distinct* searches/day.
+// Each uncached YouTube search burns 100 of the 10,000 daily quota units, so
+// caching stretches it from ~100 searches/day to ~100 *distinct* searches/day.
 //
 // Entries stay readable for 14 days (TTL index in lib/mongodb.ts) but are only
-// served outright while under the caller's freshness window. Past that a live
-// call runs first and refreshes them; the aging copy is used only when YouTube
-// is unreachable or out of quota, so a spent quota degrades to slightly-stale
-// results instead of an error page.
+// served outright inside the caller's freshness window. Past that they are the
+// outage fallback, so a spent quota degrades to stale results, not an error.
 //
-// Shared by /api/search and /api/video-lookup. Their keys can never collide:
-// search keys always contain "|", lookup keys are always "video:<id>".
+// Shared by /api/search and /api/video-lookup; their keys can never collide,
+// search keys always contain "|" and lookup keys are always "video:<id>".
 
 export interface CacheHit {
   results: SearchResult[];

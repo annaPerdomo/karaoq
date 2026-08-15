@@ -48,8 +48,8 @@ export default function SearchHealthCard({
         </>
       )}
       {links && (
-        // Always rendered, zero included: "nobody pasted a link in 30 days" is
-        // the answer this row exists to give.
+        // Rendered at zero too: "nobody pasted a link in 30 days" is the answer
+        // this row exists to give.
         <p className={styles.cardNote}>
           {[
             `Link lookups (30d): ${links.total}`,

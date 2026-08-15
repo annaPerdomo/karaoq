@@ -45,16 +45,14 @@ export function searchFailLabel(
   return SEARCH_FAIL_LABELS[key] ?? key;
 }
 
-// How a pasted link resolved — see /api/video-lookup. Read as a run-on line
-// ("38 found · 3 bad link"), so these stay lowercase.
+// Read as a run-on line ("38 found · 3 bad link"), so these stay lowercase.
 export const LOOKUP_OUTCOME_LABELS: Record<string, string> = {
   hit: 'found',
   not_found: 'bad link',
   not_embeddable: 'blocked',
 };
 
-/** Outcomes in a fixed order so the row reads the same shape every render,
- * with any unrecognised ones appended rather than dropped. */
+/** Unrecognised outcomes are appended rather than dropped. */
 export function lookupOutcomeParts(
   byOutcome: { _id: string; count: number }[]
 ): string[] {

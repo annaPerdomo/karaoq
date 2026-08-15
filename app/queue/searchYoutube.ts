@@ -35,12 +35,11 @@ export interface SearchFailure {
   /** Which flow failed — the quota message differs, because telling someone to
    * paste a link when pasting a link is what just failed would loop them. */
   source?: 'search' | 'lookup';
-  /** Link-specific outcomes; unset for ordinary search failures. */
   link?: 'not_found' | 'not_embeddable' | 'no_video' | 'not_youtube';
 }
 
-/** One /api/search or /api/video-lookup row → a YoutubeResult. Optional fields
- * are dropped rather than kept at 0, so the UI's `> 0` badge checks hold. */
+/** Optional fields are dropped rather than kept at 0, so the UI's `> 0` badge
+ * checks hold. */
 export function toYoutubeResult(item: any): YoutubeResult {
   return {
     title: decodeHtml(item?.title ?? ''),

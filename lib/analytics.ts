@@ -62,12 +62,9 @@ export interface AnalyticsEvent {
   // searching, or "" from clients predating the field — and either way the
   // failure is the API's, not the room's, so geo roll-ups must exclude these.
   searchOutcome?: "stale" | "error";
-  // link_lookup: one per resolved /api/video-lookup — which surface asked, how
-  // it resolved, and whether the cache covered it. Operational telemetry about
-  // a feature's usage rather than audience data, so like search_failed it's
-  // excluded from geo roll-ups and the public stats. Carries no YouTube
-  // metadata: outcome counts don't need a title or a video id, which keeps
-  // these rows clear of the 30-day retention split entirely.
+  // link_lookup: usage telemetry, not audience data, so like search_failed it's
+  // excluded from geo roll-ups and the public stats. Deliberately carries no
+  // YouTube metadata, keeping these rows clear of the 30-day retention split.
   src?: "paste" | "trending" | "unknown";
   lookupOutcome?: "hit" | "not_found" | "not_embeddable";
   lookupCache?: "fresh" | "miss";

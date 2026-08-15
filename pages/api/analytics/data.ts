@@ -14,8 +14,9 @@ import {
 
 const FUNNEL_WINDOW_DAYS = 30;
 
-// Operational telemetry, not audience data: these say how the YouTube API
-// behaved, not that a room happened somewhere, and their roomId is often "".
+// Excluded from the geo roll-ups: these say how the YouTube API behaved, not
+// that a room happened somewhere, and the roomId "" ones would each count as a
+// room under $addToSet — inflating every country and city that has real ones.
 const NON_ROOM_EVENTS = ["search_failed", "link_lookup"];
 
 // Cap on a session's counted length: anything above it is the legacy revisit artifact
@@ -131,10 +132,6 @@ export default async function handler(
         ])
         .toArray(),
 
-      // search_failed and link_lookup are excluded from both geo roll-ups:
-      // they're operational telemetry, saying nothing about where rooms happen,
-      // and the ones carrying roomId "" would count as a room under $addToSet —
-      // inflating every country and city that has real ones.
       events
         .aggregate([
           { $match: { type: { $nin: NON_ROOM_EVENTS }, country: { $exists: true, $ne: null } } },
@@ -596,9 +593,8 @@ export default async function handler(
         timestamp: { $gte: dayAgo },
       }),
 
-      // Pasted-link usage over the same 30 days. Grouped on both fields at once
-      // so summarizeLinkLookups can derive the total and both breakdowns from
-      // one scan (lib/analyticsStats).
+      // Grouped on both fields at once so summarizeLinkLookups can derive the
+      // total and both breakdowns from this one 30-day scan.
       events
         .aggregate([
           { $match: { type: "link_lookup", timestamp: { $gte: thirtyDaysAgo } } },

@@ -10,8 +10,6 @@ import lookupVideo from '../../../app/queue/lookupVideo';
 import { classifySearchInput } from '../../../lib/videoLink';
 import { INITIAL_RESULTS } from '../constants';
 
-/** A failed lookup, mapped to what the user should be told. 404 and 422 are
- * about the link they pasted; everything else is our backend. */
 function lookupFailure(err: unknown): SearchFailure {
   if (err instanceof SearchUnavailableError) {
     if (err.status === 404) return { quota: false, source: 'lookup', link: 'not_found' };
@@ -43,9 +41,9 @@ export function useSongSearchState({ roomId, role }: UseSongSearchStateArgs) {
   // null = search is fine. Set only on a backend failure (quota/outage/rate
   // limit) so a real zero-result search still reads as "no songs found".
   const [searchError, setSearchError] = React.useState<SearchFailure | null>(null);
-  // The current view came from a pasted link, not a text search. The query box
-  // then holds a URL, so re-running it as a search would spend a full 101-unit
-  // search on a garbage query — the filter and karaoke controls must sit still.
+  // These results came from a pasted link, so the box holds a URL: every
+  // control that would re-search it must sit still, or we spend 101 units on
+  // guaranteed-garbage results.
   const [lookupMode, setLookupMode] = React.useState(false);
   const [filters, setFilters] = React.useState<SearchFilters>({
     duration: 'any',
@@ -68,9 +66,8 @@ export function useSongSearchState({ roomId, role }: UseSongSearchStateArgs) {
     }
   }, [query, hasSearched]);
 
-  // Editing the box always ends lookup mode: whatever is in there now hasn't
-  // been classified yet, so the next search() decides afresh. Setting the flag
-  // inside search() doesn't touch `query`, so this can't undo it.
+  // Editing the box always ends lookup mode — the text hasn't been classified
+  // yet. Safe against search(): setting the flag there doesn't touch `query`.
   React.useEffect(() => {
     setLookupMode(false);
   }, [query]);
@@ -119,8 +116,6 @@ export function useSongSearchState({ roomId, role }: UseSongSearchStateArgs) {
       });
   }
 
-  // The pasted-link counterpart of runSearch: one videos.list lookup, no
-  // karaoke suffix and no filters — the singer already told us the exact video.
   function runLookup(videoId: string, from: 'url' | 'bare', rawQuery: string) {
     clearTimeout(debounceRef.current);
     abortRef.current?.abort();
@@ -137,14 +132,10 @@ export function useSongSearchState({ roomId, role }: UseSongSearchStateArgs) {
         setVisibleCount(INITIAL_RESULTS);
       })
       .catch((err) => {
-        // Same caveat as runSearch: an aborted body read surfaces as a
-        // SearchUnavailableError, not an AbortError, so a superseded lookup
-        // would stamp a stale failure onto the new result set.
         if (err?.name === 'AbortError' || controller.signal.aborted) return;
-        // An 11-character *word* that isn't a video id is far likelier to be a
-        // real query than a typo'd id, so a bare miss falls through to the
-        // search it would have been. A URL that misses never does — searching
-        // the URL string is guaranteed garbage at 101 units.
+        // An 11-character *word* is likelier a real query than a typo'd id, so
+        // a bare miss falls through to the search it would have been. A URL
+        // that misses never does — searching a URL string is 101 wasted units.
         if (
           from === 'bare' &&
           err instanceof SearchUnavailableError &&
@@ -164,9 +155,8 @@ export function useSongSearchState({ roomId, role }: UseSongSearchStateArgs) {
       });
   }
 
-  // A link we can tell isn't a single video before spending anything: a
-  // playlist, a channel, a Vimeo URL. Never searched — the input keeps its text
-  // so the singer can fix the link.
+  // A playlist, a channel, a Vimeo URL: never searched, and the input keeps its
+  // text so the singer can fix the link.
   function failLink(link: 'no_video' | 'not_youtube') {
     clearTimeout(debounceRef.current);
     abortRef.current?.abort();

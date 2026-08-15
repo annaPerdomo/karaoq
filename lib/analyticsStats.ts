@@ -95,14 +95,9 @@ export interface LinkLookupSummary {
   byOutcome: { _id: string; count: number }[];
 }
 
-/**
- * Folds the one (src × outcome) aggregation into the two breakdowns and the
- * total /admin shows. Derived rather than queried three times: one 30-day scan
- * of link_lookup answers all three, and the numbers can't disagree.
- *
- * Rows written before a field existed group under "unknown" rather than
- * vanishing, so the breakdowns always sum to the total.
- */
+/** Folds one (src × outcome) aggregation into both breakdowns and the total, so
+ * the three can't disagree. Rows written before a field existed group under
+ * "unknown" rather than vanishing, keeping the breakdowns summing to the total. */
 export function summarizeLinkLookups(rows: LinkLookupRow[]): LinkLookupSummary {
   const bySrc = new Map<string, number>();
   const byOutcome = new Map<string, number>();

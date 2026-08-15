@@ -33,10 +33,10 @@ export async function fetchPublicStats(): Promise<PublicStats> {
       // where people actually spend time, not just one action — except
       // search_failed and link_lookup, which any unauthenticated caller can
       // emit at will (trip the rate limiter, paste any link), and this ranking
-      // lights the public world map. The
-      // `country` index (see lib/mongodb.ts) turns this from a collection scan
-      // into an index scan; no explicit hint, because index creation is
-      // best-effort and hinting a not-yet-built index is a hard error.
+      // lights the public world map. The `country` index (see lib/mongodb.ts)
+      // turns this from a collection scan into an index scan; no explicit hint,
+      // because index creation is best-effort and hinting a not-yet-built
+      // index is a hard error.
       events
         .aggregate<{ _id: string }>([
           {

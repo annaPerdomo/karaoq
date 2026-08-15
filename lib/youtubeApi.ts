@@ -1,7 +1,3 @@
-// Shared YouTube Data API plumbing for the two endpoints that call it:
-// /api/search (search.list + enrichment) and /api/video-lookup (videos.list).
-// Both need the same quota detection, so it lives here rather than in either.
-
 /** A YouTube API failure, flagged when the cause is a spent quota so callers
  * can say when search comes back rather than "try again shortly". */
 export class YoutubeApiError extends Error {
@@ -13,8 +9,6 @@ export class YoutubeApiError extends Error {
   }
 }
 
-/** GETs a YouTube Data API URL and returns its parsed body, throwing a
- * YoutubeApiError on any failure. */
 export async function fetchYoutubeApi(
   url: string,
   timeoutMs: number
