@@ -4,11 +4,13 @@ import { fairPushSpec, singerKeys } from "../../../../lib/fairQueue";
 import {
   isValidQueueEntry,
   MAX_QUEUE_LENGTH,
+  MAX_TITLE_LENGTH,
   rateLimit,
   sanitizeSongDuration,
 } from "../../../../lib/limits";
 import { getRoomsCollection } from "../../../../lib/mongodb";
 import { normalizeRoomId } from "../../../../lib/roomCode";
+import { catalogEntry } from "../../../../lib/suggestionCatalog";
 
 export default async function handler(
   req: NextApiRequest,
@@ -33,6 +35,7 @@ export default async function handler(
     songTitle: string;
     durationSeconds?: unknown;
     via?: unknown;
+    suggestionKey?: unknown;
   };
   try {
     const parsed = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
@@ -58,6 +61,16 @@ export default async function handler(
   // Only the search box posts here — board claims and Sing-with-me have their
   // own endpoints — so an unrecognized or absent value is "search", not spoofable.
   const via = body.via === "paste" ? "paste" : "search";
+  // The cron reads these to decide which video a suggestion resolves to for
+  // every room, so an unrecognised key is an anonymous claim about global
+  // content. Dropped, not rejected — the add still succeeds without a vote.
+  const suggestionKey =
+    typeof body.suggestionKey === "string" &&
+    body.suggestionKey.length > 0 &&
+    body.suggestionKey.length <= MAX_TITLE_LENGTH &&
+    catalogEntry(body.suggestionKey)
+      ? body.suggestionKey
+      : undefined;
 
   // Stamped server-side, never taken from the body: queue time decides the running order, so a
   // client must not be able to backdate itself to the front.
@@ -148,6 +161,7 @@ export default async function handler(
         songTitle,
         videoId,
         via,
+        ...(suggestionKey ? { suggestionKey } : {}),
         singers: singerKeys(userName).length,
       });
       res.status(200).json({ code: 200, message: "Song added." });

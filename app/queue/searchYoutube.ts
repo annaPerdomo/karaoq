@@ -8,6 +8,9 @@ export interface YoutubeResult {
   // degraded fallback results) won't carry these.
   durationSeconds?: number;
   viewCount?: number;
+  /** The video singers converge on for a catalogued suggestion — served first
+   * and badged. Only ever set on resolved suggestions (lib/suggestionVideos). */
+  pinned?: boolean;
 }
 
 /** Thrown when /api/search responds non-2xx (quota exhausted, rate-limited,
@@ -51,6 +54,7 @@ export function toYoutubeResult(item: any): YoutubeResult {
     ...(typeof item?.viewCount === 'number' && item.viewCount > 0
       ? { viewCount: item.viewCount }
       : {}),
+    ...(item?.pinned === true ? { pinned: true } : {}),
   };
 }
 

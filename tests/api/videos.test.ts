@@ -25,6 +25,7 @@ process.env.MONGODB_URI = "mongodb://test";
 process.env.MONGODB_DB = "test-db";
 
 import handler from "../../pages/api/queue/[id]/videos";
+import { suggestionCatalog } from "../../lib/suggestionCatalog";
 
 function createRes() {
   let statusCode = 200;
@@ -446,6 +447,45 @@ describe("POST /api/queue/[id]/videos - Add song to queue", () => {
 
     it("collapses unrecognized values to search", async () => {
       expect(await addVia("board_claim")).toBe("search");
+    });
+  });
+
+  // The cron reads suggestionKey to decide which video a song resolves to for
+  // every room, so a length check is not enough to store one on.
+  describe("suggestionKey provenance", () => {
+    async function addWithKey(suggestionKey: unknown): Promise<unknown> {
+      const room: Room = { id: "ROOM1", queue: [], activeVideoIndex: 0, isPlaying: false };
+      mockCollection.findOne.mockResolvedValue(room);
+      mockCollection.updateOne.mockResolvedValue({ matchedCount: 1, modifiedCount: 1 });
+
+      const req = createMockReq({
+        method: "POST",
+        query: { id: "ROOM1" },
+        body: {
+          entryId: "entry-1",
+          userName: "Anna",
+          videoId: "dQw4w9WgXcQ",
+          songTitle: "Dancing Queen",
+          suggestionKey,
+        },
+      });
+      await handler(req, createRes());
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      return mockCollection.insertOne.mock.calls[0][0].suggestionKey;
+    }
+
+    it("records a key that names a real catalog song", async () => {
+      const key = Array.from(suggestionCatalog().keys())[0];
+
+      expect(await addWithKey(key)).toBe(key);
+    });
+
+    it("drops a key that isn't in the catalog", async () => {
+      expect(await addWithKey("whatever i felt like sending karaoke")).toBeUndefined();
+    });
+
+    it("drops a non-string key", async () => {
+      expect(await addWithKey({ $ne: null })).toBeUndefined();
     });
   });
 });

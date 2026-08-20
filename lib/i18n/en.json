@@ -85,6 +85,7 @@
   "search.finding": "Finding songs…",
   "search.showMore": "Show more results",
   "search.views": "{count} views",
+  "search.popularPick": "Most sung",
   "search.resultsSource": "Results from YouTube",
   "search.unavailable.title": "Whoa, we're popular right now!",
   "search.unavailable.body": "Search needs a quick breather — try again in a few minutes.",

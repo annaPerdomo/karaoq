@@ -43,6 +43,9 @@ export interface AnalyticsEvent {
   suggestionSource?: "random" | "song_pick" | "genre_chip" | "trending";
   sectionId?: string;
   categoryId?: string;
+  // Our own key (lib/suggestionCatalog), not a YouTube field, so it stays on
+  // the event rather than expiring at 30 days.
+  suggestionKey?: string;
   // Absent on events from before this field existed, which were all search adds.
   // "paste" is newer than "search": pastes before it shipped are in the search bucket.
   via?: "search" | "paste" | "board_claim" | "singwithme";

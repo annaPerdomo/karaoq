@@ -161,6 +161,12 @@ const SearchResults: React.FC<SearchResultsProps> = ({
             )}
           </button>
           <div className={styles.resultInfo}>
+            {/* Only set on a catalogued suggestion: arrangement, key and
+                backing take real listening to tell apart, so the crowd's
+                verdict is worth surfacing. */}
+            {song.pinned && (
+              <span className={styles.pinnedBadge}>★ {t('search.popularPick')}</span>
+            )}
             <span className={styles.resultTitle}>{song.title}</span>
             {typeof song.viewCount === 'number' && song.viewCount > 0 && (
               <span className={styles.resultViews}>

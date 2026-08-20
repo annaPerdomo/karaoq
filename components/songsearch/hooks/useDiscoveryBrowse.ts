@@ -22,7 +22,12 @@ interface UseDiscoveryBrowseArgs {
   filters: SearchFilters;
   karaokeMode: boolean;
   setQuery: (query: string) => void;
-  runSearch: (rawQuery: string, activeFilters: SearchFilters, karaoke: boolean) => void;
+  runSearch: (
+    rawQuery: string,
+    activeFilters: SearchFilters,
+    karaoke: boolean,
+    fromSuggestion?: boolean
+  ) => void;
   trackFirstSearch: () => void;
 }
 
@@ -149,7 +154,8 @@ export function useDiscoveryBrowse({
       songArtist: song.artist,
     });
 
-    runSearch(q, filters, karaokeMode);
+    // Lets an add off these results name the catalogued song it settled.
+    runSearch(q, filters, karaokeMode, true);
   }
 
   function handleSurpriseMe() {
