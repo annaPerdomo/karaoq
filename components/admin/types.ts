@@ -156,6 +156,16 @@ export interface RoomErrorRow {
   timestamp: string;
 }
 
+/** One song idea a singer tapped in this room. */
+export interface RoomSuggestionRow {
+  source: string;
+  sectionId: string | null;
+  categoryId: string | null;
+  songTitle: string | null;
+  songArtist: string | null;
+  timestamp: string;
+}
+
 /** One failed /api/search attributed to this room. */
 export interface RoomSearchFailRow {
   failReason: string | null;
@@ -170,6 +180,9 @@ export interface RoomDossierData {
   songs: DossierSongRow[];
   requests: RequestRow[];
   singWithMe: SingWithMeRow[];
+  /** Which "Song ideas" this room reached for — the per-region signal behind
+   *  the language packs. Absent from rooms whose dossier predates the panel. */
+  suggestions?: RoomSuggestionRow[];
   cheers?: {
     total: number;
     byEmoji: { emoji: string; count: number }[];
@@ -196,6 +209,7 @@ export interface RoomDossierData {
     songs: number;
     requests: number;
     singWithMe: number;
+    suggestions?: number;
     reactions: number;
     searches: number;
     errors?: number;

@@ -10,6 +10,7 @@ import {
 } from '../roomDetailLabels';
 import { BoardsSection, PeopleSection, TimelineSection } from './DossierSections';
 import { CheersPanel, SetupPanel } from './DossierPanels';
+import SuggestionsSection from './SuggestionsSection';
 
 function spanLabel(span: RoomDossierData['span']): string | null {
   if (!span) return null;
@@ -69,6 +70,7 @@ export default function RoomDossier({
   const hasBoards = data.requests.length + data.singWithMe.length > 0;
   const customized = Boolean(data.layout?.display || data.layout?.host);
   const hasSetup = customized || data.fairRotation.toggles.length > 0;
+  const hasSuggestions = (data.suggestions?.length ?? 0) > 0;
 
   const quiet = [
     !hasCheers && 'no cheers',
@@ -129,6 +131,9 @@ export default function RoomDossier({
             fair={data.fairRotation}
             wide={!hasBoards}
           />
+        )}
+        {hasSuggestions && (
+          <SuggestionsSection suggestions={data.suggestions ?? []} wide />
         )}
       </div>
     </div>

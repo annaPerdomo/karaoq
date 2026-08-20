@@ -9,12 +9,21 @@ export const SOURCE_LABELS: Record<string, string> = {
   trending: 'Trending',
 };
 
+// A pack id missing here renders as its raw id, which is how a new pack
+// announces itself as unlabelled rather than reading as one of these.
 export const SECTION_LABELS: Record<string, string> = {
   genre: 'Genre',
   'voice-type': 'Voice type',
   spanish: 'Spanish',
   kpop: 'K-Pop',
   japanese: 'Japanese',
+  brasil: '🇧🇷 Brasil',
+  cesko: '🇨🇿 Česky',
+  deutsch: '🇩🇪 Deutsch',
+  francais: '🇫🇷 Français',
+  indonesia: '🇮🇩 Indonesia',
+  bollywood: '🇮🇳 Bollywood',
+  opm: '🇵🇭 OPM',
 };
 
 export const VIA_LABELS: Record<string, string> = {
