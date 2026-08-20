@@ -34,6 +34,13 @@ vi.mock("../../lib/analytics", () => ({
   isAnalyticsExempt: () => false,
 }));
 
+const readSuggestionMock = vi.fn(async (..._args: unknown[]): Promise<unknown> => null);
+const writeSuggestionMock = vi.fn();
+vi.mock("../../lib/suggestionVideos", () => ({
+  readSuggestionVideos: (...args: unknown[]) => readSuggestionMock(...args),
+  writeSuggestionVideos: (...args: unknown[]) => writeSuggestionMock(...args),
+}));
+
 const sendQuotaAlertMock = vi.fn(async (..._args: unknown[]) => {});
 vi.mock("../../lib/alerts", () => ({
   sendQuotaAlertOnce: (...args: unknown[]) => sendQuotaAlertMock(...args),
@@ -49,6 +56,8 @@ process.env.MONGODB_DB = "test-db";
 process.env.YOUTUBE_API_KEY = "test-key";
 
 import handler from "../../pages/api/search";
+import { SONG_SECTIONS, buildSongQuery } from "../../app/queue/songSuggestions";
+import { buildSearchQuery, searchCacheKey } from "../../lib/searchQuery";
 
 function createRes() {
   let statusCode = 200;
@@ -91,6 +100,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   rateLimitMock.mockReturnValue(true);
   markNotifiedMock.mockReturnValue(true);
+  readSuggestionMock.mockResolvedValue(null);
   mockCollection.findOne.mockResolvedValue(null);
   mockCollection.updateOne.mockResolvedValue({});
   vi.stubGlobal("fetch", fetchMock);
@@ -118,12 +128,58 @@ describe("GET /api/search", () => {
     expect(rateLimitMock).not.toHaveBeenCalled();
   });
 
+  it("finds an entry left under the old cache key format", async () => {
+    // Folding out punctuation orphaned every entry holding an apostrophe, so
+    // the day after the change would re-buy results already in Mongo.
+    const q = "Don't Stop Believin' karaoke";
+    const legacyKey = `${q.trim().toLowerCase()}|any|relevance`;
+    const cached = [{ title: "Journey", thumbnailUrl: "t", videoId: "abc" }];
+    mockCollection.findOne.mockImplementation(async (filter: { key: string }) =>
+      filter.key === legacyKey
+        ? { key: legacyKey, results: cached, createdAt: new Date() }
+        : null
+    );
+
+    const res = createRes();
+    await handler(createMockReq({ query: { q } }), res);
+
+    expect(res.getBody()).toEqual(cached);
+    expect(fetchMock).not.toHaveBeenCalled();
+    // ...and re-filed under the new key, so the next hit is a plain one.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(mockCollection.updateOne).toHaveBeenCalledWith(
+      { key: `${searchCacheKey(q)}|any|relevance` },
+      expect.anything(),
+      expect.anything()
+    );
+  });
+
+  it("won't launder a stale legacy entry into a fresh one", async () => {
+    // Re-keying restarts the age clock, so only a still-fresh copy is moved.
+    const q = "beyoncé halo karaoke";
+    const legacyKey = `${q.trim().toLowerCase()}|any|relevance`;
+    mockCollection.findOne.mockImplementation(async (filter: { key: string }) =>
+      filter.key === legacyKey
+        ? {
+            key: legacyKey,
+            results: [{ title: "Old", thumbnailUrl: "t", videoId: "old" }],
+            createdAt: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000),
+          }
+        : null
+    );
+
+    await handler(createMockReq({ query: { q } }), createRes());
+
+    // A live search ran, and nothing was written under the new key beforehand.
+    expect(fetchMock).toHaveBeenCalled();
+  });
+
   it("re-searches a stale entry and refreshes it when YouTube answers", async () => {
     const stale = [{ title: "Stale", thumbnailUrl: "t", videoId: "old" }];
     mockCollection.findOne.mockResolvedValue({
       key: "q|any|relevance",
       results: stale,
-      createdAt: new Date(Date.now() - 48 * 60 * 60 * 1000),
+      createdAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000),
     });
     fetchMock.mockImplementation(async (url: string) => {
       if (url.includes("/youtube/v3/search")) return jsonResponse(searchItems(["new"]));
@@ -146,7 +202,7 @@ describe("GET /api/search", () => {
     mockCollection.findOne.mockResolvedValue({
       key: "q|any|relevance",
       results: stale,
-      createdAt: new Date(Date.now() - 48 * 60 * 60 * 1000),
+      createdAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000),
     });
     fetchMock.mockImplementation(async () =>
       jsonResponse(
@@ -168,7 +224,7 @@ describe("GET /api/search", () => {
     mockCollection.findOne.mockResolvedValue({
       key: "q|any|relevance",
       results: [],
-      createdAt: new Date(Date.now() - 48 * 60 * 60 * 1000),
+      createdAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000),
     });
     fetchMock.mockImplementation(async () =>
       jsonResponse(
@@ -204,7 +260,7 @@ describe("GET /api/search", () => {
     expect(mockCollection.updateOne).not.toHaveBeenCalled();
   });
 
-  it("requests 25 results and enriches them with duration and view count", async () => {
+  it("requests 50 results and enriches them with duration and view count", async () => {
     fetchMock.mockImplementation(async (url: string) => {
       if (url.includes("/youtube/v3/search")) return jsonResponse(searchItems(["a", "b"]));
       if (url.includes("/youtube/v3/videos")) {
@@ -225,7 +281,7 @@ describe("GET /api/search", () => {
     await handler(createMockReq({ query: { q: "bohemian rhapsody" } }), res);
 
     const searchUrl = fetchMock.mock.calls.find(([u]) => String(u).includes("/search"))![0] as string;
-    expect(searchUrl).toContain("maxResults=25");
+    expect(searchUrl).toContain("maxResults=50");
 
     expect(res.getStatus()).toBe(200);
     expect(res.getBody()).toEqual([
@@ -281,6 +337,111 @@ describe("GET /api/search", () => {
     expect(res.getStatus()).toBe(429);
     expect(fetchMock).not.toHaveBeenCalled();
   });
+
+  it("collapses whitespace and stacked karaoke suffixes into one cache key", async () => {
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url.includes("/youtube/v3/search")) return jsonResponse(searchItems(["a"]));
+      if (url.includes("/youtube/v3/videos")) return jsonResponse({ items: [] });
+      throw new Error("unexpected fetch " + url);
+    });
+
+    const res = createRes();
+    await handler(
+      createMockReq({ query: { q: "  Abba   Waterloo  Karaoke karaoke " } }),
+      res
+    );
+
+    expect(res.getStatus()).toBe(200);
+    expect(mockCollection.findOne).toHaveBeenCalledWith({
+      key: "abba waterloo karaoke|any|relevance",
+    });
+    // The normalized form is also what gets searched — "karaoke karaoke"
+    // queried worse, not just cached twice.
+    const searchUrl = fetchMock.mock.calls.find(([u]) =>
+      String(u).includes("/search")
+    )![0] as string;
+    // URLSearchParams spells spaces as "+". Casing is the singer's; only the
+    // cache key is lowercased.
+    expect(searchUrl).toContain("q=Abba+Waterloo+Karaoke");
+  });
+
+  it("keys punctuation and accents onto the entry someone already paid for", async () => {
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url.includes("/youtube/v3/search")) return jsonResponse(searchItems(["a"]));
+      if (url.includes("/youtube/v3/videos")) return jsonResponse({ items: [] });
+      throw new Error("unexpected fetch " + url);
+    });
+
+    const res = createRes();
+    await handler(createMockReq({ query: { q: "Beyoncé - Halo!" } }), res);
+
+    expect(res.getStatus()).toBe(200);
+    // The singer who typed "beyonce halo" gets a cache hit instead of another
+    // of the day's ~100 live searches.
+    expect(mockCollection.findOne).toHaveBeenCalledWith({
+      key: "beyonce halo|any|relevance",
+    });
+    // ...while YouTube still gets the accents and punctuation, which help it.
+    const searchUrl = fetchMock.mock.calls.find(([u]) =>
+      String(u).includes("/search")
+    )![0] as string;
+    // URLSearchParams spelling: "+" for spaces, %C3%A9 for the é.
+    expect(searchUrl).toContain("q=Beyonc%C3%A9+-+Halo%21");
+  });
+
+  it("collapses a karaoke suffix that isn't adjacent to the singer's own", async () => {
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url.includes("/youtube/v3/search")) return jsonResponse(searchItems(["a"]));
+      if (url.includes("/youtube/v3/videos")) return jsonResponse({ items: [] });
+      throw new Error("unexpected fetch " + url);
+    });
+
+    const res = createRes();
+    await handler(createMockReq({ query: { q: "abba karaoke live karaoke" } }), res);
+
+    // An older client's stacked suffix keys the same entry as a current one's
+    // "abba karaoke live" — one intent, one of the day's ~90 searches.
+    expect(mockCollection.findOne).toHaveBeenCalledWith({
+      key: "abba karaoke live|any|relevance",
+    });
+  });
+
+  it("coalesces concurrent identical searches into one YouTube call", async () => {
+    let releaseSearch!: (r: Response) => void;
+    fetchMock.mockImplementation((url: string) => {
+      if (url.includes("/youtube/v3/search"))
+        return new Promise<Response>((resolve) => { releaseSearch = resolve; });
+      if (url.includes("/youtube/v3/videos"))
+        return Promise.resolve(jsonResponse({ items: [] }));
+      throw new Error("unexpected fetch " + url);
+    });
+
+    const res1 = createRes();
+    const first = handler(createMockReq({ query: { q: "same song" } }), res1);
+    // Wait for the leader to reach YouTube, so its in-flight entry exists...
+    await vi.waitFor(() =>
+      expect(
+        fetchMock.mock.calls.filter(([u]) => String(u).includes("/search"))
+      ).toHaveLength(1)
+    );
+
+    const res2 = createRes();
+    const second = handler(createMockReq({ query: { q: "Same  Song" } }), res2);
+    // ...and let the follower get past its own cache read to the ride-along.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    releaseSearch(jsonResponse(searchItems(["a"])));
+    await Promise.all([first, second]);
+
+    expect(
+      fetchMock.mock.calls.filter(([u]) => String(u).includes("/search"))
+    ).toHaveLength(1);
+    expect(res1.getStatus()).toBe(200);
+    expect(res2.getStatus()).toBe(200);
+    expect(res2.getHeader("x-karaoq-search-cache")).toBe("coalesced");
+    expect(res2.getBody()).toEqual(res1.getBody());
+  });
+
 });
 
 describe("search_failed tracking", () => {
@@ -308,7 +469,7 @@ describe("search_failed tracking", () => {
     mockCollection.findOne.mockResolvedValue({
       key: "q|any|relevance",
       results: [{ title: "Stale", thumbnailUrl: "t", videoId: "old" }],
-      createdAt: new Date(Date.now() - 48 * 60 * 60 * 1000),
+      createdAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000),
     });
     fetchMock.mockImplementation(async () => quotaFailure());
 
@@ -364,7 +525,7 @@ describe("search_failed tracking", () => {
     mockCollection.findOne.mockResolvedValue({
       key: "q|any|relevance",
       results: [{ title: "Stale", thumbnailUrl: "t", videoId: "old" }],
-      createdAt: new Date(Date.now() - 48 * 60 * 60 * 1000),
+      createdAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000),
     });
 
     const res = createRes();
@@ -392,7 +553,7 @@ describe("search_failed tracking", () => {
     mockCollection.findOne.mockResolvedValue({
       key: "q|any|relevance",
       results: [{ title: "Stale", thumbnailUrl: "t", videoId: "old" }],
-      createdAt: new Date(Date.now() - 48 * 60 * 60 * 1000),
+      createdAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000),
     });
     fetchMock.mockImplementation(async () => quotaFailure());
 
@@ -446,5 +607,102 @@ describe("search_failed tracking", () => {
     );
 
     expect(failureEvent()).toMatchObject({ roomId: "" });
+  });
+});
+
+// A catalogued suggestion is the one query whose answer never changes, and the
+// ~900 of them are worth two thirds of a day's quota per cache window.
+describe("GET /api/search — catalogued suggestions", () => {
+  // Exactly what tapping the first built-in suggestion sends.
+  const song = SONG_SECTIONS[0].categories[0].songs[0];
+  const tapped = buildSearchQuery(buildSongQuery(song), true);
+  const key = searchCacheKey(tapped);
+
+  it("serves a resolved suggestion without touching YouTube or the cache", async () => {
+    readSuggestionMock.mockResolvedValue([
+      { title: "Pinned cut", thumbnailUrl: "t", videoId: "top", pinned: true },
+      { title: "Another cut", thumbnailUrl: "t", videoId: "other" },
+    ]);
+
+    const res = createRes();
+    await handler(createMockReq({ query: { q: tapped } }), res);
+
+    expect(res.getStatus()).toBe(200);
+    expect(res.getHeader("x-karaoq-search-cache")).toBe("catalog");
+    expect(readSuggestionMock).toHaveBeenCalledWith(key);
+    expect(fetchMock).not.toHaveBeenCalled();
+    // Ahead of the search cache, so a catalog song never reads it at all.
+    expect(mockCollection.findOne).not.toHaveBeenCalled();
+    expect((res.getBody() as { pinned?: boolean }[])[0].pinned).toBe(true);
+  });
+
+  it("banks the results when a suggestion has to be searched", async () => {
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url.includes("/youtube/v3/search")) return jsonResponse(searchItems(["a"]));
+      if (url.includes("/youtube/v3/videos")) return jsonResponse({ items: [] });
+      throw new Error("unexpected fetch " + url);
+    });
+
+    const res = createRes();
+    await handler(createMockReq({ query: { q: tapped } }), res);
+
+    expect(res.getStatus()).toBe(200);
+    // The call is spent once, ever: the next room to tap this suggestion —
+    // anywhere, any day — reads it back out of the store.
+    expect(writeSuggestionMock).toHaveBeenCalledWith(key, expect.any(Array));
+  });
+
+  it("leaves an ordinary search out of the catalog store entirely", async () => {
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url.includes("/youtube/v3/search")) return jsonResponse(searchItems(["a"]));
+      if (url.includes("/youtube/v3/videos")) return jsonResponse({ items: [] });
+      throw new Error("unexpected fetch " + url);
+    });
+
+    const res = createRes();
+    await handler(createMockReq({ query: { q: "my mate dave singing badly" } }), res);
+
+    expect(res.getStatus()).toBe(200);
+    expect(readSuggestionMock).not.toHaveBeenCalled();
+    // Nothing a caller invents can create an entry — the catalog is the server's.
+    expect(writeSuggestionMock).not.toHaveBeenCalled();
+  });
+
+  it("searches normally when the suggestion is tapped under changed filters", async () => {
+    readSuggestionMock.mockResolvedValue([
+      { title: "Pinned cut", thumbnailUrl: "t", videoId: "top" },
+    ]);
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url.includes("/youtube/v3/search")) return jsonResponse(searchItems(["a"]));
+      if (url.includes("/youtube/v3/videos")) return jsonResponse({ items: [] });
+      throw new Error("unexpected fetch " + url);
+    });
+
+    const res = createRes();
+    await handler(
+      createMockReq({ query: { q: tapped, duration: "short" } }),
+      res
+    );
+
+    // The store holds the "any" cut; serving it for a "short" filter would
+    // silently ignore what the singer asked for.
+    expect(readSuggestionMock).not.toHaveBeenCalled();
+    expect(res.getStatus()).toBe(200);
+    expect(fetchMock).toHaveBeenCalled();
+  });
+
+  it("falls through to a normal search while a suggestion is unresolved", async () => {
+    readSuggestionMock.mockResolvedValue(null);
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url.includes("/youtube/v3/search")) return jsonResponse(searchItems(["a"]));
+      if (url.includes("/youtube/v3/videos")) return jsonResponse({ items: [] });
+      throw new Error("unexpected fetch " + url);
+    });
+
+    const res = createRes();
+    await handler(createMockReq({ query: { q: tapped } }), res);
+
+    expect(res.getStatus()).toBe(200);
+    expect(res.getHeader("x-karaoq-search-cache")).toBe("miss");
   });
 });

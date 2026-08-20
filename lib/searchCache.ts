@@ -8,10 +8,11 @@ export interface SearchResult {
   viewCount?: number;
 }
 
-// Each uncached YouTube search burns 100 of the 10,000 daily quota units, so
-// caching stretches it from ~100 searches/day to ~100 *distinct* searches/day.
+// The binding limit is the separate "Search Queries per day" quota: 100
+// search.list *calls* per day, project-wide. Caching stretches that to ~100
+// *distinct* searches per freshness window.
 //
-// Entries stay readable for 14 days (TTL index in lib/mongodb.ts) but are only
+// Entries stay readable for 21 days (TTL index in lib/mongodb.ts) but are only
 // served outright inside the caller's freshness window. Past that they are the
 // outage fallback, so a spent quota degrades to stale results, not an error.
 //

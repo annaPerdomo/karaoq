@@ -33,11 +33,10 @@ export function getMongoClient(): Promise<MongoClient> {
 // accumulate against the Atlas free-tier storage cap.
 export const ROOM_EXPIRY_SECONDS = 30 * 24 * 60 * 60;
 
-// Entries are only *served* for 24h (FRESH_CACHE_MS in pages/api/search.ts);
-// they're retained well past that purely as a fallback for when YouTube is
-// unreachable or the daily search quota is spent. YouTube's Developer Policies
-// cap storage of non-authorized API data at 30 days, so stay comfortably under.
-const SEARCH_CACHE_TTL_SECONDS = 14 * 24 * 60 * 60;
+// Entries are only *served* for 14 days (FRESH_CACHE_MS in pages/api/search.ts)
+// and retained a week past that as an outage fallback. YouTube's Developer
+// Policies cap storage of non-authorized API data at 30 days, so stay under.
+const SEARCH_CACHE_TTL_SECONDS = 21 * 24 * 60 * 60;
 
 let roomIndexesEnsured = false;
 
@@ -244,6 +243,76 @@ export async function getClientErrorsCollection(): Promise<Collection<ClientErro
     });
   }
   return db.collection<ClientErrorDoc>("client_errors");
+}
+
+// One doc per catalogued suggestion (see lib/suggestionCatalog). The TTL is
+// YouTube's 30-day retention rule and hangs off refreshedAt, not a creation
+// date: the cron rewrites that field, so a maintained entry never expires and
+// an abandoned one deletes itself exactly when the policy says it must.
+const SUGGESTION_VIDEO_TTL_SECONDS = YOUTUBE_DATA_MAX_AGE_DAYS * 24 * 60 * 60;
+
+export interface SuggestionVideoDoc {
+  /** The catalog key — searchCacheKey() of the query a tap produces. */
+  _id: string;
+  results: { title: string; thumbnailUrl: string; videoId: string; durationSeconds?: number; viewCount?: number }[];
+  /** Pinned to the top; absent until anyone has added one. */
+  topVideoId?: string;
+  /** When the search.list call that found these ran. */
+  resolvedAt: Date;
+  /** The retention clock the TTL index reads. */
+  refreshedAt: Date;
+}
+
+let suggestionVideoIndexesEnsured = false;
+
+export async function getSuggestionVideosCollection(): Promise<Collection<SuggestionVideoDoc>> {
+  const client = await getMongoClient();
+  const db = client.db(process.env.MONGODB_DB);
+  if (!suggestionVideoIndexesEnsured) {
+    // Latched even on failure, and retuned via collMod, for the reasons on the
+    // search_cache index above.
+    suggestionVideoIndexesEnsured = true;
+    db.collection("suggestion_videos")
+      .createIndex({ refreshedAt: 1 }, { expireAfterSeconds: SUGGESTION_VIDEO_TTL_SECONDS })
+      .catch(() =>
+        db.command({
+          collMod: "suggestion_videos",
+          index: {
+            keyPattern: { refreshedAt: 1 },
+            expireAfterSeconds: SUGGESTION_VIDEO_TTL_SECONDS,
+          },
+        })
+      )
+      .catch((e) => {
+        console.error("suggestion_videos TTL retune failed:", e);
+      });
+  }
+  return db.collection<SuggestionVideoDoc>("suggestion_videos");
+}
+
+// Where last night's channel harvest stopped. The sweep runs under a fixed page
+// budget and can't read a 17k-upload channel in one night, so without a saved
+// pageToken the deep end of a big channel is never reached.
+//
+// No TTL: losing one restarts that channel from its newest upload — a waste of
+// the next run's budget, not a correctness bug.
+export interface HarvestCursorDoc {
+  /** The channel handle, or "playlist:<id>" for an explicit playlist. */
+  _id: string;
+  /** Saved so a resume skips the channels.list unit. */
+  playlistId?: string;
+  /** Where the next page starts; absent means from the newest upload. */
+  pageToken?: string;
+  /** Set when the uploads ran out, so finished channels stop consuming the
+   *  nightly budget until their resweep window passes. */
+  completedAt?: Date;
+  updatedAt: Date;
+}
+
+export async function getHarvestCursorsCollection(): Promise<Collection<HarvestCursorDoc>> {
+  const client = await getMongoClient();
+  const db = client.db(process.env.MONGODB_DB);
+  return db.collection<HarvestCursorDoc>("harvest_cursors");
 }
 
 // One doc per alert already sent, so a paging condition that keeps tripping only
