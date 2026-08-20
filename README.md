@@ -15,7 +15,7 @@ Turn any gathering into karaoke night. A host creates a room and shares a 5-char
 ![YouTube API](https://img.shields.io/badge/YouTube_Data_API-FF0000?style=flat&logo=youtube&logoColor=white)
 ![Vercel](https://img.shields.io/badge/Vercel-000000?style=flat&logo=vercel&logoColor=white)
 
-<img src="docs/screenshot.png" alt="karaoq — YouTube Karaoke, zero setup" width="100%" />
+<img src="public/screenshot.png" alt="karaoq — YouTube Karaoke, zero setup" width="100%" />
 
 </div>
 
