@@ -1,5 +1,9 @@
 import { NextApiRequest, NextApiResponse } from "next";
-import { trackEvent } from "../../../../lib/analytics";
+import {
+  extractGeo,
+  isAnalyticsExempt,
+  trackEvent,
+} from "../../../../lib/analytics";
 import { fairPushSpec, singerKeys } from "../../../../lib/fairQueue";
 import {
   isValidQueueEntry,
@@ -10,6 +14,7 @@ import {
 } from "../../../../lib/limits";
 import { getRoomsCollection } from "../../../../lib/mongodb";
 import { normalizeRoomId } from "../../../../lib/roomCode";
+import { recordAdd } from "../../../../lib/songCorpus";
 import { catalogEntry } from "../../../../lib/suggestionCatalog";
 
 export default async function handler(
@@ -165,6 +170,27 @@ export default async function handler(
         singers: singerKeys(userName).length,
       });
       res.status(200).json({ code: 200, message: "Song added." });
+      // The one corpus hook, pastes included — there is no separate lookup
+      // feeder. Awaited only after the reply: the singer waits on nothing, and
+      // the instance can't freeze partway through a two-collection write.
+      // Demo and dev traffic is skipped as the analytics writes skip it — one
+      // shared database, and a seeded room must not shape every real room.
+      if (!isAnalyticsExempt(req)) {
+        const { country } = extractGeo(req);
+        await recordAdd(
+          {
+            videoId,
+            title: songTitle,
+            ...(durationSeconds !== undefined ? { durationSeconds } : {}),
+          },
+          {
+            roomId,
+            ...(country ? { country } : {}),
+            ...(suggestionKey ? { suggestionKey } : {}),
+            via,
+          }
+        );
+      }
     }
   } catch (e) {
     console.error(e);

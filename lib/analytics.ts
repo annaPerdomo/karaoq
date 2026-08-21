@@ -110,7 +110,9 @@ export function localeFromRequest(req: NextApiRequest): Locale | null {
   return asLocale(headerString(req.headers[LOCALE_HEADER]));
 }
 
-function extractGeo(req: NextApiRequest) {
+/** Exported so a non-analytics write can attribute itself the same way an
+ *  event does — one parsing of these headers, or the two drift. */
+export function extractGeo(req: NextApiRequest) {
   return {
     country: headerString(req.headers["x-vercel-ip-country"]),
     region: headerString(req.headers["x-vercel-ip-region"]),
