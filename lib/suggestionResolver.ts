@@ -14,6 +14,7 @@ import {
   type HarvestCursor,
 } from "./karaokeChannels";
 import { isCutOf, matchHarvestToCatalog } from "./suggestionMatch";
+import { MIN_ADD_ROOMS } from "./songCorpus";
 import {
   suggestionCatalog,
   CATALOG_DURATION,
@@ -88,9 +89,6 @@ export async function seedFromSearchCache(
   }
   return { seeded: keys.length, keys };
 }
-
-// Rooms are free to create, so a single add is a claim, not a consensus.
-const MIN_ADD_ROOMS = 2;
 
 /** Step 2 — a song someone queued after tapping its suggestion was resolved by
  *  a human; turning that id into a result row costs a lookup, not a search. */

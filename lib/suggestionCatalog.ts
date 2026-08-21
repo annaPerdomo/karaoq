@@ -75,24 +75,43 @@ function entriesFrom(section: SongSection, packId: string): CatalogEntry[] {
 }
 
 let cached: Map<string, CatalogEntry> | null = null;
+let packsByKey: Map<string, string[]> | null = null;
 
-/** Built once per instance. */
-export function suggestionCatalog(): Map<string, CatalogEntry> {
-  if (cached) return cached;
+function build(): void {
   const entries = [
     ...SONG_SECTIONS.flatMap((s) => entriesFrom(s, "core")),
     ...Object.entries(PACK_SECTIONS).flatMap(([packId, section]) =>
       entriesFrom(section, packId)
     ),
   ];
+  // Built before the dedupe below, which would reduce a song in "core" and
+  // "cz" to whichever pack loaded last.
+  packsByKey = new Map();
+  for (const e of entries) {
+    const packs = packsByKey.get(e.key) ?? [];
+    if (packs.indexOf(e.packId) < 0) packs.push(e.packId);
+    packsByKey.set(e.key, packs);
+  }
   // One entry per key is what makes it the store's natural _id. A song in two
   // categories duplicates; the later wins, and duplicates share a query anyway.
   cached = new Map(entries.map((e) => [e.key, e]));
-  return cached;
+}
+
+/** Built once per instance. */
+export function suggestionCatalog(): Map<string, CatalogEntry> {
+  if (!cached) build();
+  return cached!;
 }
 
 export function catalogEntry(key: string): CatalogEntry | undefined {
   return suggestionCatalog().get(key);
+}
+
+/** Every pack listing this song, not just the one its surviving entry came
+ *  from — a pack shelf filtering on `entry.packId` would hide the rest. */
+export function catalogPackIds(key: string): string[] {
+  if (!packsByKey) build();
+  return packsByKey!.get(key) ?? [];
 }
 
 /** The default combination the catalog is keyed for. */
