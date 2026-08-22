@@ -2,77 +2,111 @@ import { describe, it, expect } from "vitest";
 import { writeFileSync } from "fs";
 import { loadLocalEnv } from "./env";
 
-// How much of the catalog is resolved, by pack and category, so the gap can be
-// closed where it is rather than by waiting on the nightly search budget.
+// What the corpus can actually serve. Doubles as the migration check: songs
+// should reach the catalog's size, and cutless is what the resolver still owes.
 //
 //   COVERAGE_LIVE=1 pnpm tool scripts/tools/coverageReport.tool.ts
 const LIVE = Boolean(process.env.COVERAGE_LIVE);
 
-import { getSuggestionVideosCollection } from "../../lib/mongodb";
+import {
+  getCronStateCollection,
+  getKaraokeSongsCollection,
+  getKaraokeVideosCollection,
+} from "../../lib/mongodb";
+import { MIGRATION_ID } from "../../lib/corpusMigration";
+import { MAX_CUTS } from "../../lib/songCorpus";
 import { suggestionCatalog } from "../../lib/suggestionCatalog";
-import { THIN_RESULTS } from "../../lib/suggestionVideos";
 
-describe("suggestion catalog coverage", () => {
-  it.runIf(LIVE)("reports resolved share per pack and category", async () => {
+function bucket(n: number): string {
+  return n === 0 ? "0" : n === 1 ? "1" : n <= 4 ? "2-4" : n <= 9 ? "5-9" : "10+";
+}
+
+describe("song corpus coverage", () => {
+  it.runIf(LIVE)("reports what the corpus can serve, weakest packs first", async () => {
     loadLocalEnv();
-    const store = await getSuggestionVideosCollection();
-    const docs = await store.find({}).toArray();
-    const resolved = new Set(docs.map((d) => d._id));
+    const songs = await (await getKaraokeSongsCollection()).find({}).toArray();
+    const videos = await (await getKaraokeVideosCollection())
+      .find({}, { projection: { sources: 1 } })
+      .toArray();
+    const migration = await (await getCronStateCollection()).findOne({
+      _id: MIGRATION_ID,
+    });
 
-    // How many arrangements each resolved song offers — channel-seeded entries
-    // hold what the harvest matched, searched ones hold up to fifty.
+    const cut = new Set(songs.flatMap((s) => s.cuts ?? []));
+    const resolved = songs.filter((s) => (s.cuts ?? []).length > 0);
+    const cutless = songs.filter((s) => (s.cuts ?? []).length === 0);
+
     const buckets = new Map<string, number>();
-    for (const d of docs) {
-      const n = d.results.length;
-      const label = n === 1 ? "1" : n <= 4 ? "2-4" : n <= 9 ? "5-9" : n <= 24 ? "10-24" : "25+";
+    for (const s of songs) {
+      const label = bucket((s.cuts ?? []).length);
       buckets.set(label, (buckets.get(label) ?? 0) + 1);
     }
 
-    const byGroup = new Map<string, { done: number; total: number }>();
-    const missingByGroup = new Map<string, string[]>();
-
-    for (const entry of Array.from(suggestionCatalog().values())) {
-      const group = `${entry.packId}/${entry.categoryId}`;
-      const row = byGroup.get(group) ?? { done: 0, total: 0 };
-      row.total += 1;
-      if (resolved.has(entry.key)) {
-        row.done += 1;
-      } else {
-        const missing = missingByGroup.get(group) ?? [];
-        missing.push(`${entry.artist} — ${entry.title}`);
-        missingByGroup.set(group, missing);
+    // A source per video, not per song: one video can arrive several ways, and
+    // the interesting number is how much of the corpus each source earned.
+    const sources = new Map<string, number>();
+    for (const v of videos) {
+      for (const name of ["adds", "harvest", "seed", "search"]) {
+        if ((v.sources as Record<string, unknown> | undefined)?.[name]) {
+          sources.set(name, (sources.get(name) ?? 0) + 1);
+        }
       }
-      byGroup.set(group, row);
     }
 
-    const rows = Array.from(byGroup.entries())
-      .map(([group, r]) => ({ group, ...r, pct: Math.round((r.done / r.total) * 100) }))
+    const byPack = new Map<string, { done: number; total: number }>();
+    for (const s of songs) {
+      for (const pack of s.packIds ?? ["(uncurated)"]) {
+        const row = byPack.get(pack) ?? { done: 0, total: 0 };
+        row.total += 1;
+        if ((s.cuts ?? []).length > 0) row.done += 1;
+        byPack.set(pack, row);
+      }
+    }
+    const packs = Array.from(byPack.entries())
+      .map(([pack, r]) => ({ pack, ...r, pct: Math.round((r.done / r.total) * 100) }))
       .sort((a, b) => a.pct - b.pct);
 
-    // An entry under THIN_RESULTS is stored but doesn't answer queries yet.
-    const serving = docs.filter((d) => d.results.length >= THIN_RESULTS).length;
+    // The resolver's queue in the order it will spend the nightly cap.
+    const wanted = cutless
+      .slice()
+      .sort((a, b) => (b.demand ?? 0) - (a.demand ?? 0))
+      .slice(0, 20);
+
+    // A catalog song with no doc is a migration that hasn't finished (or a
+    // pack added since it ran) — the resolver only ever sees stored songs.
+    const missing = Array.from(suggestionCatalog().keys()).filter(
+      (key) => !songs.some((s) => s._id === key)
+    );
 
     const lines = [
-      `resolved: ${resolved.size} / ${suggestionCatalog().size}`,
-      `serving : ${serving} (>= ${THIN_RESULTS} cuts; the rest still search)`,
+      `migrate-v1: ${migration?.done ? "done" : migration?.cursor ?? "never ran"}`,
       "",
-      "options per resolved song:",
-      ...["1", "2-4", "5-9", "10-24", "25+"].map(
-        (b) => `  ${b.padEnd(6)} ${buckets.get(b) ?? 0} songs`
+      `songs : ${songs.length} stored, ${resolved.length} with cuts, ` +
+        `${cutless.length} cutless`,
+      `videos: ${videos.length} stored, ${cut.size} named as a cut`,
+      `catalog songs with no doc: ${missing.length}`,
+      "",
+      `cuts per song (cap ${MAX_CUTS}):`,
+      ...["0", "1", "2-4", "5-9", "10+"].map(
+        (b) => `  ${b.padEnd(5)} ${buckets.get(b) ?? 0} songs`
       ),
       "",
-      "weakest groups first:",
-      ...rows.map(
-        (r) => `  ${String(r.pct).padStart(3)}%  ${r.done}/${r.total}  ${r.group}`
+      "videos by source:",
+      ...["adds", "harvest", "seed", "search"].map(
+        (s) => `  ${s.padEnd(8)} ${sources.get(s) ?? 0}`
       ),
       "",
-      "sample unresolved from the weakest groups:",
-      ...rows.slice(0, 6).flatMap((r) => [
-        `  [${r.group}]`,
-        ...(missingByGroup.get(r.group) ?? []).slice(0, 6).map((s) => `      ${s}`),
-      ]),
+      "weakest packs first:",
+      ...packs.map(
+        (p) => `  ${String(p.pct).padStart(3)}%  ${p.done}/${p.total}  ${p.pack}`
+      ),
+      "",
+      "most-wanted songs still cutless:",
+      ...wanted.map(
+        (s) => `  ${String(s.demand ?? 0).padStart(5)} taps  ${s.artist} — ${s.title}`
+      ),
     ];
-    writeFileSync("/tmp/coverage.txt", lines.join("\n"));
-    expect(rows.length).toBeGreaterThan(0);
+    writeFileSync("/tmp/corpus.txt", lines.join("\n"));
+    expect(songs.length).toBeGreaterThan(0);
   }, 300_000);
 });
