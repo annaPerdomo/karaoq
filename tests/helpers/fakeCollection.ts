@@ -3,8 +3,10 @@
 // makes — which is the only way to test a cap, a ranking, or idempotency.
 //
 // Deliberately partial: it supports the operators the corpus writers use
-// ($set / $setOnInsert / $inc / $addToSet / $unset, upsert, dotted paths) and
-// _id filters, and throws on anything else rather than quietly passing a test.
+// ($set / $setOnInsert / $inc / $addToSet / $unset / $pull, upsert, dotted
+// paths) and the filters they read with ($in, $gt/$lt on a field, $exists,
+// $or, $expr over $size, exact array equality), and throws on anything else
+// rather than quietly passing a test.
 
 type Doc = Record<string, any>;
 
@@ -18,6 +20,7 @@ interface UpdateSpec {
   $inc?: Record<string, number>;
   $addToSet?: Doc;
   $unset?: Record<string, "">;
+  $pull?: Doc;
 }
 
 function setPath(doc: Doc, path: string, value: unknown): void {
@@ -41,8 +44,18 @@ function unsetPath(doc: Doc, path: string): void {
   if (parent) delete parent[parts[parts.length - 1]];
 }
 
+/** Structural rather than a JSON round trip, which would hand every reader a
+ *  string where the collection holds a Date — and the sweep pages on exactly
+ *  that comparison. Dates are shared, not cloned; nothing here mutates one. */
 function copy<T>(value: T): T {
-  return value === undefined ? value : JSON.parse(JSON.stringify(value));
+  if (value instanceof Date) return value;
+  if (Array.isArray(value)) return value.map((item) => copy(item)) as unknown as T;
+  if (value && typeof value === "object") {
+    const out: Doc = {};
+    for (const [key, held] of Object.entries(value)) out[key] = copy(held);
+    return out as unknown as T;
+  }
+  return value;
 }
 
 /** Real Mongo rejects an update whose $setOnInsert path is also written by
@@ -52,7 +65,7 @@ function copy<T>(value: T): T {
 function assertNoConflict(update: UpdateSpec): void {
   const onInsert = Object.keys(update.$setOnInsert ?? {});
   if (onInsert.length === 0) return;
-  const others = [update.$set, update.$inc, update.$addToSet, update.$unset]
+  const others = [update.$set, update.$inc, update.$addToSet, update.$unset, update.$pull]
     .flatMap((op) => Object.keys(op ?? {}));
   for (const a of onInsert) {
     for (const b of others) {
@@ -74,15 +87,101 @@ function idsOf(filter: Doc): string[] {
   throw new Error("fakeCollection supports only _id equality or $in");
 }
 
-/** Reads scan ({} or { _id: { $gt } }, for a resumable job's paging); writes
- *  stay on idsOf — a range filter has no business in an updateOne. */
-function readIdsOf(filter: Doc, stored: string[]): string[] {
-  if (Object.keys(filter).length === 0) return stored;
-  const id = filter._id;
-  if (id && typeof id === "object" && typeof id.$gt === "string") {
-    return stored.filter((key) => key > id.$gt);
+/** An _id plus a condition updateOne applies to the doc it names. */
+function idAndGuard(filter: Doc): { id: string; guard: Doc } {
+  const { _id, ...guard } = filter;
+  return { id: idsOf({ _id })[0], guard };
+}
+
+/** Mongo's ordering of mixed types isn't worth reproducing; a missing field
+ *  sorting first ascending is — that's how an unswept row reaches the front. */
+function compare(a: unknown, b: unknown): number {
+  const x = a instanceof Date ? a.getTime() : a;
+  const y = b instanceof Date ? b.getTime() : b;
+  if (x === y) return 0;
+  if (x === undefined || x === null) return -1;
+  if (y === undefined || y === null) return 1;
+  return (x as any) < (y as any) ? -1 : 1;
+}
+
+/** "$field" reads the doc, { $size: "$field" } counts it, anything else is a
+ *  literal — enough for the `cuts` length filters the corpus jobs page on. */
+function exprValue(doc: Doc, node: any): any {
+  if (typeof node === "string" && node.charAt(0) === "$") return readPath(doc, node.slice(1));
+  if (node && typeof node === "object" && "$size" in node) {
+    const held = exprValue(doc, node.$size);
+    return Array.isArray(held) ? held.length : 0;
   }
-  return idsOf(filter);
+  return node;
+}
+
+function matchesExpr(doc: Doc, expr: Doc): boolean {
+  const entries = Object.entries(expr);
+  if (entries.length !== 1) throw new Error("fakeCollection supports one $expr operator");
+  const [op, operands] = entries[0];
+  if (!Array.isArray(operands) || operands.length !== 2) {
+    throw new Error(`fakeCollection supports only two-operand $expr, got ${op}`);
+  }
+  const order = compare(exprValue(doc, operands[0]), exprValue(doc, operands[1]));
+  switch (op) {
+    case "$eq":
+      return order === 0;
+    case "$lt":
+      return order < 0;
+    case "$lte":
+      return order <= 0;
+    case "$gt":
+      return order > 0;
+    case "$gte":
+      return order >= 0;
+    default:
+      throw new Error(`fakeCollection has no $expr operator ${op}`);
+  }
+}
+
+function matchesValue(value: unknown, condition: any): boolean {
+  if (condition instanceof Date || Array.isArray(condition) || condition === null) {
+    return JSON.stringify(value ?? null) === JSON.stringify(condition);
+  }
+  if (typeof condition !== "object") return value === condition;
+
+  return Object.entries(condition).every(([op, operand]) => {
+    if (op === "$in") {
+      const wanted = operand as unknown[];
+      // A field holding an array matches when any element is in the list.
+      return Array.isArray(value)
+        ? value.some((held) => wanted.indexOf(held) >= 0)
+        : wanted.indexOf(value) >= 0;
+    }
+    if (op === "$exists") return (value !== undefined) === Boolean(operand);
+    // Ahead of the guard below: in Mongo an absent field is not equal to the
+    // thing being ruled out.
+    if (op === "$ne") return !matchesValue(value, operand);
+    if (value === undefined) return false;
+    switch (op) {
+      case "$lt":
+        return compare(value, operand) < 0;
+      case "$lte":
+        return compare(value, operand) <= 0;
+      case "$gt":
+        return compare(value, operand) > 0;
+      case "$gte":
+        return compare(value, operand) >= 0;
+      default:
+        throw new Error(`fakeCollection has no operator ${op}`);
+    }
+  });
+}
+
+/** Reads and multi-writes scan; single-doc writes stay on idsOf. */
+function matches(doc: Doc, filter: Doc): boolean {
+  return Object.entries(filter).every(([path, condition]) => {
+    if (path === "$expr") return matchesExpr(doc, condition as Doc);
+    if (path === "$or") {
+      return (condition as Doc[]).some((clause) => matches(doc, clause));
+    }
+    return matchesValue(readPath(doc, path), condition);
+  });
 }
 
 /** Inclusion only, _id riding along as in Mongo. Applied rather than ignored,
@@ -129,6 +228,10 @@ export function fakeCollection() {
       for (const item of incoming) if (held.indexOf(item) < 0) held.push(item);
       setPath(doc, path, held);
     }
+    for (const [path, condition] of Object.entries(update.$pull ?? {})) {
+      const held = (readPath(doc, path) as unknown[]) ?? [];
+      setPath(doc, path, held.filter((item) => !matchesValue(item, condition)));
+    }
     for (const path of Object.keys(update.$unset ?? {})) unsetPath(doc, path);
     docs.set(id, doc);
     return {
@@ -149,36 +252,53 @@ export function fakeCollection() {
     clear: () => docs.clear(),
 
     findOne: async (filter: Doc, options?: { projection?: Doc }) => {
-      const [id] = idsOf(filter);
-      const doc = docs.get(id);
+      const doc = Array.from(docs.values()).find((d) => matches(d, filter));
       return doc ? project(copy(doc), options?.projection) : null;
     },
     find: (filter: Doc, options?: { projection?: Doc }) => {
-      let ids = readIdsOf(filter, Array.from(docs.keys()));
+      let found = Array.from(docs.values()).filter((doc) => matches(doc, filter));
       const cursor = {
         sort: (spec: Doc) => {
           const keys = Object.keys(spec);
-          if (keys.length !== 1 || keys[0] !== "_id") {
-            throw new Error("fakeCollection sorts only by _id");
-          }
-          const dir = spec._id === -1 ? -1 : 1;
-          ids = ids.slice().sort((a, b) => (a < b ? -dir : a > b ? dir : 0));
+          if (keys.length !== 1) throw new Error("fakeCollection sorts on one field");
+          const [field] = keys;
+          const dir = spec[field] === -1 ? -1 : 1;
+          found = found
+            .slice()
+            .sort((a, b) => dir * compare(readPath(a, field), readPath(b, field)));
           return cursor;
         },
         limit: (n: number) => {
-          ids = ids.slice(0, n);
+          found = found.slice(0, n);
           return cursor;
         },
         toArray: async () =>
-          ids
-            .map((id) => docs.get(id))
-            .filter((d): d is Doc => Boolean(d))
-            .map((d) => project(copy(d), options?.projection)),
+          found.map((doc) => project(copy(doc), options?.projection)),
       };
       return cursor;
     },
-    updateOne: async (filter: Doc, update: UpdateSpec, options?: UpdateOptions) =>
-      apply(idsOf(filter)[0], update, options),
+    countDocuments: async (filter: Doc = {}) =>
+      Array.from(docs.values()).filter((doc) => matches(doc, filter)).length,
+    insertOne: async (doc: Doc) => {
+      if (docs.has(doc._id)) {
+        // The shape a conditional insert reads as "somebody else has it".
+        const e: any = new Error(`E11000 duplicate key error: ${doc._id}`);
+        e.code = 11000;
+        throw e;
+      }
+      docs.set(doc._id, copy(doc));
+      return { insertedId: doc._id };
+    },
+    updateOne: async (filter: Doc, update: UpdateSpec, options?: UpdateOptions) => {
+      const { id, guard } = idAndGuard(filter);
+      if (Object.keys(guard).length > 0) {
+        const held = docs.get(id);
+        if (!held || !matches(held, guard)) {
+          return { matchedCount: 0, modifiedCount: 0, upsertedCount: 0 };
+        }
+      }
+      return apply(id, update, options);
+    },
     bulkWrite: async (
       ops: { updateOne: { filter: Doc; update: UpdateSpec; upsert?: boolean } }[]
     ) => {
@@ -193,10 +313,24 @@ export function fakeCollection() {
       }
       return { upsertedCount, modifiedCount };
     },
+    updateMany: async (filter: Doc, update: UpdateSpec) => {
+      const ids = Array.from(docs.values())
+        .filter((doc) => matches(doc, filter))
+        .map((doc) => doc._id as string);
+      for (const id of ids) apply(id, update);
+      return { matchedCount: ids.length, modifiedCount: ids.length };
+    },
     deleteOne: async (filter: Doc) => {
       const [id] = idsOf(filter);
       const had = docs.delete(id);
       return { deletedCount: had ? 1 : 0 };
+    },
+    deleteMany: async (filter: Doc) => {
+      const ids = Array.from(docs.values())
+        .filter((doc) => matches(doc, filter))
+        .map((doc) => doc._id as string);
+      for (const id of ids) docs.delete(id);
+      return { deletedCount: ids.length };
     },
     createIndex: async () => "ok",
     command: async () => ({}),

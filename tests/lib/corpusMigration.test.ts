@@ -158,8 +158,8 @@ describe("migrateToCorpus - full run", () => {
     await migrateToCorpus(FAR_FUTURE());
 
     expect(videos().get("narrow-0")).toMatchObject({
-      refreshedAt: REFRESHED_AT.toISOString(),
-      firstSeenAt: RESOLVED_AT.toISOString(),
+      refreshedAt: REFRESHED_AT,
+      firstSeenAt: RESOLVED_AT,
     });
   });
 
