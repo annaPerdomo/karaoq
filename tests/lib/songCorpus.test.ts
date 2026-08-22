@@ -33,6 +33,7 @@ import {
   MIN_ADD_ROOMS,
   recordAdd,
   recordHarvestMatches,
+  recordSearchResults,
   songIdentityFromCatalog,
   type AddSource,
   type AddedVideo,
@@ -487,6 +488,99 @@ describe("recordHarvestMatches", () => {
     expect(songs().get(entry.key)).toMatchObject({
       title: entry.title,
       artist: entry.artist,
+    });
+  });
+});
+
+// Reachable from /api/search: the key is a query a stranger typed.
+describe("recordSearchResults", () => {
+  function result(videoId: string): SearchResult {
+    return {
+      videoId,
+      title: `Result ${videoId}`,
+      thumbnailUrl: `thumb-${videoId}`,
+      durationSeconds: 210,
+      viewCount: 5000,
+    };
+  }
+
+  it("can name a song but never create one", async () => {
+    const written = await recordSearchResults("no song has this key", [result("a")]);
+
+    expect(written).toEqual({ videosUpserted: 0, cutsAdded: 0 });
+    // Were this an upsert, any query anyone typed would file itself as a song.
+    expect(songs().all()).toEqual([]);
+    expect(videos().all()).toEqual([]);
+  });
+
+  it("fills a wanted song's cuts and banks the rows behind them", async () => {
+    songs().seed({ ...songIdentityFromCatalog(entry), cuts: [], demand: 3 });
+
+    const written = await recordSearchResults(entry.key, [result("a"), result("b")]);
+
+    expect(written.cutsAdded).toBe(2);
+    expect(songs().get(entry.key)).toMatchObject({ cuts: ["a", "b"] });
+    expect(videos().get("a")).toMatchObject({
+      title: "Result a",
+      songKeys: [entry.key],
+      durationSeconds: 210,
+      viewCount: 5000,
+    });
+    // How the sweep and the dossier tell a bought answer from a harvested one.
+    expect(videos().get("a")?.sources?.search?.at).toBeInstanceOf(Date);
+  });
+
+  it("appends behind the cuts singers have already chosen", async () => {
+    await addCut("chosen");
+
+    await recordSearchResults(entry.key, [result("a")]);
+
+    // Relevance order is YouTube's opinion; the leading cuts are what rooms sang.
+    expect(songs().get(entry.key)?.cuts).toEqual(["chosen", "a"]);
+  });
+
+  it("stops filling at the cap", async () => {
+    songs().seed({ ...songIdentityFromCatalog(entry), cuts: [], demand: 0 });
+    const rows = Array.from({ length: MAX_CUTS + 5 }, (_, i) => result(`v${i}`));
+
+    await recordSearchResults(entry.key, rows);
+
+    expect(songs().get(entry.key)?.cuts).toHaveLength(MAX_CUTS);
+    // Every stored id is a row the sweep re-reads forever, so the rest never land.
+    expect(videos().all()).toHaveLength(MAX_CUTS);
+  });
+
+  it("clears the backoff a run of empty answers earned", async () => {
+    songs().seed({
+      ...songIdentityFromCatalog(entry),
+      cuts: [],
+      demand: 0,
+      resolveMisses: 3,
+      nextResolveAt: new Date("2026-09-01T00:00:00.000Z"),
+    });
+
+    await recordSearchResults(entry.key, [result("a")]);
+
+    const song = songs().get(entry.key)!;
+    expect(song.resolveMisses).toBeUndefined();
+    expect(song.nextResolveAt).toBeUndefined();
+  });
+
+  it("drops a cut whose video row has expired", async () => {
+    songs().seed({ ...songIdentityFromCatalog(entry), cuts: ["gone"], demand: 0 });
+
+    await recordSearchResults(entry.key, [result("a")]);
+
+    // Left on the song the dead id counts towards the cap for good — no TTL there.
+    expect(songs().get(entry.key)?.cuts).toEqual(["a"]);
+  });
+
+  it("writes nothing for an empty result set", async () => {
+    songs().seed({ ...songIdentityFromCatalog(entry), cuts: [], demand: 0 });
+
+    expect(await recordSearchResults(entry.key, [])).toEqual({
+      videosUpserted: 0,
+      cutsAdded: 0,
     });
   });
 });

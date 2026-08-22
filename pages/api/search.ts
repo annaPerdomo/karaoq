@@ -3,10 +3,7 @@ import { readCache, writeCache, SearchResult } from "../../lib/searchCache";
 import { YoutubeApiError } from "../../lib/youtubeApi";
 import { searchYoutubeApi } from "../../lib/youtubeSearch";
 import { catalogEntry, isCatalogFilters } from "../../lib/suggestionCatalog";
-import {
-  readSuggestionVideos,
-  writeSuggestionVideos,
-} from "../../lib/suggestionVideos";
+import { recordSearchResults } from "../../lib/songCorpus";
 import { MAX_ENTRY_ID_LENGTH, markRateLimitNotified, rateLimit } from "../../lib/limits";
 import { normalizeRoomId } from "../../lib/roomCode";
 import { trackEvent } from "../../lib/analytics";
@@ -28,6 +25,19 @@ const FRESH_CACHE_MS = 14 * 24 * 60 * 60 * 1000;
 // requests into one instance — exactly the window the duplicate burn happened
 // in. A race past the lookup just means two live calls, as before.
 const inFlightSearches = new Map<string, Promise<SearchResult[]>>();
+
+// searchCacheKey folds punctuation, so "abba -dancing queen karaoke" keys to the
+// song it tells YouTube to leave out — and cuts are appended, never overwritten,
+// so one crafted request would answer that song for every room until it expires.
+const SEARCH_OPERATORS = /(^|\s)[-#]\S|["|]/;
+
+/** Five catalog songs wear the punctuation in their names ("NARUTO -ナルト-"), so
+ *  an operator only disqualifies a query the corpus wouldn't have run itself. */
+function banksIntoCorpus(songKey: string, normalizedQ: string): boolean {
+  if (!SEARCH_OPERATORS.test(normalizedQ)) return true;
+  const entry = catalogEntry(songKey);
+  return !!entry && entry.query.toLowerCase() === normalizedQ.toLowerCase();
+}
 
 export default async function handler(
   req: NextApiRequest,
@@ -66,19 +76,6 @@ export default async function handler(
 
   const queryKey = searchCacheKey(normalizedQ);
   const cacheKey = `${queryKey}|${duration}|${sortBy}`;
-
-  // Ahead of the search cache: this store is the catalog's own answer,
-  // refreshed on a schedule and carrying the pick singers converge on.
-  const catalogSong =
-    isCatalogFilters(duration, sortBy) && catalogEntry(queryKey);
-  if (catalogSong) {
-    const resolved = await readSuggestionVideos(queryKey);
-    if (resolved) {
-      res.setHeader("x-karaoq-search-cache", "catalog");
-      res.status(200).json(resolved);
-      return;
-    }
-  }
 
   let cached = await readCache(cacheKey);
 
@@ -153,10 +150,14 @@ export default async function handler(
   try {
     const results = await live;
     writeCache(cacheKey, results);
-    // Bank it, so the next room tapping this suggestion spends nothing.
-    if (catalogSong) writeSuggestionVideos(queryKey, results);
     res.setHeader("x-karaoq-search-cache", "miss");
     res.status(200).json(results);
+    // A search one singer paid for fills the cuts every later tap reads for free.
+    // After the response but awaited, never dropped: two dependent writes, and a
+    // dropped promise dies with the frozen instance (lib/songCorpus).
+    if (isCatalogFilters(duration, sortBy) && banksIntoCorpus(queryKey, normalizedQ)) {
+      await recordSearchResults(queryKey, results).catch(() => {});
+    }
     return;
   } catch (e: any) {
     console.warn("YouTube API search failed:", e?.message);

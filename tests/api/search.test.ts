@@ -34,11 +34,12 @@ vi.mock("../../lib/analytics", () => ({
   isAnalyticsExempt: () => false,
 }));
 
-const readSuggestionMock = vi.fn(async (..._args: unknown[]): Promise<unknown> => null);
-const writeSuggestionMock = vi.fn();
-vi.mock("../../lib/suggestionVideos", () => ({
-  readSuggestionVideos: (...args: unknown[]) => readSuggestionMock(...args),
-  writeSuggestionVideos: (...args: unknown[]) => writeSuggestionMock(...args),
+const recordSearchResultsMock = vi.fn(async (..._args: unknown[]) => ({
+  videosUpserted: 0,
+  cutsAdded: 0,
+}));
+vi.mock("../../lib/songCorpus", () => ({
+  recordSearchResults: (...args: unknown[]) => recordSearchResultsMock(...args),
 }));
 
 const sendQuotaAlertMock = vi.fn(async (..._args: unknown[]) => {});
@@ -100,7 +101,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   rateLimitMock.mockReturnValue(true);
   markNotifiedMock.mockReturnValue(true);
-  readSuggestionMock.mockResolvedValue(null);
+  recordSearchResultsMock.mockResolvedValue({ videosUpserted: 0, cutsAdded: 0 });
   mockCollection.findOne.mockResolvedValue(null);
   mockCollection.updateOne.mockResolvedValue({});
   vi.stubGlobal("fetch", fetchMock);
@@ -610,73 +611,78 @@ describe("search_failed tracking", () => {
   });
 });
 
-// A catalogued suggestion is the one query whose answer never changes, and the
-// ~900 of them are worth two thirds of a day's quota per cache window.
-describe("GET /api/search — catalogued suggestions", () => {
-  // Exactly what tapping the first built-in suggestion sends.
+describe("GET /api/search — banking a live search into the corpus", () => {
+  // Exactly what a tap that fell through to search still sends.
   const song = SONG_SECTIONS[0].categories[0].songs[0];
   const tapped = buildSearchQuery(buildSongQuery(song), true);
   const key = searchCacheKey(tapped);
 
-  it("serves a resolved suggestion without touching YouTube or the cache", async () => {
-    readSuggestionMock.mockResolvedValue([
-      { title: "Pinned cut", thumbnailUrl: "t", videoId: "top", pinned: true },
-      { title: "Another cut", thumbnailUrl: "t", videoId: "other" },
-    ]);
+  function liveSearch() {
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url.includes("/youtube/v3/search")) return jsonResponse(searchItems(["a"]));
+      if (url.includes("/youtube/v3/videos")) return jsonResponse({ items: [] });
+      throw new Error("unexpected fetch " + url);
+    });
+  }
+
+  it("reads the search cache for a catalogued query like any other", async () => {
+    const cached = [{ title: "Cached", thumbnailUrl: "t", videoId: "abc" }];
+    mockCollection.findOne.mockResolvedValue({
+      key: `${key}|any|relevance`,
+      results: cached,
+      createdAt: new Date(),
+    });
 
     const res = createRes();
     await handler(createMockReq({ query: { q: tapped } }), res);
 
-    expect(res.getStatus()).toBe(200);
-    expect(res.getHeader("x-karaoq-search-cache")).toBe("catalog");
-    expect(readSuggestionMock).toHaveBeenCalledWith(key);
+    expect(res.getHeader("x-karaoq-search-cache")).toBe("fresh");
+    expect(res.getBody()).toEqual(cached);
     expect(fetchMock).not.toHaveBeenCalled();
-    // Ahead of the search cache, so a catalog song never reads it at all.
-    expect(mockCollection.findOne).not.toHaveBeenCalled();
-    expect((res.getBody() as { pinned?: boolean }[])[0].pinned).toBe(true);
   });
 
-  it("banks the results when a suggestion has to be searched", async () => {
-    fetchMock.mockImplementation(async (url: string) => {
-      if (url.includes("/youtube/v3/search")) return jsonResponse(searchItems(["a"]));
-      if (url.includes("/youtube/v3/videos")) return jsonResponse({ items: [] });
-      throw new Error("unexpected fetch " + url);
-    });
+  it("banks a live search under the key the corpus files that song by", async () => {
+    liveSearch();
 
     const res = createRes();
     await handler(createMockReq({ query: { q: tapped } }), res);
 
     expect(res.getStatus()).toBe(200);
-    // The call is spent once, ever: the next room to tap this suggestion —
-    // anywhere, any day — reads it back out of the store.
-    expect(writeSuggestionMock).toHaveBeenCalledWith(key, expect.any(Array));
+    expect(recordSearchResultsMock).toHaveBeenCalledWith(key, expect.any(Array));
   });
 
-  it("leaves an ordinary search out of the catalog store entirely", async () => {
-    fetchMock.mockImplementation(async (url: string) => {
-      if (url.includes("/youtube/v3/search")) return jsonResponse(searchItems(["a"]));
-      if (url.includes("/youtube/v3/videos")) return jsonResponse({ items: [] });
-      throw new Error("unexpected fetch " + url);
-    });
+  it("banks under the server's own key, never one a caller supplies", async () => {
+    liveSearch();
 
     const res = createRes();
-    await handler(createMockReq({ query: { q: "my mate dave singing badly" } }), res);
+    await handler(
+      createMockReq({ query: { q: tapped, song: "some other song" } }),
+      res
+    );
 
     expect(res.getStatus()).toBe(200);
-    expect(readSuggestionMock).not.toHaveBeenCalled();
-    // Nothing a caller invents can create an entry — the catalog is the server's.
-    expect(writeSuggestionMock).not.toHaveBeenCalled();
+    // Recognition stays server-side: the key comes from the query we normalized,
+    // so nothing a caller sends can name a song (see recordSearchResults).
+    expect(recordSearchResultsMock).toHaveBeenCalledWith(key, expect.any(Array));
   });
 
-  it("searches normally when the suggestion is tapped under changed filters", async () => {
-    readSuggestionMock.mockResolvedValue([
-      { title: "Pinned cut", thumbnailUrl: "t", videoId: "top" },
-    ]);
-    fetchMock.mockImplementation(async (url: string) => {
-      if (url.includes("/youtube/v3/search")) return jsonResponse(searchItems(["a"]));
-      if (url.includes("/youtube/v3/videos")) return jsonResponse({ items: [] });
-      throw new Error("unexpected fetch " + url);
-    });
+  it("keys an ordinary query to itself, which is no song at all", async () => {
+    liveSearch();
+
+    const res = createRes();
+    await handler(
+      createMockReq({ query: { q: "my mate dave singing badly" } }),
+      res
+    );
+
+    expect(recordSearchResultsMock).toHaveBeenCalledWith(
+      searchCacheKey("my mate dave singing badly"),
+      expect.any(Array)
+    );
+  });
+
+  it("banks nothing from a filtered search", async () => {
+    liveSearch();
 
     const res = createRes();
     await handler(
@@ -684,25 +690,70 @@ describe("GET /api/search — catalogued suggestions", () => {
       res
     );
 
-    // The store holds the "any" cut; serving it for a "short" filter would
-    // silently ignore what the singer asked for.
-    expect(readSuggestionMock).not.toHaveBeenCalled();
     expect(res.getStatus()).toBe(200);
-    expect(fetchMock).toHaveBeenCalled();
+    // Cuts are the unfiltered answer; a "short" set would rewrite every room's.
+    expect(recordSearchResultsMock).not.toHaveBeenCalled();
   });
 
-  it("falls through to a normal search while a suggestion is unresolved", async () => {
-    readSuggestionMock.mockResolvedValue(null);
-    fetchMock.mockImplementation(async (url: string) => {
-      if (url.includes("/youtube/v3/search")) return jsonResponse(searchItems(["a"]));
-      if (url.includes("/youtube/v3/videos")) return jsonResponse({ items: [] });
-      throw new Error("unexpected fetch " + url);
-    });
+  it("banks nothing when the search itself failed", async () => {
+    fetchMock.mockImplementation(async () => jsonResponse({}, false, 500));
+
+    const res = createRes();
+    await handler(createMockReq({ query: { q: tapped } }), res);
+
+    expect(recordSearchResultsMock).not.toHaveBeenCalled();
+  });
+
+  it("banks nothing from a query that keys to a song but asks for another", async () => {
+    liveSearch();
+    // The fold turns " -" into one space, so this reaches the corpus as the song
+    // it tells YouTube to leave out — and cuts are never overwritten.
+    const crafted = tapped.replace(" ", " -");
+    expect(searchCacheKey(crafted)).toBe(key);
+
+    const res = createRes();
+    await handler(createMockReq({ query: { q: crafted } }), res);
+
+    expect(res.getStatus()).toBe(200);
+    expect(recordSearchResultsMock).not.toHaveBeenCalled();
+  });
+
+  it("answers even when banking rejects", async () => {
+    liveSearch();
+    // A singer waiting on results must never be failed by our bookkeeping.
+    recordSearchResultsMock.mockRejectedValue(new Error("write concern"));
 
     const res = createRes();
     await handler(createMockReq({ query: { q: tapped } }), res);
 
     expect(res.getStatus()).toBe(200);
-    expect(res.getHeader("x-karaoq-search-cache")).toBe("miss");
+  });
+
+  it("banks after answering, and stays alive until the write lands", async () => {
+    liveSearch();
+    const res = createRes();
+    let bodyWhenBanked: unknown = null;
+    let land!: () => void;
+    recordSearchResultsMock.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          bodyWhenBanked = res.getBody();
+          land = () => resolve({ videosUpserted: 0, cutsAdded: 0 });
+        })
+    );
+
+    let ended = false;
+    const done = handler(createMockReq({ query: { q: tapped } }), res).then(() => {
+      ended = true;
+    });
+    await vi.waitFor(() => expect(recordSearchResultsMock).toHaveBeenCalled());
+
+    // Answered first, so the bank costs the singer nothing — but awaited, since
+    // a dropped promise dies with the frozen instance mid-write.
+    expect(bodyWhenBanked).not.toBeNull();
+    expect(ended).toBe(false);
+    land();
+    await done;
+    expect(ended).toBe(true);
   });
 });
