@@ -3,6 +3,7 @@ import { renderHook, act, waitFor } from "@testing-library/react";
 
 const mockSearchYoutube = vi.fn();
 const mockLookupVideo = vi.fn();
+const mockSuggestionCuts = vi.fn();
 
 vi.mock("../../app/queue/searchYoutube", async (importOriginal) => ({
   // SearchUnavailableError is used with `instanceof`, so the real module has to
@@ -15,7 +16,12 @@ vi.mock("../../app/queue/lookupVideo", () => ({
   default: (...args: unknown[]) => mockLookupVideo(...args),
 }));
 
+vi.mock("../../app/queue/suggestionCuts", () => ({
+  default: (...args: unknown[]) => mockSuggestionCuts(...args),
+}));
+
 import { useSongSearchState } from "../../components/songsearch/hooks/useSongSearchState";
+import { SearchUnavailableError } from "../../app/queue/searchYoutube";
 import { buildSearchQuery, searchCacheKey } from "../../lib/searchQuery";
 
 const PASTE_URL = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
@@ -113,7 +119,6 @@ describe("useSongSearchState — resultsVia", () => {
   });
 
   it("marks a bare-id lookup that falls through to search as search", async () => {
-    const { SearchUnavailableError } = await import("../../app/queue/searchYoutube");
     mockLookupVideo.mockRejectedValue(
       new SearchUnavailableError(404, { reason: "not_found" })
     );
@@ -231,6 +236,8 @@ describe("useSongSearchState — suggestion attribution", () => {
     localStorage.clear();
     global.fetch = vi.fn().mockResolvedValue({ ok: true }) as never;
     mockSearchYoutube.mockResolvedValue([song("a")]);
+    // Unresolved: the corpus 404s and the tap is the search it always was.
+    mockSuggestionCuts.mockRejectedValue(new SearchUnavailableError(404));
   });
 
   it("keys a suggestion tap the way the server keys its catalog", async () => {
@@ -298,5 +305,122 @@ describe("useSongSearchState — suggestion attribution", () => {
 
     await waitFor(() => expect(result.current.resultsVia).toBe("paste"));
     expect(result.current.resultsSuggestionKey).toBeNull();
+  });
+});
+
+// Browsing must never reach search.list: only an unresolved song costs one.
+describe("useSongSearchState — serving taps from the corpus", () => {
+  const TAP = "ABBA Dancing Queen";
+  const TAP_KEY = searchCacheKey(buildSearchQuery(TAP, true));
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+    global.fetch = vi.fn().mockResolvedValue({ ok: true }) as never;
+    mockSearchYoutube.mockResolvedValue([song("live")]);
+  });
+
+  /** searchSuggestion fills the box before running, and the empty-query guard
+   *  effect would otherwise wipe the results straight back out. */
+  async function tap(result: { current: ReturnType<typeof useSongSearchState> }) {
+    await act(async () => {
+      result.current.setQuery(TAP);
+    });
+    await act(async () => {
+      result.current.runSearch(TAP, result.current.filters, true, true);
+    });
+  }
+
+  it("renders a resolved song's cuts without spending a search", async () => {
+    mockSuggestionCuts.mockResolvedValue([song("cut1"), song("cut2")]);
+    const { result } = setup();
+
+    await tap(result);
+
+    await waitFor(() => expect(result.current.results).toHaveLength(2));
+    expect(mockSuggestionCuts).toHaveBeenCalledWith(TAP_KEY, expect.anything());
+    expect(mockSearchYoutube).not.toHaveBeenCalled();
+    // Unchanged either way, so an add off these results still names its song.
+    expect(result.current.resultsVia).toBe("search");
+    expect(result.current.resultsSuggestionKey).toBe(TAP_KEY);
+    expect(result.current.searchError).toBeNull();
+    expect(result.current.searching).toBe(false);
+  });
+
+  it("falls through to a search for a song we hold nothing for", async () => {
+    mockSuggestionCuts.mockRejectedValue(new SearchUnavailableError(404));
+    const { result } = setup();
+
+    await tap(result);
+
+    await waitFor(() => expect(mockSearchYoutube).toHaveBeenCalledTimes(1));
+    expect(result.current.results[0].videoId).toBe("live");
+    expect(result.current.resultsSuggestionKey).toBe(TAP_KEY);
+    expect(result.current.searchError).toBeNull();
+  });
+
+  it("falls through when the store request never lands", async () => {
+    // A dropped connection to our own API must not read as "no cuts, no song".
+    mockSuggestionCuts.mockRejectedValue(new TypeError("Failed to fetch"));
+    const { result } = setup();
+
+    await tap(result);
+
+    await waitFor(() => expect(result.current.results).toHaveLength(1));
+    expect(mockSearchYoutube).toHaveBeenCalledTimes(1);
+    expect(result.current.searchError).toBeNull();
+  });
+
+  it("searches when the tap carries a filter the cuts can't honour", async () => {
+    mockSuggestionCuts.mockResolvedValue([song("cut1")]);
+    const { result } = setup();
+
+    await act(async () => {
+      result.current.setQuery(TAP);
+    });
+    await act(async () => {
+      result.current.runSearch(TAP, { duration: "short", sortBy: "relevance" }, true, true);
+    });
+
+    // Cuts are the unfiltered answer; a "short" chip must not be served from them.
+    await waitFor(() => expect(mockSearchYoutube).toHaveBeenCalledTimes(1));
+    expect(mockSuggestionCuts).not.toHaveBeenCalled();
+    expect(result.current.resultsSuggestionKey).toBe(TAP_KEY);
+  });
+
+  it("leaves a typed search on the search path", async () => {
+    const { result } = setup();
+
+    await runQuery(result, "my mate dave singing badly");
+
+    await waitFor(() => expect(mockSearchYoutube).toHaveBeenCalledTimes(1));
+    expect(mockSuggestionCuts).not.toHaveBeenCalled();
+  });
+
+  it("doesn't strand the spinner or buy a search when a tap is aborted", async () => {
+    // What an aborted fetch actually rejects with, so the fall-through sees it.
+    mockSuggestionCuts.mockImplementationOnce(
+      (_key: string, signal: AbortSignal) =>
+        new Promise((_resolve, reject) => {
+          signal.addEventListener("abort", () => {
+            const err = new Error("Aborted");
+            err.name = "AbortError";
+            reject(err);
+          });
+        })
+    );
+    const { result } = setup();
+
+    await tap(result);
+    expect(result.current.searching).toBe(true);
+
+    await runQuery(result, "something else entirely");
+
+    await waitFor(() => expect(result.current.results[0].videoId).toBe("live"));
+    // Falling the abort through would spend one of the day's hundred searches on
+    // a tap nobody is waiting for, and clear the spinner the new query owns.
+    expect(mockSearchYoutube).toHaveBeenCalledTimes(1);
+    expect(result.current.searching).toBe(false);
+    expect(result.current.searchError).toBeNull();
   });
 });

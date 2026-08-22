@@ -7,6 +7,7 @@ import searchYoutube, {
   SearchFailure,
 } from '../../../app/queue/searchYoutube';
 import lookupVideo from '../../../app/queue/lookupVideo';
+import suggestionCuts from '../../../app/queue/suggestionCuts';
 import { classifySearchInput } from '../../../lib/videoLink';
 import { buildSearchQuery, searchCacheKey } from '../../../lib/searchQuery';
 import { INITIAL_RESULTS } from '../constants';
@@ -119,7 +120,21 @@ export function useSongSearchState({ roomId, role }: UseSongSearchStateArgs) {
     // Keyed as the server keys the catalog, so the two agree on which
     // suggestion this is without trusting the client to name it.
     const suggestionKey = fromSuggestion ? searchCacheKey(query) : null;
-    searchYoutube(query, activeFilters, controller.signal, roomId)
+    // Cuts are the unfiltered answer, so a "short" chip must not be served from
+    // them. Mirrors isCatalogFilters (lib/suggestionCatalog).
+    const resolvable =
+      suggestionKey &&
+      activeFilters.duration === 'any' &&
+      activeFilters.sortBy === 'relevance';
+    // Anything but an abort falls through to the search the tap has always been;
+    // an aborted tap must not start one nobody is waiting for.
+    const fetching = resolvable
+      ? suggestionCuts(suggestionKey, controller.signal).catch((err) => {
+          if (err?.name === 'AbortError' || controller.signal.aborted) throw err;
+          return searchYoutube(query, activeFilters, controller.signal, roomId);
+        })
+      : searchYoutube(query, activeFilters, controller.signal, roomId);
+    fetching
       .then((res) => {
         setResults(res);
         setResultsVia('search');
