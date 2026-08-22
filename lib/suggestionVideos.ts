@@ -1,10 +1,6 @@
+import { pinTopFirst, type ResolvedResult } from "./corpusRead";
 import { getSuggestionVideosCollection } from "./mongodb";
 import type { SearchResult } from "./searchCache";
-
-export interface ResolvedResult extends SearchResult {
-  /** The community's pick, badged by the UI. */
-  pinned?: boolean;
-}
 
 // Sources fill entries unequally — a search buys fifty rows, the harvest a
 // handful, a human's pick one — so below this an entry stays stored but doesn't
@@ -24,20 +20,6 @@ export async function readSuggestionVideos(
   } catch {
     return null;
   }
-}
-
-export function pinTopFirst(
-  results: SearchResult[],
-  topVideoId?: string
-): ResolvedResult[] {
-  const top = topVideoId
-    ? results.find((r) => r.videoId === topVideoId)
-    : undefined;
-  if (!top) return results;
-  return [
-    { ...top, pinned: true },
-    ...results.filter((r) => r.videoId !== top.videoId),
-  ];
 }
 
 /** Fire-and-forget, like writeCache — a singer waiting on results must never

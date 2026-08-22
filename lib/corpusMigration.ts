@@ -1,5 +1,6 @@
 import type { AnyBulkWriteOperation, Collection } from "mongodb";
 
+import { pinTopFirst, type ResolvedResult } from "./corpusRead";
 import {
   getCronStateCollection,
   getKaraokeSongsCollection,
@@ -13,7 +14,6 @@ import {
 import { MAX_CUTS, songIdentityFromCatalog } from "./songCorpus";
 import { catalogEntry, suggestionCatalog, type CatalogEntry } from "./suggestionCatalog";
 import { suggestionDemand } from "./suggestionDemand";
-import { pinTopFirst, type ResolvedResult } from "./suggestionVideos";
 
 // Only ever runs as an authenticated cron step: dev and prod share one
 // database, so an import-time or per-request trigger would rewrite live data

@@ -1,15 +1,14 @@
 import type { AnyBulkWriteOperation } from "mongodb";
 
+import { hydrateVideo } from "./corpusRead";
 import {
   getCronStateCollection,
   getKaraokeSongsCollection,
   getKaraokeVideosCollection,
   getSuggestionVideosCollection,
   type KaraokeSongDoc,
-  type KaraokeVideoDoc,
   type SuggestionVideoDoc,
 } from "./mongodb";
-import type { SearchResult } from "./searchCache";
 import { catalogEntry } from "./suggestionCatalog";
 import { THIN_RESULTS } from "./suggestionVideos";
 
@@ -17,9 +16,8 @@ import { THIN_RESULTS } from "./suggestionVideos";
 // and tells nobody, so a song whose cuts have all expired still looks resolved
 // to every other step — full to the harvest, cut-holding to the resolver.
 //
-// And suggestion_videos is still what a tap reads (pages/api/search.ts) with
-// nothing else left writing it, so its 30-day TTL would empty it song by song.
-// That half goes away with the collection when the corpus serving path lands.
+// And suggestion_videos is the rollback copy until phase 3 drops it: taps read
+// the corpus now, so nothing else writes it and its TTL would empty it.
 
 const CURSOR_ID = "publish";
 
@@ -39,18 +37,6 @@ export interface PublishReport {
    *  the entry is no worse than yesterday's, and deleting it sends the tap to a
    *  live search over a couple of cuts. */
   thin: number;
-}
-
-function hydrate(row: KaraokeVideoDoc): SearchResult {
-  return {
-    videoId: row._id,
-    title: row.title,
-    thumbnailUrl: row.thumbnailUrl,
-    ...(row.durationSeconds !== undefined
-      ? { durationSeconds: row.durationSeconds }
-      : {}),
-    ...(row.viewCount !== undefined ? { viewCount: row.viewCount } : {}),
-  };
 }
 
 /** Paged by _id so a killed run resumes, and starting over once it runs out —
@@ -123,7 +109,7 @@ export async function publishCorpus(
         });
       }
 
-      // pages/api/search.ts only reads the store for a catalog key.
+      // suggestion_videos is keyed by catalog key, so only those have an entry.
       if (!catalogEntry(song._id)) continue;
       if (cuts.length < THIN_RESULTS) {
         report.thin += 1;
@@ -135,7 +121,7 @@ export async function publishCorpus(
           filter: { _id: song._id },
           update: {
             $set: {
-              results: cuts.map((id) => hydrate(live.get(id)!)),
+              results: cuts.map((id) => hydrateVideo(live.get(id)!)),
               refreshedAt: now,
               ...(top ? { topVideoId: top } : {}),
             },

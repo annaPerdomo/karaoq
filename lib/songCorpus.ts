@@ -56,7 +56,6 @@ function songIdentityFields(entry: CatalogEntry): Record<string, unknown> {
 export interface AddedVideo {
   videoId: string;
   title: string;
-  thumbnailUrl?: string;
   durationSeconds?: number;
 }
 
@@ -109,7 +108,9 @@ async function writeAdd(video: AddedVideo, opts: AddSource): Promise<void> {
   // bumping refreshedAt renews an unrefreshed row's 30 days on traffic alone.
   const onInsert: Record<string, unknown> = {
     title: video.title,
-    thumbnailUrl: video.thumbnailUrl ?? "",
+    // Blank, never the client's: this is the field readSongCuts serves on, so a
+    // row no videos.list has answered for stays invisible (lib/corpusRead).
+    thumbnailUrl: "",
     firstSeenAt: now,
     refreshedAt: now,
   };

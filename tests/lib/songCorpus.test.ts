@@ -158,7 +158,7 @@ describe("recordAdd", () => {
     await addCut("abc123");
 
     await add(
-      { videoId: "abc123", title: "Anything The Request Body Says", thumbnailUrl: "spoof" },
+      { videoId: "abc123", title: "Anything The Request Body Says" },
       { via: "search", suggestionKey: entry.key, roomId: "ROOM9" }
     );
 
@@ -216,10 +216,12 @@ describe("recordAdd", () => {
     expect(songs().all()).toEqual([]);
   });
 
-  it("keeps the doc whole when the add carried no thumbnail or length", async () => {
+  it("leaves the row picture-less, which is what keeps it off the browse path", async () => {
     await addCut("abc123");
 
     const doc = videos().get("abc123");
+    // An add writes no YouTube data, not even a thumbnail the client is holding,
+    // and readSongCuts serves no row without one (lib/corpusRead).
     expect(doc.thumbnailUrl).toBe("");
     expect(doc.firstSeenAt).toBeTruthy();
     expect(doc.refreshedAt).toBeTruthy();
