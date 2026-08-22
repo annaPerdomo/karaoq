@@ -89,6 +89,11 @@ const SearchResults: React.FC<SearchResultsProps> = ({
             ? t('search.unavailable.quotaBody', { time: formatCountdown(secondsLeft, t) })
             : t('search.unavailable.body')}
         </p>
+        {/* Cuts come from the corpus, which spends no quota, so ideas outlive
+            it however it was spent — including on a paste. */}
+        {searchError.quota && (
+          <p className={styles.unavailableBody}>{t('search.quotaIdeasHint')}</p>
+        )}
         {/* A spent quota still leaves the 1-unit lookups working, so a searcher
             is told to paste a link. Someone whose paste hit it isn't. */}
         {searchError.quota && searchError.source !== 'lookup' && (
