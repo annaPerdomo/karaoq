@@ -74,6 +74,17 @@ function idsOf(filter: Doc): string[] {
   throw new Error("fakeCollection supports only _id equality or $in");
 }
 
+/** Reads scan ({} or { _id: { $gt } }, for a resumable job's paging); writes
+ *  stay on idsOf — a range filter has no business in an updateOne. */
+function readIdsOf(filter: Doc, stored: string[]): string[] {
+  if (Object.keys(filter).length === 0) return stored;
+  const id = filter._id;
+  if (id && typeof id === "object" && typeof id.$gt === "string") {
+    return stored.filter((key) => key > id.$gt);
+  }
+  return idsOf(filter);
+}
+
 /** Inclusion only, _id riding along as in Mongo. Applied rather than ignored,
  *  so an unprojected read is undefined here as it is in production. */
 function project(doc: Doc, projection?: Doc): Doc {
@@ -142,13 +153,30 @@ export function fakeCollection() {
       const doc = docs.get(id);
       return doc ? project(copy(doc), options?.projection) : null;
     },
-    find: (filter: Doc, options?: { projection?: Doc }) => ({
-      toArray: async () =>
-        idsOf(filter)
-          .map((id) => docs.get(id))
-          .filter((d): d is Doc => Boolean(d))
-          .map((d) => project(copy(d), options?.projection)),
-    }),
+    find: (filter: Doc, options?: { projection?: Doc }) => {
+      let ids = readIdsOf(filter, Array.from(docs.keys()));
+      const cursor = {
+        sort: (spec: Doc) => {
+          const keys = Object.keys(spec);
+          if (keys.length !== 1 || keys[0] !== "_id") {
+            throw new Error("fakeCollection sorts only by _id");
+          }
+          const dir = spec._id === -1 ? -1 : 1;
+          ids = ids.slice().sort((a, b) => (a < b ? -dir : a > b ? dir : 0));
+          return cursor;
+        },
+        limit: (n: number) => {
+          ids = ids.slice(0, n);
+          return cursor;
+        },
+        toArray: async () =>
+          ids
+            .map((id) => docs.get(id))
+            .filter((d): d is Doc => Boolean(d))
+            .map((d) => project(copy(d), options?.projection)),
+      };
+      return cursor;
+    },
     updateOne: async (filter: Doc, update: UpdateSpec, options?: UpdateOptions) =>
       apply(idsOf(filter)[0], update, options),
     bulkWrite: async (
