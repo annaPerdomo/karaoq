@@ -395,6 +395,11 @@ export interface KaraokeSongDoc {
   packIds?: string[];
   /** suggestion_used taps — the resolver's priority order for cuts: []. */
   demand: number;
+  /** Searches that answered with nothing playable. */
+  resolveMisses?: number;
+  /** Backed off until here; absent means eligible. Without it a song nothing
+   *  can find holds the head of the wanted queue for good. */
+  nextResolveAt?: Date;
 }
 
 let karaokeSongIndexesEnsured = false;
@@ -404,13 +409,16 @@ export async function getKaraokeSongsCollection(): Promise<Collection<KaraokeSon
   const db = client.db(process.env.MONGODB_DB);
   if (!karaokeSongIndexesEnsured) {
     karaokeSongIndexesEnsured = true;
-    // The resolver spends its nightly cap on the most-wanted songs first.
-    db.collection("karaoke_songs")
-      .createIndex({ demand: -1 })
-      .catch((e) => {
-        console.error("Karaoke song index creation failed:", e);
-        karaokeSongIndexesEnsured = false;
-      });
+    Promise.all([
+      // The resolver spends its nightly cap on the most-wanted songs first.
+      db.collection("karaoke_songs").createIndex({ demand: -1 }),
+      // Multikey, for two readers that were both collection scans: dropping a
+      // dead video from every song naming it, and the resolver's cuts: [] queue.
+      db.collection("karaoke_songs").createIndex({ cuts: 1 }),
+    ]).catch((e) => {
+      console.error("Karaoke song index creation failed:", e);
+      karaokeSongIndexesEnsured = false;
+    });
   }
   return db.collection<KaraokeSongDoc>("karaoke_songs");
 }
@@ -429,8 +437,14 @@ export interface CronStateDoc {
    *  a migration re-run over a corpus live traffic has moved can't be undone;
    *  a doc with no cursorAt is never a TTL candidate. */
   cursorAt?: Date;
-  /** Set by a once-only step that has finished for good. */
+  /** Set by a step that has finished: for good, if it is once-only, and until
+   *  the resweep window passes for a harvested channel. */
   done?: boolean;
+  /** The run lock's lease; only the "run" doc carries one. See lib/corpusBudget. */
+  leaseUntil?: Date;
+  /** The day's YouTube spend; only the "budget" doc carries it. One subdocument
+   *  so rolling to a new day can't leave yesterday's counts beside today. */
+  spend?: { day: string; searches: number; pages: number };
   updatedAt: Date;
 }
 

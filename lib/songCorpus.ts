@@ -346,3 +346,181 @@ export async function recordHarvestMatches(
 
   return { videosUpserted, videosRefreshed, songsFilled };
 }
+
+/** Below this a song plays but offers little choice, so leftover search budget
+ *  widens it rather than being lost. */
+export const THIN_CUTS = 10;
+
+/** Doubling, capped at a month. */
+const RESOLVE_BACKOFF_DAYS = [1, 2, 4, 8, 16, 32];
+
+/** Both of the resolver's queues are ordered by demand and neither writes on a
+ *  miss, so without this an unresolvable song holds the head of the list and
+ *  re-buys the same empty answer every run, forever. */
+export async function markResolveMiss(songKey: string): Promise<void> {
+  const songs = await getKaraokeSongsCollection();
+  const song = await songs.findOne(
+    { _id: songKey },
+    { projection: { resolveMisses: 1 } }
+  );
+  const misses = (song?.resolveMisses ?? 0) + 1;
+  const days = RESOLVE_BACKOFF_DAYS[Math.min(misses, RESOLVE_BACKOFF_DAYS.length) - 1];
+  await songs.updateOne(
+    { _id: songKey },
+    {
+      $inc: { resolveMisses: 1 },
+      $set: { nextResolveAt: new Date(Date.now() + days * 24 * 60 * 60 * 1000) },
+    }
+  );
+}
+
+/** The sweep's refresh half. A row videos.list still answers for is fresh by
+ *  definition, so rewriting refreshedAt is what keeps a served video out of the
+ *  TTL's way. */
+export async function refreshVideos(rows: SearchResult[]): Promise<number> {
+  if (rows.length === 0) return 0;
+  const now = new Date();
+  const videos = await getKaraokeVideosCollection();
+  const ops: AnyBulkWriteOperation<KaraokeVideoDoc>[] = rows.map((row) => ({
+    updateOne: {
+      // No upsert: the sweep only re-reads ids the corpus already holds, and a
+      // row the TTL collected mid-run must not be written back.
+      filter: { _id: row.videoId },
+      update: {
+        $set: {
+          refreshedAt: now,
+          // fetchVideoRows defaults both to "", and blanking a stored one costs
+          // the browse row its name or picture until the next sweep.
+          ...(row.title ? { title: row.title } : {}),
+          ...(row.thumbnailUrl ? { thumbnailUrl: row.thumbnailUrl } : {}),
+          ...(row.durationSeconds !== undefined
+            ? { durationSeconds: row.durationSeconds }
+            : {}),
+          ...(row.viewCount !== undefined ? { viewCount: row.viewCount } : {}),
+        },
+      },
+    },
+  }));
+  try {
+    const written = await videos.bulkWrite(ops, { ordered: false });
+    return written.modifiedCount;
+  } catch (e: any) {
+    console.warn("Sweep refresh partly failed:", e?.message);
+    return 0;
+  }
+}
+
+/** A video YouTube no longer serves or lets us embed leaves the corpus and every
+ *  song that named it. Songs first: killed between the two writes, that leaves an
+ *  orphan row the TTL collects, where the other order leaves a dead cut. */
+export async function dropVideos(
+  videoIds: string[]
+): Promise<{ dropped: number; cutsPulled: number; unpinned: number }> {
+  if (videoIds.length === 0) return { dropped: 0, cutsPulled: 0, unpinned: 0 };
+  const songs = await getKaraokeSongsCollection();
+  const videos = await getKaraokeVideosCollection();
+
+  const pulled = await songs.updateMany(
+    { cuts: { $in: videoIds } },
+    { $pull: { cuts: { $in: videoIds } } }
+  );
+  // Left dangling, the badge pins a video the song no longer serves.
+  const unpinned = await songs.updateMany(
+    { topVideoId: { $in: videoIds } },
+    { $unset: { topVideoId: "" } }
+  );
+  const deleted = await videos.deleteMany({ _id: { $in: videoIds } });
+  return {
+    dropped: deleted.deletedCount,
+    cutsPulled: pulled.modifiedCount,
+    unpinned: unpinned.modifiedCount,
+  };
+}
+
+/** The resolver's write, and phase 1's only path from search.list into the
+ *  corpus. Only rows that become cuts are stored: every extra id is one the
+ *  sweep must re-read forever for a song that will never serve it. */
+export async function recordSearchResults(
+  songKey: string,
+  results: SearchResult[]
+): Promise<{ videosUpserted: number; cutsAdded: number }> {
+  if (results.length === 0) return { videosUpserted: 0, cutsAdded: 0 };
+  const songs = await getKaraokeSongsCollection();
+  const videos = await getKaraokeVideosCollection();
+  // No upsert on the song: the song set is what bounds the corpus, so a search
+  // result can name a song but never create one.
+  const song = await songs.findOne({ _id: songKey });
+  if (!song) return { videosUpserted: 0, cutsAdded: 0 };
+
+  // A TTL deletion announces itself to nothing, so an expired cut occupies a
+  // slot — and counts towards the cap — until a writer drops it.
+  const held = song.cuts ?? [];
+  const alive =
+    held.length === 0
+      ? new Set<string>()
+      : new Set(
+          (
+            await videos
+              .find({ _id: { $in: held } }, { projection: { _id: 1 } })
+              .toArray()
+          ).map((r) => r._id)
+        );
+
+  const cuts = held.filter((id) => alive.has(id));
+  const fresh: SearchResult[] = [];
+  for (const row of results) {
+    if (cuts.length >= MAX_CUTS) break;
+    // Appended, never inserted: relevance order is YouTube's opinion, and the
+    // leading cuts are ranked by what rooms actually sang.
+    if (cuts.indexOf(row.videoId) >= 0) continue;
+    cuts.push(row.videoId);
+    fresh.push(row);
+  }
+
+  const now = new Date();
+  let videosUpserted = 0;
+  if (fresh.length > 0) {
+    const ops: AnyBulkWriteOperation<KaraokeVideoDoc>[] = fresh.map((row) => ({
+      updateOne: {
+        filter: { _id: row.videoId },
+        update: {
+          $set: {
+            title: row.title,
+            thumbnailUrl: row.thumbnailUrl,
+            refreshedAt: now,
+            "sources.search": { at: now },
+            ...(row.durationSeconds !== undefined
+              ? { durationSeconds: row.durationSeconds }
+              : {}),
+            ...(row.viewCount !== undefined ? { viewCount: row.viewCount } : {}),
+          },
+          $addToSet: { songKeys: songKey },
+          $setOnInsert: { firstSeenAt: now },
+        },
+        upsert: true,
+      },
+    }));
+    try {
+      const written = await videos.bulkWrite(ops, { ordered: false });
+      videosUpserted = written.upsertedCount;
+    } catch (e: any) {
+      console.warn("Resolve video write partly failed:", e?.message);
+    }
+  }
+
+  // Written even when nothing was added: the filter above may have dropped an
+  // expired cut, and leaving that id on the song strands it for good.
+  if (cuts.length !== held.length || fresh.length > 0) {
+    await songs.updateOne(
+      { _id: songKey },
+      {
+        $set: { cuts },
+        // A song that resolves isn't backing off any more.
+        ...(fresh.length > 0
+          ? { $unset: { resolveMisses: "", nextResolveAt: "" } }
+          : {}),
+      }
+    );
+  }
+  return { videosUpserted, cutsAdded: fresh.length };
+}

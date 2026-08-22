@@ -68,6 +68,12 @@ export function karaokePlaylistIds(): string[] {
     .filter(Boolean);
 }
 
+/** Playlists first, since they're the only reach into a language no channel
+ *  serves. Shared with the cursor store, which names targets the same way. */
+export function harvestTargets(handles: string[]): string[] {
+  return [...karaokePlaylistIds().map((id) => `playlist:${id}`), ...handles];
+}
+
 export interface HarvestedVideo {
   videoId: string;
   title: string;
@@ -189,10 +195,7 @@ export async function harvestKaraokeChannels(
   };
   if (!key) return report;
 
-  const targets = [
-    ...karaokePlaylistIds().map((id) => `playlist:${id}`),
-    ...handles,
-  ];
+  const targets = harvestTargets(handles);
 
   const spent = () => report.pages >= opts.totalPages || Date.now() >= opts.deadlineMs;
   let consecutiveFailures = 0;
