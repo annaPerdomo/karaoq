@@ -1,53 +1,68 @@
 import { NextApiRequest, NextApiResponse } from "next";
-import { suggestionCatalog } from "../../../lib/suggestionCatalog";
-import { suggestionDemand } from "../../../lib/suggestionDemand";
 import {
-  pendingEntries,
-  pinPopularPicks,
-  thinEntries,
-  refreshStale,
-  resolveBySearch,
-  seedFromAdds,
-  seedFromKaraokeChannels,
-  seedFromSearchCache,
-  type ResolveReport,
-} from "../../../lib/suggestionResolver";
-import { THIN_RESULTS } from "../../../lib/suggestionVideos";
+  acquireRun,
+  CHANNEL_PAGES_PER_DAY,
+  recordSpend,
+  releaseRun,
+  remaining,
+  SEARCH_PER_DAY,
+  spentToday,
+  type DailySpend,
+} from "../../../lib/corpusBudget";
+import {
+  CHANNEL_PAGES_PER_CHANNEL,
+  CHANNEL_RESWEEP_MS,
+  CUTS_PER_SONG,
+  harvestIntoCorpus,
+} from "../../../lib/corpusHarvest";
+import { migrateToCorpus } from "../../../lib/corpusMigration";
+import { publishCorpus } from "../../../lib/corpusPublish";
+import { resolveWantedSongs } from "../../../lib/corpusResolve";
+import {
+  REFRESH_AFTER_DAYS,
+  SWEEP_PER_RUN,
+  sweepCorpusVideos,
+} from "../../../lib/corpusSweep";
+import { suggestionCatalog } from "../../../lib/suggestionCatalog";
 
-// Nightly, not monthly: the quota is a *daily* allowance, so a monthly pass
-// could only ever spend one day's worth.
-const DEFAULT_RESOLVE_PER_RUN = 40;
+// Nightly, not monthly: the quota is a daily allowance, so a monthly pass could
+// only ever spend one day's worth. vercel.json invokes this twice because a full
+// harvest measured 335s against a 300s function — a later slot finishes what the
+// first ran out of clock for, spending clock and not quota (lib/corpusBudget).
 
-// Entries are refreshed well before their 30-day retention TTL, so a run that
-// fails or is skipped has a fortnight of slack before anything expires.
-const REFRESH_AFTER_DAYS = 16;
-const REFRESH_PER_RUN = 400;
-
-// A *total*, not a per-channel cap: 35 channels × 400 pages each was a
-// 14,035-unit ceiling against a 10,000/day pool, so the step built to protect
-// the quota could spend all of it and take every room's searches down with it.
-// 800 pages is ~835 units and ~40,000 uploads a night, walked from a saved
-// cursor so successive nights reach the deep end.
-const CHANNEL_PAGES = 800;
-const CHANNEL_PAGES_PER_CHANNEL = 60;
-const CUTS_PER_SONG = 8;
-
-const CHANNEL_RESWEEP_MS = 14 * 24 * 60 * 60 * 1000;
-
-// The function's ceiling, with the sweep's deadline held under it: work is
-// persisted per channel, so stopping voluntarily keeps what was bought where
-// being killed mid-sweep spent the units and wrote nothing.
+// The function's ceiling, with the run's deadline held under it: work is
+// persisted as it is bought, so stopping voluntarily keeps what a run paid for
+// where being killed mid-step spent the units and wrote nothing.
 export const config = { maxDuration: 300 };
 const RUN_BUDGET_MS = 240_000;
-const CHANNEL_DEADLINE_MS = 150_000;
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** No step may assume it finishes: the contract is to stop starting work at the
+ *  deadline, persist the cursor, and hand back done:false to be resumed.
+ *  `spent` is what it took out of the day's YouTube allowance. */
+type Step = (deadline: number) => Promise<{
+  done: boolean;
+  report: Record<string, unknown>;
+  spent?: Partial<DailySpend>;
+}>;
+
+interface StepSpec {
+  name: string;
+  run: Step;
+  /** The longest this step may hold the run, whatever else is left. */
+  budgetMs: number;
+  /** Held back out of the run for the steps after this one. Handed the whole
+   *  deadline the harvest will legitimately take it, and the search step then
+   *  opens on a clock that has already run out. */
+  floorMs: number;
+}
 
 function envCount(name: string, fallback: number): number {
   const n = Number(process.env[name]);
   return Number.isFinite(n) && n > 0 ? n : fallback;
 }
 
-/** Cheapest source first, so a day whose search quota is already spent still
- *  makes progress on everything before the last step. */
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -63,75 +78,137 @@ export default async function handler(
   // ?search=0 runs only the steps that don't touch search.list. Everything
   // else still does real work, so a maxed-out day isn't a no-op.
   const useSearch = req.query.search !== "0";
+  // Nothing branches on it; it is what makes the second cron entry a distinct
+  // path, and what names a run in the logs.
+  const slot = typeof req.query.slot === "string" ? req.query.slot : "1";
 
   const started = Date.now();
-  const demand = await suggestionDemand();
-  let pending = await pendingEntries(demand);
+  const deadline = started + RUN_BUDGET_MS;
 
-  const fromCache = await seedFromSearchCache(pending);
-  if (fromCache.seeded > 0) {
-    const seeded = new Set(fromCache.keys);
-    pending = pending.filter((e) => !seeded.has(e.key));
+  if (!(await acquireRun(started))) {
+    console.log("Corpus cron skipped, a run holds the lease:", slot);
+    res.status(200).json({ skipped: "locked", slot });
+    return;
   }
 
-  const fromAdds = await seedFromAdds(pending);
-  if (fromAdds.seeded > 0) pending = await pendingEntries(demand);
-
-  const fromChannels = await seedFromKaraokeChannels(pending, {
-    totalPages: envCount("SUGGESTION_CHANNEL_PAGES", CHANNEL_PAGES),
-    pagesPerChannel: envCount(
-      "SUGGESTION_CHANNEL_PAGES_PER_CHANNEL",
-      CHANNEL_PAGES_PER_CHANNEL
-    ),
-    deadlineMs: started + CHANNEL_DEADLINE_MS,
-    resweepAfterMs: CHANNEL_RESWEEP_MS,
-    maxCutsPerSong: CUTS_PER_SONG,
-  });
-  if (fromChannels.seeded > 0) pending = await pendingEntries(demand);
-
-  const cutoff = new Date(Date.now() - REFRESH_AFTER_DAYS * 24 * 60 * 60 * 1000);
-  const { refreshed, dropped, skipped } = await refreshStale(
-    cutoff,
-    REFRESH_PER_RUN
+  const spent = await spentToday(started);
+  const searchBudget = remaining(
+    envCount("SUGGESTION_RESOLVE_PER_DAY", SEARCH_PER_DAY),
+    spent.searches
+  );
+  const pageBudget = remaining(
+    envCount("SUGGESTION_CHANNEL_PAGES", CHANNEL_PAGES_PER_DAY),
+    spent.pages
   );
 
-  // Last and cheapest to lose, so these give way near the run's ceiling.
-  const timeLeft = () => Date.now() - started < RUN_BUDGET_MS;
-  const budget = envCount("SUGGESTION_RESOLVE_PER_RUN", DEFAULT_RESOLVE_PER_RUN);
-  const { searched } = useSearch && timeLeft()
-    ? await resolveBySearch(pending, budget)
-    : { searched: 0 };
+  /** Cheap and user-visible first, so a run short of clock has spent it where a
+   *  browsing room can feel it. Search is last: it's the one a room competes
+   *  with for quota. */
+  const steps: StepSpec[] = [
+    {
+      name: "migrate",
+      budgetMs: 60_000,
+      floorMs: 0,
+      run: async (by) => {
+        const { done, report } = await migrateToCorpus(by);
+        return { done, report: { ...report } };
+      },
+    },
+    {
+      name: "sweep",
+      budgetMs: 60_000,
+      floorMs: 5_000,
+      run: async (by) => {
+        const { done, report } = await sweepCorpusVideos(by, {
+          limit: envCount("SWEEP_PER_RUN", SWEEP_PER_RUN),
+          staleBefore: new Date(started - REFRESH_AFTER_DAYS * DAY_MS),
+        });
+        return { done, report: { ...report } };
+      },
+    },
+    {
+      name: "publish",
+      budgetMs: 45_000,
+      floorMs: 5_000,
+      run: async (by) => {
+        const { done, report } = await publishCorpus(by);
+        return { done, report: { ...report } };
+      },
+    },
+    {
+      name: "harvest",
+      budgetMs: 150_000,
+      floorMs: 5_000,
+      run: async (by) => {
+        if (pageBudget <= 0) {
+          return { done: false, report: { skipped: "pages spent today" } };
+        }
+        const { done, report } = await harvestIntoCorpus(by, {
+          totalPages: pageBudget,
+          pagesPerChannel: envCount(
+            "SUGGESTION_CHANNEL_PAGES_PER_CHANNEL",
+            CHANNEL_PAGES_PER_CHANNEL
+          ),
+          resweepAfterMs: CHANNEL_RESWEEP_MS,
+          maxCutsPerSong: CUTS_PER_SONG,
+        });
+        return { done, report: { ...report }, spent: { pages: report.pages } };
+      },
+    },
+    {
+      name: "resolve",
+      budgetMs: 60_000,
+      floorMs: 45_000,
+      run: async (by) => {
+        if (!useSearch) return { done: false, report: { skipped: "search=0" } };
+        if (searchBudget <= 0) {
+          return { done: false, report: { skipped: "searches spent today" } };
+        }
+        const { done, report } = await resolveWantedSongs(by, searchBudget);
+        return {
+          done,
+          report: { ...report },
+          spent: { searches: report.searched + report.widened },
+        };
+      },
+    },
+  ];
 
-  // An unused search is lost for good, so leftover budget widens thin entries.
-  const { searched: widened } = useSearch && searched < budget && timeLeft()
-    ? await resolveBySearch(
-        await thinEntries(THIN_RESULTS, demand),
-        budget - searched
-      )
-    : { searched: 0 };
+  const ran: Record<string, unknown> = {};
+  // Each floor is released as its step's turn comes, so the last step's
+  // deadline is the run's own.
+  let reserved = steps.reduce((total, step) => total + step.floorMs, 0);
+  try {
+    for (const step of steps) {
+      reserved -= step.floorMs;
+      const by = Math.min(Date.now() + step.budgetMs, deadline - reserved);
+      try {
+        const { done, report, spent: took } = await step.run(by);
+        ran[step.name] = { done, ...report };
+        // Before the next step, not at the end: a run killed at the function
+        // cap never reaches its cleanup, and units it didn't write down are
+        // units the next slot spends over again.
+        if (took) await recordSpend(started, took);
+      } catch (e: any) {
+        // Never a 500: the cursors the other steps wrote are what tomorrow
+        // resumes from, and Vercel retries nothing either way.
+        console.warn("Corpus cron step failed:", step.name, e?.message);
+        ran[step.name] = { done: false, error: e?.message ?? "failed" };
+      }
+    }
+  } finally {
+    // Released rather than left to expire, or a one-minute run locks out the
+    // slot behind it.
+    await releaseRun(Date.now()).catch(() => {});
+  }
 
-  const { pinned } = await pinPopularPicks();
-
-  const report: ResolveReport & { catalog: number; ms: number } = {
-    seededFromCache: fromCache.seeded,
-    seededFromAdds: fromAdds.seeded,
-    rejectedAdds: fromAdds.rejected,
-    seededFromChannels: fromChannels.seeded,
-    channels: fromChannels.channels,
-    missingChannels: fromChannels.missing,
-    channelUnits: fromChannels.units,
-    channelPages: fromChannels.pages,
-    channelsStoppedEarly: fromChannels.stoppedEarly,
-    refreshed,
-    dropped,
-    skipped,
-    pinned,
-    searched,
-    widened,
-    remaining: Math.max(pending.length - searched, 0),
+  const report = {
+    slot,
+    steps: ran,
+    budget: { searches: searchBudget, pages: pageBudget },
     catalog: suggestionCatalog().size,
     ms: Date.now() - started,
   };
-  console.log("Suggestion catalog run:", JSON.stringify(report));
+  console.log("Corpus cron run:", JSON.stringify(report));
   res.status(200).json(report);
 }

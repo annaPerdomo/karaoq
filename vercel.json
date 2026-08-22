@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/suggestions",
       "schedule": "15 7 * * *"
+    },
+    {
+      "path": "/api/cron/suggestions?slot=2",
+      "schedule": "15 8 * * *"
     }
   ]
 }

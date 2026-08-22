@@ -5,7 +5,8 @@ import {
   getSuggestionVideosCollection,
 } from "./mongodb";
 import { THIN_RESULTS } from "./suggestionVideos";
-import { searchYoutubeApi, videoDetailFields } from "./youtubeSearch";
+import { searchYoutubeApi } from "./youtubeSearch";
+import { fetchVideoRows, ID_BATCH } from "./youtubeVideos";
 import { YoutubeApiError } from "./youtubeApi";
 import {
   harvestKaraokeChannels,
@@ -22,9 +23,6 @@ import {
   type CatalogEntry,
 } from "./suggestionCatalog";
 import type { SearchResult } from "./searchCache";
-
-/** videos.list takes up to 50 ids per call, and that ceiling sets the batch. */
-const ID_BATCH = 50;
 
 export interface ResolveReport {
   seededFromCache: number;
@@ -192,50 +190,6 @@ export async function addedVideoIdsBySuggestion(
     winners.set(row._id.key, { videoId: row._id.videoId, rooms: row.rooms });
   }
   return winners;
-}
-
-/**
- * Null when the call failed; an empty map when YouTube answered and none of the
- * videos exist. Collapsing the two let one 403 read as every video being gone,
- * deleting hundreds of healthy entries.
- */
-async function fetchVideoRows(
-  videoIds: string[],
-  key: string
-): Promise<Map<string, SearchResult> | null> {
-  const rows = new Map<string, SearchResult>();
-  if (videoIds.length === 0) return rows;
-  const params = new URLSearchParams({
-    part: "snippet,contentDetails,statistics,status",
-    id: videoIds.slice(0, ID_BATCH).join(","),
-    key,
-  });
-  let resp: Response;
-  try {
-    resp = await fetch("https://www.googleapis.com/youtube/v3/videos?" + params, {
-      signal: AbortSignal.timeout(8000),
-    });
-  } catch {
-    // A timeout is the same "couldn't ask" as a 5xx, and must not propagate out
-    // and abort the whole run.
-    return null;
-  }
-  if (!resp.ok) return null;
-  const data = await resp.json();
-  for (const item of data.items ?? []) {
-    // Unembeddable can't play in the room, so it's as good as deleted.
-    if (item?.status?.embeddable === false) continue;
-    const snippet = item?.snippet;
-    if (!snippet || !item.id) continue;
-    rows.set(item.id, {
-      title: snippet.title ?? "",
-      thumbnailUrl:
-        snippet.thumbnails?.medium?.url || snippet.thumbnails?.default?.url || "",
-      videoId: item.id,
-      ...videoDetailFields(item),
-    });
-  }
-  return rows;
 }
 
 export interface ChannelSweepOptions {
@@ -519,24 +473,6 @@ export async function pinPopularPicks(): Promise<{ pinned: number }> {
     pinned += 1;
   }
   return { pinned };
-}
-
-/** Resolved but holding few cuts, so eligible for a search-backed upgrade once
- *  nothing is unresolved. Without this they stay thin forever: being resolved
- *  is what keeps a song out of the pending list. */
-export async function thinEntries(
-  minResults: number,
-  demand: Map<string, number>
-): Promise<CatalogEntry[]> {
-  const store = await getSuggestionVideosCollection();
-  const docs = await store
-    .find({ $expr: { $lt: [{ $size: "$results" }, minResults] } })
-    .toArray();
-  const catalog = suggestionCatalog();
-  return docs
-    .map((doc) => catalog.get(doc._id))
-    .filter((e): e is CatalogEntry => Boolean(e))
-    .sort((a, b) => (demand.get(b.key) ?? 0) - (demand.get(a.key) ?? 0));
 }
 
 /** Catalog songs with nothing stored yet, most-tapped first. */
