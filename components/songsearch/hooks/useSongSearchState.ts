@@ -118,8 +118,11 @@ export function useSongSearchState({ roomId, role }: UseSongSearchStateArgs) {
     // Shared with the server so one intent can't key two cache entries.
     const query = buildSearchQuery(rawQuery, karaoke);
     // Keyed as the server keys the catalog, so the two agree on which
-    // suggestion this is without trusting the client to name it.
-    const suggestionKey = fromSuggestion ? searchCacheKey(query) : null;
+    // suggestion this is without trusting the client to name it. Always the
+    // karaoke form: the catalog holds only karaoke keys, toggle or not.
+    const suggestionKey = fromSuggestion
+      ? searchCacheKey(buildSearchQuery(rawQuery, true))
+      : null;
     // Cuts are the unfiltered answer, so a "short" chip must not be served from
     // them. Mirrors isCatalogFilters (lib/suggestionCatalog).
     const resolvable =

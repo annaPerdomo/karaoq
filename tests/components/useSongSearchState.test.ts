@@ -347,6 +347,24 @@ describe("useSongSearchState — serving taps from the corpus", () => {
     expect(result.current.searching).toBe(false);
   });
 
+  it("serves a tap from the corpus even with karaoke mode off", async () => {
+    mockSuggestionCuts.mockResolvedValue([song("cut1")]);
+    const { result } = setup();
+
+    await act(async () => {
+      result.current.setQuery(TAP);
+    });
+    await act(async () => {
+      result.current.runSearch(TAP, result.current.filters, false, true);
+    });
+
+    // The quota hint promises song ideas to exactly this singer.
+    await waitFor(() => expect(result.current.results).toHaveLength(1));
+    expect(mockSuggestionCuts).toHaveBeenCalledWith(TAP_KEY, expect.anything());
+    expect(mockSearchYoutube).not.toHaveBeenCalled();
+    expect(result.current.resultsSuggestionKey).toBe(TAP_KEY);
+  });
+
   it("falls through to a search for a song we hold nothing for", async () => {
     mockSuggestionCuts.mockRejectedValue(new SearchUnavailableError(404));
     const { result } = setup();
