@@ -7,9 +7,8 @@ export const DURATION_OPTIONS: { value: VideoDuration; tKey: string }[] = [
   { value: 'long', tKey: 'search.duration.long' },
 ];
 
-// How many results are revealed at once; the server returns up to 50 per
-// search (one YouTube quota spend) and "Show more" pages through the rest
-// client-side without another request.
+// The server returns up to 50 per search (one quota spend); "Show more" pages
+// through the rest client-side without another request.
 export const INITIAL_RESULTS = 8;
 
 export const SORT_OPTIONS: { value: SortOrder; tKey: string }[] = [

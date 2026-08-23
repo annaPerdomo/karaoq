@@ -2,8 +2,8 @@ import { describe, it, expect } from "vitest";
 import { writeFileSync } from "fs";
 import { loadLocalEnv } from "./env";
 
-// What the corpus can actually serve. Doubles as the migration check: songs
-// should reach the catalog's size, and cutless is what the resolver still owes.
+// The migration check too: songs should reach the catalog's size, and cutless is
+// what the resolver still owes.
 //
 //   COVERAGE_LIVE=1 pnpm tool scripts/tools/coverageReport.tool.ts
 const LIVE = Boolean(process.env.COVERAGE_LIVE);
@@ -42,8 +42,7 @@ describe("song corpus coverage", () => {
       buckets.set(label, (buckets.get(label) ?? 0) + 1);
     }
 
-    // A source per video, not per song: one video can arrive several ways, and
-    // the interesting number is how much of the corpus each source earned.
+    // A source per video, not per song: one video can arrive several ways.
     const sources = new Map<string, number>();
     for (const v of videos) {
       for (const name of ["adds", "harvest", "seed", "search"]) {
@@ -66,14 +65,13 @@ describe("song corpus coverage", () => {
       .map(([pack, r]) => ({ pack, ...r, pct: Math.round((r.done / r.total) * 100) }))
       .sort((a, b) => a.pct - b.pct);
 
-    // The resolver's queue in the order it will spend the nightly cap.
     const wanted = cutless
       .slice()
       .sort((a, b) => (b.demand ?? 0) - (a.demand ?? 0))
       .slice(0, 20);
 
-    // A catalog song with no doc is a migration that hasn't finished (or a
-    // pack added since it ran) — the resolver only ever sees stored songs.
+    // A catalog song with no doc is an unfinished migration, or a pack added
+    // since it ran — the resolver only ever sees stored songs.
     const missing = Array.from(suggestionCatalog().keys()).filter(
       (key) => !songs.some((s) => s._id === key)
     );
@@ -107,8 +105,8 @@ describe("song corpus coverage", () => {
       ),
     ];
     writeFileSync("/tmp/corpus.txt", lines.join("\n"));
-    // The catalog, not the corpus: an empty corpus is the honest answer before
-    // the first migration run, and the report is what the tool is for.
+    // The catalog, not the corpus: empty is the honest answer before the first
+    // migration run, and the report is what the tool is for.
     expect(suggestionCatalog().size).toBeGreaterThan(0);
   }, 300_000);
 });

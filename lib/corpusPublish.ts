@@ -11,16 +11,13 @@ import {
 } from "./mongodb";
 import { catalogEntry } from "./suggestionCatalog";
 
-// Two jobs, no YouTube units. A karaoke_videos row deletes itself on its TTL and
-// tells nobody, so a song whose cuts have all expired still looks resolved to
-// every other step. And suggestion_videos is the rollback copy until phase 3
-// drops it — nothing else writes it now, and its TTL would empty it.
+// A karaoke_videos row deletes itself on its TTL and tells nobody, so a song whose
+// cuts have all expired still looks resolved. suggestion_videos is the rollback
+// copy — nothing else writes it, and its TTL would empty it.
 
 const CURSOR_ID = "publish";
 
-/** Sources fill songs unequally — a search buys fifty rows, the harvest a
- *  handful, a human's pick one — so below this a song is stored but not
- *  published: a tap falls through to a search whose results overwrite it. */
+/** Below this the tap falls through to a search that overwrites it anyway. */
 const THIN_RESULTS = 10;
 
 /** A full pass over the ~900-song corpus; the cursor covers the rest. */
@@ -30,19 +27,15 @@ const PAGE = 200;
 
 export interface PublishReport {
   scanned: number;
-  /** Cuts whose video row had expired, pulled off the song. */
   reconciled: number;
-  /** Songs left holding nothing, and so back on the resolver's queue. */
   emptied: number;
   published: number;
-  /** Too few live cuts to serve. Deliberately neither refreshed nor deleted:
-   *  the entry is no worse than yesterday's, and deleting it sends the tap to a
-   *  live search over a couple of cuts. */
+  /** Too few live cuts to serve. Neither refreshed nor deleted: yesterday's
+   *  entry beats a live search over a couple of cuts. */
   thin: number;
 }
 
-/** Paged by _id so a killed run resumes, and starting over once it runs out —
- *  a refresh loop, not a migration. */
+/** Paged by _id so a killed run resumes, starting over once it runs out. */
 export async function publishCorpus(
   deadline: number
 ): Promise<{ done: boolean; report: PublishReport }> {
@@ -93,6 +86,9 @@ export async function publishCorpus(
           ? song.topVideoId
           : undefined;
 
+      const servable = cuts.filter((id) => !!live.get(id)!.thumbnailUrl);
+      const pinned = top && servable.indexOf(top) >= 0 ? top : undefined;
+
       const dead = held.filter((id) => !live.has(id));
       if (dead.length > 0) {
         report.reconciled += dead.length;
@@ -101,19 +97,16 @@ export async function publishCorpus(
           updateOne: {
             filter: { _id: song._id },
             update: {
-              // $pull, never the list back: a room's add lands inside this
-              // read, and rewriting cuts wholesale would silently revert it.
+              // $pull, never the list back: a room's add lands inside this read.
               $pull: { cuts: { $in: dead } },
-              // Left dangling, the badge pins a video the song no longer serves.
               ...(song.topVideoId && !top ? { $unset: { topVideoId: "" } } : {}),
             },
           },
         });
       }
 
-      // suggestion_videos is keyed by catalog key, so only those have an entry.
       if (!catalogEntry(song._id)) continue;
-      if (cuts.length < THIN_RESULTS) {
+      if (servable.length < THIN_RESULTS) {
         report.thin += 1;
         continue;
       }
@@ -123,21 +116,20 @@ export async function publishCorpus(
           filter: { _id: song._id },
           update: {
             $set: {
-              results: cuts.map((id) => hydrateVideo(live.get(id)!)),
+              results: servable.map((id) => hydrateVideo(live.get(id)!)),
               refreshedAt: now,
-              ...(top ? { topVideoId: top } : {}),
+              ...(pinned ? { topVideoId: pinned } : {}),
             },
             // Only on insert: it dates a search.list call, and this spends none.
             $setOnInsert: { resolvedAt: now },
-            ...(top ? {} : { $unset: { topVideoId: "" } }),
+            ...(pinned ? {} : { $unset: { topVideoId: "" } }),
           },
           upsert: true,
         },
       });
     }
 
-    // Songs before the store: the other order leaves the store serving a cut
-    // the song has dropped, where this one costs a tap a stale night.
+    // Songs before the store: the other order serves a cut the song has dropped.
     if (songOps.length > 0) {
       try {
         await songs.bulkWrite(songOps, { ordered: false });

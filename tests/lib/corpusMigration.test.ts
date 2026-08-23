@@ -38,14 +38,11 @@ const videos = () => collection("karaoke_videos");
 const store = () => collection("suggestion_videos");
 const state = () => collection("cron_state");
 
-/** The order the migration pages in, so a cursor assertion can name a key. */
 const catalogKeys = Array.from(suggestionCatalog().keys()).sort();
 
 const RESOLVED_AT = new Date("2026-07-04T00:00:00Z");
 const REFRESHED_AT = new Date("2026-08-01T00:00:00Z");
 
-/** A legacy store entry: up to fifty rows from one search.list call, with the
- *  community's pick recorded separately rather than moved to the front. */
 function seedStoreDoc(
   key: string,
   prefix: string,
@@ -72,8 +69,8 @@ const NARROW_KEY = catalogKeys[1];
 const ADDED_KEY = catalogKeys[2];
 const ORPHAN_KEY = "a song that left the catalog";
 
-/** The common fixture: one entry deep enough to hit the cap with its pick near
- *  the bottom, one thin entry, and one key the catalog no longer knows. */
+/** One entry deep enough to hit the cap with its pick near the bottom, one thin
+ *  entry, and one key the catalog no longer knows. */
 function seedLegacyStore(): void {
   seedStoreDoc(WIDE_KEY, "wide", 15, "wide-13");
   seedStoreDoc(NARROW_KEY, "narrow", 3);
@@ -82,8 +79,8 @@ function seedLegacyStore(): void {
 
 const FAR_FUTURE = () => Date.now() + 60_000;
 
-/** Advances the clock one step per reading, so a deadline picks how many
- *  batches a run gets — the module checks it once per batch. */
+/** Advances one step per reading, so a deadline picks how many batches a run
+ *  gets — the module checks the clock once per batch. */
 function tickingClock(stepMs: number): number {
   const base = Date.now();
   let ticks = 0;
@@ -91,8 +88,7 @@ function tickingClock(stepMs: number): number {
   return base;
 }
 
-/** Byte-for-byte comparable across runs: every timestamp the seed writes is
- *  copied from the store entry, never taken from the clock. */
+/** Comparable across runs: every timestamp is copied from the store entry. */
 function corpus(): string {
   return JSON.stringify([songs().all(), videos().all()]);
 }
@@ -120,7 +116,6 @@ describe("migrateToCorpus - full run", () => {
     expect(report.phase).toBe("done");
     expect(report.songsSeeded).toBe(suggestionCatalog().size);
     expect(songs().all().length).toBe(suggestionCatalog().size);
-    // A song with nothing resolved is the wanted list, not a missing row.
     expect(songs().get(catalogKeys[3])).toMatchObject({ cuts: [], demand: 0 });
   });
 
@@ -129,7 +124,7 @@ describe("migrateToCorpus - full run", () => {
 
     const song = songs().get(WIDE_KEY);
     expect(song.cuts.length).toBe(MAX_CUTS);
-    // Thirteenth in the stored order, first once pinned — the cap would have
+    // Thirteenth in the stored order, first once pinned; the cap would have
     // dropped it where it sat.
     expect(song.cuts[0]).toBe("wide-13");
     expect(song.topVideoId).toBe("wide-13");
@@ -161,6 +156,21 @@ describe("migrateToCorpus - full run", () => {
       refreshedAt: REFRESHED_AT,
       firstSeenAt: RESOLVED_AT,
     });
+  });
+
+  it("gives a row a retention clock the store never had one for", async () => {
+    // The driver writes an absent field as null, which expires under no TTL and
+    // matches no $lt — so the row would hold YouTube data for good.
+    const undated = store().get(NARROW_KEY);
+    delete undated.refreshedAt;
+    delete undated.resolvedAt;
+    store().seed(undated);
+
+    await migrateToCorpus(FAR_FUTURE());
+
+    const row = videos().get("narrow-0");
+    expect(row.refreshedAt).toBeInstanceOf(Date);
+    expect(row.firstSeenAt).toBeInstanceOf(Date);
   });
 
   it("writes the tap counts onto the songs", async () => {
@@ -242,7 +252,6 @@ describe("migrateToCorpus - resumability", () => {
 
     expect(done).toBe(false);
     expect(report.phase).toBe("catalog");
-    // Three readings fell inside the deadline, so three pages of 100 ran.
     expect(report.songsSeeded).toBe(300);
     expect(state().get(MIGRATION_ID).cursor).toBe(`catalog:${catalogKeys[299]}`);
     expect(state().get(MIGRATION_ID).done).toBeUndefined();
@@ -316,10 +325,8 @@ describe("migrateToCorpus - songs adds reached first", () => {
       title: "Whatever the add called it",
       addCount: 3,
       addsByCountry: { BR: 3 },
-      // Two rooms chose this one; a store-wide pick doesn't outrank that.
       topVideoId: "added",
     });
-    // The seed fills the rest of the cap behind what singers actually queued.
     expect(song.cuts[0]).toBe("added");
     expect(song.cuts.length).toBe(MAX_CUTS);
     expect(song.cuts[1]).toBe("seed-13");

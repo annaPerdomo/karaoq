@@ -17,32 +17,26 @@ import { suggestionDemand } from "./suggestionDemand";
 
 // Only ever runs as an authenticated cron step: dev and prod share one database,
 // so an import-time or per-request trigger would rewrite live data from a laptop.
-// suggestion_videos stays read-only here — it's the rollback until dropped.
 
 /** Bumping the suffix is how a re-seed is authorised — the old id stays done. */
 export const MIGRATION_ID = "migrate-v1";
 
-/** Small enough that a killed run loses little, large enough that the cursor
- *  write isn't the cost of the run. */
 const BATCH = 100;
 
 type Phase = "catalog" | "store" | "demand";
 
 // Catalog before demand: seedDemand only updates existing docs, so a demand
-// reached before its song's identity exists is silently dropped to zero.
+// reached before its song's identity exists is silently dropped.
 const PHASES: Phase[] = ["catalog", "store", "demand"];
 
 export interface MigrationReport {
-  /** The step already finished for good; nothing was read or written. */
   skipped?: boolean;
-  /** Where the next run resumes, or "done". */
   phase: Phase | "done";
   songsSeeded: number;
   videosSeeded: number;
   songsFilled: number;
   demandScored: number;
-  /** Store entries whose song has since left the catalog — a doc with no
-   *  title, so it is counted rather than migrated. */
+  /** Store entries whose song has since left the catalog: counted, not migrated. */
   orphaned: number;
 }
 
@@ -109,7 +103,6 @@ async function seedCatalog(
         update: {
           $setOnInsert: {
             ...identity,
-            // Empty cuts IS the wanted list — the resolver's queue.
             cuts: [],
             addCount: 0,
             addsByCountry: {},
@@ -124,11 +117,16 @@ async function seedCatalog(
     const written = await songs.bulkWrite(ops, { ordered: false });
     report.songsSeeded += written.upsertedCount;
   } catch (e: any) {
-    // Unordered: a duplicate-key error means an add's own upsert won this
-    // race, and that doc already exists — one bad row must not stall the batch.
+    // Unordered: a duplicate key means an add's own upsert won the race, and one
+    // bad row must not stall the batch.
     console.warn("Migration catalog write partly failed:", e?.message);
   }
   return batch[batch.length - 1];
+}
+
+/** A doc written before the field existed hands the driver undefined. */
+function dated(value: Date | undefined, fallback: Date): Date {
+  return value instanceof Date ? value : fallback;
 }
 
 function growCuts(
@@ -137,9 +135,7 @@ function growCuts(
 ): { cuts: string[]; rows: ResolvedResult[] } {
   const cuts = existing.slice();
   const rows: ResolvedResult[] = [];
-  // Only rows that become cuts are stored, so the harvest sweep's nightly
-  // budget isn't spent re-checking rows no song serves. Pinned first, so the
-  // cap can't drop the community's pick.
+  // Pinned first, so the cap can't drop the community's pick.
   for (const row of pinTopFirst(doc.results, doc.topVideoId)) {
     if (cuts.length >= MAX_CUTS) break;
     if (cuts.indexOf(row.videoId) >= 0) continue;
@@ -149,7 +145,6 @@ function growCuts(
   return { cuts, rows };
 }
 
-/** Already resolved, so seeding from suggestion_videos spends no search quota. */
 async function seedStore(
   cursor: string,
   report: MigrationReport
@@ -164,18 +159,17 @@ async function seedStore(
 
   const songs = await getKaraokeSongsCollection();
   const videos = await getKaraokeVideosCollection();
+  const now = new Date();
 
-  // Sized off a point-in-time read: worst case a room's add lands here and a
-  // video row that never makes the cut is upserted a batch early. Harmless —
-  // only the song write below could be corrupted, so only that read is repeated.
+  // Stale by the song write below, which re-reads it.
   const early = new Map(
     (
       await songs.find({ _id: { $in: docs.map((d) => d._id) } }).toArray()
     ).map((s) => [s._id, s])
   );
 
-  // One op per video even where two songs share a cut — two upserts on one new
-  // _id within an unordered batch can both attempt the insert and one throws.
+  // One op per video even where two songs share a cut: two upserts on one new
+  // _id in an unordered batch can both attempt the insert and one throws.
   const pending = new Map<
     string,
     { onInsert: Record<string, unknown>; songKeys: string[] }
@@ -198,8 +192,7 @@ async function seedStore(
         continue;
       }
       pending.set(row.videoId, {
-        // $setOnInsert: a store row's date is older than a video's own
-        // provenance, and $set-ing it would push a live retention clock back.
+        // $setOnInsert: $set-ing would push a live retention clock back.
         onInsert: {
           title: row.title,
           thumbnailUrl: row.thumbnailUrl,
@@ -207,8 +200,10 @@ async function seedStore(
             ? { durationSeconds: row.durationSeconds }
             : {}),
           ...(row.viewCount !== undefined ? { viewCount: row.viewCount } : {}),
-          firstSeenAt: doc.resolvedAt ?? doc.refreshedAt,
-          refreshedAt: doc.refreshedAt,
+          // Dated, never copied through: a null here expires under no TTL and
+          // matches no $lt, so the row would hold YouTube data for good.
+          firstSeenAt: dated(doc.resolvedAt ?? doc.refreshedAt, now),
+          refreshedAt: dated(doc.refreshedAt, now),
         },
         songKeys: [doc._id],
       });
@@ -230,8 +225,7 @@ async function seedStore(
     });
   });
 
-  // Videos before songs: a cut whose video row is missing serves nothing, so a
-  // run killed between the two writes is better off owing cuts than ids.
+  // Videos before songs: better to owe cuts than to name ids nothing backs.
   if (videoOps.length > 0) {
     try {
       const written = await videos.bulkWrite(videoOps, { ordered: false });
@@ -243,9 +237,8 @@ async function seedStore(
 
   if (wanted.length === 0) return docs[docs.length - 1]._id;
 
-  // Re-read right before writing: the video bulkWrite above is a round trip a
-  // room's add can land inside, and writing cuts off the early read would
-  // silently revert it. fileCut (songCorpus.ts) is the only other writer here.
+  // Re-read right before writing: the bulkWrite above is a round trip a room's
+  // add can land inside, and the early read would silently revert it.
   const fresh = new Map(
     (
       await songs
@@ -294,8 +287,6 @@ async function seedStore(
   return docs[docs.length - 1]._id;
 }
 
-/** What people tapped, denormalized onto the song so the resolver can order
- *  its nightly searches without re-querying analytics events. */
 async function seedDemand(
   demand: Map<string, number>,
   cursor: string,
@@ -306,8 +297,7 @@ async function seedDemand(
 
   const songs = await getKaraokeSongsCollection();
   try {
-    // No upsert: every key here came from the current catalog, so its doc was
-    // written by the first step or the song has since been retired.
+    // No upsert: a key with no doc is a song the catalog has since retired.
     await songs.bulkWrite(
       batch.map((key) => ({
         updateOne: {
@@ -324,9 +314,8 @@ async function seedDemand(
   return batch[batch.length - 1];
 }
 
-/** Resumable seed, safe to run every night forever: an O(1) read once finished,
- *  and every write idempotent, so a run killed at the 300s cap continues from
- *  its cursor. */
+/** Safe to run every night forever: an O(1) read once finished, and every write
+ *  idempotent, so a run killed at the 300s cap continues from its cursor. */
 export async function migrateToCorpus(
   deadline: number
 ): Promise<{ done: boolean; report: MigrationReport }> {
@@ -350,8 +339,6 @@ export async function migrateToCorpus(
         : await seedDemand(demand!, cursor, report);
 
     if (next !== null) {
-      // After every batch, not at the end: a run killed at the function cap
-      // never reaches its own cleanup.
       cursor = next;
       await saveCursor(state, phase, cursor);
       continue;
@@ -360,9 +347,8 @@ export async function migrateToCorpus(
     const nextPhase = PHASES[PHASES.indexOf(phase) + 1];
     if (!nextPhase) {
       const now = new Date();
-      // cursorAt goes with the cursor: a done doc with a TTL clock deletes
-      // itself in a week, and a missing doc reads as "never ran" — which would
-      // re-seed a corpus that live traffic has since moved on from.
+      // cursorAt goes with the cursor: a done doc with a TTL clock deletes itself
+      // in a week, and a missing doc reads as "never ran" — re-seeding a live corpus.
       await state.updateOne(
         { _id: MIGRATION_ID },
         {

@@ -18,8 +18,8 @@ describe("normalizeSearchQuery", () => {
   });
 
   it("collapses a suffix that isn't adjacent to the singer's own word", () => {
-    // The rule the server used to miss: only trailing *runs* collapsed, so this
-    // kept keying (and spending) separately from "abba karaoke live".
+    // Only trailing *runs* used to collapse, so this kept keying separately from
+    // "abba karaoke live".
     expect(normalizeSearchQuery("abba karaoke live karaoke")).toBe(
       "abba karaoke live"
     );
@@ -55,8 +55,6 @@ describe("buildSearchQuery", () => {
   });
 
   it("agrees with the server's normalization, so one intent keys one entry", () => {
-    // Whatever the client sends, the server's normalizer must be a no-op on it
-    // — otherwise the two spend two of the day's ~90 searches on one intent.
     for (const raw of ["abba waterloo", "abba karaoke", "karaoke", "  a  b  "]) {
       for (const mode of [true, false]) {
         const sent = buildSearchQuery(raw, mode);
@@ -85,19 +83,16 @@ describe("searchCacheKey", () => {
   });
 
   it("keeps non-Latin queries intact rather than flattening them away", () => {
-    // \w-based folding would key every Japanese and Korean query as "", so
-    // every singer using one would collide on a single cache entry.
+    // \w-based folding keys every Japanese and Korean query as "".
     expect(searchCacheKey("上を向いて歩こう")).toBe("上を向いて歩こう");
-    // Hangul comes out decomposed (NFKD splits syllables into jamo), which is
-    // fine for an opaque key — what matters is that it's stable and distinct.
+    // NFKD splits hangul syllables into jamo — fine for an opaque key.
     expect(searchCacheKey("아파트 - 로제")).toBe(searchCacheKey("아파트 로제"));
     expect(searchCacheKey("아파트 로제")).not.toBe(searchCacheKey("소주 한 잔"));
     expect(searchCacheKey("아파트 로제")).not.toBe("");
   });
 
   it("keys a query the same however the client composed its characters", () => {
-    // The same song typed on two keyboards must not be two live searches. Built
-    // with normalize() rather than pasted literals, so the fixtures can't
+    // Built with normalize() rather than pasted literals, so the fixtures can't
     // silently become byte-identical and turn this into a tautology.
     const song = "Cafe\u0301 del Mar";
     expect(song.normalize("NFD")).not.toBe(song.normalize("NFC"));

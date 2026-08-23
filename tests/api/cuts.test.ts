@@ -104,10 +104,8 @@ describe("GET /api/suggestions/cuts", () => {
     const res = await get({ song: SONG_KEY });
 
     expect(res.getStatus()).toBe(200);
-    // The one claim the corpus exists to make: browsing never reaches search.list.
     expect(fetchMock).not.toHaveBeenCalled();
     expect(res.getHeader("x-karaoq-suggestions")).toBe("corpus");
-    // Same for everyone, rewritten only overnight: the CDN takes the repeat taps.
     expect(res.getHeader("Cache-Control")).toBe(
       "public, s-maxage=3600, stale-while-revalidate=86400"
     );
@@ -122,7 +120,6 @@ describe("GET /api/suggestions/cuts", () => {
 
     const res = await get({ song: SONG_KEY });
 
-    // Anything else and the results list and add flow need a second code path.
     expect(res.getBody()).toEqual([
       {
         videoId: "a",
@@ -168,7 +165,6 @@ describe("GET /api/suggestions/cuts", () => {
     const res = await get({ song: SONG_KEY });
 
     expect(res.getStatus()).toBe(429);
-    // A 429 here costs a live search, and a venue browses from one IP.
     expect(rateLimitMock).toHaveBeenCalledWith(
       expect.anything(),
       "cuts",

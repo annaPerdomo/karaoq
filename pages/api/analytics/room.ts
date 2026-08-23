@@ -48,8 +48,7 @@ async function handleGet(
           "singwithme_queued",
           "reaction_sent",
           "search_performed",
-          // Our own catalog data, so no retention window strips the titles the
-          // way it does song_added.
+          // Our own catalog data, so no retention window strips the titles.
           "suggestion_used",
           // Attributed to a room since the client began sending its code with
           // the search request; older failures carry roomId "" and never match.
@@ -207,8 +206,8 @@ async function handleGet(
           source: e.suggestionSource ?? "song_pick",
           sectionId: e.sectionId ?? null,
           categoryId: e.categoryId ?? null,
-          // A "trending" title is a cleaned-up YouTube title and so lives in
-          // youtube_song_data; the rest are our own catalog names on the event.
+          // A "trending" title is a YouTube title and lives in youtube_song_data;
+          // the rest are our own catalog names on the event.
           songTitle: e.songTitle ?? titleOf(e),
           songArtist: e.songArtist ?? null,
           timestamp: e.timestamp,

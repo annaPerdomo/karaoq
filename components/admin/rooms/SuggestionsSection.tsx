@@ -4,8 +4,8 @@ import type { RoomSuggestionRow } from '../types';
 import { SECTION_LABELS, SOURCE_LABELS } from '../format';
 import { DossierRow, Section } from './DossierSections';
 
-/** Our own catalog names, not YouTube's, so unlike the song timeline these
- *  survive the 30-day retention window (lib/youtubeRetention). */
+/** Our own catalog names, not YouTube's, so these survive the 30-day retention
+ *  window the song timeline is subject to. */
 export default function SuggestionsSection({
   suggestions,
   wide,
@@ -59,7 +59,6 @@ interface SongTally {
   count: number;
 }
 
-/** Rolls repeat taps of one song into a single row, most-tapped first. */
 function summarize(rows: RoomSuggestionRow[]): {
   songs: SongTally[];
   sources: { source: string; count: number }[];
@@ -69,8 +68,6 @@ function summarize(rows: RoomSuggestionRow[]): {
 
   for (const row of rows) {
     sources.set(row.source, (sources.get(row.source) ?? 0) + 1);
-    // A genre chip is a category opening, not a song: it counts as a source
-    // but has no title to rank.
     if (!row.songTitle) continue;
     const key = `${row.songTitle}|${row.songArtist ?? ''}`;
     const existing = songs.get(key);

@@ -12,10 +12,9 @@ import { MAX_CUTS } from "../../lib/songCorpus";
 import { matchHarvestToCatalog } from "../../lib/suggestionMatch";
 import { suggestionCatalog, type CatalogEntry } from "../../lib/suggestionCatalog";
 
-// Run after editing KARAOKE_CHANNELS to see which handles resolve and how much
-// of the corpus they would fill. Costs 1 unit per handle plus 1 per page of 50,
-// and no search.list. Empty cursors and no writes, so it never disturbs what the
-// cron saved.
+// Run after editing KARAOKE_CHANNELS to see which handles resolve and how much of
+// the corpus they would fill. 1 unit per handle plus 1 per page of 50, no
+// search.list. Empty cursors and no writes, so the cron's own are undisturbed.
 //
 //   PROBE_LIVE=1 PROBE_PAGES=8 pnpm tool scripts/tools/probeHarvest.tool.ts
 //   PROBE_LIVE=1 PROBE_HANDLES=SomeChannel,Another pnpm tool …
@@ -29,7 +28,7 @@ describe("channel harvest probe", () => {
     const pages = Number(process.env.PROBE_PAGES ?? 4);
 
     // The two sets the harvest step works from: songs short of the cap are what
-    // it matches against, and the cutless ones are what a new handle is judged on.
+    // it matches against, cutless ones what a new handle is judged on.
     const stored = await (await getKaraokeSongsCollection())
       .find({}, { projection: { cuts: 1 } })
       .toArray();

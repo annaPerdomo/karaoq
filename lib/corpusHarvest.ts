@@ -19,24 +19,17 @@ import { matchHarvestToCatalog, type MatchedVideo } from "./suggestionMatch";
 import { suggestionCatalog, type CatalogEntry } from "./suggestionCatalog";
 import { fetchVideoRows, ID_BATCH } from "./youtubeVideos";
 
-// The step that still works on a day the search quota is spent: channel uploads
-// cost 1 unit per 50 out of a separate 10,000/day pool, and the strict matcher
-// (lib/suggestionMatch) is what makes a title enough to file a video by.
-
-/** Per-channel slice of the run's page budget, so one enormous channel can't
- *  starve the other thirty-four. The budget itself is CHANNEL_PAGES_PER_DAY. */
+/** Slice of CHANNEL_PAGES_PER_DAY, so one channel can't starve the rest. */
 export const CHANNEL_PAGES_PER_CHANNEL = 60;
 
-/** One channel's contribution to one song. Four channels covering a song is
- *  four arrangements; one channel filling all twelve cuts is a monoculture. */
+/** One channel's share of a song; twelve cuts from one is a monoculture. */
 export const CUTS_PER_SONG = 8;
 
 export const CHANNEL_RESWEEP_MS = 14 * 24 * 60 * 60 * 1000;
 
 const CURSOR_PREFIX = "harvest:";
 
-/** "<playlistId>|<pageToken>" — neither half can hold a pipe, and one cursor
- *  field keeps every step's state doc the same shape. */
+/** "<playlistId>|<pageToken>" — neither half can hold a pipe. */
 function encodeCursor(cursor: HarvestCursor): string {
   return `${cursor.playlistId ?? ""}|${cursor.pageToken ?? ""}`;
 }
@@ -46,8 +39,7 @@ function decodeCursor(doc: CronStateDoc): HarvestCursor {
   return {
     playlistId: playlistId || undefined,
     pageToken: pageToken || undefined,
-    // A finished channel is parked with done:true, so its write time is when it
-    // finished — which is what the resweep window is measured from.
+    // A finished channel is parked with done:true, so updatedAt is when it did.
     completedAt: doc.done ? doc.updatedAt : undefined,
   };
 }
@@ -62,8 +54,7 @@ async function loadCursors(targets: string[]): Promise<Map<string, HarvestCursor
     cursors.set(doc._id.slice(CURSOR_PREFIX.length), decodeCursor(doc));
   }
 
-  // One-time bridge from the pre-corpus store, dropped in phase 3: a channel
-  // restarting from its newest upload re-walks weeks of nightly budget.
+  // Bridge from the pre-corpus store: a restart re-walks weeks of budget.
   const missing = targets.filter((t) => !cursors.has(t));
   if (missing.length > 0) {
     const legacy = await getHarvestCursorsCollection();
@@ -89,7 +80,7 @@ async function saveCursor(
   const unset: Record<string, ""> = {};
   if (cursor.completedAt) {
     // No cursorAt on a finished channel: that field is the TTL clock, and a
-    // channel parked for its two-week resweep must outlive a seven-day sweep.
+    // two-week resweep must outlive a seven-day sweep.
     set.done = true;
     unset.cursorAt = "";
   } else {
@@ -103,8 +94,8 @@ async function saveCursor(
   );
 }
 
-/** Every catalog song but the ones already at the cut cap — enrichment bought
- *  for a song that can't take another cut is a unit spent on nothing. */
+/** Every catalog song short of the cut cap. Counts ids, so a song holding cuts
+ *  the sweep hasn't named yet reads as full and sits out one run. */
 async function wantedEntries(): Promise<CatalogEntry[]> {
   const songs = await getKaraokeSongsCollection();
   const full = await songs
@@ -117,9 +108,8 @@ async function wantedEntries(): Promise<CatalogEntry[]> {
   return Array.from(suggestionCatalog().values()).filter((e) => !done.has(e.key));
 }
 
-/** Durations and view counts aren't in a playlist row, so matched uploads get
- *  one videos.list pass for the same badges a searched row carries. Best-effort:
- *  recordHarvestMatches keeps the playlist's title where a lookup didn't reach. */
+/** Durations and view counts aren't in a playlist row. Best-effort — the
+ *  playlist title stands where the lookup fails. */
 async function enrichMatches(
   matches: Map<string, MatchedVideo[]>,
   key: string,
@@ -151,7 +141,6 @@ export interface HarvestStepReport {
   units: number;
   pages: number;
   stoppedEarly: boolean;
-  /** Catalog songs still short of the cap when the run started. */
   wanted: number;
   videosUpserted: number;
   videosRefreshed: number;
@@ -163,6 +152,8 @@ export interface HarvestStepOptions {
   pagesPerChannel: number;
   resweepAfterMs: number;
   maxCutsPerSong: number;
+  /** Billed per page as bought: a step that throws has still spent them. */
+  onPages?: (pages: number) => void;
 }
 
 export async function harvestIntoCorpus(
@@ -191,14 +182,15 @@ export async function harvestIntoCorpus(
   const handles = karaokeChannelHandles();
   const cursors = await loadCursors(harvestTargets(handles));
   let extraUnits = 0;
+  // Narrowed as songs fill: a match on a full song buys enrichment for nothing.
+  let open = wanted;
 
   const onChannel = async ({ channel, videos, cursor }: ChannelBatch) => {
-    // Persisted per channel, not buffered: a sweep runs for minutes, and
-    // buffering meant a run killed at the function cap stored nothing.
+    // Per channel, not buffered: a run killed at the function cap stored nothing.
     await saveCursor(state, channel, cursor);
-    if (videos.length === 0) return;
+    if (videos.length === 0 || open.length === 0) return;
 
-    const matches = matchHarvestToCatalog(videos, wanted, opts.maxCutsPerSong);
+    const matches = matchHarvestToCatalog(videos, open, opts.maxCutsPerSong);
     if (matches.size === 0) return;
 
     const enriched = await enrichMatches(matches, key, deadline);
@@ -207,6 +199,10 @@ export async function harvestIntoCorpus(
     report.videosUpserted += written.videosUpserted;
     report.videosRefreshed += written.videosRefreshed;
     report.songsFilled += written.songsFilled;
+    if (written.full.length > 0) {
+      const filled = new Set(written.full);
+      open = open.filter((entry) => !filled.has(entry.key));
+    }
   };
 
   const harvest = await harvestKaraokeChannels(handles, {
@@ -216,6 +212,7 @@ export async function harvestIntoCorpus(
     resweepAfterMs: opts.resweepAfterMs,
     cursors,
     onChannel,
+    ...(opts.onPages ? { onPages: opts.onPages } : {}),
   });
 
   report.channels = harvest.channels;

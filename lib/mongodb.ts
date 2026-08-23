@@ -33,9 +33,8 @@ export function getMongoClient(): Promise<MongoClient> {
 // accumulate against the Atlas free-tier storage cap.
 export const ROOM_EXPIRY_SECONDS = 30 * 24 * 60 * 60;
 
-// Entries are only *served* for 14 days (FRESH_CACHE_MS in pages/api/search.ts)
-// and retained a week past that as an outage fallback. YouTube's Developer
-// Policies cap storage of non-authorized API data at 30 days, so stay under.
+// YouTube's Developer Policies cap storage of non-authorized API data at 30 days.
+// Served for 14 (FRESH_CACHE_MS), then a week as an outage fallback.
 const SEARCH_CACHE_TTL_SECONDS = 21 * 24 * 60 * 60;
 
 let roomIndexesEnsured = false;
@@ -245,18 +244,14 @@ export async function getClientErrorsCollection(): Promise<Collection<ClientErro
   return db.collection<ClientErrorDoc>("client_errors");
 }
 
-// One doc per catalogued suggestion (lib/suggestionCatalog). Same refreshedAt
-// TTL as karaoke_videos below, for the same YouTube 30-day rule.
 const SUGGESTION_VIDEO_TTL_SECONDS = YOUTUBE_DATA_MAX_AGE_DAYS * 24 * 60 * 60;
 
 export interface SuggestionVideoDoc {
   /** The catalog key — searchCacheKey() of the query a tap produces. */
   _id: string;
   results: { title: string; thumbnailUrl: string; videoId: string; durationSeconds?: number; viewCount?: number }[];
-  /** Pinned to the top; absent until anyone has added one. */
   topVideoId?: string;
   resolvedAt: Date;
-  /** The retention clock the TTL index reads. */
   refreshedAt: Date;
 }
 
@@ -266,8 +261,7 @@ export async function getSuggestionVideosCollection(): Promise<Collection<Sugges
   const client = await getMongoClient();
   const db = client.db(process.env.MONGODB_DB);
   if (!suggestionVideoIndexesEnsured) {
-    // Latched even on failure, and retuned via collMod, for the reasons on the
-    // search_cache index above.
+    // Latched even on failure, and retuned via collMod, as search_cache is.
     suggestionVideoIndexesEnsured = true;
     db.collection("suggestion_videos")
       .createIndex({ refreshedAt: 1 }, { expireAfterSeconds: SUGGESTION_VIDEO_TTL_SECONDS })
@@ -287,40 +281,32 @@ export async function getSuggestionVideosCollection(): Promise<Collection<Sugges
   return db.collection<SuggestionVideoDoc>("suggestion_videos");
 }
 
-// One doc per playable video, and the only collection holding YouTube-derived
-// fields — which is what lets a TTL index enforce the 30-day rule instead of a
-// job that can fail to run. The clock is refreshedAt, not a creation date: the
-// nightly sweep rewrites it, so a maintained video never expires.
+// The only collection holding YouTube-derived fields, so a TTL index enforces the
+// 30-day rule. The clock is refreshedAt, which the sweep rewrites.
 const KARAOKE_VIDEO_TTL_SECONDS = YOUTUBE_DATA_MAX_AGE_DAYS * 24 * 60 * 60;
 
 export interface KaraokeVideoDoc {
-  /** The YouTube video id. */
   _id: string;
   title: string;
   thumbnailUrl: string;
   durationSeconds?: number;
   viewCount?: number;
-  /** The karaoke_songs._id values this cut is grouped under. Plural because one
-   *  title can cover two songs, and a singular field loses whichever lost. */
+  /** The karaoke_songs._id values this cut is grouped under; plural because one
+   *  title can cover two songs. */
   songKeys?: string[];
-  /** How the video reached the corpus; one can arrive more than one way. */
   sources: {
     adds?: {
       count: number;
       byCountry: Record<string, number>;
-      /** Distinct rooms that added it, kept only until there are enough to
-       *  badge the cut — a bound, not a log. See MIN_ADD_ROOMS. */
+      /** Kept only up to MIN_ADD_ROOMS — a bound, not a log. */
       rooms?: string[];
       lastAt: Date;
     };
     harvest?: { channel: string; matchedAt: Date };
-    /** Carried over from suggestion_videos by the seed migration. */
     seed?: boolean;
-    /** Banked from a live search a singer already paid for. */
     search?: { at: Date };
   };
   firstSeenAt: Date;
-  /** The retention clock the TTL index reads. */
   refreshedAt: Date;
 }
 
@@ -332,9 +318,8 @@ export async function getKaraokeVideosCollection(): Promise<Collection<KaraokeVi
   if (!karaokeVideoIndexesEnsured) {
     karaokeVideoIndexesEnsured = true;
     Promise.all([
-      // Latched even on failure, and retuned via collMod, for the reasons on
-      // the search_cache index above — including swallowing its own rejection
-      // so a failed retune can't un-latch the batch.
+      // Latched even on failure, and retuned via collMod, as search_cache is —
+      // swallowing its own rejection so a failed retune can't un-latch the batch.
       db
         .collection("karaoke_videos")
         .createIndex(
@@ -353,7 +338,6 @@ export async function getKaraokeVideosCollection(): Promise<Collection<KaraokeVi
         .catch((e) => {
           console.error("karaoke_videos TTL retune failed:", e);
         }),
-      // Multikey: every cut of one song, for the sweep's regroup.
       db.collection("karaoke_videos").createIndex({ songKeys: 1 }),
     ]).catch((e) => {
       console.error("Karaoke video index creation failed:", e);
@@ -363,22 +347,20 @@ export async function getKaraokeVideosCollection(): Promise<Collection<KaraokeVi
   return db.collection<KaraokeVideoDoc>("karaoke_videos");
 }
 
-// One doc per song identity: our names, our counts, and videoId *references*.
-// No YouTube content — hydrated from karaoke_videos at read time — so no TTL
-// here. The references aren't self-cleaning: a karaoke_videos row deletes itself
-// on TTL and tells nobody, so every writer of `cuts` drops ids whose video is gone.
+// No YouTube content — hydrated from karaoke_videos at read time — so no TTL here.
+// A karaoke_videos row deletes itself on TTL and tells nobody, so every writer of
+// `cuts` drops ids whose video is gone.
 export interface KaraokeSongDoc {
   /** searchCacheKey(buildSearchQuery(`${artist} ${title}`, true)) — the key a
    *  suggestion tap already resolves to. */
   _id: string;
-  /** Our name for the song, curated or from the suggestion catalog; never a
-   *  video's title. */
+  /** Our name for the song, curated or catalogued; never a video's title. */
   title: string;
   artist: string;
   nativeTitle?: string;
   nativeArtist?: string;
-  /** Ranked videoIds, best cut first, capped at 12. Empty is the wanted list:
-   *  the resolver's queue, and what browse hides once phase 2 lands. */
+  /** Ranked videoIds, best cut first, capped at MAX_CUTS. Empty is the wanted
+   *  list — the resolver's queue. */
   cuts: string[];
   /** The cut singers converge on; powers the "Most sung" badge. */
   topVideoId?: string;
@@ -389,7 +371,6 @@ export interface KaraokeSongDoc {
   packIds?: string[];
   /** suggestion_used taps — the resolver's priority order for cuts: []. */
   demand: number;
-  /** Searches that answered with nothing playable. */
   resolveMisses?: number;
   /** Backed off until here; absent means eligible. See markResolveMiss. */
   nextResolveAt?: Date;
@@ -403,10 +384,7 @@ export async function getKaraokeSongsCollection(): Promise<Collection<KaraokeSon
   if (!karaokeSongIndexesEnsured) {
     karaokeSongIndexesEnsured = true;
     Promise.all([
-      // The resolver spends its nightly cap on the most-wanted songs first.
       db.collection("karaoke_songs").createIndex({ demand: -1 }),
-      // Multikey, for two readers that were both collection scans: dropping a
-      // dead video from every song naming it, and the resolver's cuts: [] queue.
       db.collection("karaoke_songs").createIndex({ cuts: 1 }),
     ]).catch((e) => {
       console.error("Karaoke song index creation failed:", e);
@@ -417,23 +395,22 @@ export async function getKaraokeSongsCollection(): Promise<Collection<KaraokeSon
 }
 
 // Where each nightly step stopped, so a run that hits the 300s function cap
-// resumes rather than restarting. A cursor untouched for a week names a step
-// that no longer runs.
+// resumes. A cursor untouched for a week names a step that no longer runs.
 const CRON_STATE_TTL_SECONDS = 7 * 24 * 60 * 60;
 
 export interface CronStateDoc {
   /** The step name, e.g. "sweep", "harvest", "migrate-v1". */
   _id: string;
   cursor?: string;
-  /** The TTL clock, and only a resumable step sets it — hence the index keys on
-   *  this, not updatedAt. A deleted "done" reads as "never ran", and a migration
-   *  re-run over a corpus live traffic has moved can't be undone. */
+  /** The TTL clock, set only by a resumable step — hence the index keys on this,
+   *  not updatedAt. A deleted "done" reads as "never ran", and re-seeding a live
+   *  corpus can't be undone. */
   cursorAt?: Date;
-  /** Set by a step that has finished: for good, if it is once-only, and until
-   *  the resweep window passes for a harvested channel. */
+  /** Finished: for good if the step is once-only, until resweep for a channel. */
   done?: boolean;
   /** The run lock's lease; only the "run" doc carries one. See lib/corpusBudget. */
   leaseUntil?: Date;
+  leaseToken?: string;
   /** The day's YouTube spend; only the "budget" doc carries it. One subdocument
    *  so rolling to a new day can't leave yesterday's counts beside today. */
   spend?: { day: string; searches: number; pages: number };
@@ -446,8 +423,7 @@ export async function getCronStateCollection(): Promise<Collection<CronStateDoc>
   const client = await getMongoClient();
   const db = client.db(process.env.MONGODB_DB);
   if (!cronStateIndexesEnsured) {
-    // Latched even on failure, and retuned via collMod, for the reasons on the
-    // search_cache index above.
+    // Latched even on failure, and retuned via collMod, as search_cache is.
     cronStateIndexesEnsured = true;
     db.collection("cron_state")
       .createIndex({ cursorAt: 1 }, { expireAfterSeconds: CRON_STATE_TTL_SECONDS })
@@ -467,15 +443,11 @@ export async function getCronStateCollection(): Promise<Collection<CronStateDoc>
   return db.collection<CronStateDoc>("cron_state");
 }
 
-// The pre-corpus harvest cursors, read once as a bridge by lib/corpusHarvest and
-// dropped in phase 3; cron_state holds the live ones.
+// The pre-corpus harvest cursors; cron_state holds the live ones.
 export interface HarvestCursorDoc {
-  /** The channel handle, or "playlist:<id>" for an explicit playlist. */
   _id: string;
   playlistId?: string;
   pageToken?: string;
-  /** Set when the uploads ran out, so finished channels stop consuming the
-   *  nightly budget until their resweep window passes. */
   completedAt?: Date;
   updatedAt: Date;
 }

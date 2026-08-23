@@ -296,7 +296,6 @@ describe("Client API wrappers", () => {
     });
 
     it("treats an empty 200 as nothing resolved rather than no results", async () => {
-      // Rendered, an empty list reads as "your song isn't on YouTube".
       mockFetch.mockResolvedValue({ ok: true, json: async () => [] });
       const { default: suggestionCuts } = await import("../../app/queue/suggestionCuts");
 

@@ -179,8 +179,6 @@ export interface RoomDossierData {
   songs: DossierSongRow[];
   requests: RequestRow[];
   singWithMe: SingWithMeRow[];
-  /** Which "Song ideas" this room reached for — the per-region signal behind
-   *  the language packs. Absent from rooms whose dossier predates the panel. */
   suggestions?: RoomSuggestionRow[];
   cheers?: {
     total: number;

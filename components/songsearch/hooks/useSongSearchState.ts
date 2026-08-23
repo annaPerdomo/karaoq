@@ -30,7 +30,6 @@ interface UseSongSearchStateArgs {
   role?: 'host' | 'singer' | 'display';
 }
 
-// How long a filter chip waits for the singer to settle before searching.
 const FILTER_SETTLE_MS = 600;
 
 // Owns the YouTube search box: query/filters/karaoke-mode state, the debounced
@@ -114,22 +113,19 @@ export function useSongSearchState({ roomId, role }: UseSongSearchStateArgs) {
     setSearching(true);
     setHasSearched(true);
     setSearchError(null);
-    // Shared with the server so one intent can't key two cache entries.
     const query = buildSearchQuery(rawQuery, karaoke);
-    // Keyed as the server keys the catalog, so the two agree on which
-    // suggestion this is without trusting the client to name it. Always the
-    // karaoke form: the catalog holds only karaoke keys, toggle or not.
+    // Keyed as the server keys the catalog, so the two agree without the client
+    // naming the song. Always the karaoke form: those are the only keys held.
     const suggestionKey = fromSuggestion
       ? searchCacheKey(buildSearchQuery(rawQuery, true))
       : null;
-    // Cuts are the unfiltered answer, so a "short" chip must not be served from
-    // them. Mirrors isCatalogFilters (lib/suggestionCatalog).
+    // Mirrors isCatalogFilters (lib/suggestionCatalog): cuts are the unfiltered
+    // answer. Karaoke mode is excluded — song ideas are karaoke ideas either way.
     const resolvable =
       suggestionKey &&
       activeFilters.duration === 'any' &&
       activeFilters.sortBy === 'relevance';
-    // Anything but an abort falls through to the search the tap has always been;
-    // an aborted tap must not start one nobody is waiting for.
+    // An aborted tap must not start a search nobody is waiting for.
     const fetching = resolvable
       ? suggestionCuts(suggestionKey, controller.signal).catch((err) => {
           if (err?.name === 'AbortError' || controller.signal.aborted) throw err;
@@ -221,9 +217,8 @@ export function useSongSearchState({ roomId, role }: UseSongSearchStateArgs) {
     try {
       localStorage.setItem('karaoq_karaoke_mode', String(next));
     } catch {}
-    // A query already saying "karaoke" searches the same either way, so
-    // re-running spends a request to redraw identical results. The preference
-    // still applies to the next query.
+    // A query already saying "karaoke" searches the same either way, so re-running
+    // spends a request to redraw identical results.
     const raw = query.trim();
     if (
       hasSearched &&
@@ -283,9 +278,8 @@ export function useSongSearchState({ roomId, role }: UseSongSearchStateArgs) {
     const next = { ...filters, [key]: value };
     setFilters(next);
     if (hasSearched && !lookupMode && query.trim()) {
-      // Each filter combination is its own cache key and so its own live
-      // search: trying "short", then "medium", then "long" spends three of the
-      // day's ~100. The spinner starts immediately, so chips still feel instant.
+      // Each filter combination is its own cache key and so its own live search:
+      // "short" then "medium" then "long" spends three of the day's ~100.
       clearTimeout(debounceRef.current);
       abortRef.current?.abort();
       setSearching(true);

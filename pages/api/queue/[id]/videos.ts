@@ -66,9 +66,8 @@ export default async function handler(
   // Only the search box posts here — board claims and Sing-with-me have their
   // own endpoints — so an unrecognized or absent value is "search", not spoofable.
   const via = body.via === "paste" ? "paste" : "search";
-  // The cron reads these to decide which video a suggestion resolves to for
-  // every room, so an unrecognised key is an anonymous claim about global
-  // content. Dropped, not rejected — the add still succeeds without a vote.
+  // This votes on what a suggestion resolves to for every room, so an
+  // unrecognised key is dropped rather than rejected — the add still succeeds.
   const suggestionKey =
     typeof body.suggestionKey === "string" &&
     body.suggestionKey.length > 0 &&
@@ -170,11 +169,9 @@ export default async function handler(
         singers: singerKeys(userName).length,
       });
       res.status(200).json({ code: 200, message: "Song added." });
-      // The one corpus hook, pastes included — there is no separate lookup
-      // feeder. Awaited only after the reply: the singer waits on nothing, and
-      // the instance can't freeze partway through a two-collection write.
-      // Demo and dev traffic is skipped as the analytics writes skip it — one
-      // shared database, and a seeded room must not shape every real room.
+      // Awaited only after the reply: the singer waits on nothing, and the
+      // instance can't freeze partway through a two-collection write. Demo and
+      // dev traffic is skipped — one shared database with the live site.
       if (!isAnalyticsExempt(req)) {
         const { country } = extractGeo(req);
         await recordAdd(

@@ -24,8 +24,8 @@ async function uploadsPlaylist(handle: string): Promise<string | null> {
   return d?.items?.[0]?.contentDetails?.relatedPlaylists?.uploads ?? null;
 }
 
-/** playlistItems returns the playlist's full size in pageInfo, so one call per
- *  channel says how deep its catalogue really goes. */
+/** playlistItems reports the playlist's full size in pageInfo, so one call says
+ *  how deep a channel goes. */
 async function uploadCount(playlistId: string): Promise<number> {
   const params = new URLSearchParams({
     part: "id",
@@ -46,7 +46,6 @@ describe("quota and depth probe", () => {
     loadLocalEnv();
     const lines: string[] = [];
 
-    // Is search.list actually spent? One call settles it.
     const sp = new URLSearchParams({
       part: "snippet",
       q: "abba dancing queen karaoke",
@@ -63,8 +62,8 @@ describe("quota and depth probe", () => {
     );
     lines.push("");
 
-    // The sweep resumes from a saved cursor, so the question is how many
-    // nights the budget needs rather than what goes permanently unread.
+    // The sweep resumes from a saved cursor, so the question is how many nights
+    // the budget needs, not what goes permanently unread.
     const TOTAL_PAGES = Number(process.env.SUGGESTION_CHANNEL_PAGES ?? 800);
     const PER_CHANNEL = Number(
       process.env.SUGGESTION_CHANNEL_PAGES_PER_CHANNEL ?? 60

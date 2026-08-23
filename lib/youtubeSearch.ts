@@ -2,12 +2,8 @@ import { fetchYoutubeApi } from "./youtubeApi";
 import { parseIso8601Duration } from "./duration";
 import type { SearchResult } from "./searchCache";
 
-// The one place a search.list call is made, so the cron spends quota through
-// exactly the path a singer does.
-
 /** A call counts once against the 100/day quota whether it returns 8 results or
- *  50, so ask for the maximum — which is also the videos.list id ceiling, so
- *  enrichment stays one call. */
+ *  50, so ask for the maximum — also the videos.list id ceiling. */
 export async function searchYoutubeApi(
   q: string,
   duration: string,
@@ -46,8 +42,8 @@ export async function searchYoutubeApi(
   return enrichWithVideoDetails(results, key);
 }
 
-// 1 unit per 50 ids, so the badges cost ~1% extra. Best-effort: any failure
-// returns the bare results.
+// 1 unit per 50 ids, so the badges cost ~1% extra. Any failure returns the bare
+// results.
 export async function enrichWithVideoDetails(
   results: SearchResult[],
   key: string
@@ -79,8 +75,7 @@ export async function enrichWithVideoDetails(
   }
 }
 
-/** Drops absent values rather than storing zeros, so the UI's `> 0` badge
- *  checks hold. */
+/** Absent rather than zero, so the UI's `> 0` badge checks hold. */
 export function videoDetailFields(item: any): Partial<SearchResult> {
   const durationSeconds = parseIso8601Duration(item?.contentDetails?.duration ?? "");
   const viewCount = Number(item?.statistics?.viewCount);

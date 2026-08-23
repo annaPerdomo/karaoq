@@ -4,39 +4,43 @@ import { YoutubeApiError } from "../../lib/youtubeApi";
 import { searchYoutubeApi } from "../../lib/youtubeSearch";
 import { catalogEntry, isCatalogFilters } from "../../lib/suggestionCatalog";
 import { recordSearchResults } from "../../lib/songCorpus";
+import { readSongCuts } from "../../lib/corpusRead";
 import { MAX_ENTRY_ID_LENGTH, markRateLimitNotified, rateLimit } from "../../lib/limits";
 import { normalizeRoomId } from "../../lib/roomCode";
 import { trackEvent } from "../../lib/analytics";
 import { sendQuotaAlertOnce } from "../../lib/alerts";
 import { quotaResetsAt } from "../../lib/pacificTime";
-import { normalizeSearchQuery, searchCacheKey } from "../../lib/searchQuery";
+import {
+  hasSearchOperators,
+  normalizeSearchQuery,
+  searchCacheKey,
+} from "../../lib/searchQuery";
 
 const VALID_DURATIONS = new Set(["any", "short", "medium", "long"]);
 const VALID_SORTS = new Set(["relevance", "viewCount", "date", "rating"]);
 const MAX_QUERY_LENGTH = 200;
 
-// A fortnight, not a day: karaoke cuts barely move month to month, and at 100
-// searches/day a popular query re-spent 1% of the pool every 24h. Held under
-// the 21-day retention so a stale fallback window survives (lib/searchCache).
+// A fortnight, not a day: at 100 searches/day a popular query re-spent 1% of the
+// pool every 24h. Held under the 21-day retention so a fallback window survives.
 const FRESH_CACHE_MS = 14 * 24 * 60 * 60 * 1000;
 
-// Two singers tapping the same trending song within seconds used to burn two
-// of the day's ~100 searches. Per-instance, but Fluid Compute routes concurrent
-// requests into one instance — exactly the window the duplicate burn happened
-// in. A race past the lookup just means two live calls, as before.
+// Per-instance, but Fluid Compute routes concurrent requests into one instance —
+// exactly the window in which two singers tapping one song burned two searches.
 const inFlightSearches = new Map<string, Promise<SearchResult[]>>();
 
-// searchCacheKey folds punctuation, so "abba -dancing queen karaoke" keys to the
-// song it tells YouTube to leave out — and cuts are appended, never overwritten,
-// so one crafted request would answer that song for every room until it expires.
-const SEARCH_OPERATORS = /(^|\s)[-#]\S|["|]/;
-
-/** Five catalog songs wear the punctuation in their names ("NARUTO -ナルト-"), so
- *  an operator only disqualifies a query the corpus wouldn't have run itself. */
+/** Cuts are appended, never overwritten, so a crafted operator query would answer
+ *  its folded song for every room. Five catalog songs wear the punctuation
+ *  themselves ("NARUTO -ナルト-"), hence the exact-query escape. */
 function banksIntoCorpus(songKey: string, normalizedQ: string): boolean {
-  if (!SEARCH_OPERATORS.test(normalizedQ)) return true;
+  if (!hasSearchOperators(normalizedQ)) return true;
   const entry = catalogEntry(songKey);
   return !!entry && entry.query.toLowerCase() === normalizedQ.toLowerCase();
+}
+
+/** An operator query asked YouTube something else entirely, so it keys on its own
+ *  unfolded text, which no folded key can equal. */
+function cacheEntryKey(queryKey: string, normalizedQ: string): string {
+  return hasSearchOperators(normalizedQ) ? normalizedQ.toLowerCase() : queryKey;
 }
 
 export default async function handler(
@@ -54,7 +58,6 @@ export default async function handler(
     return;
   }
 
-  // Diagnostic only; never touches the cache key or the results.
   const rawRoomId = normalizeRoomId(req.query.roomId);
   const roomId =
     typeof rawRoomId === "string" && rawRoomId.length <= MAX_ENTRY_ID_LENGTH
@@ -70,12 +73,12 @@ export default async function handler(
       ? req.query.sortBy
       : "relevance";
 
-  // The same rule the client applies before sending, so "abba karaoke karaoke"
-  // from an older client can't key one intent twice. See lib/searchQuery.
+  // The same rule the client applies, so an older client's "abba karaoke karaoke"
+  // can't key one intent twice.
   const normalizedQ = normalizeSearchQuery(q);
 
   const queryKey = searchCacheKey(normalizedQ);
-  const cacheKey = `${queryKey}|${duration}|${sortBy}`;
+  const cacheKey = `${cacheEntryKey(queryKey, normalizedQ)}|${duration}|${sortBy}`;
 
   let cached = await readCache(cacheKey);
 
@@ -87,8 +90,7 @@ export default async function handler(
       const legacy = await readCache(legacyKey);
       if (legacy) {
         cached = legacy;
-        // Rewriting restarts the age clock, so a stale copy must not be
-        // laundered into a fresh one.
+        // Rewriting restarts the age clock: don't launder a stale copy fresh.
         if (legacy.ageMs < FRESH_CACHE_MS && legacy.results.length > 0) {
           writeCache(cacheKey, legacy.results);
         }
@@ -116,8 +118,8 @@ export default async function handler(
       res.status(200).json(results);
       return;
     } catch {
-      // The leader's own error path did the tracking/alerting; fall through
-      // and run the normal rate-limited, budgeted path for this request.
+      // The leader's own error path did the tracking; fall through and run the
+      // normal rate-limited path for this request.
     }
   }
 
@@ -151,9 +153,8 @@ export default async function handler(
     writeCache(cacheKey, results);
     res.setHeader("x-karaoq-search-cache", "miss");
     res.status(200).json(results);
-    // A search one singer paid for fills the cuts every later tap reads for free.
-    // Awaited after the response, never dropped: two dependent writes, and a
-    // dropped promise dies with the frozen instance (lib/songCorpus).
+    // Awaited after the response, never dropped: a dropped promise dies with the
+    // frozen instance partway through two dependent writes (lib/songCorpus).
     if (isCatalogFilters(duration, sortBy) && banksIntoCorpus(queryKey, normalizedQ)) {
       await recordSearchResults(queryKey, results).catch(() => {});
     }
@@ -179,6 +180,22 @@ export default async function handler(
       res.setHeader("x-karaoq-search-cache", "stale");
       res.status(200).json(staleFallback);
       return;
+    }
+
+    // The nightly resolver may already have bought this song's cuts out of a
+    // quota that is gone by the time a singer types its name.
+    if (isCatalogFilters(duration, sortBy)) {
+      const cuts = await readSongCuts(queryKey);
+      if (cuts) {
+        await trackEvent(req, "search_failed", {
+          roomId,
+          failReason,
+          searchOutcome: "corpus",
+        });
+        res.setHeader("x-karaoq-search-cache", "corpus");
+        res.status(200).json(cuts);
+        return;
+      }
     }
 
     await trackEvent(req, "search_failed", {

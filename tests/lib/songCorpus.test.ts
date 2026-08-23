@@ -1,9 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { fakeCollection, type FakeCollection } from "../helpers/fakeCollection";
 
-// One in-memory collection per name, and it applies its writes: the cap, the
-// ranking and the idempotency claims are about the state left behind, which
-// call assertions can't see.
 const collections = new Map<string, FakeCollection>();
 
 function collection(name: string): FakeCollection {
@@ -32,6 +29,7 @@ import {
   MAX_CUTS,
   MIN_ADD_ROOMS,
   recordAdd,
+  recordDemand,
   recordHarvestMatches,
   recordSearchResults,
   songIdentityFromCatalog,
@@ -54,12 +52,10 @@ function cutTitle(e: CatalogEntry): string {
   return `${e.artist} - ${e.title} (Karaoke Version)`;
 }
 
-/** Real catalog songs, since the key a tap produces is the id it stores under. */
 const catalog = Array.from(suggestionCatalog().values());
 const entry: CatalogEntry = catalog.find((e) => isCutOf(cutTitle(e), e))!;
 const otherEntry: CatalogEntry = catalog.find((e) => e.key !== entry.key)!;
 
-/** A song with both scripts, to prove the native names ride along. */
 const nativeEntry: CatalogEntry =
   catalog.find((e) => e.nativeTitle) ?? entry;
 
@@ -67,7 +63,6 @@ async function add(video: AddedVideo, opts: AddSource): Promise<void> {
   await recordAdd(video, opts);
 }
 
-/** The common case: a singer taps the suggestion and queues one of its cuts. */
 async function addCut(
   videoId: string,
   opts: { roomId?: string; country?: string } = {}
@@ -140,7 +135,6 @@ describe("recordAdd", () => {
       cuts: ["abc123"],
       addCount: 1,
       addsByCountry: { BR: 1 },
-      // The taps own this number; a song we create just starts the queue.
       demand: 0,
     });
   });
@@ -175,12 +169,10 @@ describe("recordAdd", () => {
 
     await addCut("abc123", { roomId: "ROOM2" });
 
-    // An add writes no YouTube data, so it certifies no freshness.
     expect(videos().get("abc123").refreshedAt).toBe(born);
   });
 
   it("keeps a video whose title doesn't name the tapped song ungrouped", async () => {
-    // A search for one song returns covers and live versions too.
     await add(
       { videoId: "wrong", title: "Somebody Else Entirely (Karaoke Version)" },
       { via: "search", suggestionKey: entry.key, roomId: "ROOM1" }
@@ -198,14 +190,10 @@ describe("recordAdd", () => {
 
     expect(videos().get("loose")).toMatchObject({ sources: { adds: { count: 1 } } });
     expect(videos().get("loose").songKeys).toBeUndefined();
-    // No song was named, so no song may be written — the catalog is what
-    // bounds the corpus.
     expect(songs().all()).toEqual([]);
   });
 
   it("keeps a pasted link ungrouped even when it carries a key", async () => {
-    // A paste says a URL plays, not which song it is; the client clears the key
-    // on paste and the server doesn't take the pairing on trust either.
     await add({ videoId: "pasted", title: cutTitle(entry) }, {
       via: "paste",
       suggestionKey: entry.key,
@@ -220,16 +208,12 @@ describe("recordAdd", () => {
     await addCut("abc123");
 
     const doc = videos().get("abc123");
-    // An add writes no YouTube data, not even a thumbnail the client is holding,
-    // and readSongCuts serves no row without one (lib/corpusRead).
     expect(doc.thumbnailUrl).toBe("");
     expect(doc.firstSeenAt).toBeTruthy();
     expect(doc.refreshedAt).toBeTruthy();
   });
 
   it("drops a country that isn't a country code", async () => {
-    // The value becomes a field name, so a header carrying dots would write a
-    // nested path instead of a tally.
     await add({ videoId: "abc123", title: cutTitle(entry) }, {
       via: "search",
       suggestionKey: entry.key,
@@ -312,8 +296,6 @@ describe("recordAdd", () => {
     await addCut("v12");
     expect(songs().get(entry.key).cuts).not.toContain("v12");
 
-    // Added again it outranks the once-added incumbents, and the last of those
-    // is what leaves — the badged cut stays whatever the list does.
     await addCut("v12");
     const song = songs().get(entry.key);
     expect(song.cuts).toHaveLength(MAX_CUTS);
@@ -352,9 +334,9 @@ describe("recordHarvestMatches", () => {
       videosUpserted: 2,
       videosRefreshed: 0,
       songsFilled: 1,
+      full: [],
     });
     expect(videos().get("h1")).toMatchObject({
-      // videos.list is the better row when the enrichment pass reached it.
       title: "Enriched h1",
       thumbnailUrl: "better-h1",
       durationSeconds: 210,
@@ -362,7 +344,6 @@ describe("recordHarvestMatches", () => {
       songKeys: [entry.key],
       sources: { harvest: { channel: "sing-king" } },
     });
-    // Enrichment failing costs the badges, not the cut.
     expect(videos().get("h2")).toMatchObject({
       title: "Harvested h2",
       thumbnailUrl: "thumb-h2",
@@ -377,7 +358,6 @@ describe("recordHarvestMatches", () => {
   });
 
   it("files one upload under every song it matches", async () => {
-    // A title can cover two catalog songs.
     await recordHarvestMatches(
       new Map([
         [entry.key, [matched("h1")]],
@@ -406,6 +386,7 @@ describe("recordHarvestMatches", () => {
       videosUpserted: 0,
       videosRefreshed: 2,
       songsFilled: 0,
+      full: [],
     });
   });
 
@@ -436,7 +417,6 @@ describe("recordHarvestMatches", () => {
       new Map()
     );
 
-    // The video is still worth knowing about; a titleless song doc is not.
     expect(videos().get("h1")).toBeTruthy();
     expect(songs().all()).toEqual([]);
     expect(report.songsFilled).toBe(0);
@@ -458,7 +438,6 @@ describe("recordHarvestMatches", () => {
       new Map()
     );
 
-    // Left in place it keeps the song looking resolved.
     expect(songs().get(entry.key).cuts).toEqual(["h1"]);
   });
 
@@ -478,7 +457,6 @@ describe("recordHarvestMatches", () => {
       new Map()
     );
 
-    // The only writer a song with no adds ever sees.
     expect(songs().get(entry.key)).toMatchObject({
       title: entry.title,
       artist: entry.artist,
@@ -486,7 +464,6 @@ describe("recordHarvestMatches", () => {
   });
 });
 
-// Reachable from /api/search: the key is a query a stranger typed.
 describe("recordSearchResults", () => {
   function result(videoId: string): SearchResult {
     return {
@@ -520,7 +497,6 @@ describe("recordSearchResults", () => {
       durationSeconds: 210,
       viewCount: 5000,
     });
-    // How the sweep and the dossier tell a bought answer from a harvested one.
     expect(videos().get("a")?.sources?.search?.at).toBeInstanceOf(Date);
   });
 
@@ -529,7 +505,6 @@ describe("recordSearchResults", () => {
 
     await recordSearchResults(entry.key, [result("a")]);
 
-    // Relevance order is YouTube's opinion; the leading cuts are what rooms sang.
     expect(songs().get(entry.key)?.cuts).toEqual(["chosen", "a"]);
   });
 
@@ -540,7 +515,6 @@ describe("recordSearchResults", () => {
     await recordSearchResults(entry.key, rows);
 
     expect(songs().get(entry.key)?.cuts).toHaveLength(MAX_CUTS);
-    // Every stored id is a row the sweep re-reads forever, so the rest never land.
     expect(videos().all()).toHaveLength(MAX_CUTS);
   });
 
@@ -560,12 +534,51 @@ describe("recordSearchResults", () => {
     expect(song.nextResolveAt).toBeUndefined();
   });
 
+  it("keeps a cut a room added while the run was reading", async () => {
+    const store = songs();
+    const readSongs = store.find;
+    store.find = (filter: any, options?: any) => {
+      store.find = readSongs;
+      const cursor = readSongs.call(store, filter, options);
+      const readRows = cursor.toArray;
+      cursor.toArray = async () => {
+        const rows = await readRows.call(cursor);
+        await addCut("chosen");
+        return rows;
+      };
+      return cursor;
+    };
+
+    await recordHarvestMatches(new Map([[entry.key, [matched("h1")]]]), new Map());
+
+    expect(songs().get(entry.key).cuts).toEqual(["chosen", "h1"]);
+  });
+
+  it("files a cut once when a room adds the very one it is filing", async () => {
+    const store = songs();
+    const readSongs = store.find;
+    store.find = (filter: any, options?: any) => {
+      store.find = readSongs;
+      const cursor = readSongs.call(store, filter, options);
+      const readRows = cursor.toArray;
+      cursor.toArray = async () => {
+        const rows = await readRows.call(cursor);
+        await addCut("h1");
+        return rows;
+      };
+      return cursor;
+    };
+
+    await recordHarvestMatches(new Map([[entry.key, [matched("h1")]]]), new Map());
+
+    expect(songs().get(entry.key).cuts).toEqual(["h1"]);
+  });
+
   it("drops a cut whose video row has expired", async () => {
     songs().seed({ ...songIdentityFromCatalog(entry), cuts: ["gone"], demand: 0 });
 
     await recordSearchResults(entry.key, [result("a")]);
 
-    // Left on the song the dead id counts towards the cap for good — no TTL there.
     expect(songs().get(entry.key)?.cuts).toEqual(["a"]);
   });
 
@@ -576,6 +589,75 @@ describe("recordSearchResults", () => {
       videosUpserted: 0,
       cutsAdded: 0,
     });
+  });
+});
+
+// A row only an add has written has no picture, so readSongCuts won't serve it —
+// and a capped slot it holds costs the song a cut every tap can play.
+describe("cuts nothing has named yet", () => {
+  async function fillWithHarvested(count: number): Promise<string[]> {
+    const ids = Array.from({ length: count }, (_, i) => `h${i}`);
+    await recordHarvestMatches(
+      new Map([[entry.key, ids.map((id) => matched(id))]]),
+      new Map()
+    );
+    return ids;
+  }
+
+  it("never takes the place of a cut a room can play", async () => {
+    const harvested = await fillWithHarvested(MAX_CUTS);
+
+    await addCut("unnamed");
+
+    const cuts: string[] = songs().get(entry.key).cuts;
+    expect(cuts[0]).toBe("unnamed");
+    for (const id of harvested) expect(cuts).toContain(id);
+  });
+
+  it("leaves room for the search a song's cuts were bought with", async () => {
+    for (let i = 0; i < MAX_CUTS; i++) {
+      await addCut(`unnamed${i}`, { roomId: `ROOM${i}` });
+    }
+
+    const written = await recordSearchResults(entry.key, [result("bought")]);
+
+    // Counted against the cap, unproven adds turn every later search into a call
+    // that buys nothing.
+    expect(written.cutsAdded).toBe(1);
+    expect(songs().get(entry.key).cuts).toContain("bought");
+  });
+
+  function result(videoId: string): SearchResult {
+    return {
+      videoId,
+      title: `Result ${videoId}`,
+      thumbnailUrl: `thumb-${videoId}`,
+    };
+  }
+
+  it("stops the harvest filling a song that is already full", async () => {
+    const report = await recordHarvestMatches(
+      new Map([[entry.key, Array.from({ length: MAX_CUTS }, (_, i) => matched(`f${i}`))]]),
+      new Map()
+    );
+
+    expect(report.full).toEqual([entry.key]);
+  });
+});
+
+describe("recordDemand", () => {
+  it("rewrites the order the resolver spends its searches in", async () => {
+    songs().seed({ ...songIdentityFromCatalog(entry), cuts: [], demand: 0 });
+
+    await recordDemand(new Map([[entry.key, 42]]));
+
+    expect(songs().get(entry.key).demand).toBe(42);
+  });
+
+  it("creates no song: the catalog is what bounds the corpus", async () => {
+    await recordDemand(new Map([["a song nobody curated", 9]]));
+
+    expect(songs().all()).toEqual([]);
   });
 });
 

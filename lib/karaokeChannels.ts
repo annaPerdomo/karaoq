@@ -1,16 +1,11 @@
-// Resolving the catalog without search.list. The binding quota is 100
-// search.list calls/day; reading a channel's uploads is 1 unit per 50 videos
-// out of a separate 10,000/day pool, so this step still works on a spent day.
-//
-// Channels hold 10,000-17,000 uploads each, so a sweep is bounded by a *total*
-// page budget and resumes from a saved pageToken — reading everything at once
-// would outspend the daily pool and be killed on the function timeout anyway.
+// A channel's uploads cost 1 unit per 50 videos out of the 10,000/day pool, not
+// the 100 search.list calls/day. Channels hold 10,000-17,000 uploads each, hence
+// the total page budget and the saved cursor.
 
 /** Override with KARAOKE_CHANNELS (comma separated, @ optional). */
 const DEFAULT_CHANNEL_HANDLES = [
-  // Every handle was verified against channels.list. Plausible ones that didn't
-  // resolve (ZoomKaraoke, KaraokeyTV, KaraokeDeutschland, KaraokeVersion) are
-  // deliberately absent rather than left in to fail nightly.
+  // Verified against channels.list. Plausible ones that didn't resolve
+  // (ZoomKaraoke, KaraokeyTV, KaraokeDeutschland, KaraokeVersion) are left out.
   "SingKingKaraoke",
   "KaraFun",
   "ZoomKaraokeOfficial",
@@ -59,8 +54,7 @@ export function karaokeChannelHandles(): string[] {
   return list.map((h) => h.replace(/^@/, "")).filter(Boolean);
 }
 
-/** KARAOKE_PLAYLISTS (comma separated) — ids from a playlist URL's ?list=
- *  param. Often the only way to reach a language no big channel serves. */
+/** KARAOKE_PLAYLISTS (comma separated) — ids from a playlist URL's ?list= param. */
 export function karaokePlaylistIds(): string[] {
   return (process.env.KARAOKE_PLAYLISTS ?? "")
     .split(",")
@@ -68,8 +62,7 @@ export function karaokePlaylistIds(): string[] {
     .filter(Boolean);
 }
 
-/** Playlists first, since they're the only reach into a language no channel
- *  serves. Shared with the cursor store, which names targets the same way. */
+/** Playlists first; named as the cursor store names them. */
 export function harvestTargets(handles: string[]): string[] {
   return [...karaokePlaylistIds().map((id) => `playlist:${id}`), ...handles];
 }
@@ -81,9 +74,7 @@ export interface HarvestedVideo {
   channel: string;
 }
 
-/** A refusal that will refuse the next target too — a spent pool, a throttle,
- *  an outage — as against one handle that no longer resolves. Only a wall is
- *  worth ending a sweep on; a 404 means skip this target and keep going. */
+/** A refusal that will refuse the next target too, as against a dead handle. */
 function isWall(status: number): boolean {
   return status === 403 || status === 429 || status >= 500;
 }
@@ -111,9 +102,8 @@ async function uploadsPlaylistId(
   };
 }
 
-/** playlistItems.list — 1 unit per page of 50. A null page means the call
- *  failed, which must not read as "no more pages": that marks a channel
- *  finished and skips it on every later run. */
+/** 1 unit per page of 50. A null page is a failed call, which must not read as
+ *  "no more pages" — that parks the channel as finished for good. */
 async function playlistPage(
   playlistId: string,
   key: string,
@@ -144,8 +134,7 @@ async function playlistPage(
         item?.snippet?.thumbnails?.default?.url ||
         "",
     }))
-    // A private or deleted upload still occupies a playlist row, titled
-    // "Private video" with no usable id.
+    // A private or deleted upload still occupies a row, with no usable id.
     .filter((v: any) => v.videoId && v.title && v.title !== "Private video");
   return { page: { videos, next: data?.nextPageToken }, wall: false };
 }
@@ -174,29 +163,23 @@ export interface ChannelBatch {
 }
 
 export interface HarvestOptions {
-  /** The one number bounding a run's cost, and it is a *total*: a per-channel
-   *  cap multiplied by the handle list is not a budget. */
+  /** A *total*: a per-channel cap times the handle list is not a budget. */
   totalPages: number;
-  /** Per-channel slice, so one enormous channel can't starve the rest. */
   pagesPerChannel: number;
   cursors: Map<string, HarvestCursor>;
-  /** Stop starting work here, so a killed run never means "units spent,
-   *  nothing written". */
+  /** Stop starting work here: a killed run means units spent, nothing written. */
   deadlineMs: number;
   resweepAfterMs: number;
-  /** Called per channel as it completes, so progress persists without the run
-   *  surviving to the end. */
   onChannel: (batch: ChannelBatch) => Promise<void>;
+  /** Called as each page is bought, so a run that throws later has still told
+   *  the day's ledger what it spent. */
+  onPages?: (pages: number) => void;
 }
 
-// Grinding through the remaining thirty targets against a wall learns nothing.
-// Counted only for wall failures: handles get renamed, and letting three dead
-// ones end the sweep walls off every target behind them — which is where the
-// language packs are.
+// Wall failures only: handles get renamed, and letting three dead ones end the
+// sweep walls off every target behind them — where the language packs are.
 const MAX_CONSECUTIVE_FAILURES = 3;
 
-/** Newest-first, since a channel's recent uploads track what people are
- *  currently singing. */
 export async function harvestKaraokeChannels(
   handles: string[],
   opts: HarvestOptions
@@ -228,8 +211,7 @@ export async function harvestKaraokeChannels(
 
     const cursor: HarvestCursor = { ...(opts.cursors.get(target) ?? {}) };
     if (cursor.completedAt) {
-      // Re-walking a finished channel from the top spends the budget on pages
-      // the store already holds.
+      // Re-walking from the top spends budget on pages the store already holds.
       if (Date.now() - cursor.completedAt.getTime() < opts.resweepAfterMs) continue;
       cursor.completedAt = undefined;
       cursor.pageToken = undefined;
@@ -265,6 +247,7 @@ export async function harvestKaraokeChannels(
         }
         report.units += 1;
         report.pages += 1;
+        opts.onPages?.(1);
         const res = await playlistPage(playlistId, key, pageToken);
         if (!res.page) {
           failed = true;
@@ -287,9 +270,7 @@ export async function harvestKaraokeChannels(
           consecutiveFailures += 1;
           continue;
         }
-        // A page YouTube rejects outright is a token it will keep rejecting, so
-        // the cursor is cleared rather than left to wedge the channel on it for
-        // good. Costs the pages already walked; being stuck costs the channel.
+        // A page token YouTube rejects it will keep rejecting.
         cursor.pageToken = undefined;
         await opts.onChannel({ channel: target, videos: [], cursor });
         continue;
@@ -297,8 +278,7 @@ export async function harvestKaraokeChannels(
       consecutiveFailures = 0;
       report.channels.push(target);
 
-      // A failure parks the cursor on the page that failed, so the next run
-      // retries it. Only running out of pages marks the channel finished.
+      // Only running out of pages marks a channel finished.
       cursor.pageToken = exhausted ? undefined : pageToken;
       if (exhausted) cursor.completedAt = new Date();
       await opts.onChannel({ channel: target, videos, cursor });

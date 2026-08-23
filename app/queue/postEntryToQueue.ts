@@ -4,8 +4,8 @@ export default async function postEntryToQueue(
   roomId: string,
   entry: QueueEntry,
   via?: "search" | "paste",
-  /** Set when these results came from tapping a catalogued suggestion, so the
-   *  corpus can learn which cut singers actually queue (lib/songCorpus). */
+  /** Set when these results came from tapping a catalogued suggestion: the
+   *  corpus learns which cut singers queue from it. */
   suggestionKey?: string
 ): Promise<boolean> {
   try {

@@ -18,7 +18,6 @@ interface UseSongAddFlowArgs {
   onPick?: (song: YoutubeResult) => void;
   resetSearch: () => void;
   via: 'search' | 'paste';
-  /** Catalogued suggestion these results came from, when there is one. */
   suggestionKey?: string | null;
 }
 

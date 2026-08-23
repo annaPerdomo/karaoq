@@ -38,10 +38,9 @@ export function pinTopFirst(
   ];
 }
 
-/** Null — never a throw — when the song is unknown, holds nothing, or the store
- *  fails: a browse tap must degrade to the search it always ran, not to an error.
- *  One cut is enough: suggestion_videos' floor of ten worked only because a short
- *  answer bought a search that overwrote it (THIN_CUTS, lib/songCorpus). */
+/** Null, never a throw: a browse tap must degrade to the search it always ran.
+ *  One cut is enough — the old floor of ten worked only because a short answer
+ *  bought a search that overwrote it. */
 export async function readSongCuts(
   songKey: string
 ): Promise<ResolvedResult[] | null> {
@@ -72,10 +71,8 @@ export async function readSongCuts(
           .toArray()
       ).map((row) => [row._id, row])
     );
-    // The cuts array is the ranking, and karaoke_songs has no TTL: an id can
-    // outlive its video row by a night.
-    // A blank thumbnail is a row only an add wrote (writeAdd, lib/songCorpus) —
-    // a client-typed title and no picture, so it isn't ours to serve yet.
+    // karaoke_songs has no TTL, so an id can outlive its video row by a night. A
+    // blank thumbnail is a row only an add wrote, so it isn't ours to serve yet.
     const hydrated = cuts
       .filter((id) => !!rows.get(id)?.thumbnailUrl)
       .map((id) => hydrateVideo(rows.get(id)!));

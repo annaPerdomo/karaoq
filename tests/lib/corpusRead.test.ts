@@ -64,7 +64,6 @@ describe("pinTopFirst", () => {
 
     expect(pinned.map((r) => r.videoId)).toEqual(["b", "a", "c"]);
     expect(pinned[0].pinned).toBe(true);
-    // Only the winner is badged, or the marker would mean nothing.
     expect(pinned.slice(1).some((r) => r.pinned)).toBe(false);
   });
 
@@ -75,8 +74,6 @@ describe("pinTopFirst", () => {
   });
 
   it("ignores a pick the list no longer holds", () => {
-    // A refresh can drop a deleted video; the badge must not point at a row
-    // that isn't there, and the list must not lose one either.
     const results = [row("a"), row("b")];
 
     expect(pinTopFirst(results, "gone")).toEqual(results);
@@ -103,7 +100,6 @@ describe("readSongCuts", () => {
     const cuts = await readSongCuts("abba dancing queen karaoke");
 
     expect(cuts?.map((r) => r.videoId)).toEqual(["b", "a"]);
-    // The exact shape /api/search returns; the add flow can't tell the two apart.
     expect(cuts?.[1]).toEqual({
       videoId: "a",
       title: "Song a",
@@ -127,7 +123,6 @@ describe("readSongCuts", () => {
   });
 
   it("skips a cut whose video row has expired", async () => {
-    // A TTL deletion announces itself to nothing: the dead id survives on the song.
     songs().seed(songDoc(["gone", "a"]));
     videos().seed(videoDoc("a"));
 
@@ -137,8 +132,6 @@ describe("readSongCuts", () => {
   });
 
   it("skips a cut no fetch of ours has ever filled in", async () => {
-    // An add creates the row from a request body — a client-typed title, no
-    // picture — and it stays that way until the sweep reads it from videos.list.
     songs().seed(songDoc(["unseen", "a"]));
     videos().seed(
       videoDoc("unseen", { title: "Anything The Request Body Said", thumbnailUrl: "" })
@@ -174,7 +167,6 @@ describe("readSongCuts", () => {
   });
 
   it("reads a store failure as unresolved rather than an error", async () => {
-    // A browse tap has somewhere to fall through to; a failure page is not it.
     songs().seed(songDoc(["a"]));
     const boom = vi
       .spyOn(videos(), "find")

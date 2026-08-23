@@ -8,8 +8,6 @@ export interface YoutubeResult {
   // degraded fallback results) won't carry these.
   durationSeconds?: number;
   viewCount?: number;
-  /** The video singers converge on for a catalogued suggestion — served first
-   * and badged. Only ever set on a song the corpus holds cuts for. */
   pinned?: boolean;
 }
 

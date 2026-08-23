@@ -1,5 +1,6 @@
 import {
   SONG_SECTIONS,
+  COUNTRY_CONFIG,
   LANGUAGE_PACKS,
   buildSongQuery,
   type SongSection,
@@ -7,13 +8,9 @@ import {
 } from "../app/queue/songSuggestions";
 import { buildSearchQuery, searchCacheKey } from "./searchQuery";
 
-// The ~900 songs in "Song ideas" are a fixed catalog, and a tap on one costs a
-// search.list call unless the server can recognise it on sight. Recognising
-// queries here rather than trusting a client flag is also what bounds the
-// corpus: nothing outside this catalog can create a song.
-
-// Imported rather than fetched from /public, so the server sees what the
-// browser does with no network call and no filesystem assumptions on Vercel.
+// Recognising queries here rather than trusting a client flag is what bounds the
+// corpus: nothing outside this catalog can create a song. Imported rather than
+// fetched from /public, so no network call and no filesystem assumptions.
 import brPack from "../public/suggestions/br.json";
 import czPack from "../public/suggestions/cz.json";
 import dePack from "../public/suggestions/de.json";
@@ -22,7 +19,7 @@ import idPack from "../public/suggestions/id.json";
 import inPack from "../public/suggestions/in.json";
 import phPack from "../public/suggestions/ph.json";
 
-export const PACK_SECTIONS: Record<string, SongSection> = {
+const PACK_FILES: Record<string, SongSection> = {
   br: brPack as SongSection,
   cz: czPack as SongSection,
   de: dePack as SongSection,
@@ -31,6 +28,18 @@ export const PACK_SECTIONS: Record<string, SongSection> = {
   in: inPack as SongSection,
   ph: phPack as SongSection,
 };
+
+/** Keyed off the lists the browse view offers, never hand-listed beside them: a
+ *  pack shown but not catalogued costs a live search on every tap in it. */
+export const PACK_SECTIONS: Record<string, SongSection> = {};
+const offeredPackIds = LANGUAGE_PACKS.map((pack) => pack.packId).concat(
+  Object.keys(COUNTRY_CONFIG)
+    .map((country) => COUNTRY_CONFIG[country].regionalPack)
+    .filter((packId): packId is string => !!packId)
+);
+for (const packId of offeredPackIds) {
+  if (PACK_FILES[packId]) PACK_SECTIONS[packId] = PACK_FILES[packId];
+}
 
 export interface CatalogEntry {
   /** The cache key a tap on this song produces — how it's recognised. */
@@ -47,9 +56,8 @@ export interface CatalogEntry {
   categoryId: string;
 }
 
-// One song has several keys in principle, since a tap carries the room's
-// filters. Only the default combination is catalogued; a tap under changed
-// filters just searches the old way, so only the saving depends on this.
+// A tap carries the room's filters, so a song has several keys in principle. Only
+// the default combination is catalogued; a tap under changed filters just searches.
 export const CATALOG_DURATION = "any";
 export const CATALOG_SORT = "relevance";
 
@@ -81,16 +89,14 @@ function build(): void {
       entriesFrom(section, packId)
     ),
   ];
-  // Built before the dedupe below, which would reduce a song in "core" and
-  // "cz" to whichever pack loaded last.
+  // Before the dedupe below, which reduces a song in two packs to the later one.
   packsByKey = new Map();
   for (const e of entries) {
     const packs = packsByKey.get(e.key) ?? [];
     if (packs.indexOf(e.packId) < 0) packs.push(e.packId);
     packsByKey.set(e.key, packs);
   }
-  // One entry per key is what makes it the store's natural _id. A song in two
-  // categories duplicates; the later wins, and duplicates share a query anyway.
+  // One entry per key is what makes it the store's natural _id.
   cached = new Map(entries.map((e) => [e.key, e]));
 }
 
@@ -103,8 +109,8 @@ export function catalogEntry(key: string): CatalogEntry | undefined {
   return suggestionCatalog().get(key);
 }
 
-/** Every pack listing this song, not just the one its surviving entry came
- *  from — a pack shelf filtering on `entry.packId` would hide the rest. */
+/** Every pack listing this song: a shelf filtering on `entry.packId` would only
+ *  see the one the dedupe kept. */
 export function catalogPackIds(key: string): string[] {
   if (!packsByKey) build();
   return packsByKey!.get(key) ?? [];

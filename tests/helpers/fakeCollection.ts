@@ -1,12 +1,9 @@
-// A stand-in Mongo collection that actually applies its writes, so a write
-// module can be asserted on the state it leaves rather than on the calls it
-// makes — which is the only way to test a cap, a ranking, or idempotency.
+// A stand-in Mongo collection that actually applies its writes, so a cap, a
+// ranking or an idempotency claim can be asserted on the state left behind.
 //
-// Deliberately partial: it supports the operators the corpus writers use
-// ($set / $setOnInsert / $inc / $addToSet / $unset / $pull, upsert, dotted
-// paths) and the filters they read with ($in, $gt/$lt on a field, $exists,
-// $or, $expr over $size, exact array equality), and throws on anything else
-// rather than quietly passing a test.
+// Deliberately partial: it supports the operators the corpus writers use and the
+// filters they read with, and throws on anything else rather than quietly
+// passing a test.
 
 type Doc = Record<string, any>;
 
@@ -44,9 +41,8 @@ function unsetPath(doc: Doc, path: string): void {
   if (parent) delete parent[parts[parts.length - 1]];
 }
 
-/** Structural rather than a JSON round trip, which would hand every reader a
- *  string where the collection holds a Date — and the sweep pages on exactly
- *  that comparison. Dates are shared, not cloned; nothing here mutates one. */
+/** Structural rather than a JSON round trip, which hands every reader a string
+ *  where Mongo holds a Date — and the sweep pages on that comparison. */
 function copy<T>(value: T): T {
   if (value instanceof Date) return value;
   if (Array.isArray(value)) return value.map((item) => copy(item)) as unknown as T;
@@ -60,8 +56,7 @@ function copy<T>(value: T): T {
 
 /** Real Mongo rejects an update whose $setOnInsert path is also written by
  *  another operator, prefixes included: { $setOnInsert: { "a.b": {} },
- *  $inc: { "a.b.c": 1 } } is an error. Applying both would leave writes green
- *  here and failing on every call in production. */
+ *  $inc: { "a.b.c": 1 } } is an error. */
 function assertNoConflict(update: UpdateSpec): void {
   const onInsert = Object.keys(update.$setOnInsert ?? {});
   if (onInsert.length === 0) return;
@@ -87,14 +82,13 @@ function idsOf(filter: Doc): string[] {
   throw new Error("fakeCollection supports only _id equality or $in");
 }
 
-/** An _id plus a condition updateOne applies to the doc it names. */
 function idAndGuard(filter: Doc): { id: string; guard: Doc } {
   const { _id, ...guard } = filter;
   return { id: idsOf({ _id })[0], guard };
 }
 
-/** Mongo's ordering of mixed types isn't worth reproducing; a missing field
- *  sorting first ascending is — that's how an unswept row reaches the front. */
+/** A missing field sorts first ascending, as in Mongo — that's how an unswept
+ *  row reaches the front. */
 function compare(a: unknown, b: unknown): number {
   const x = a instanceof Date ? a.getTime() : a;
   const y = b instanceof Date ? b.getTime() : b;
@@ -105,7 +99,7 @@ function compare(a: unknown, b: unknown): number {
 }
 
 /** "$field" reads the doc, { $size: "$field" } counts it, anything else is a
- *  literal — enough for the `cuts` length filters the corpus jobs page on. */
+ *  literal. */
 function exprValue(doc: Doc, node: any): any {
   if (typeof node === "string" && node.charAt(0) === "$") return readPath(doc, node.slice(1));
   if (node && typeof node === "object" && "$size" in node) {
@@ -145,6 +139,14 @@ function matchesValue(value: unknown, condition: any): boolean {
   }
   if (typeof condition !== "object") return value === condition;
 
+  // Fields rather than operators — { videoId: { $in: [...] } } — is a predicate
+  // on the element as a document, which is how $pull selects array rows.
+  if (Object.keys(condition).some((key) => key.charAt(0) !== "$")) {
+    return value != null && typeof value === "object"
+      ? matches(value as Doc, condition)
+      : false;
+  }
+
   return Object.entries(condition).every(([op, operand]) => {
     if (op === "$in") {
       const wanted = operand as unknown[];
@@ -154,11 +156,12 @@ function matchesValue(value: unknown, condition: any): boolean {
         : wanted.indexOf(value) >= 0;
     }
     if (op === "$exists") return (value !== undefined) === Boolean(operand);
-    // Ahead of the guard below: in Mongo an absent field is not equal to the
-    // thing being ruled out.
+    // In Mongo an absent field is not equal to the thing being ruled out.
     if (op === "$ne") return !matchesValue(value, operand);
     if (value === undefined) return false;
     switch (op) {
+      case "$size":
+        return Array.isArray(value) && value.length === operand;
       case "$lt":
         return compare(value, operand) < 0;
       case "$lte":
@@ -173,14 +176,26 @@ function matchesValue(value: unknown, condition: any): boolean {
   });
 }
 
-/** Reads and multi-writes scan; single-doc writes stay on idsOf. */
+/** A path crossing an array reads the field off every element — how Mongo finds
+ *  a cache entry by one of the rows it holds. */
+function readMatchPath(doc: Doc, path: string): unknown {
+  return path.split(".").reduce<any>((node, key) => {
+    if (node == null) return node;
+    if (Array.isArray(node)) {
+      const held = node.map((item) => item?.[key]).filter((v) => v !== undefined);
+      return held.length > 0 ? held : undefined;
+    }
+    return node[key];
+  }, doc);
+}
+
 function matches(doc: Doc, filter: Doc): boolean {
   return Object.entries(filter).every(([path, condition]) => {
     if (path === "$expr") return matchesExpr(doc, condition as Doc);
     if (path === "$or") {
       return (condition as Doc[]).some((clause) => matches(doc, clause));
     }
-    return matchesValue(readPath(doc, path), condition);
+    return matchesValue(readMatchPath(doc, path), condition);
   });
 }
 
@@ -242,7 +257,7 @@ export function fakeCollection() {
   }
 
   return {
-    /** Deep copies on the way out, so a test holding a doc can't mutate the store. */
+    /** Deep copies out, so a test holding a doc can't mutate the store. */
     all: () => Array.from(docs.values()).map((d) => copy(d)),
     get: (id: string) => {
       const doc = docs.get(id);
@@ -305,9 +320,8 @@ export function fakeCollection() {
       let upsertedCount = 0;
       let modifiedCount = 0;
       for (const op of ops) {
-        // Guarded like updateOne: a bulk op's filter is a filter in Mongo too,
-        // and applying it unconditionally here would pass a test the database
-        // would have skipped.
+        // A bulk op's filter is a filter in Mongo too: applying it unconditionally
+        // would pass a test the database would have skipped.
         const { id, guard } = idAndGuard(op.updateOne.filter);
         if (Object.keys(guard).length > 0) {
           const held = docs.get(id);

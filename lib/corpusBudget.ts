@@ -1,19 +1,18 @@
+import { randomUUID } from "crypto";
+
 import { getCronStateCollection } from "./mongodb";
 import { pacificDayKey } from "./pacificTime";
 
-// YouTube's quota is a daily allowance and vercel.json invokes this cron more
-// than once a day, so a slot buys wall-clock and never units: every invocation
-// draws from the same day's ledger.
+// vercel.json invokes this cron more than once a day: a slot buys wall-clock and
+// never units, every invocation drawing from the same day's ledger.
 
 const LEDGER_ID = "budget";
 const LOCK_ID = "run";
 
-/** The corpus's share of the ~100 search.list calls a day the project gets.
- *  The rest stays for the queries singers type. */
+/** The corpus's share of the ~100 search.list calls a day; the rest is singers'. */
 export const SEARCH_PER_DAY = 40;
 
-/** ~835 units for 800 playlistItems.list pages — ~40,000 uploads, walked from a
- *  saved cursor so successive days reach the deep end of a big channel. */
+/** ~835 units for 800 playlistItems.list pages — ~40,000 uploads a day. */
 export const CHANNEL_PAGES_PER_DAY = 800;
 
 export interface DailySpend {
@@ -21,10 +20,8 @@ export interface DailySpend {
   pages: number;
 }
 
-/** The Pacific day, because that is the one YouTube resets the allowance on.
- *  On UTC the two cron slots straddle the PST reset: the first spends against
- *  yesterday's exhausted pool and the second, firing minutes after the refill,
- *  reads the ledger as already spent and skips the resolve entirely. */
+/** The Pacific day: that is the one YouTube resets the allowance on, and on UTC
+ *  the two cron slots straddle the reset. */
 export function ledgerDay(at: number): string {
   return pacificDayKey(new Date(at));
 }
@@ -64,34 +61,42 @@ export function remaining(allowance: number, spent: number): number {
   return Math.max(allowance - spent, 0);
 }
 
-/** Longer than the 300s function cap, so a run the platform kills still frees
- *  the lock well before the next slot an hour later. */
+/** Longer than the 300s function cap, so a killed run still frees the lock. */
 const LEASE_MS = 6 * 60_000;
 
-/** Two overlapping runs both take the top of the same demand-ordered queue and
- *  buy the same searches twice, and Vercel only guarantees a cron within its
- *  hour — which is exactly how far apart the slots are. */
-export async function acquireRun(at: number): Promise<boolean> {
+/** Vercel only guarantees a cron within its hour, exactly how far apart the slots
+ *  are. Returns the token to release with; null means another run holds it. */
+export async function acquireRun(at: number): Promise<string | null> {
   const state = await getCronStateCollection();
   const now = new Date(at);
   const until = new Date(at + LEASE_MS);
+  const token = randomUUID();
   const taken = await state.updateOne(
     { _id: LOCK_ID, leaseUntil: { $lte: now } },
-    { $set: { leaseUntil: until, updatedAt: now } }
+    { $set: { leaseUntil: until, leaseToken: token, updatedAt: now } }
   );
-  if (taken.matchedCount > 0) return true;
+  if (taken.matchedCount > 0) return token;
   try {
-    await state.insertOne({ _id: LOCK_ID, leaseUntil: until, updatedAt: now });
-    return true;
+    await state.insertOne({
+      _id: LOCK_ID,
+      leaseUntil: until,
+      leaseToken: token,
+      updatedAt: now,
+    });
+    return token;
   } catch (e: any) {
     // A held lease or a lost insert race; anything else is the database.
-    if (e?.code === 11000) return false;
+    if (e?.code === 11000) return null;
     throw e;
   }
 }
 
-export async function releaseRun(at: number): Promise<void> {
+/** Only its own lease: an overrunning run would otherwise free the successor's. */
+export async function releaseRun(at: number, token: string): Promise<void> {
   const state = await getCronStateCollection();
   const now = new Date(at);
-  await state.updateOne({ _id: LOCK_ID }, { $set: { leaseUntil: now, updatedAt: now } });
+  await state.updateOne(
+    { _id: LOCK_ID, leaseToken: token },
+    { $set: { leaseUntil: now, updatedAt: now } }
+  );
 }

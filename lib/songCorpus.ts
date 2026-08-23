@@ -14,18 +14,28 @@ import {
 } from "./suggestionCatalog";
 import { isCutOf, type MatchedVideo } from "./suggestionMatch";
 
-// The only module that writes the corpus: every feeder lands here, so the cut
-// cap and the ranking rule have one implementation rather than one each.
-
-/** Past a dozen the list is scrolling rather than choosing, and every stored id
- *  is another row the nightly sweep must re-read to stay inside the 30-day rule. */
 export const MAX_CUTS = 12;
 
 /** Rooms are free to create, so one room's adds are a claim, not a consensus —
  *  never relax this to a raw add count. */
 export const MIN_ADD_ROOMS = 2;
 
-/** The song set is the catalog today; the chart feeder (phase 3) grows it. */
+/** Own budget, not a share of MAX_CUTS: nothing serves an unnamed row, so a
+ *  shared cap let one add evict a cut every tap could play. */
+const PENDING_CUTS = MAX_CUTS;
+
+function isServable(row?: { thumbnailUrl?: string }): boolean {
+  return !!row?.thumbnailUrl;
+}
+
+function capCuts(ranked: string[], served: (id: string) => boolean): string[] {
+  let serving = 0;
+  let pending = 0;
+  return ranked.filter((id) =>
+    served(id) ? serving++ < MAX_CUTS : pending++ < PENDING_CUTS
+  );
+}
+
 const CUT_LOOKUP_BATCH = 1000;
 
 export type SongIdentity = Omit<
@@ -46,8 +56,6 @@ export function songIdentityFromCatalog(entry: CatalogEntry): SongIdentity {
   };
 }
 
-/** $set, never $setOnInsert: the names come from JSON a human edits, and an
- *  identity frozen at insert makes a spelling fix silently not happen. */
 function songIdentityFields(entry: CatalogEntry): Record<string, unknown> {
   const { _id, ...identity } = songIdentityFromCatalog(entry);
   return identity;
@@ -72,10 +80,8 @@ function countryField(country?: string): string | undefined {
   return country && /^[A-Za-z]{2}$/.test(country) ? country.toUpperCase() : undefined;
 }
 
-/** Never rejects, so a corpus failure is never an add's failure. Await it after
- *  the response, never drop it: a dropped promise dies with the frozen instance
- *  — measured at ~8% loss on this repo's analytics — and a half-written add
- *  leaves the video's counters and the song's cuts disagreeing for good. */
+/** Await after the response, never drop: a dropped promise dies with the frozen
+ *  instance, leaving the video's counters and the song's cuts disagreeing. */
 export function recordAdd(video: AddedVideo, opts: AddSource): Promise<void> {
   return writeAdd(video, opts).catch(() => {});
 }
@@ -86,11 +92,9 @@ async function writeAdd(video: AddedVideo, opts: AddSource): Promise<void> {
   const videos = await getKaraokeVideosCollection();
   const known = await videos.findOne({ _id: video.videoId });
 
-  // Both halves came from a client, so the title has to prove the pairing: an
-  // unchecked add files the cover a search returned under the song it searched
-  // for, and a crafted one publishes any video as any song's answer for every
-  // room. Judged on the stored title where there is one — only that came from
-  // videos.list.
+  // Both halves came from a client: unchecked, a crafted add publishes any video
+  // as any song's answer for every room. Judged on the stored title where there
+  // is one — only that came from videos.list.
   const named =
     opts.via === "search" && opts.suggestionKey
       ? catalogEntry(opts.suggestionKey)
@@ -103,13 +107,11 @@ async function writeAdd(video: AddedVideo, opts: AddSource): Promise<void> {
   const inc: Record<string, number> = { "sources.adds.count": 1 };
   if (country) inc[`sources.adds.byCountry.${country}`] = 1;
 
-  // $setOnInsert, never $set — the sweep owns these after the first sighting.
-  // $set-ing the title hands every room whatever one request body said, and
-  // bumping refreshedAt renews an unrefreshed row's 30 days on traffic alone.
+  // $setOnInsert, never $set: $set-ing the title hands every room whatever one
+  // request body said, and bumping refreshedAt renews the TTL on traffic alone.
   const onInsert: Record<string, unknown> = {
     title: video.title,
-    // Blank, never the client's: this is the field readSongCuts serves on, so a
-    // row no videos.list has answered for stays invisible (lib/corpusRead).
+    // Blank, never the client's: readSongCuts serves only rows with a picture.
     thumbnailUrl: "",
     firstSeenAt: now,
     refreshedAt: now,
@@ -121,7 +123,6 @@ async function writeAdd(video: AddedVideo, opts: AddSource): Promise<void> {
 
   const addToSet: Record<string, unknown> = {};
   if (entry) addToSet.songKeys = entry.key;
-  // Answers "more than one room?" — not a log, so it stops at the threshold.
   if ((known?.sources?.adds?.rooms ?? []).length < MIN_ADD_ROOMS) {
     addToSet["sources.adds.rooms"] = opts.roomId;
   }
@@ -141,9 +142,8 @@ async function writeAdd(video: AddedVideo, opts: AddSource): Promise<void> {
   await fileCut(entry, video.videoId, country, now);
 }
 
-/** Re-derives the cuts rather than pushing: the order is a function of who added
- *  each one, so one add can move the whole list. Two adds racing cost the loser
- *  its place until the sweep regroups; the counters are $inc, so no count is. */
+/** Re-derives the whole list: rank is a function of who added each cut. Racing
+ *  adds cost the loser its place until the sweep regroups; $inc counts survive. */
 async function fileCut(
   entry: CatalogEntry,
   videoId: string,
@@ -157,7 +157,7 @@ async function fileCut(
   const existing = song?.cuts ?? [];
   const ids = existing.indexOf(videoId) >= 0 ? existing : existing.concat(videoId);
   const rows = await videos
-    .find({ _id: { $in: ids } }, { projection: { sources: 1 } })
+    .find({ _id: { $in: ids } }, { projection: { sources: 1, thumbnailUrl: 1 } })
     .toArray();
   const backing = new Map(
     rows.map((r) => [
@@ -165,12 +165,12 @@ async function fileCut(
       {
         adds: r.sources?.adds?.count ?? 0,
         rooms: (r.sources?.adds?.rooms ?? []).length,
+        served: isServable(r),
       },
     ])
   );
 
-  // karaoke_songs has no TTL, so dropping cuts whose video row has expired is
-  // what stops video ids stranding in a collection that never expires.
+  // karaoke_songs has no TTL: dropping expired cuts is what stops ids stranding.
   const live = ids.filter((id) => backing.has(id));
 
   // Rooms before raw adds: one room adding a cut fifty times must not outrank
@@ -180,9 +180,10 @@ async function fileCut(
     const y = backing.get(b)!;
     return y.rooms - x.rooms || y.adds - x.adds;
   });
-  // Best-backed first, so the cap can only drop rows the badge doesn't name.
-  const cuts = ranked.slice(0, MAX_CUTS);
-  const top = cuts.find((id) => (backing.get(id)?.rooms ?? 0) >= MIN_ADD_ROOMS);
+  const cuts = capCuts(ranked, (id) => backing.get(id)!.served);
+  // Servability isn't a condition: pinTopFirst skips a pin no served row matches,
+  // so the badge lands the night the sweep names the row, not on a third add.
+  const top = cuts.find((id) => backing.get(id)!.rooms >= MIN_ADD_ROOMS);
 
   const update: UpdateFilter<KaraokeSongDoc> = {
     $set: {
@@ -202,14 +203,12 @@ async function fileCut(
       ...(country ? {} : { addsByCountry: {} }),
     },
   };
-  // Left dangling, the badge pins a video the song no longer serves.
   if (!top && song?.topVideoId) update.$unset = { topVideoId: "" };
 
   await songs.updateOne({ _id: entry.key }, update, { upsert: true });
 }
 
-/** Bulk feeder for the nightly channel harvest. Idempotent, so a run that dies
- *  mid-sweep can simply be run again. */
+/** Idempotent: a run that dies mid-sweep can simply be run again. */
 export async function recordHarvestMatches(
   matches: Map<string, MatchedVideo[]>,
   details: Map<string, SearchResult>
@@ -217,9 +216,11 @@ export async function recordHarvestMatches(
   videosUpserted: number;
   videosRefreshed: number;
   songsFilled: number;
+  /** Songs now at the cut cap, so the caller can stop matching them. */
+  full: string[];
 }> {
   if (matches.size === 0) {
-    return { videosUpserted: 0, videosRefreshed: 0, songsFilled: 0 };
+    return { videosUpserted: 0, videosRefreshed: 0, songsFilled: 0, full: [] };
   }
   const now = new Date();
   const videos = await getKaraokeVideosCollection();
@@ -238,8 +239,6 @@ export async function recordHarvestMatches(
         if (seen.songKeys.indexOf(songKey) < 0) seen.songKeys.push(songKey);
         continue;
       }
-      // videos.list where the enrichment pass reached it, else the playlist's
-      // row: a failed enrichment costs the badges, not the cut.
       const enriched = details.get(row.videoId);
       const set: Record<string, unknown> = {
         title: enriched?.title ?? row.title,
@@ -274,8 +273,6 @@ export async function recordHarvestMatches(
   let videosRefreshed = 0;
   if (ops.length > 0) {
     try {
-      // Unordered: one rejected row must not forfeit a night of catalog
-      // progress that can't be earned back.
       const written = await videos.bulkWrite(ops, { ordered: false });
       videosUpserted = written.upsertedCount;
       videosRefreshed = written.modifiedCount;
@@ -289,10 +286,15 @@ export async function recordHarvestMatches(
     (await songs.find({ _id: { $in: songKeys } }).toArray()).map((s) => [s._id, s])
   );
 
-  // A TTL deletion announces itself to nothing, so an expired cut survives on
-  // the song — looking resolved, keeping it out of the resolver's queue — until
-  // a pass drops it. This is the only nightly writer an unadded song gets.
+  // A TTL deletion announces itself to nothing: an expired cut survives on the
+  // song, looking resolved, until a pass drops it.
   const alive = new Set(pending.keys());
+  // The cap counts what a tap can actually be served (capCuts), so a song's
+  // free slots are its unproven cuts plus its expired ones, not its id count.
+  const served = new Set<string>();
+  pending.forEach((row, videoId) => {
+    if (isServable(row.set as { thumbnailUrl?: string })) served.add(videoId);
+  });
   const held = Array.from(
     new Set(Array.from(stored.values()).flatMap((s) => s.cuts ?? []))
   ).filter((id) => !alive.has(id));
@@ -300,32 +302,44 @@ export async function recordHarvestMatches(
     const rows = await videos
       .find(
         { _id: { $in: held.slice(i, i + CUT_LOOKUP_BATCH) } },
-        { projection: { _id: 1 } }
+        { projection: { _id: 1, thumbnailUrl: 1 } }
       )
       .toArray();
-    for (const row of rows) alive.add(row._id);
+    for (const row of rows) {
+      alive.add(row._id);
+      if (isServable(row)) served.add(row._id);
+    }
   }
 
   const songOps: AnyBulkWriteOperation<KaraokeSongDoc>[] = [];
+  const full: string[] = [];
   let songsFilled = 0;
   for (const songKey of songKeys) {
     const entry = catalogEntry(songKey);
     const song = stored.get(songKey);
-    // A doc with no title. The catalog bounds the corpus, here as on the add path.
     if (!song && !entry) continue;
 
-    const before = (song?.cuts ?? []).filter((id) => alive.has(id));
-    const cuts = before.slice();
+    const filed = song?.cuts ?? [];
+    const dead = filed.filter((id) => !alive.has(id));
+    const kept = filed.filter((id) => alive.has(id));
+    let serving = kept.filter((id) => served.has(id)).length;
+    const added: string[] = [];
     for (const row of matches.get(songKey) ?? []) {
-      if (cuts.length >= MAX_CUTS) break;
-      // Appended, never inserted: a harvest match is evidence the cut exists,
-      // not that anyone wants it, and the leading rows are ranked by who did.
-      if (cuts.indexOf(row.videoId) < 0) cuts.push(row.videoId);
+      if (serving >= MAX_CUTS) break;
+      // Appended: a harvest match is evidence the cut exists, not that it's wanted.
+      if (kept.indexOf(row.videoId) >= 0 || added.indexOf(row.videoId) >= 0) continue;
+      added.push(row.videoId);
+      if (served.has(row.videoId)) serving += 1;
     }
-    if (cuts.length !== before.length) songsFilled += 1;
+    if (added.length > 0) songsFilled += 1;
+    if (serving >= MAX_CUTS) full.push(songKey);
 
+    // $addToSet and $pull, never the list back: this read is minutes old by the
+    // time it lands, so a room's concurrent add would be reverted — or, with
+    // $push, left in the array twice and served twice.
     const update: UpdateFilter<KaraokeSongDoc> = {
-      $set: { cuts, ...(entry ? songIdentityFields(entry) : {}) },
+      ...(added.length > 0 ? { $addToSet: { cuts: { $each: added } } } : {}),
+      ...(entry ? { $set: songIdentityFields(entry) } : {}),
     };
     // An empty operator is an error, and a stored song can't be inserted anyway.
     if (entry) {
@@ -335,7 +349,22 @@ export async function recordHarvestMatches(
         addsByCountry: {},
       };
     }
-    songOps.push({ updateOne: { filter: { _id: songKey }, update, upsert: true } });
+    if (Object.keys(update).length > 0) {
+      // Upsert only alongside the push: $setOnInsert can't seed a cuts array the
+      // $addToSet writes, and readers that $size it throw on a doc without one.
+      songOps.push({
+        updateOne: { filter: { _id: songKey }, update, upsert: added.length > 0 },
+      });
+    }
+    // A separate op: one update can't both $addToSet and $pull the same field.
+    if (dead.length > 0) {
+      songOps.push({
+        updateOne: {
+          filter: { _id: songKey },
+          update: { $pull: { cuts: { $in: dead } } },
+        },
+      });
+    }
   }
   if (songOps.length > 0) {
     try {
@@ -345,19 +374,16 @@ export async function recordHarvestMatches(
     }
   }
 
-  return { videosUpserted, videosRefreshed, songsFilled };
+  return { videosUpserted, videosRefreshed, songsFilled, full };
 }
 
-/** Below this a song plays but offers little choice, so leftover search budget
- *  widens it rather than being lost. */
+/** Songs under this get leftover search budget rather than it going unspent. */
 export const THIN_CUTS = 10;
 
-/** Doubling, capped at a month. */
 const RESOLVE_BACKOFF_DAYS = [1, 2, 4, 8, 16, 32];
 
-/** Both of the resolver's queues are ordered by demand and neither writes on a
- *  miss, so without this an unresolvable song holds the head of the list and
- *  re-buys the same empty answer every run, forever. */
+/** The resolver's queues order on demand and don't write on a miss, so without
+ *  this an unresolvable song holds the head of the list and re-buys it forever. */
 export async function markResolveMiss(songKey: string): Promise<void> {
   const songs = await getKaraokeSongsCollection();
   const song = await songs.findOne(
@@ -375,9 +401,7 @@ export async function markResolveMiss(songKey: string): Promise<void> {
   );
 }
 
-/** The sweep's refresh half. A row videos.list still answers for is fresh by
- *  definition, so rewriting refreshedAt is what keeps a served video out of the
- *  TTL's way. */
+/** Rewriting refreshedAt is what keeps a served video out of the TTL's way. */
 export async function refreshVideos(rows: SearchResult[]): Promise<number> {
   if (rows.length === 0) return 0;
   const now = new Date();
@@ -411,9 +435,8 @@ export async function refreshVideos(rows: SearchResult[]): Promise<number> {
   }
 }
 
-/** A video YouTube no longer serves or lets us embed leaves the corpus and every
- *  song that named it. Songs first: killed between the two writes, that leaves an
- *  orphan row the TTL collects, where the other order leaves a dead cut. */
+/** Songs first: killed between the two writes, that leaves an orphan row the TTL
+ *  collects, where the other order leaves a dead cut. */
 export async function dropVideos(
   videoIds: string[]
 ): Promise<{ dropped: number; cutsPulled: number; unpinned: number }> {
@@ -421,11 +444,20 @@ export async function dropVideos(
   const songs = await getKaraokeSongsCollection();
   const videos = await getKaraokeVideosCollection();
 
-  const pulled = await songs.updateMany(
+  // Read before the pull: updateMany reports docs touched, not array elements,
+  // so its count is not a cut count.
+  const dying = new Set(videoIds);
+  const naming = await songs
+    .find({ cuts: { $in: videoIds } }, { projection: { cuts: 1 } })
+    .toArray();
+  const cutsPulled = naming.reduce(
+    (total, song) => total + (song.cuts ?? []).filter((id) => dying.has(id)).length,
+    0
+  );
+  await songs.updateMany(
     { cuts: { $in: videoIds } },
     { $pull: { cuts: { $in: videoIds } } }
   );
-  // Left dangling, the badge pins a video the song no longer serves.
   const unpinned = await songs.updateMany(
     { topVideoId: { $in: videoIds } },
     { $unset: { topVideoId: "" } }
@@ -433,20 +465,14 @@ export async function dropVideos(
   const deleted = await videos.deleteMany({ _id: { $in: videoIds } });
   return {
     dropped: deleted.deletedCount,
-    cutsPulled: pulled.modifiedCount,
+    cutsPulled,
     unpinned: unpinned.modifiedCount,
   };
 }
 
-/** The add path proves a (song, video) pairing on a title that arrived in the
- *  same request body as the videoId, and the sweep is where YouTube finally
- *  names the row. Re-running the match on the real title is what stops a video
- *  admitted on a client's string from staying a cut — and being badged as one —
- *  for every room once the placeholder title is gone.
- *
- *  Only rows an add is the sole source of: a harvest match was made on the
- *  channel's own title, and a resolver row is whatever search.list answered a
- *  song's query with, which need not repeat the artist. */
+/** The sweep is where YouTube first names a row an add filed on a client's title,
+ *  so the match is re-run against the real one. Add-sourced rows only: the other
+ *  sources were never matched on a client's string. */
 export async function unfileUnprovenCuts(
   fresh: Map<string, SearchResult>
 ): Promise<{ pulled: number; unpinned: number }> {
@@ -472,8 +498,7 @@ export async function unfileUnprovenCuts(
     if (!title) continue;
     const failed = (row.songKeys ?? []).filter((key) => {
       const entry = catalogEntry(key);
-      // A song the catalog has since dropped can't be re-checked, and its doc
-      // is titleless anyway — the migration counts those rather than serving them.
+      // A song the catalog has since dropped can't be re-checked.
       return entry ? !isCutOf(title, entry) : false;
     });
     if (failed.length > 0) unproven.set(row._id, failed);
@@ -489,7 +514,6 @@ export async function unfileUnprovenCuts(
       pullOps.push({
         updateOne: { filter: { _id: key }, update: { $pull: { cuts: videoId } } },
       });
-      // Left dangling, the badge pins a video the song no longer serves.
       unpinOps.push({
         updateOne: {
           filter: { _id: key, topVideoId: videoId },
@@ -497,8 +521,7 @@ export async function unfileUnprovenCuts(
         },
       });
     }
-    // Or the next sweep re-reads the row for a song it no longer belongs to,
-    // and another add re-files it on the same unchecked claim.
+    // Or another add re-files it on the same unchecked claim.
     videoOps.push({
       updateOne: {
         filter: { _id: videoId },
@@ -507,7 +530,6 @@ export async function unfileUnprovenCuts(
     });
   });
 
-  // Separate batches so each count means one thing.
   let pulled = 0;
   let unpinned = 0;
   try {
@@ -520,9 +542,8 @@ export async function unfileUnprovenCuts(
   return { pulled, unpinned };
 }
 
-/** The resolver's write, and phase 1's only path from search.list into the
- *  corpus. Only rows that become cuts are stored: every extra id is one the
- *  sweep must re-read forever for a song that will never serve it. */
+/** Only rows that become cuts are stored: every extra id is one the sweep must
+ *  re-read forever for a song that will never serve it. */
 export async function recordSearchResults(
   songKey: string,
   results: SearchResult[]
@@ -530,34 +551,31 @@ export async function recordSearchResults(
   if (results.length === 0) return { videosUpserted: 0, cutsAdded: 0 };
   const songs = await getKaraokeSongsCollection();
   const videos = await getKaraokeVideosCollection();
-  // No upsert on the song: the song set is what bounds the corpus, so a search
-  // result can name a song but never create one.
+  // No upsert: a search result can name a song but never create one.
   const song = await songs.findOne({ _id: songKey });
   if (!song) return { videosUpserted: 0, cutsAdded: 0 };
 
-  // A TTL deletion announces itself to nothing, so an expired cut occupies a
-  // slot — and counts towards the cap — until a writer drops it.
+  // An expired cut still occupies a slot until a writer drops it.
   const held = song.cuts ?? [];
-  const alive =
+  const rows =
     held.length === 0
-      ? new Set<string>()
-      : new Set(
-          (
-            await videos
-              .find({ _id: { $in: held } }, { projection: { _id: 1 } })
-              .toArray()
-          ).map((r) => r._id)
-        );
+      ? []
+      : await videos
+          .find({ _id: { $in: held } }, { projection: { _id: 1, thumbnailUrl: 1 } })
+          .toArray();
+  const alive = new Set(rows.map((r) => r._id));
 
   const cuts = held.filter((id) => alive.has(id));
+  // Servable rows only: unnamed rows must not turn a paid search away.
+  let serving = rows.filter((row) => isServable(row)).length;
   const fresh: SearchResult[] = [];
   for (const row of results) {
-    if (cuts.length >= MAX_CUTS) break;
-    // Appended, never inserted: relevance order is YouTube's opinion, and the
-    // leading cuts are ranked by what rooms actually sang.
+    if (serving >= MAX_CUTS) break;
+    // Appended: relevance order is YouTube's opinion, the leading cuts are ours.
     if (cuts.indexOf(row.videoId) >= 0) continue;
     cuts.push(row.videoId);
     fresh.push(row);
+    if (isServable(row)) serving += 1;
   }
 
   const now = new Date();
@@ -591,14 +609,12 @@ export async function recordSearchResults(
     }
   }
 
-  // Written even when nothing was added: the filter above may have dropped an
-  // expired cut, and leaving that id on the song strands it for good.
+  // Also written when nothing was added: the filter may have dropped a dead id.
   if (cuts.length !== held.length || fresh.length > 0) {
     await songs.updateOne(
       { _id: songKey },
       {
         $set: { cuts },
-        // A song that resolves isn't backing off any more.
         ...(fresh.length > 0
           ? { $unset: { resolveMisses: "", nextResolveAt: "" } }
           : {}),
@@ -606,4 +622,24 @@ export async function recordSearchResults(
     );
   }
   return { videosUpserted, cutsAdded: fresh.length };
+}
+
+/** Rewritten nightly, not seeded once: the resolver's queues order on it, so a
+ *  frozen score spends every later day's searches on last month's taste. */
+export async function recordDemand(demand: Map<string, number>): Promise<number> {
+  if (demand.size === 0) return 0;
+  const songs = await getKaraokeSongsCollection();
+  const ops: AnyBulkWriteOperation<KaraokeSongDoc>[] = [];
+  // No upsert: a key with no doc is a song the catalog has since retired.
+  demand.forEach((count, key) => {
+    ops.push({
+      updateOne: { filter: { _id: key }, update: { $set: { demand: count } } },
+    });
+  });
+  try {
+    return (await songs.bulkWrite(ops, { ordered: false })).modifiedCount;
+  } catch (e: any) {
+    console.warn("Demand write partly failed:", e?.message);
+    return 0;
+  }
 }

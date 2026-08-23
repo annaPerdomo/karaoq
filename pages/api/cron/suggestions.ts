@@ -23,37 +23,32 @@ import {
   SWEEP_PER_RUN,
   sweepCorpusVideos,
 } from "../../../lib/corpusSweep";
+import { recordDemand } from "../../../lib/songCorpus";
 import { suggestionCatalog } from "../../../lib/suggestionCatalog";
+import { suggestionDemand } from "../../../lib/suggestionDemand";
 
-// Nightly, not monthly: the quota is a daily allowance, so a monthly pass could
-// only ever spend one day's worth. vercel.json invokes this twice because a full
-// harvest outlasts the 300s function — the later slot buys clock, not quota
-// (lib/corpusBudget).
-
-// The function's ceiling, with the run's deadline held under it: stopping
-// voluntarily keeps what a run paid for, where being killed mid-step spent the
-// units and wrote nothing.
+// vercel.json invokes this twice because a full harvest outlasts the 300s
+// function — the later slot buys clock, not quota (lib/corpusBudget). The run's
+// deadline is held under the ceiling: being killed spends units and writes nothing.
 export const config = { maxDuration: 300 };
 const RUN_BUDGET_MS = 240_000;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-/** No step may assume it finishes: the contract is to stop starting work at the
- *  deadline, persist the cursor, and hand back done:false to be resumed.
- *  `spent` is what it took out of the day's YouTube allowance. */
-type Step = (deadline: number) => Promise<{
-  done: boolean;
-  report: Record<string, unknown>;
-  spent?: Partial<DailySpend>;
-}>;
+/** No step may assume it finishes: stop starting work at the deadline, persist
+ *  the cursor, hand back done:false. `bill` is called as units leave the day's
+ *  allowance, never once at the end — a step that throws still spent them. */
+type Step = (
+  deadline: number,
+  bill: (units: Partial<DailySpend>) => void
+) => Promise<{ done: boolean; report: Record<string, unknown> }>;
 
 interface StepSpec {
   name: string;
   run: Step;
-  /** The longest this step may hold the run, whatever else is left. */
   budgetMs: number;
-  /** Held back out of the run for the steps after this one: handed the whole
-   *  deadline, the harvest legitimately takes it and search opens on nothing. */
+  /** Held back for the steps after this one: handed the whole deadline, the
+   *  harvest legitimately takes it and search opens on nothing. */
   floorMs: number;
 }
 
@@ -66,25 +61,23 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  // Closed rather than open when unset, so a missing env var can't publish a
-  // route that spends the API quota.
+  // Closed when unset: a missing env var must not publish a quota-spending route.
   const secret = process.env.CRON_SECRET;
   if (!secret || req.headers.authorization !== `Bearer ${secret}`) {
     res.status(401).json({ code: 401, message: "Unauthorized." });
     return;
   }
 
-  // ?search=0 runs only the steps that don't touch search.list. Everything
-  // else still does real work, so a maxed-out day isn't a no-op.
+  // ?search=0 runs only the steps that don't touch search.list.
   const useSearch = req.query.search !== "0";
-  // Nothing branches on it; it is what makes the second cron entry a distinct
-  // path, and what names a run in the logs.
+  // Nothing branches on it: it makes the second cron entry a distinct path.
   const slot = typeof req.query.slot === "string" ? req.query.slot : "1";
 
   const started = Date.now();
   const deadline = started + RUN_BUDGET_MS;
 
-  if (!(await acquireRun(started))) {
+  const lease = await acquireRun(started);
+  if (!lease) {
     console.log("Corpus cron skipped, a run holds the lease:", slot);
     res.status(200).json({ skipped: "locked", slot });
     return;
@@ -100,9 +93,7 @@ export default async function handler(
     spent.pages
   );
 
-  /** Cheap and user-visible first, so a run short of clock has spent it where a
-   *  browsing room can feel it. Search is last: it's the one a room competes
-   *  with for quota. */
+  /** Cheap and user-visible first; search is last, since rooms compete for it. */
   const steps: StepSpec[] = [
     {
       name: "migrate",
@@ -135,10 +126,21 @@ export default async function handler(
       },
     },
     {
+      // Ahead of the resolver, whose queues it orders. Our own events, no units.
+      name: "demand",
+      budgetMs: 20_000,
+      floorMs: 5_000,
+      run: async (by) => {
+        if (Date.now() >= by) return { done: false, report: { skipped: "no clock" } };
+        const scored = await recordDemand(await suggestionDemand());
+        return { done: true, report: { scored } };
+      },
+    },
+    {
       name: "harvest",
       budgetMs: 150_000,
       floorMs: 5_000,
-      run: async (by) => {
+      run: async (by, bill) => {
         if (pageBudget <= 0) {
           return { done: false, report: { skipped: "pages spent today" } };
         }
@@ -150,25 +152,24 @@ export default async function handler(
           ),
           resweepAfterMs: CHANNEL_RESWEEP_MS,
           maxCutsPerSong: CUTS_PER_SONG,
+          onPages: (pages) => bill({ pages }),
         });
-        return { done, report: { ...report }, spent: { pages: report.pages } };
+        return { done, report: { ...report } };
       },
     },
     {
       name: "resolve",
       budgetMs: 60_000,
       floorMs: 45_000,
-      run: async (by) => {
+      run: async (by, bill) => {
         if (!useSearch) return { done: false, report: { skipped: "search=0" } };
         if (searchBudget <= 0) {
           return { done: false, report: { skipped: "searches spent today" } };
         }
-        const { done, report } = await resolveWantedSongs(by, searchBudget);
-        return {
-          done,
-          report: { ...report },
-          spent: { searches: report.searched + report.widened },
-        };
+        const { done, report } = await resolveWantedSongs(by, searchBudget, () =>
+          bill({ searches: 1 })
+        );
+        return { done, report: { ...report } };
       },
     },
   ];
@@ -179,24 +180,29 @@ export default async function handler(
     for (const step of steps) {
       reserved -= step.floorMs;
       const by = Math.min(Date.now() + step.budgetMs, deadline - reserved);
+      const billed: DailySpend = { searches: 0, pages: 0 };
       try {
-        const { done, report, spent: took } = await step.run(by);
+        const { done, report } = await step.run(by, (units) => {
+          billed.searches += units.searches ?? 0;
+          billed.pages += units.pages ?? 0;
+        });
         ran[step.name] = { done, ...report };
-        // Before the next step, not at the end: a run killed at the function
-        // cap never reaches its cleanup, and units it didn't write down are
-        // units the next slot spends over again.
-        if (took) await recordSpend(started, took);
       } catch (e: any) {
-        // Never a 500: the cursors the other steps wrote are what tomorrow
-        // resumes from, and Vercel retries nothing either way.
+        // Never a 500: Vercel retries nothing either way.
         console.warn("Corpus cron step failed:", step.name, e?.message);
         ran[step.name] = { done: false, error: e?.message ?? "failed" };
+      } finally {
+        // Out of a failed step too: units nobody wrote down are units the next
+        // slot spends over again.
+        await recordSpend(started, billed).catch((e: any) => {
+          console.warn("Corpus cron spend not recorded:", e?.message);
+        });
       }
     }
   } finally {
-    // Released rather than left to expire, or a one-minute run locks out the
+    // Released rather than left to expire: a one-minute run would lock out the
     // slot behind it.
-    await releaseRun(Date.now()).catch(() => {});
+    await releaseRun(Date.now(), lease).catch(() => {});
   }
 
   const report = {

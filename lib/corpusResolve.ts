@@ -7,10 +7,6 @@ import { CATALOG_DURATION, CATALOG_SORT } from "./suggestionCatalog";
 import { YoutubeApiError } from "./youtubeApi";
 import { searchYoutubeApi } from "./youtubeSearch";
 
-// The only place in the product that spends a search.list call on anything but
-// a query a singer typed. YouTube allows 100 a day project-wide, so the budget
-// is a daily one (lib/corpusBudget) and this step runs last.
-
 export interface ResolveStepReport {
   /** The whole wanted list, not the page of it this run could afford. */
   wanted: number;
@@ -18,7 +14,6 @@ export interface ResolveStepReport {
   eligible: number;
   searched: number;
   filled: number;
-  /** Searches that answered with nothing new, each buying its song a wait. */
   missed: number;
   thin: number;
   widened: number;
@@ -51,13 +46,17 @@ async function searchInto(
   wanted: KaraokeSongDoc[],
   budget: number,
   deadline: number,
-  attempted: Set<string>
+  attempted: Set<string>,
+  onSearch?: () => void
 ): Promise<PassResult> {
   const pass: PassResult = { calls: 0, filled: 0, missed: 0, quotaSpent: false };
   for (const song of wanted) {
     if (pass.calls >= budget || Date.now() >= deadline) break;
     attempted.add(song._id);
     pass.calls += 1;
+    // Billed before the call: a call the corpus write then throws on is still
+    // one of the day's hundred.
+    onSearch?.();
     try {
       const results = await searchYoutubeApi(
         songQuery(song),
@@ -72,14 +71,12 @@ async function searchInto(
         pass.filled += 1;
         continue;
       }
-      // No answer, or one the song already held: the call bought nothing, and
-      // the miss is what stops it being bought again ahead of untried songs.
+      // The miss stops it being re-bought ahead of songs nobody has tried.
       pass.missed += 1;
       await markResolveMiss(song._id);
     } catch (e: any) {
-      // Only a spent quota ends the step: a timeout must not forfeit a day of
-      // corpus progress that can't be earned back. Nor does it count as a miss,
-      // or our own flakiness backs a song off for a fortnight.
+      // Only a spent quota ends the step and counts as a miss — our own
+      // flakiness must not back a song off for a fortnight.
       if (e instanceof YoutubeApiError && e.quotaExceeded) {
         console.warn("Corpus resolve stopped, quota spent:", e?.message);
         pass.quotaSpent = true;
@@ -93,7 +90,8 @@ async function searchInto(
 
 export async function resolveWantedSongs(
   deadline: number,
-  budget: number
+  budget: number,
+  onSearch?: () => void
 ): Promise<{ done: boolean; report: ResolveStepReport }> {
   const report: ResolveStepReport = {
     wanted: 0,
@@ -119,7 +117,7 @@ export async function resolveWantedSongs(
   report.eligible = wanted.length;
 
   const attempted = new Set<string>();
-  const first = await searchInto(wanted, budget, deadline, attempted);
+  const first = await searchInto(wanted, budget, deadline, attempted, onSearch);
   report.searched = first.calls;
   report.filled = first.filled;
   report.missed = first.missed;
@@ -127,19 +125,17 @@ export async function resolveWantedSongs(
 
   const remaining = budget - first.calls;
   if (!first.quotaSpent && remaining > 0 && Date.now() < deadline) {
-    // A search not spent today is lost for good, so what's left widens thin
-    // songs. Holding any cut at all is what keeps one off the wanted list.
+    // A search not spent today is lost for good, so what's left widens thin songs.
     const thin = (
       await songs
         .find({ $expr: { $lt: [{ $size: "$cuts" }, THIN_CUTS] }, ...ready })
         .sort({ demand: -1 })
-        // Room for the ones this run already tried and is about to filter out.
         .limit(remaining + attempted.size)
         .toArray()
     ).filter((song) => !attempted.has(song._id));
     report.thin = thin.length;
 
-    const second = await searchInto(thin, remaining, deadline, attempted);
+    const second = await searchInto(thin, remaining, deadline, attempted, onSearch);
     report.widened = second.calls;
     report.filled += second.filled;
     report.missed += second.missed;

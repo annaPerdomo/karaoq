@@ -370,9 +370,8 @@
   color: var(--text-muted);
 }
 
-/* Marks the cut singers actually queue for a suggested song. Sits above the
-   title so it reads as a label on the row, and wraps rather than truncating —
-   the string is a full phrase in most of the languages we ship. */
+/* Wraps rather than truncating — the string is a full phrase in most of the
+   languages we ship. */
 .pinnedBadge {
   display: inline-block;
   margin-bottom: 3px;

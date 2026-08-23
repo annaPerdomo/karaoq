@@ -1,16 +1,12 @@
 import type { SearchResult } from "./searchCache";
 import { videoDetailFields } from "./youtubeSearch";
 
-// The read half of the 30-day rule. One videos.list call re-reads up to 50 rows
-// for a single unit out of the 10,000/day pool — a rounding error next to the
-// 100 search.list calls a day the same project gets.
-
-/** videos.list takes up to 50 ids per call, and that ceiling sets the batch. */
+/** videos.list takes up to 50 ids per call — 1 unit out of the 10,000/day pool,
+ *  a different pool from the 100 search.list calls a day. */
 export const ID_BATCH = 50;
 
-/** Null when the call failed; an empty map when YouTube answered and none of
- *  the videos exist. Collapsing the two let one 403 read as every video being
- *  gone, deleting hundreds of healthy entries. */
+/** Null when the call failed; an empty map when YouTube answered and none of the
+ *  videos exist. Collapsed, one 403 read as every video being gone. */
 export async function fetchVideoRows(
   videoIds: string[],
   key: string

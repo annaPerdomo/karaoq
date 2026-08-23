@@ -43,8 +43,7 @@ export interface AnalyticsEvent {
   suggestionSource?: "random" | "song_pick" | "genre_chip" | "trending";
   sectionId?: string;
   categoryId?: string;
-  // Our own key (lib/suggestionCatalog), not a YouTube field, so it stays on
-  // the event rather than expiring at 30 days.
+  // Our own key, not a YouTube field, so it doesn't expire at 30 days.
   suggestionKey?: string;
   // Absent on events from before this field existed, which were all search adds.
   // "paste" is newer than "search": pastes before it shipped are in the search bucket.
@@ -65,7 +64,7 @@ export interface AnalyticsEvent {
   // …and whether the cache covered for it. roomId is the room whose singer was
   // searching, or "" from clients predating the field — and either way the
   // failure is the API's, not the room's, so geo roll-ups must exclude these.
-  searchOutcome?: "stale" | "error";
+  searchOutcome?: "stale" | "corpus" | "error";
   // link_lookup: usage telemetry, not audience data, so like search_failed it's
   // excluded from geo roll-ups and the public stats. Deliberately carries no
   // YouTube metadata, keeping these rows clear of the 30-day retention split.

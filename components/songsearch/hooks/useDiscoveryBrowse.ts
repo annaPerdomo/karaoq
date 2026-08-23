@@ -154,8 +154,9 @@ export function useDiscoveryBrowse({
       songArtist: song.artist,
     });
 
-    // Lets an add off these results name the catalogued song it settled.
-    runSearch(q, filters, karaokeMode, true);
+    // Catalogued picks only: a trending row is a cleaned video title with no
+    // artist, so it keys to nothing the catalog holds.
+    runSearch(q, filters, karaokeMode, source !== 'trending');
   }
 
   function handleSurpriseMe() {

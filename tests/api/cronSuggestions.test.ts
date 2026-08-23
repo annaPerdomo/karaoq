@@ -3,9 +3,6 @@ import { NextApiResponse } from "next";
 import { createMockReq } from "../helpers/mockRequest";
 import { fakeCollection, type FakeCollection } from "../helpers/fakeCollection";
 
-// The steps run for real against in-memory collections and a fake YouTube: a
-// resumable job is worth asserting on the state and the units it leaves, and
-// "no search.list call happened" can only be read off the requests.
 const collections = new Map<string, FakeCollection>();
 
 function collection(name: string): FakeCollection {
@@ -46,7 +43,6 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 /** Past the sweep's 16-day cutoff, inside the 30-day TTL. */
 const STALE_AT = new Date(Date.now() - 20 * DAY_MS);
 
-// One channel, so a run's harvest is two requests rather than seventy.
 const CHANNEL = "TestKaraoke";
 
 const api = {
@@ -54,13 +50,14 @@ const api = {
   /** Ids videos.list answers with nothing: deleted, or never there. */
   missing: new Set<string>(),
   unembeddable: new Set<string>(),
+  /** Ids videos.list answers for with no picture, so nothing can serve them. */
+  unpictured: new Set<string>(),
   titles: new Map<string, string>(),
   uploads: [] as { videoId: string; title: string }[],
   /** Pages before the channel runs out; more than one lets it outlast a run. */
   uploadPages: 1,
   onPlaylistItems: () => {},
   searchHits: [] as { videoId: string; title: string }[],
-  /** search.list calls answered before the quota 403 lands. */
   searchesBeforeQuota: Number.MAX_SAFE_INTEGER,
   searches: 0,
   onVideosList: () => {},
@@ -75,7 +72,7 @@ function videoItem(id: string) {
     id,
     snippet: {
       title: api.titles.get(id) ?? `Track ${id}`,
-      thumbnails: { medium: { url: `thumb-${id}` } },
+      thumbnails: api.unpictured.has(id) ? {} : { medium: { url: `thumb-${id}` } },
     },
     contentDetails: { duration: "PT3M20S" },
     statistics: { viewCount: "4242" },
@@ -179,8 +176,8 @@ function migrationDone(): void {
 
 const catalogEntries = Array.from(suggestionCatalog().values());
 
-/** A song the harvest matcher can reach with a plain "<artist> <title>" upload
- *  title — the native-script packs need the channel to title in kana or hangul. */
+/** Reachable with a plain "<artist> <title>" upload title, unlike the
+ *  native-script packs. */
 const PLAIN: CatalogEntry = catalogEntries.find(
   (e) => !e.nativeTitle && !e.nativeArtist
 )!;
@@ -197,8 +194,7 @@ function seedSong(entry: CatalogEntry, cuts: string[], demand = 0): void {
   });
 }
 
-/** songKeys is what makes a row a cut rather than a stray add, and the sweep
- *  only spends units on cuts. */
+/** songKeys is what makes a row a cut rather than a stray add. */
 function seedVideo(
   videoId: string,
   refreshedAt = STALE_AT,
@@ -228,6 +224,7 @@ beforeEach(() => {
   api.urls = [];
   api.missing = new Set();
   api.unembeddable = new Set();
+  api.unpictured = new Set();
   api.titles = new Map();
   api.uploads = [];
   api.uploadPages = 1;
@@ -305,7 +302,6 @@ describe("GET /api/cron/suggestions - the run budget", () => {
     seedVideo("live1");
     api.uploads = [{ videoId: "up1", title: `${PLAIN.artist} ${PLAIN.title} (Karaoke)` }];
 
-    // The clock runs out inside the sweep's first videos.list.
     const base = Date.now();
     let spent = false;
     vi.spyOn(Date, "now").mockImplementation(() => (spent ? base + 10 * 60_000 : base));
@@ -327,8 +323,6 @@ describe("GET /api/cron/suggestions - one run at a time", () => {
   beforeEach(migrationDone);
 
   it("skips a slot that overlaps a run still holding the lease", async () => {
-    // Every step derives its work from a query rather than a queue, so two runs
-    // both take the top of the night's list and buy the same searches twice.
     state().seed({
       _id: "run",
       leaseUntil: new Date(Date.now() + 60_000),
@@ -358,7 +352,6 @@ describe("GET /api/cron/suggestions - one run at a time", () => {
 describe("GET /api/cron/suggestions - the daily quota ledger", () => {
   beforeEach(() => {
     migrationDone();
-    // Two searches is the whole day, whichever slot asks for them.
     process.env.SUGGESTION_RESOLVE_PER_DAY = "2";
     seedSong(catalogEntries[0], [], 30);
     seedSong(catalogEntries[1], [], 20);
@@ -372,11 +365,26 @@ describe("GET /api/cron/suggestions - the daily quota ledger", () => {
 
     const second = await run({ slot: "2" });
 
-    // The slot buys wall-clock. It must not buy units, or the two of them
-    // together spend the day twice and leave a room's own search nothing.
     expect(second.resolve).toMatchObject({ skipped: "searches spent today" });
     expect(calls("search")).toHaveLength(2);
     expect(songs().get(catalogEntries[2].key).cuts).toEqual([]);
+  });
+
+  it("bills the searches a step spent before it threw", async () => {
+    // Recorded only on the way out, a step that dies after buying its searches
+    // reads as having spent nothing.
+    process.env.SUGGESTION_RESOLVE_PER_DAY = "5";
+    const store = songs();
+    const readSongs = store.find;
+    store.find = (filter: any, options?: any) => {
+      if (api.searches > 0) throw new Error("Atlas failover");
+      return readSongs.call(store, filter, options);
+    };
+
+    const steps = await run();
+
+    expect(steps.resolve).toMatchObject({ error: "Atlas failover" });
+    expect(state().get("budget").spend).toMatchObject({ searches: 3 });
   });
 
   it("reports the budget a run actually opened with", async () => {
@@ -404,7 +412,6 @@ describe("GET /api/cron/suggestions - the run's clock", () => {
   it("caps the harvest so the search step is never handed a spent clock", async () => {
     seedSong(PLAIN, [], 30);
     api.searchHits = [{ videoId: "hit1", title: "One (Karaoke)" }];
-    // A channel deep enough to outlast any run, answering slowly.
     api.uploadPages = 1000;
     const clock = fakeClock();
     api.onPlaylistItems = () => clock.advance(20_000);
@@ -450,11 +457,11 @@ describe("GET /api/cron/suggestions - sweep", () => {
       checked: 3,
       refreshed: 1,
       dropped: 2,
-      cutsPulled: 1,
+      // Both dead ids came off one song: a count of songs touched would read 1.
+      cutsPulled: 2,
       unpinned: 1,
       done: true,
     });
-    // Unembeddable can't play in a room, so it leaves with the deleted one.
     expect(videos().get("gone1")).toBeNull();
     expect(videos().get("blocked1")).toBeNull();
     expect(songs().get(PLAIN.key).cuts).toEqual(["live1"]);
@@ -476,6 +483,64 @@ describe("GET /api/cron/suggestions - sweep", () => {
     expect(swept.refreshedAt.getTime()).toBeGreaterThan(STALE_AT.getTime());
   });
 
+  it("names an add's row the night it arrives, cutoff or not", async () => {
+    seedSong(PLAIN, ["added"]);
+    api.titles.set("added", `${PLAIN.artist} - ${PLAIN.title} (Karaoke)`);
+    videos().seed({
+      _id: "added",
+      title: `${PLAIN.artist} - ${PLAIN.title} (Karaoke)`,
+      thumbnailUrl: "",
+      songKeys: [PLAIN.key],
+      sources: { adds: { count: 1, byCountry: {}, rooms: ["r1"], lastAt: new Date() } },
+      firstSeenAt: new Date(),
+      refreshedAt: new Date(),
+    });
+
+    const steps = await run({ search: "0" });
+
+    expect(steps.sweep).toMatchObject({ pending: 1, backlog: 0 });
+    expect(videos().get("added").thumbnailUrl).toBe("thumb-added");
+    expect(songs().get(PLAIN.key).cuts).toEqual(["added"]);
+  });
+
+  it("takes a dead video out of the searches still caching it", async () => {
+    seedSong(PLAIN, ["gone1"]);
+    seedVideo("gone1");
+    api.missing.add("gone1");
+    collection("search_cache").seed({
+      _id: "c1",
+      key: "some song|any|relevance",
+      results: [
+        { videoId: "gone1", title: "Gone", thumbnailUrl: "t" },
+        { videoId: "still", title: "Still here", thumbnailUrl: "t" },
+      ],
+      createdAt: new Date(),
+    });
+
+    const steps = await run({ search: "0" });
+
+    expect(steps.sweep).toMatchObject({ dropped: 1, cachePruned: 1 });
+    expect(collection("search_cache").get("c1").results).toEqual([
+      { videoId: "still", title: "Still here", thumbnailUrl: "t" },
+    ]);
+  });
+
+  it("deletes a cached search the pruning would empty", async () => {
+    seedSong(PLAIN, ["gone1"]);
+    seedVideo("gone1");
+    api.missing.add("gone1");
+    collection("search_cache").seed({
+      _id: "c1",
+      key: "some song|any|relevance",
+      results: [{ videoId: "gone1", title: "Gone", thumbnailUrl: "t" }],
+      createdAt: new Date(),
+    });
+
+    await run({ search: "0" });
+
+    expect(collection("search_cache").get("c1")).toBeNull();
+  });
+
   it("leaves a row alone until it is older than the refresh window", async () => {
     seedSong(PLAIN, ["fresh1"]);
     seedVideo("fresh1", new Date(Date.now() - DAY_MS));
@@ -487,8 +552,6 @@ describe("GET /api/cron/suggestions - sweep", () => {
   });
 
   it("unfiles a cut an add claimed once YouTube names the video", async () => {
-    // An add proves its (song, video) pairing on a title from the same request
-    // body. The sweep is the first time anyone hears the real one.
     seedSong(PLAIN, ["claimed"]);
     songs().seed({ ...songs().get(PLAIN.key), topVideoId: "claimed" });
     seedVideo("claimed");
@@ -503,13 +566,10 @@ describe("GET /api/cron/suggestions - sweep", () => {
     expect(steps.sweep).toMatchObject({ unproven: 1, unpinned: 1 });
     expect(songs().get(PLAIN.key).cuts).toEqual([]);
     expect(songs().get(PLAIN.key).topVideoId).toBeUndefined();
-    // Or the next add re-files it on the same unchecked claim.
     expect(videos().get("claimed").songKeys).toEqual([]);
   });
 
   it("leaves a harvested cut alone whatever its title says", async () => {
-    // The matcher read the channel's own title, and a resolver row is whatever
-    // search.list answered the song's query with — neither is a client's claim.
     seedSong(PLAIN, ["harvested"]);
     seedVideo("harvested");
     videos().seed({
@@ -542,8 +602,6 @@ describe("GET /api/cron/suggestions - sweep", () => {
   });
 
   it("spends nothing on a row no song names", async () => {
-    // writeAdd upserts a row for every video a room adds; those carry no songKeys
-    // and serve nothing, so re-reading them renews the 30 days they exist to expire.
     seedVideo("pasted1", STALE_AT, []);
 
     const steps = await run({ search: "0" });
@@ -587,8 +645,6 @@ describe("GET /api/cron/suggestions - publish", () => {
   });
 
   it("projects the corpus into the store a suggestion tap still reads", async () => {
-    // Nothing else writes suggestion_videos any more, and its 30-day TTL would
-    // empty it song by song, sending every tap back to a live search.
     const ids = seedResolved(PLAIN);
     songs().seed({ ...songs().get(PLAIN.key), topVideoId: ids[3] });
 
@@ -621,6 +677,29 @@ describe("GET /api/cron/suggestions - publish", () => {
     expect(calls("videos")).toEqual([]);
   });
 
+  it("stores only the cuts a tap can be served", async () => {
+    const ids = seedResolved(PLAIN, 11);
+    videos().seed({ ...videos().get(ids[0]), thumbnailUrl: "" });
+    api.unpictured.add(ids[0]);
+
+    const steps = await run({ search: "0" });
+
+    expect(steps.publish).toMatchObject({ published: 1 });
+    const stored = collection("suggestion_videos").get(PLAIN.key);
+    expect(stored.results.map((r: any) => r.videoId)).toEqual(ids.slice(1));
+    expect(songs().get(PLAIN.key).cuts).toEqual(ids);
+  });
+
+  it("counts a song thin on what it can serve, not on what it holds", async () => {
+    const ids = seedResolved(PLAIN, 10);
+    videos().seed({ ...videos().get(ids[0]), thumbnailUrl: "" });
+    api.unpictured.add(ids[0]);
+
+    const steps = await run({ search: "0" });
+
+    expect(steps.publish).toMatchObject({ published: 0, thin: 1 });
+  });
+
   it("stores nothing for a song with too few cuts to answer with", async () => {
     seedResolved(PLAIN, 4);
 
@@ -641,7 +720,6 @@ describe("GET /api/cron/suggestions - publish", () => {
 
     await run({ search: "0" });
 
-    // Deleting it would send the tap to a live search; yesterday's entry is better.
     expect(collection("suggestion_videos").get(PLAIN.key).refreshedAt).toEqual(
       STALE_AT
     );
@@ -653,7 +731,6 @@ describe("GET /api/cron/suggestions - publish", () => {
     const first = await run({ search: "0" });
 
     expect(first.publish).toMatchObject({ done: true });
-    // Cleared on a full pass: a refresh loop, not a migration.
     expect(state().get("publish").cursor).toBe("");
   });
 });
@@ -670,7 +747,6 @@ describe("GET /api/cron/suggestions - harvest", () => {
     expect(songs().get(PLAIN.key).cuts).toContain("up1");
     expect(videos().get("up1")).toMatchObject({
       sources: { harvest: { channel: CHANNEL } },
-      // The enrichment pass buys the badges a searched row carries.
       durationSeconds: 200,
       viewCount: 4242,
     });
@@ -739,8 +815,6 @@ describe("GET /api/cron/suggestions - resolve", () => {
   });
 
   it("spends what the wanted list leaves over on widening thin songs", async () => {
-    // An unused search is lost for good, and a song holding one cut is stored
-    // rather than pending — nothing else would ever revisit it.
     songs().clear();
     seedSong(first, ["only1"], 30);
     seedVideo("only1", new Date());
@@ -795,8 +869,6 @@ describe("GET /api/cron/suggestions - resolve", () => {
   });
 
   it("counts a search that answered only with cuts the song already held", async () => {
-    // The unit bought nothing, so it backs off as an empty answer does — or a
-    // thin song re-buys its own cuts every night.
     songs().clear();
     seedSong(first, ["hit1"], 30);
     seedVideo("hit1", new Date(), [first.key]);

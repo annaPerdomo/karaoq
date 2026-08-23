@@ -2,10 +2,9 @@ import { describe, it, expect } from "vitest";
 import { writeFileSync } from "fs";
 import { loadLocalEnv } from "./env";
 
-// Fills the corpus for real, against the database in .env.local, with the
-// cron's own channel harvest and zero search.list calls. Safe to re-run: the
-// writes are upserts and it shares the cron's cursors, so successive runs walk
-// further into each channel than a 240s nightly slice ever reaches.
+// Fills the corpus for real, against .env.local, with the cron's own harvest and
+// no search.list calls. Safe to re-run: it shares the cron's cursors, so each run
+// walks further into each channel than a 240s nightly slice reaches.
 //
 //   POPULATE_LIVE=1 pnpm tool scripts/tools/populateCorpus.tool.ts
 const LIVE = Boolean(process.env.POPULATE_LIVE);
@@ -39,8 +38,8 @@ describe("populate the song corpus", () => {
     const before = await counts();
 
     const totalPages = envCount("POPULATE_PAGES", 800);
-    // Zero re-walks a channel the cron parked as finished, which is what a
-    // raised cut cap needs and what a deeper walk does not.
+    // Zero re-walks a channel the cron parked as finished — what a raised cut
+    // cap needs, and what a deeper walk does not.
     const resweepAfterMs = Number(process.env.POPULATE_RESWEEP_MS ?? CHANNEL_RESWEEP_MS);
     const { done, report } = await harvestIntoCorpus(Date.now() + 880_000, {
       totalPages,
@@ -72,8 +71,6 @@ describe("populate the song corpus", () => {
     expect(after.withCuts).toBeGreaterThan(0);
   }, 900_000);
 
-  // Closes the loop: proves a tap reads cuts out of the corpus instead of
-  // falling through to the spent search quota.
   it.runIf(LIVE)("serves a tapped suggestion from the corpus", async () => {
     loadLocalEnv();
     const probes = [
@@ -83,8 +80,8 @@ describe("populate the song corpus", () => {
       ["Tulus", "Hati-Hati di Jalan"],
       ["Dewa 19", "Kangen"],
     ];
-    // Looked up by identity rather than rebuilt from artist and title: the key
-    // a tap produces is the catalog's own query, and the two can differ.
+    // Looked up by identity: the key a tap produces is the catalog's own query,
+    // which can differ from `${artist} ${title}`.
     const byName = new Map(
       Array.from(suggestionCatalog().values()).map((e) => [
         `${e.artist}|${e.title}`,

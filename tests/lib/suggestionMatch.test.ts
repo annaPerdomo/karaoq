@@ -14,6 +14,15 @@ function entry(title: string, artist: string): CatalogEntry {
   };
 }
 
+function bilingual(
+  title: string,
+  nativeTitle: string,
+  artist: string,
+  nativeArtist: string
+): CatalogEntry {
+  return { ...entry(title, artist), nativeTitle, nativeArtist };
+}
+
 function video(title: string, videoId = "v1", channel = "SingKing") {
   return { videoId, title, thumbnailUrl: "t", channel };
 }
@@ -35,6 +44,15 @@ describe("matchHarvestToCatalog", () => {
       "b",
       "c",
     ]);
+  });
+
+  it("files an upload titled in both scripts under its song once", () => {
+    const song = bilingual("Gurenge", "紅蓮華", "LiSA", "LiSA");
+    const upload = video("紅蓮華 Gurenge LiSA カラオケ", "both");
+
+    const matched = matchHarvestToCatalog([upload], [song], 5);
+
+    expect(matched.get(song.key)?.map((v) => v.videoId)).toEqual(["both"]);
   });
 
   it("keeps several channels' cuts — those are real arrangement choices", () => {
@@ -60,8 +78,6 @@ describe("matchHarvestToCatalog", () => {
   });
 
   it("refuses a title match with the wrong artist", () => {
-    // The failure that matters: a wrong match hands the room someone else's
-    // song and then pins it there for everyone.
     const videos = [video("Kylie Minogue - Dancing Queen (Karaoke)")];
 
     expect(matchHarvestToCatalog(videos, [DANCING_QUEEN], 5).size).toBe(0);
@@ -74,8 +90,8 @@ describe("matchHarvestToCatalog", () => {
   });
 
   it("doesn't let a short title collide across artists", () => {
-    // "Dan" by Sheila on 7 is one word; without the artist check it would match
-    // every Indonesian upload with "dan" anywhere in the title.
+    // "Dan" by Sheila on 7 is one word; without the artist check it matches every
+    // Indonesian upload with "dan" in the title.
     const dan = entry("Dan", "Sheila on 7");
     const videos = [
       video("Sheila on 7 - Dan (Karaoke)", "right"),
@@ -147,8 +163,8 @@ describe("matchHarvestToCatalog — uploads that only look like tracks", () => {
   });
 
   it("refuses a song whose words appear inside a different song", () => {
-    // The one that proved FILLER was eating real title words: "Without You"
-    // collapsed to "you", which "I Know What You Want" satisfies trivially.
+    // FILLER ate real title words: "Without You" collapsed to "you", which
+    // "I Know What You Want" satisfies trivially.
     const withoutYou = entry("Without You", "Mariah Carey");
     const videos = [
       video("Busta Rhymes, Mariah Carey - I Know What You Want (Karaoke Version)"),
@@ -166,8 +182,6 @@ describe("matchHarvestToCatalog — uploads that only look like tracks", () => {
   });
 
   it("matches a two-word song identity", () => {
-    // "Halo" by "Beyoncé" is the shortest real case in the catalog and must
-    // survive the distinctiveness floor.
     const halo = entry("Halo", "Beyoncé");
     const videos = [video("BEYONCE - HALO (KARAOKE VERSION)", "halo")];
 
@@ -178,9 +192,8 @@ describe("matchHarvestToCatalog — uploads that only look like tracks", () => {
 
 describe("matchHarvestToCatalog — a title that identifies nothing", () => {
   it("refuses an entry whose title is contained in its own artist", () => {
-    // Real catalog row: { title: "Enrique", artist: "Enrique Iglesias" }. The
-    // needle is then just "is by Enrique Iglesias", which every upload of his
-    // satisfies — the live harvest duly claimed "Heroe" and "Addicted" for it.
+    // Real catalog row: { title: "Enrique", artist: "Enrique Iglesias" }. The live
+    // harvest duly claimed "Heroe" and "Addicted" for it.
     const miscurated = entry("Enrique", "Enrique Iglesias");
     const videos = [
       video("Enrique Iglesias - Heroe (Karaoke Version)"),
@@ -210,7 +223,7 @@ describe("matchHarvestToCatalog — native scripts", () => {
 
   it("matches an upload titled entirely in the native script", () => {
     // Japanese and Korean channels title in native script, so romanisation-only
-    // matching found literally nothing for those packs.
+    // matching found nothing for those packs.
     const videos = [video("竹内まりや - プラスティック・ラブ (カラオケ)", "native")];
 
     expect(matchHarvestToCatalog(videos, [jp()], 5).get(jp().key)?.[0].videoId)
@@ -238,8 +251,6 @@ describe("matchHarvestToCatalog — native scripts", () => {
   });
 });
 
-// The same rule applied to a single title, which is what stands between a
-// client-supplied (suggestionKey, videoId) pair and the global catalog.
 describe("isCutOf", () => {
   it("accepts a real karaoke cut of the song", () => {
     expect(isCutOf("ABBA - Dancing Queen (Karaoke Version)", DANCING_QUEEN))

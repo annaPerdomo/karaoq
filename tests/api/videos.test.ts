@@ -21,8 +21,6 @@ vi.mock("mongodb", () => ({
   },
 }));
 
-// The endpoint's contract with the corpus: every add feeds it, the singer never
-// waits on it, and it can never be why an add fails.
 const recordAddMock = vi.fn();
 vi.mock("../../lib/songCorpus", () => ({
   recordAdd: (...args: unknown[]) => recordAddMock(...args),
@@ -457,8 +455,6 @@ describe("POST /api/queue/[id]/videos - Add song to queue", () => {
     });
   });
 
-  // The cron reads suggestionKey to decide which video a song resolves to for
-  // every room, so a length check is not enough to store one on.
   describe("suggestionKey provenance", () => {
     async function addWithKey(suggestionKey: unknown): Promise<unknown> {
       const room: Room = { id: "ROOM1", queue: [], activeVideoIndex: 0, isPlaying: false };
@@ -556,8 +552,6 @@ describe("POST /api/queue/[id]/videos - Add song to queue", () => {
     });
 
     it("answers the singer before it waits on the corpus", async () => {
-      // Dropping the promise loses writes to a frozen instance; awaiting it
-      // first would put a singer's song behind the bookkeeping.
       let finish: () => void = () => {};
       recordAddMock.mockReturnValue(
         new Promise<void>((resolve) => {
@@ -577,8 +571,7 @@ describe("POST /api/queue/[id]/videos - Add song to queue", () => {
     });
 
     it("skips demo and dev traffic, as the analytics writes do", async () => {
-      // One database behind both, so a seeded room must not shape what every
-      // real room is offered.
+      // One database behind both, so a seeded room must not shape the corpus.
       await addFrom({ host: "localhost:3000" });
       await addFrom({ "x-karaoq-demo": "1" });
 

@@ -8,7 +8,6 @@ import {
   type HarvestCursor,
 } from "../../lib/karaokeChannels";
 
-// How many pages of 50 each fake channel holds before it runs out.
 type Depth = Record<string, number>;
 
 interface FakeApi {
@@ -42,7 +41,6 @@ function fakeYoutube(depth: Depth, api: FakeApi = {}) {
       return { ok: false, status: 404, json: async () => ({}) } as Response;
     }
     const total = depth[playlistId] ?? 1;
-    // The token is the 0-based index of the page it asks for.
     const page = Number(parsed.searchParams.get("pageToken") ?? "0");
     return json({
       items: [
@@ -102,8 +100,7 @@ describe("harvestKaraokeChannels", () => {
   });
 
   it("stops at the total page budget rather than spending it per channel", async () => {
-    // A per-channel cap times 35 channels was the real ceiling, and at 400
-    // pages each it exceeded the whole day's unit pool.
+    // A per-channel cap times 35 channels exceeded the whole day's unit pool.
     const calls = fakeYoutube({ UP_a: 500, UP_b: 500, UP_c: 500 });
     const { opts } = options({ totalPages: 5, pagesPerChannel: 400 });
 
@@ -144,7 +141,6 @@ describe("harvestKaraokeChannels", () => {
 
     await harvestKaraokeChannels(["a"], opts);
 
-    // No channels.list unit spent, and it picked up at page 7 rather than 0.
     expect(calls.channels).toBe(0);
     expect(batches[0].videos[0].videoId).toBe("UP_a-v7");
     expect(batches[0].cursor.pageToken).toBe("8");
@@ -196,7 +192,6 @@ describe("harvestKaraokeChannels", () => {
 
     await harvestKaraokeChannels(["a"], opts);
 
-    // From the newest upload again, not from the token it finished on.
     expect(batches[0].videos[0].videoId).toBe("UP_a-v0");
   });
 
@@ -211,8 +206,8 @@ describe("harvestKaraokeChannels", () => {
   });
 
   it("walks past handles that no longer resolve", async () => {
-    // Handles get renamed, and the language-pack channels are at the tail of
-    // the list: three dead ones ending the sweep walls off everything behind.
+    // The language-pack channels are at the tail, so three dead handles ending
+    // the sweep walls off everything behind them.
     const calls = fakeYoutube(
       { UP_e: 1 },
       { unresolvable: new Set(["a", "b", "c", "d"]) }
@@ -238,8 +233,6 @@ describe("harvestKaraokeChannels", () => {
 
     expect(calls.pages).toBe(1);
     expect(report.missing).toEqual(["a"]);
-    // Parked without the token, so the next run restarts the channel instead of
-    // buying the same rejection for good.
     expect(batches).toHaveLength(1);
     expect(batches[0].cursor.pageToken).toBeUndefined();
     expect(batches[0].cursor.completedAt).toBeUndefined();

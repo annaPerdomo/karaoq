@@ -42,6 +42,11 @@ vi.mock("../../lib/songCorpus", () => ({
   recordSearchResults: (...args: unknown[]) => recordSearchResultsMock(...args),
 }));
 
+const readSongCutsMock = vi.fn(async (..._args: unknown[]) => null as unknown);
+vi.mock("../../lib/corpusRead", () => ({
+  readSongCuts: (...args: unknown[]) => readSongCutsMock(...args),
+}));
+
 const sendQuotaAlertMock = vi.fn(async (..._args: unknown[]) => {});
 vi.mock("../../lib/alerts", () => ({
   sendQuotaAlertOnce: (...args: unknown[]) => sendQuotaAlertMock(...args),
@@ -102,6 +107,7 @@ beforeEach(() => {
   rateLimitMock.mockReturnValue(true);
   markNotifiedMock.mockReturnValue(true);
   recordSearchResultsMock.mockResolvedValue({ videosUpserted: 0, cutsAdded: 0 });
+  readSongCutsMock.mockResolvedValue(null);
   mockCollection.findOne.mockResolvedValue(null);
   mockCollection.updateOne.mockResolvedValue({});
   vi.stubGlobal("fetch", fetchMock);
@@ -130,8 +136,7 @@ describe("GET /api/search", () => {
   });
 
   it("finds an entry left under the old cache key format", async () => {
-    // Folding out punctuation orphaned every entry holding an apostrophe, so
-    // the day after the change would re-buy results already in Mongo.
+    // Folding out punctuation orphaned every entry holding an apostrophe.
     const q = "Don't Stop Believin' karaoke";
     const legacyKey = `${q.trim().toLowerCase()}|any|relevance`;
     const cached = [{ title: "Journey", thumbnailUrl: "t", videoId: "abc" }];
@@ -146,7 +151,6 @@ describe("GET /api/search", () => {
 
     expect(res.getBody()).toEqual(cached);
     expect(fetchMock).not.toHaveBeenCalled();
-    // ...and re-filed under the new key, so the next hit is a plain one.
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(mockCollection.updateOne).toHaveBeenCalledWith(
       { key: `${searchCacheKey(q)}|any|relevance` },
@@ -156,7 +160,6 @@ describe("GET /api/search", () => {
   });
 
   it("won't launder a stale legacy entry into a fresh one", async () => {
-    // Re-keying restarts the age clock, so only a still-fresh copy is moved.
     const q = "beyoncé halo karaoke";
     const legacyKey = `${q.trim().toLowerCase()}|any|relevance`;
     mockCollection.findOne.mockImplementation(async (filter: { key: string }) =>
@@ -171,7 +174,6 @@ describe("GET /api/search", () => {
 
     await handler(createMockReq({ query: { q } }), createRes());
 
-    // A live search ran, and nothing was written under the new key beforehand.
     expect(fetchMock).toHaveBeenCalled();
   });
 
@@ -356,13 +358,9 @@ describe("GET /api/search", () => {
     expect(mockCollection.findOne).toHaveBeenCalledWith({
       key: "abba waterloo karaoke|any|relevance",
     });
-    // The normalized form is also what gets searched — "karaoke karaoke"
-    // queried worse, not just cached twice.
     const searchUrl = fetchMock.mock.calls.find(([u]) =>
       String(u).includes("/search")
     )![0] as string;
-    // URLSearchParams spells spaces as "+". Casing is the singer's; only the
-    // cache key is lowercased.
     expect(searchUrl).toContain("q=Abba+Waterloo+Karaoke");
   });
 
@@ -377,16 +375,12 @@ describe("GET /api/search", () => {
     await handler(createMockReq({ query: { q: "Beyoncé - Halo!" } }), res);
 
     expect(res.getStatus()).toBe(200);
-    // The singer who typed "beyonce halo" gets a cache hit instead of another
-    // of the day's ~100 live searches.
     expect(mockCollection.findOne).toHaveBeenCalledWith({
       key: "beyonce halo|any|relevance",
     });
-    // ...while YouTube still gets the accents and punctuation, which help it.
     const searchUrl = fetchMock.mock.calls.find(([u]) =>
       String(u).includes("/search")
     )![0] as string;
-    // URLSearchParams spelling: "+" for spaces, %C3%A9 for the é.
     expect(searchUrl).toContain("q=Beyonc%C3%A9+-+Halo%21");
   });
 
@@ -400,8 +394,6 @@ describe("GET /api/search", () => {
     const res = createRes();
     await handler(createMockReq({ query: { q: "abba karaoke live karaoke" } }), res);
 
-    // An older client's stacked suffix keys the same entry as a current one's
-    // "abba karaoke live" — one intent, one of the day's ~90 searches.
     expect(mockCollection.findOne).toHaveBeenCalledWith({
       key: "abba karaoke live|any|relevance",
     });
@@ -419,7 +411,6 @@ describe("GET /api/search", () => {
 
     const res1 = createRes();
     const first = handler(createMockReq({ query: { q: "same song" } }), res1);
-    // Wait for the leader to reach YouTube, so its in-flight entry exists...
     await vi.waitFor(() =>
       expect(
         fetchMock.mock.calls.filter(([u]) => String(u).includes("/search"))
@@ -428,7 +419,6 @@ describe("GET /api/search", () => {
 
     const res2 = createRes();
     const second = handler(createMockReq({ query: { q: "Same  Song" } }), res2);
-    // ...and let the follower get past its own cache read to the ride-along.
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     releaseSearch(jsonResponse(searchItems(["a"])));
@@ -464,6 +454,39 @@ describe("search_failed tracking", () => {
       failReason: "quota",
       searchOutcome: "error",
     });
+  });
+
+  it("answers a catalogued song from the corpus rather than an error", async () => {
+    fetchMock.mockImplementation(async () => quotaFailure());
+    const cuts = [{ title: "A cut", thumbnailUrl: "t", videoId: "c1", pinned: true }];
+    readSongCutsMock.mockResolvedValue(cuts);
+
+    const res = createRes();
+    await handler(createMockReq({ query: { q: "abba dancing queen karaoke" } }), res);
+
+    expect(res.getStatus()).toBe(200);
+    expect(res.getBody()).toEqual(cuts);
+    expect(res.getHeader("x-karaoq-search-cache")).toBe("corpus");
+    expect(failureEvent()).toMatchObject({
+      failReason: "quota",
+      searchOutcome: "corpus",
+    });
+  });
+
+  it("never answers a filtered search from the corpus", async () => {
+    fetchMock.mockImplementation(async () => quotaFailure());
+    readSongCutsMock.mockResolvedValue([
+      { title: "A cut", thumbnailUrl: "t", videoId: "c1" },
+    ]);
+
+    const res = createRes();
+    await handler(
+      createMockReq({ query: { q: "abba dancing queen karaoke", duration: "short" } }),
+      res
+    );
+
+    expect(res.getStatus()).toBe(503);
+    expect(readSongCutsMock).not.toHaveBeenCalled();
   });
 
   it("records a spent quota the cache covered for", async () => {
@@ -612,7 +635,6 @@ describe("search_failed tracking", () => {
 });
 
 describe("GET /api/search — banking a live search into the corpus", () => {
-  // Exactly what a tap that fell through to search still sends.
   const song = SONG_SECTIONS[0].categories[0].songs[0];
   const tapped = buildSearchQuery(buildSongQuery(song), true);
   const key = searchCacheKey(tapped);
@@ -661,8 +683,7 @@ describe("GET /api/search — banking a live search into the corpus", () => {
     );
 
     expect(res.getStatus()).toBe(200);
-    // Recognition stays server-side: the key comes from the query we normalized,
-    // so nothing a caller sends can name a song (see recordSearchResults).
+    // The key comes from the query the server normalized, not from the caller.
     expect(recordSearchResultsMock).toHaveBeenCalledWith(key, expect.any(Array));
   });
 
@@ -691,7 +712,6 @@ describe("GET /api/search — banking a live search into the corpus", () => {
     );
 
     expect(res.getStatus()).toBe(200);
-    // Cuts are the unfiltered answer; a "short" set would rewrite every room's.
     expect(recordSearchResultsMock).not.toHaveBeenCalled();
   });
 
@@ -706,8 +726,6 @@ describe("GET /api/search — banking a live search into the corpus", () => {
 
   it("banks nothing from a query that keys to a song but asks for another", async () => {
     liveSearch();
-    // The fold turns " -" into one space, so this reaches the corpus as the song
-    // it tells YouTube to leave out — and cuts are never overwritten.
     const crafted = tapped.replace(" ", " -");
     expect(searchCacheKey(crafted)).toBe(key);
 
@@ -718,9 +736,24 @@ describe("GET /api/search — banking a live search into the corpus", () => {
     expect(recordSearchResultsMock).not.toHaveBeenCalled();
   });
 
+  it("caches such a query under itself, never under the song it excludes", async () => {
+    liveSearch();
+    const crafted = tapped.replace(" ", " -");
+
+    const res = createRes();
+    await handler(createMockReq({ query: { q: crafted } }), res);
+
+    // Sharing the entry served every room an answer excluding the song.
+    await vi.waitFor(() => expect(mockCollection.updateOne).toHaveBeenCalled());
+    const written = mockCollection.updateOne.mock.calls.map(
+      (call) => (call[0] as { key: string }).key
+    );
+    expect(written).not.toContain(`${key}|any|relevance`);
+    expect(written).toContain(`${crafted.toLowerCase()}|any|relevance`);
+  });
+
   it("answers even when banking rejects", async () => {
     liveSearch();
-    // A singer waiting on results must never be failed by our bookkeeping.
     recordSearchResultsMock.mockRejectedValue(new Error("write concern"));
 
     const res = createRes();
@@ -748,8 +781,6 @@ describe("GET /api/search — banking a live search into the corpus", () => {
     });
     await vi.waitFor(() => expect(recordSearchResultsMock).toHaveBeenCalled());
 
-    // Answered first, so the bank costs the singer nothing — but awaited, since
-    // a dropped promise dies with the frozen instance mid-write.
     expect(bodyWhenBanked).not.toBeNull();
     expect(ended).toBe(false);
     land();

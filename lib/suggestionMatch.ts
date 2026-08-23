@@ -3,12 +3,10 @@ import type { CatalogEntry } from "./suggestionCatalog";
 import type { HarvestedVideo } from "./karaokeChannels";
 
 // A wrong match hands a room the wrong song and pins it there, so the rule is
-// strict: every title word AND every artist word must be present. Anything less
-// falls through to a search, which is what used to happen anyway.
+// strict: every title word AND every artist word must be present.
 
-// Production words and articles only. "with"/"without" look like filler but are
-// half of "Without You" — stripping them reduced it to "you", which then
-// matched "I Know What You Want".
+// "with"/"without" look like filler but are half of "Without You" — stripping
+// them reduced it to "you", which matched "I Know What You Want".
 const FILLER = new Set([
   "karaoke",
   "version",
@@ -25,8 +23,7 @@ const FILLER = new Set([
   "ft",
 ]);
 
-// A real track says so in its own language. An English-only marker rejected
-// every Japanese and Korean upload, which is most of what those packs needed.
+// An English-only marker rejected every Japanese and Korean upload.
 const KARAOKE_MARKER =
   /karaoke|karaokê|instrumental|backing track|playback|sing[- ]?along|off\s*vocal|mr\s*removed|カラオケ|オフボーカル|노래방|반주|엠[아]?르|伴奏|卡拉|कराओके/i;
 
@@ -39,9 +36,8 @@ export function isKaraokeTrack(title: string): boolean {
   return KARAOKE_MARKER.test(title) && !NOT_A_TRACK.test(title);
 }
 
-// "Halo" by "Beyoncé" is two words and still unambiguous once both must appear
-// in a karaoke-marked title. Raising this would drop it; the "Without You"
-// mismatch was FILLER eating a title word, not the count.
+// "Halo" by "Beyoncé" is the shortest real catalog entry; raising this drops it.
+// The "Without You" mismatch was FILLER eating a title word, not the count.
 const MIN_TOKENS = 2;
 
 function uniqueForms(romanised: string, native?: string): string[][] {
@@ -78,8 +74,7 @@ interface Variant {
 function variantsOf(entries: CatalogEntry[]): Variant[] {
   return entries
     .flatMap((entry) => {
-      // A Japanese upload may be all native, all romanised, or one of each, so
-      // every combination counts. Each still passes the guards below on its own.
+      // A Japanese upload may be all native, all romanised, or one of each.
       const titles = uniqueForms(entry.title, entry.nativeTitle);
       const artists = uniqueForms(entry.artist, entry.nativeArtist);
       return titles.flatMap((title) =>
@@ -87,24 +82,21 @@ function variantsOf(entries: CatalogEntry[]): Variant[] {
       );
     })
     .filter((w) => w.title.length + w.artist.length >= MIN_TOKENS)
-    // The title must say something the artist doesn't. The catalog has
-    // { title: "Enrique", artist: "Enrique Iglesias" }, which otherwise claims
-    // every one of that artist's uploads.
+    // The title must say something the artist doesn't: { title: "Enrique",
+    // artist: "Enrique Iglesias" } otherwise claims every upload of his.
     .filter((w) => {
       const artistWords = new Set(w.artist);
       return w.title.some((t) => !artistWords.has(t));
     });
 }
 
-/** The artist is the discriminator: a bare title match would put every cover
- *  of "September" under Earth, Wind & Fire. */
+/** A bare title match puts every cover of "September" under Earth, Wind & Fire. */
 function variantCovers(bag: Set<string>, v: Variant): boolean {
   return covers(bag, v.title) && covers(bag, v.artist);
 }
 
-/** Exported because anything storing a videoId against a catalog key must
- *  prove they belong together — a client-supplied videoId is a claim, not a
- *  fact. */
+/** Exported: a client-supplied videoId is a claim, and anything storing one
+ *  against a catalog key has to prove the pairing. */
 export function isCutOf(title: string, entry: CatalogEntry): boolean {
   if (!isKaraokeTrack(title)) return false;
   const bag = new Set(tokens(title));
@@ -112,8 +104,6 @@ export function isCutOf(title: string, entry: CatalogEntry): boolean {
   return variantsOf([entry]).some((v) => variantCovers(bag, v));
 }
 
-/** A song matching several channels is the good case: those are different
- *  arrangements, which is what a search would have offered too. */
 export function matchHarvestToCatalog(
   videos: HarvestedVideo[],
   entries: CatalogEntry[],
@@ -124,9 +114,8 @@ export function matchHarvestToCatalog(
 
   const wanted = variantsOf(entries);
 
-  // ~1,500 variants × hundreds of thousands of uploads is enough CPU to blow
-  // the function timeout, so each variant is filed under its rarest token. One
-  // pivot per variant, so no video ever tests the same variant twice.
+  // ~1,500 variants × hundreds of thousands of uploads blows the function
+  // timeout, so each variant is filed under its rarest token.
   const inVariants = new Map<string, number>();
   const pivotsFor = wanted.map((w) => Array.from(new Set([...w.title, ...w.artist])));
   pivotsFor.forEach((all) => {
@@ -149,9 +138,13 @@ export function matchHarvestToCatalog(
     if (videoTokens.length === 0) continue;
     const bag = new Set(videoTokens);
 
+    // One row per (video, song): a bilingual entry has a variant under each of
+    // two pivots, and an upload titled in both would file twice.
+    const filed = new Set<string>();
     for (const token of Array.from(bag)) {
       for (const w of index.get(token) ?? []) {
-        if (!variantCovers(bag, w)) continue;
+        if (filed.has(w.entry.key) || !variantCovers(bag, w)) continue;
+        filed.add(w.entry.key);
         const rows = matches.get(w.entry.key) ?? [];
         rows.push({
           ...video,

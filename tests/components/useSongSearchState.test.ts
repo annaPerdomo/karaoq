@@ -153,8 +153,6 @@ describe("useSongSearchState — spending searches sparingly", () => {
     // Fake timers only from here: waitFor above needs real ones to settle.
     vi.useFakeTimers();
     try {
-      // Each combination is its own cache key, so three chips used to be three
-      // of the day's live searches for the one result set they were after.
       act(() => {
         result.current.updateFilter("duration", "short");
         result.current.updateFilter("duration", "medium");
@@ -200,7 +198,6 @@ describe("useSongSearchState — spending searches sparingly", () => {
     });
     await waitFor(() => expect(mockSearchYoutube).toHaveBeenCalledTimes(1));
 
-    // The singer already typed "karaoke", so both modes search the same thing.
     await act(async () => {
       result.current.toggleKaraokeMode();
     });
@@ -235,7 +232,6 @@ describe("useSongSearchState — suggestion attribution", () => {
     localStorage.clear();
     global.fetch = vi.fn().mockResolvedValue({ ok: true }) as never;
     mockSearchYoutube.mockResolvedValue([song("a")]);
-    // Unresolved: the corpus 404s and the tap is the search it always was.
     mockSuggestionCuts.mockRejectedValue(new SearchUnavailableError(404));
   });
 
@@ -250,8 +246,6 @@ describe("useSongSearchState — suggestion attribution", () => {
     });
     await waitFor(() => expect(result.current.results).toHaveLength(1));
 
-    // The two must agree without the client being trusted to name the song:
-    // same query in, same key out.
     expect(result.current.resultsSuggestionKey).toBe(
       searchCacheKey(buildSearchQuery("ABBA Dancing Queen", true))
     );
@@ -276,8 +270,8 @@ describe("useSongSearchState — suggestion attribution", () => {
     });
     await waitFor(() => expect(result.current.resultsSuggestionKey).not.toBeNull());
 
-    // Otherwise the next add would credit its video to a song nobody tapped,
-    // and that video would get pinned to the wrong suggestion for everyone.
+    // Otherwise the next add credits its video to a song nobody tapped, pinning
+    // it to the wrong suggestion for everyone.
     await runQuery(result, "something else entirely");
 
     await waitFor(() => expect(result.current.resultsSuggestionKey).toBeNull());
@@ -301,7 +295,6 @@ describe("useSongSearchState — suggestion attribution", () => {
   });
 });
 
-// Browsing must never reach search.list: only an unresolved song costs one.
 describe("useSongSearchState — serving taps from the corpus", () => {
   const TAP = "ABBA Dancing Queen";
   const TAP_KEY = searchCacheKey(buildSearchQuery(TAP, true));
@@ -333,7 +326,6 @@ describe("useSongSearchState — serving taps from the corpus", () => {
     await waitFor(() => expect(result.current.results).toHaveLength(2));
     expect(mockSuggestionCuts).toHaveBeenCalledWith(TAP_KEY, expect.anything());
     expect(mockSearchYoutube).not.toHaveBeenCalled();
-    // Unchanged either way, so an add off these results still names its song.
     expect(result.current.resultsVia).toBe("search");
     expect(result.current.resultsSuggestionKey).toBe(TAP_KEY);
     expect(result.current.searchError).toBeNull();
@@ -351,7 +343,6 @@ describe("useSongSearchState — serving taps from the corpus", () => {
       result.current.runSearch(TAP, result.current.filters, false, true);
     });
 
-    // The quota hint promises song ideas to exactly this singer.
     await waitFor(() => expect(result.current.results).toHaveLength(1));
     expect(mockSuggestionCuts).toHaveBeenCalledWith(TAP_KEY, expect.anything());
     expect(mockSearchYoutube).not.toHaveBeenCalled();
@@ -371,7 +362,6 @@ describe("useSongSearchState — serving taps from the corpus", () => {
   });
 
   it("falls through when the store request never lands", async () => {
-    // A dropped connection to our own API must not read as "no cuts, no song".
     mockSuggestionCuts.mockRejectedValue(new TypeError("Failed to fetch"));
     const { result } = setup();
 
@@ -393,7 +383,6 @@ describe("useSongSearchState — serving taps from the corpus", () => {
       result.current.runSearch(TAP, { duration: "short", sortBy: "relevance" }, true, true);
     });
 
-    // Cuts are the unfiltered answer; a "short" chip must not be served from them.
     await waitFor(() => expect(mockSearchYoutube).toHaveBeenCalledTimes(1));
     expect(mockSuggestionCuts).not.toHaveBeenCalled();
     expect(result.current.resultsSuggestionKey).toBe(TAP_KEY);
@@ -428,8 +417,6 @@ describe("useSongSearchState — serving taps from the corpus", () => {
     await runQuery(result, "something else entirely");
 
     await waitFor(() => expect(result.current.results[0].videoId).toBe("live"));
-    // Falling the abort through would spend one of the day's hundred searches on
-    // a tap nobody is waiting for, and clear the spinner the new query owns.
     expect(mockSearchYoutube).toHaveBeenCalledTimes(1);
     expect(result.current.searching).toBe(false);
     expect(result.current.searchError).toBeNull();

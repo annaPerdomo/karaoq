@@ -2,9 +2,8 @@ import { getAnalyticsDb } from "./mongodb";
 import { buildSearchQuery, searchCacheKey } from "./searchQuery";
 import { suggestionCatalog } from "./suggestionCatalog";
 
-/** A suggestion_used event records the romanised title and artist, but the
- *  catalog keys on buildSongQuery, which prefers native script — rebuilding the
- *  key from the event fields matched nothing at all for ja/ko/in, silently. */
+/** The event records romanised names but the catalog keys on native script, so
+ *  rebuilding the key from event fields matched nothing for ja/ko/in, silently. */
 function catalogKeyByRomanisedName(): Map<string, string> {
   const index = new Map<string, string>();
   for (const entry of Array.from(suggestionCatalog().values())) {

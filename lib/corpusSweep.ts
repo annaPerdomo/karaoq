@@ -1,42 +1,46 @@
-import { getKaraokeVideosCollection } from "./mongodb";
+import type { Filter } from "mongodb";
+
+import { getKaraokeVideosCollection, type KaraokeVideoDoc } from "./mongodb";
+import { pruneCachedVideos } from "./searchCache";
 import { dropVideos, refreshVideos, unfileUnprovenCuts } from "./songCorpus";
 import { fetchVideoRows, ID_BATCH } from "./youtubeVideos";
 
-// The 30-day rule's enforcement: anything videos.list doesn't return is gone
-// from the corpus with it.
-
-/** Read against the corpus it covers: ~900 songs × 12 cuts across the 14 days
- *  between the 16-day cutoff and the 30-day TTL is ~770 rows a day just to keep
- *  level. 2000 clears a full corpus in under a week, for 40 units. */
+/** ~900 songs × 12 cuts over the 14 days between cutoff and TTL is ~770 rows a
+ *  day to keep level; 2000 clears a full corpus in a week, for 40 units. */
 export const SWEEP_PER_RUN = 2000;
 
-/** Videos are re-read well before their 30-day TTL, so a run that fails or is
- *  skipped has a fortnight of slack before anything expires. */
+/** Well inside the 30-day TTL: a failed or skipped run has a fortnight of slack. */
 export const REFRESH_AFTER_DAYS = 16;
 
+/** Bounded: a night of adds must not spend the run before the retention pass. */
+export const UNPROVEN_PER_RUN = 200;
+
 export interface SweepReport {
-  /** Rows past the cutoff at the start of the run. Climbing past what a run can
-   *  check is the corpus outgrowing the sweep. */
   backlog: number;
   checked: number;
+  /** Of those, rows no videos.list call had named yet. */
+  pending: number;
   refreshed: number;
   dropped: number;
   cutsPulled: number;
   unpinned: number;
   /** Cuts an add filed on a title YouTube has now contradicted. */
   unproven: number;
-  /** YouTube stopped answering, so the unread rows keep their TTL slack. */
+  cachePruned: number;
   stalled: boolean;
 }
 
 export interface SweepOptions {
   limit: number;
-  /** Only rows older than this, so a small corpus doesn't re-read itself nightly. */
   staleBefore: Date;
+  pendingLimit?: number;
 }
 
-/** Oldest refreshedAt first. No cursor: every row the sweep touches moves past
- *  the cutoff, so the same query is the next page. */
+/** "drained" — no more rows — is the only outcome that means caught up. */
+type PageResult = "swept" | "drained" | "stopped";
+
+/** Oldest refreshedAt first, unnamed rows before stale ones. No cursor: every row
+ *  the sweep touches leaves its query, so the same query is the next page. */
 export async function sweepCorpusVideos(
   deadline: number,
   opts: SweepOptions
@@ -44,47 +48,41 @@ export async function sweepCorpusVideos(
   const report: SweepReport = {
     backlog: 0,
     checked: 0,
+    pending: 0,
     refreshed: 0,
     dropped: 0,
     cutsPulled: 0,
     unpinned: 0,
     unproven: 0,
+    cachePruned: 0,
     stalled: false,
   };
   const key = process.env.YOUTUBE_API_KEY;
   if (!key || Date.now() >= deadline) return { done: false, report };
+  const apiKey = key;
 
   const videos = await getKaraokeVideosCollection();
-  // Only rows a song names: writeAdd upserts one for every video a room adds,
-  // and re-reading those renews the 30 days they exist to expire after.
-  const stale = {
-    songKeys: { $exists: true, $ne: [] },
-    refreshedAt: { $lt: opts.staleBefore },
-  };
-  report.backlog = await videos.countDocuments(stale);
   const seen = new Set<string>();
-  let done = false;
+  const gone: string[] = [];
 
-  while (report.checked < opts.limit && Date.now() < deadline) {
+  async function sweepPage(
+    filter: Filter<KaraokeVideoDoc>,
+    limit: number
+  ): Promise<PageResult> {
     const batch = await videos
-      .find(stale, { projection: { _id: 1 } })
+      .find(filter, { projection: { _id: 1 } })
       .sort({ refreshedAt: 1 })
-      .limit(Math.min(ID_BATCH, opts.limit - report.checked))
+      .limit(Math.min(ID_BATCH, limit))
       .toArray();
-    if (batch.length === 0) {
-      done = true;
-      break;
-    }
+    if (batch.length === 0) return "drained";
     const ids = batch.map((d) => d._id);
-    // A batch that comes back unchanged means the refresh isn't landing, and
-    // re-reading the same page until the deadline would spend the run on it.
-    if (ids.every((id) => seen.has(id))) break;
+    if (ids.every((id) => seen.has(id))) return "stopped";
     for (const id of ids) seen.add(id);
 
-    const live = await fetchVideoRows(ids, key);
+    const live = await fetchVideoRows(ids, apiKey);
     if (!live) {
       report.stalled = true;
-      break;
+      return "stopped";
     }
     report.checked += ids.length;
     report.refreshed += await refreshVideos(Array.from(live.values()));
@@ -95,11 +93,45 @@ export async function sweepCorpusVideos(
     report.unpinned += unproven.unpinned;
 
     // fetchVideoRows drops missing and unembeddable alike; neither plays.
-    const removed = await dropVideos(ids.filter((id) => !live.has(id)));
+    const dead = ids.filter((id) => !live.has(id));
+    const removed = await dropVideos(dead);
     report.dropped += removed.dropped;
     report.cutsPulled += removed.cutsPulled;
     report.unpinned += removed.unpinned;
+    for (const id of dead) gone.push(id);
+    return "swept";
   }
+
+  // Only rows a song names: re-reading a stray add renews its 30 days.
+  const named = { songKeys: { $exists: true, $ne: [] } };
+  const stale = { ...named, refreshedAt: { $lt: opts.staleBefore } };
+  report.backlog = await videos.countDocuments(stale);
+
+  // Ahead of the retention pass: until videos.list names it, an add's row serves
+  // nothing (lib/corpusRead) and a crafted pairing stays filed uncontradicted.
+  const pendingBudget = Math.min(opts.pendingLimit ?? UNPROVEN_PER_RUN, opts.limit);
+  while (report.checked < pendingBudget && Date.now() < deadline) {
+    const swept = await sweepPage(
+      { ...named, thumbnailUrl: "" },
+      pendingBudget - report.checked
+    );
+    if (swept !== "swept") break;
+  }
+  report.pending = report.checked;
+
+  let done = false;
+  while (report.checked < opts.limit && !report.stalled && Date.now() < deadline) {
+    const swept = await sweepPage(stale, opts.limit - report.checked);
+    if (swept === "drained") {
+      done = true;
+      break;
+    }
+    if (swept === "stopped") break;
+  }
+
+  // A search's results are served fresh for a fortnight (pages/api/search), so a
+  // dead video would otherwise be offered for two weeks after the corpus drops it.
+  report.cachePruned = await pruneCachedVideos(gone);
 
   return { done, report };
 }
