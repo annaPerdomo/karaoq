@@ -73,15 +73,55 @@ describe("useSearchBackNotice", () => {
     expect(localStorage.getItem(STORAGE_KEY)).toBe(RESETS_AT);
   });
 
-  it("fires on mount for a device coming back after the reset", () => {
+  it("announces to a device coming back after the reset, once a snapshot confirms it", () => {
     localStorage.setItem(STORAGE_KEY, RESETS_AT);
     vi.setSystemTime(new Date("2026-08-23T18:00:00Z")); // next morning
 
     const { result } = renderHook(() => useSearchBackNotice());
+    expect(result.current.show).toBe(false); // armed, but waits for the room's word
 
+    act(() => {
+      result.current.applyRoom(roomSnapshot());
+    });
     expect(result.current.show).toBe(true);
     // Cleared, so the singer isn't congratulated again on every later visit.
     expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
+  });
+
+  it("stays quiet when the stored reset passed but quota is out again today", () => {
+    localStorage.setItem(STORAGE_KEY, RESETS_AT);
+    vi.setSystemTime(new Date("2026-08-24T04:00:00Z")); // next evening, 21:00 Pacific
+    const NEXT_RESET = "2026-08-24T07:00:00.000Z";
+
+    const { result } = renderHook(() => useSearchBackNotice());
+
+    act(() => {
+      result.current.applyRoom(roomSnapshot(NEXT_RESET));
+    });
+
+    expect(result.current.show).toBe(false);
+    expect(localStorage.getItem(STORAGE_KEY)).toBe(NEXT_RESET);
+
+    // ...and the new outage announces normally when it clears.
+    act(() => {
+      result.current.applyRoom(roomSnapshot());
+    });
+    expect(result.current.show).toBe(true);
+  });
+
+  it("pulls a showing notice if quota trips again mid-linger", () => {
+    const { result } = renderHook(() => useSearchBackNotice());
+
+    act(() => {
+      result.current.applyRoom(roomSnapshot(RESETS_AT));
+      result.current.applyRoom(roomSnapshot());
+    });
+    expect(result.current.show).toBe(true);
+
+    act(() => {
+      result.current.applyRoom(roomSnapshot("2026-08-24T07:00:00.000Z"));
+    });
+    expect(result.current.show).toBe(false);
   });
 
   it("does not fire on mount while quota is still out", () => {
