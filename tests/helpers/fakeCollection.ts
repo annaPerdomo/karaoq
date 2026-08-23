@@ -305,7 +305,15 @@ export function fakeCollection() {
       let upsertedCount = 0;
       let modifiedCount = 0;
       for (const op of ops) {
-        const result = apply(idsOf(op.updateOne.filter)[0], op.updateOne.update, {
+        // Guarded like updateOne: a bulk op's filter is a filter in Mongo too,
+        // and applying it unconditionally here would pass a test the database
+        // would have skipped.
+        const { id, guard } = idAndGuard(op.updateOne.filter);
+        if (Object.keys(guard).length > 0) {
+          const held = docs.get(id);
+          if (!held || !matches(held, guard)) continue;
+        }
+        const result = apply(id, op.updateOne.update, {
           upsert: op.updateOne.upsert,
         });
         upsertedCount += result.upsertedCount;

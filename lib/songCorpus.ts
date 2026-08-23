@@ -438,6 +438,88 @@ export async function dropVideos(
   };
 }
 
+/** The add path proves a (song, video) pairing on a title that arrived in the
+ *  same request body as the videoId, and the sweep is where YouTube finally
+ *  names the row. Re-running the match on the real title is what stops a video
+ *  admitted on a client's string from staying a cut — and being badged as one —
+ *  for every room once the placeholder title is gone.
+ *
+ *  Only rows an add is the sole source of: a harvest match was made on the
+ *  channel's own title, and a resolver row is whatever search.list answered a
+ *  song's query with, which need not repeat the artist. */
+export async function unfileUnprovenCuts(
+  fresh: Map<string, SearchResult>
+): Promise<{ pulled: number; unpinned: number }> {
+  if (fresh.size === 0) return { pulled: 0, unpinned: 0 };
+  const videos = await getKaraokeVideosCollection();
+  const rows = await videos
+    .find(
+      {
+        _id: { $in: Array.from(fresh.keys()) },
+        songKeys: { $exists: true, $ne: [] },
+        "sources.adds": { $exists: true },
+        "sources.harvest": { $exists: false },
+        "sources.search": { $exists: false },
+        "sources.seed": { $exists: false },
+      },
+      { projection: { songKeys: 1 } }
+    )
+    .toArray();
+
+  const unproven = new Map<string, string[]>();
+  for (const row of rows) {
+    const title = fresh.get(row._id)?.title;
+    if (!title) continue;
+    const failed = (row.songKeys ?? []).filter((key) => {
+      const entry = catalogEntry(key);
+      // A song the catalog has since dropped can't be re-checked, and its doc
+      // is titleless anyway — the migration counts those rather than serving them.
+      return entry ? !isCutOf(title, entry) : false;
+    });
+    if (failed.length > 0) unproven.set(row._id, failed);
+  }
+  if (unproven.size === 0) return { pulled: 0, unpinned: 0 };
+
+  const songs = await getKaraokeSongsCollection();
+  const pullOps: AnyBulkWriteOperation<KaraokeSongDoc>[] = [];
+  const unpinOps: AnyBulkWriteOperation<KaraokeSongDoc>[] = [];
+  const videoOps: AnyBulkWriteOperation<KaraokeVideoDoc>[] = [];
+  unproven.forEach((keys, videoId) => {
+    for (const key of keys) {
+      pullOps.push({
+        updateOne: { filter: { _id: key }, update: { $pull: { cuts: videoId } } },
+      });
+      // Left dangling, the badge pins a video the song no longer serves.
+      unpinOps.push({
+        updateOne: {
+          filter: { _id: key, topVideoId: videoId },
+          update: { $unset: { topVideoId: "" } },
+        },
+      });
+    }
+    // Or the next sweep re-reads the row for a song it no longer belongs to,
+    // and another add re-files it on the same unchecked claim.
+    videoOps.push({
+      updateOne: {
+        filter: { _id: videoId },
+        update: { $pull: { songKeys: { $in: keys } } },
+      },
+    });
+  });
+
+  // Separate batches so each count means one thing.
+  let pulled = 0;
+  let unpinned = 0;
+  try {
+    pulled = (await songs.bulkWrite(pullOps, { ordered: false })).modifiedCount;
+    unpinned = (await songs.bulkWrite(unpinOps, { ordered: false })).modifiedCount;
+    await videos.bulkWrite(videoOps, { ordered: false });
+  } catch (e: any) {
+    console.warn("Unproven cut cleanup partly failed:", e?.message);
+  }
+  return { pulled, unpinned };
+}
+
 /** The resolver's write, and phase 1's only path from search.list into the
  *  corpus. Only rows that become cuts are stored: every extra id is one the
  *  sweep must re-read forever for a song that will never serve it. */

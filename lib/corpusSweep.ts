@@ -1,5 +1,5 @@
 import { getKaraokeVideosCollection } from "./mongodb";
-import { dropVideos, refreshVideos } from "./songCorpus";
+import { dropVideos, refreshVideos, unfileUnprovenCuts } from "./songCorpus";
 import { fetchVideoRows, ID_BATCH } from "./youtubeVideos";
 
 // The 30-day rule's enforcement: anything videos.list doesn't return is gone
@@ -23,6 +23,8 @@ export interface SweepReport {
   dropped: number;
   cutsPulled: number;
   unpinned: number;
+  /** Cuts an add filed on a title YouTube has now contradicted. */
+  unproven: number;
   /** YouTube stopped answering, so the unread rows keep their TTL slack. */
   stalled: boolean;
 }
@@ -46,15 +48,15 @@ export async function sweepCorpusVideos(
     dropped: 0,
     cutsPulled: 0,
     unpinned: 0,
+    unproven: 0,
     stalled: false,
   };
   const key = process.env.YOUTUBE_API_KEY;
   if (!key || Date.now() >= deadline) return { done: false, report };
 
   const videos = await getKaraokeVideosCollection();
-  // Only rows a song names. writeAdd upserts one for every video a room adds,
-  // and those carry no songKeys and serve nothing — re-reading them spends the
-  // budget on nothing and renews the 30 days they exist to expire after.
+  // Only rows a song names: writeAdd upserts one for every video a room adds,
+  // and re-reading those renews the 30 days they exist to expire after.
   const stale = {
     songKeys: { $exists: true, $ne: [] },
     refreshedAt: { $lt: opts.staleBefore },
@@ -86,6 +88,11 @@ export async function sweepCorpusVideos(
     }
     report.checked += ids.length;
     report.refreshed += await refreshVideos(Array.from(live.values()));
+
+    // After the refresh, so the titles being judged are the ones now stored.
+    const unproven = await unfileUnprovenCuts(live);
+    report.unproven += unproven.pulled;
+    report.unpinned += unproven.unpinned;
 
     // fetchVideoRows drops missing and unembeddable alike; neither plays.
     const removed = await dropVideos(ids.filter((id) => !live.has(id)));
