@@ -1,4 +1,5 @@
 import { getCronStateCollection } from "./mongodb";
+import { pacificDayKey } from "./pacificTime";
 
 // YouTube's quota is a daily allowance and vercel.json invokes this cron more
 // than once a day, so a slot buys wall-clock and never units: every invocation
@@ -20,8 +21,12 @@ export interface DailySpend {
   pages: number;
 }
 
+/** The Pacific day, because that is the one YouTube resets the allowance on.
+ *  On UTC the two cron slots straddle the PST reset: the first spends against
+ *  yesterday's exhausted pool and the second, firing minutes after the refill,
+ *  reads the ledger as already spent and skips the resolve entirely. */
 export function ledgerDay(at: number): string {
-  return new Date(at).toISOString().slice(0, 10);
+  return pacificDayKey(new Date(at));
 }
 
 export async function spentToday(at: number): Promise<DailySpend> {
