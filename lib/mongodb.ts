@@ -33,11 +33,9 @@ export function getMongoClient(): Promise<MongoClient> {
 // accumulate against the Atlas free-tier storage cap.
 export const ROOM_EXPIRY_SECONDS = 30 * 24 * 60 * 60;
 
-// Entries are only *served* for 24h (FRESH_CACHE_MS in pages/api/search.ts);
-// they're retained well past that purely as a fallback for when YouTube is
-// unreachable or the daily search quota is spent. YouTube's Developer Policies
-// cap storage of non-authorized API data at 30 days, so stay comfortably under.
-const SEARCH_CACHE_TTL_SECONDS = 14 * 24 * 60 * 60;
+// YouTube's Developer Policies cap storage of non-authorized API data at 30 days.
+// Served for 14 (FRESH_CACHE_MS), then a week as an outage fallback.
+const SEARCH_CACHE_TTL_SECONDS = 21 * 24 * 60 * 60;
 
 let roomIndexesEnsured = false;
 
@@ -244,6 +242,220 @@ export async function getClientErrorsCollection(): Promise<Collection<ClientErro
     });
   }
   return db.collection<ClientErrorDoc>("client_errors");
+}
+
+const SUGGESTION_VIDEO_TTL_SECONDS = YOUTUBE_DATA_MAX_AGE_DAYS * 24 * 60 * 60;
+
+export interface SuggestionVideoDoc {
+  /** The catalog key — searchCacheKey() of the query a tap produces. */
+  _id: string;
+  results: { title: string; thumbnailUrl: string; videoId: string; durationSeconds?: number; viewCount?: number }[];
+  topVideoId?: string;
+  resolvedAt: Date;
+  refreshedAt: Date;
+}
+
+let suggestionVideoIndexesEnsured = false;
+
+export async function getSuggestionVideosCollection(): Promise<Collection<SuggestionVideoDoc>> {
+  const client = await getMongoClient();
+  const db = client.db(process.env.MONGODB_DB);
+  if (!suggestionVideoIndexesEnsured) {
+    // Latched even on failure, and retuned via collMod, as search_cache is.
+    suggestionVideoIndexesEnsured = true;
+    db.collection("suggestion_videos")
+      .createIndex({ refreshedAt: 1 }, { expireAfterSeconds: SUGGESTION_VIDEO_TTL_SECONDS })
+      .catch(() =>
+        db.command({
+          collMod: "suggestion_videos",
+          index: {
+            keyPattern: { refreshedAt: 1 },
+            expireAfterSeconds: SUGGESTION_VIDEO_TTL_SECONDS,
+          },
+        })
+      )
+      .catch((e) => {
+        console.error("suggestion_videos TTL retune failed:", e);
+      });
+  }
+  return db.collection<SuggestionVideoDoc>("suggestion_videos");
+}
+
+// The only collection holding YouTube-derived fields, so a TTL index enforces the
+// 30-day rule. The clock is refreshedAt, which the sweep rewrites.
+const KARAOKE_VIDEO_TTL_SECONDS = YOUTUBE_DATA_MAX_AGE_DAYS * 24 * 60 * 60;
+
+export interface KaraokeVideoDoc {
+  _id: string;
+  title: string;
+  thumbnailUrl: string;
+  durationSeconds?: number;
+  viewCount?: number;
+  /** The karaoke_songs._id values this cut is grouped under; plural because one
+   *  title can cover two songs. */
+  songKeys?: string[];
+  sources: {
+    adds?: {
+      count: number;
+      byCountry: Record<string, number>;
+      /** Kept only up to MIN_ADD_ROOMS — a bound, not a log. */
+      rooms?: string[];
+      lastAt: Date;
+    };
+    harvest?: { channel: string; matchedAt: Date };
+    seed?: boolean;
+    search?: { at: Date };
+  };
+  firstSeenAt: Date;
+  refreshedAt: Date;
+}
+
+let karaokeVideoIndexesEnsured = false;
+
+export async function getKaraokeVideosCollection(): Promise<Collection<KaraokeVideoDoc>> {
+  const client = await getMongoClient();
+  const db = client.db(process.env.MONGODB_DB);
+  if (!karaokeVideoIndexesEnsured) {
+    karaokeVideoIndexesEnsured = true;
+    Promise.all([
+      // Latched even on failure, and retuned via collMod, as search_cache is —
+      // swallowing its own rejection so a failed retune can't un-latch the batch.
+      db
+        .collection("karaoke_videos")
+        .createIndex(
+          { refreshedAt: 1 },
+          { expireAfterSeconds: KARAOKE_VIDEO_TTL_SECONDS }
+        )
+        .catch(() =>
+          db.command({
+            collMod: "karaoke_videos",
+            index: {
+              keyPattern: { refreshedAt: 1 },
+              expireAfterSeconds: KARAOKE_VIDEO_TTL_SECONDS,
+            },
+          })
+        )
+        .catch((e) => {
+          console.error("karaoke_videos TTL retune failed:", e);
+        }),
+      db.collection("karaoke_videos").createIndex({ songKeys: 1 }),
+    ]).catch((e) => {
+      console.error("Karaoke video index creation failed:", e);
+      karaokeVideoIndexesEnsured = false;
+    });
+  }
+  return db.collection<KaraokeVideoDoc>("karaoke_videos");
+}
+
+// No YouTube content — hydrated from karaoke_videos at read time — so no TTL here.
+// A karaoke_videos row deletes itself on TTL and tells nobody, so every writer of
+// `cuts` drops ids whose video is gone.
+export interface KaraokeSongDoc {
+  /** searchCacheKey(buildSearchQuery(`${artist} ${title}`, true)) — the key a
+   *  suggestion tap already resolves to. */
+  _id: string;
+  /** Our name for the song, curated or catalogued; never a video's title. */
+  title: string;
+  artist: string;
+  nativeTitle?: string;
+  nativeArtist?: string;
+  /** Ranked videoIds, best cut first, capped at MAX_CUTS. Empty is the wanted
+   *  list — the resolver's queue. */
+  cuts: string[];
+  /** The cut singers converge on; powers the "Most sung" badge. */
+  topVideoId?: string;
+  addCount: number;
+  addsByCountry: Record<string, number>;
+  lastAddedAt?: Date;
+  /** Curated packs referencing this song ("core", "cz", …). */
+  packIds?: string[];
+  /** suggestion_used taps — the resolver's priority order for cuts: []. */
+  demand: number;
+  resolveMisses?: number;
+  /** Backed off until here; absent means eligible. See markResolveMiss. */
+  nextResolveAt?: Date;
+}
+
+let karaokeSongIndexesEnsured = false;
+
+export async function getKaraokeSongsCollection(): Promise<Collection<KaraokeSongDoc>> {
+  const client = await getMongoClient();
+  const db = client.db(process.env.MONGODB_DB);
+  if (!karaokeSongIndexesEnsured) {
+    karaokeSongIndexesEnsured = true;
+    Promise.all([
+      db.collection("karaoke_songs").createIndex({ demand: -1 }),
+      db.collection("karaoke_songs").createIndex({ cuts: 1 }),
+    ]).catch((e) => {
+      console.error("Karaoke song index creation failed:", e);
+      karaokeSongIndexesEnsured = false;
+    });
+  }
+  return db.collection<KaraokeSongDoc>("karaoke_songs");
+}
+
+// Where each nightly step stopped, so a run that hits the 300s function cap
+// resumes. A cursor untouched for a week names a step that no longer runs.
+const CRON_STATE_TTL_SECONDS = 7 * 24 * 60 * 60;
+
+export interface CronStateDoc {
+  /** The step name, e.g. "sweep", "harvest", "migrate-v1". */
+  _id: string;
+  cursor?: string;
+  /** The TTL clock, set only by a resumable step — hence the index keys on this,
+   *  not updatedAt. A deleted "done" reads as "never ran", and re-seeding a live
+   *  corpus can't be undone. */
+  cursorAt?: Date;
+  /** Finished: for good if the step is once-only, until resweep for a channel. */
+  done?: boolean;
+  /** The run lock's lease; only the "run" doc carries one. See lib/corpusBudget. */
+  leaseUntil?: Date;
+  leaseToken?: string;
+  /** The day's YouTube spend; only the "budget" doc carries it. One subdocument
+   *  so rolling to a new day can't leave yesterday's counts beside today. */
+  spend?: { day: string; searches: number; pages: number };
+  updatedAt: Date;
+}
+
+let cronStateIndexesEnsured = false;
+
+export async function getCronStateCollection(): Promise<Collection<CronStateDoc>> {
+  const client = await getMongoClient();
+  const db = client.db(process.env.MONGODB_DB);
+  if (!cronStateIndexesEnsured) {
+    // Latched even on failure, and retuned via collMod, as search_cache is.
+    cronStateIndexesEnsured = true;
+    db.collection("cron_state")
+      .createIndex({ cursorAt: 1 }, { expireAfterSeconds: CRON_STATE_TTL_SECONDS })
+      .catch(() =>
+        db.command({
+          collMod: "cron_state",
+          index: {
+            keyPattern: { cursorAt: 1 },
+            expireAfterSeconds: CRON_STATE_TTL_SECONDS,
+          },
+        })
+      )
+      .catch((e) => {
+        console.error("cron_state TTL retune failed:", e);
+      });
+  }
+  return db.collection<CronStateDoc>("cron_state");
+}
+
+// The pre-corpus harvest cursors; cron_state holds the live ones.
+export interface HarvestCursorDoc {
+  _id: string;
+  playlistId?: string;
+  pageToken?: string;
+  completedAt?: Date;
+  updatedAt: Date;
+}
+
+export async function getHarvestCursorsCollection(): Promise<Collection<HarvestCursorDoc>> {
+  const client = await getMongoClient();
+  const db = client.db(process.env.MONGODB_DB);
+  return db.collection<HarvestCursorDoc>("harvest_cursors");
 }
 
 // One doc per alert already sent, so a paging condition that keeps tripping only

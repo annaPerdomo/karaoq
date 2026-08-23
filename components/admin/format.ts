@@ -9,12 +9,20 @@ export const SOURCE_LABELS: Record<string, string> = {
   trending: 'Trending',
 };
 
+// A pack id missing here renders as its raw id, not as one of these.
 export const SECTION_LABELS: Record<string, string> = {
   genre: 'Genre',
   'voice-type': 'Voice type',
   spanish: 'Spanish',
   kpop: 'K-Pop',
   japanese: 'Japanese',
+  brasil: '🇧🇷 Brasil',
+  cesko: '🇨🇿 Česky',
+  deutsch: '🇩🇪 Deutsch',
+  francais: '🇫🇷 Français',
+  indonesia: '🇮🇩 Indonesia',
+  bollywood: '🇮🇳 Bollywood',
+  opm: '🇵🇭 OPM',
 };
 
 export const VIA_LABELS: Record<string, string> = {
@@ -29,11 +37,13 @@ export const ERROR_SOURCE_LABELS: Record<string, string> = {
   promise: 'Unhandled rejection',
 };
 
-// The five real (failReason, searchOutcome) combinations — see /api/search.
+// The real (failReason, searchOutcome) combinations — see /api/search.
 export const SEARCH_FAIL_LABELS: Record<string, string> = {
   'quota:stale': 'Quota spent — served stale cache',
+  'quota:corpus': 'Quota spent — served song cuts',
   'quota:error': 'Quota spent — nothing to serve',
   'upstream:stale': 'YouTube down — served stale cache',
+  'upstream:corpus': 'YouTube down — served song cuts',
   'upstream:error': 'YouTube down — nothing to serve',
   'rate_limited:error': 'Caller rate-limited',
 };

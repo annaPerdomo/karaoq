@@ -18,6 +18,7 @@ interface UseSongAddFlowArgs {
   onPick?: (song: YoutubeResult) => void;
   resetSearch: () => void;
   via: 'search' | 'paste';
+  suggestionKey?: string | null;
 }
 
 // Owns the preview/confirm modal and the add-to-queue (or pick-and-return)
@@ -30,6 +31,7 @@ export function useSongAddFlow({
   onPick,
   resetSearch,
   via,
+  suggestionKey,
 }: UseSongAddFlowArgs) {
   const [justAdded, setJustAdded] = React.useState<string | null>(null);
   const [addError, setAddError] = React.useState<string | null>(null);
@@ -58,7 +60,7 @@ export function useSongAddFlow({
     setAdding(true);
     let ok = false;
     try {
-      ok = await postEntryToQueue(roomId, entry, via);
+      ok = await postEntryToQueue(roomId, entry, via, suggestionKey ?? undefined);
     } catch {
       ok = false;
     } finally {

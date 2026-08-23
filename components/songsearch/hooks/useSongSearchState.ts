@@ -7,7 +7,9 @@ import searchYoutube, {
   SearchFailure,
 } from '../../../app/queue/searchYoutube';
 import lookupVideo from '../../../app/queue/lookupVideo';
+import suggestionCuts from '../../../app/queue/suggestionCuts';
 import { classifySearchInput } from '../../../lib/videoLink';
+import { buildSearchQuery, searchCacheKey } from '../../../lib/searchQuery';
 import { INITIAL_RESULTS } from '../constants';
 
 function lookupFailure(err: unknown): SearchFailure {
@@ -27,6 +29,8 @@ interface UseSongSearchStateArgs {
   roomId: string;
   role?: 'host' | 'singer' | 'display';
 }
+
+const FILTER_SETTLE_MS = 600;
 
 // Owns the YouTube search box: query/filters/karaoke-mode state, the debounced
 // abort-and-refetch runner behind every search entry point, and the
@@ -48,6 +52,11 @@ export function useSongSearchState({ roomId, role }: UseSongSearchStateArgs) {
   // Moves with the results, not with the box: lookupMode is set when a lookup
   // starts and cleared on any keystroke, so deriving via from it misattributes adds.
   const [resultsVia, setResultsVia] = React.useState<'search' | 'paste'>('search');
+  // Moves with the results, like resultsVia: a later typed search must not
+  // inherit the attribution.
+  const [resultsSuggestionKey, setResultsSuggestionKey] = React.useState<string | null>(
+    null
+  );
   const [filters, setFilters] = React.useState<SearchFilters>({
     duration: 'any',
     sortBy: 'relevance',
@@ -56,11 +65,16 @@ export function useSongSearchState({ roomId, role }: UseSongSearchStateArgs) {
   const debounceRef = React.useRef<ReturnType<typeof setTimeout>>();
   const abortRef = React.useRef<AbortController>();
 
+  // Closing the sheet just after tapping a filter chip would otherwise still
+  // fire the debounced search, spending one of the day's live searches.
+  React.useEffect(() => () => clearTimeout(debounceRef.current), []);
+
   React.useEffect(() => {
     if (query.trim().length === 0 && hasSearched) {
       // Mirror clearSearch(): abort any in-flight search, or its late results
       // would land with hasSearched === false — stranding the singer with
       // neither "back to ideas" nor the browse view.
+      clearTimeout(debounceRef.current);
       abortRef.current?.abort();
       setSearching(false);
       setHasSearched(false);
@@ -85,7 +99,12 @@ export function useSongSearchState({ roomId, role }: UseSongSearchStateArgs) {
   // Single runner behind every search entry point (typed search, filter
   // change, karaoke toggle, suggestion tap): abort the in-flight request and
   // reset the "Show more" window for the fresh result set.
-  function runSearch(rawQuery: string, activeFilters: SearchFilters, karaoke: boolean) {
+  function runSearch(
+    rawQuery: string,
+    activeFilters: SearchFilters,
+    karaoke: boolean,
+    fromSuggestion = false
+  ) {
     clearTimeout(debounceRef.current);
     abortRef.current?.abort();
     const controller = new AbortController();
@@ -94,11 +113,30 @@ export function useSongSearchState({ roomId, role }: UseSongSearchStateArgs) {
     setSearching(true);
     setHasSearched(true);
     setSearchError(null);
-    const searchQuery = karaoke ? `${rawQuery} karaoke` : rawQuery;
-    searchYoutube(searchQuery, activeFilters, controller.signal, roomId)
+    const query = buildSearchQuery(rawQuery, karaoke);
+    // Keyed as the server keys the catalog, so the two agree without the client
+    // naming the song. Always the karaoke form: those are the only keys held.
+    const suggestionKey = fromSuggestion
+      ? searchCacheKey(buildSearchQuery(rawQuery, true))
+      : null;
+    // Mirrors isCatalogFilters (lib/suggestionCatalog): cuts are the unfiltered
+    // answer. Karaoke mode is excluded — song ideas are karaoke ideas either way.
+    const resolvable =
+      suggestionKey &&
+      activeFilters.duration === 'any' &&
+      activeFilters.sortBy === 'relevance';
+    // An aborted tap must not start a search nobody is waiting for.
+    const fetching = resolvable
+      ? suggestionCuts(suggestionKey, controller.signal).catch((err) => {
+          if (err?.name === 'AbortError' || controller.signal.aborted) throw err;
+          return searchYoutube(query, activeFilters, controller.signal, roomId);
+        })
+      : searchYoutube(query, activeFilters, controller.signal, roomId);
+    fetching
       .then((res) => {
         setResults(res);
         setResultsVia('search');
+        setResultsSuggestionKey(suggestionKey);
         setVisibleCount(INITIAL_RESULTS);
       })
       .catch((err) => {
@@ -134,6 +172,7 @@ export function useSongSearchState({ roomId, role }: UseSongSearchStateArgs) {
       .then((result) => {
         setResults([result]);
         setResultsVia('paste');
+        setResultsSuggestionKey(null);
         setVisibleCount(INITIAL_RESULTS);
       })
       .catch((err) => {
@@ -178,8 +217,16 @@ export function useSongSearchState({ roomId, role }: UseSongSearchStateArgs) {
     try {
       localStorage.setItem('karaoq_karaoke_mode', String(next));
     } catch {}
-    if (hasSearched && !lookupMode && query.trim()) {
-      runSearch(query.trim(), filters, next);
+    // A query already saying "karaoke" searches the same either way, so re-running
+    // spends a request to redraw identical results.
+    const raw = query.trim();
+    if (
+      hasSearched &&
+      !lookupMode &&
+      raw &&
+      buildSearchQuery(raw, next) !== buildSearchQuery(raw, karaokeMode)
+    ) {
+      runSearch(raw, filters, next);
     }
   }
 
@@ -227,10 +274,21 @@ export function useSongSearchState({ roomId, role }: UseSongSearchStateArgs) {
     key: K,
     value: SearchFilters[K]
   ) {
+    if (filters[key] === value) return;
     const next = { ...filters, [key]: value };
     setFilters(next);
     if (hasSearched && !lookupMode && query.trim()) {
-      runSearch(query.trim(), next, karaokeMode);
+      // Each filter combination is its own cache key and so its own live search:
+      // "short" then "medium" then "long" spends three of the day's ~100.
+      clearTimeout(debounceRef.current);
+      abortRef.current?.abort();
+      setSearching(true);
+      setSearchError(null);
+      const raw = query.trim();
+      debounceRef.current = setTimeout(
+        () => runSearch(raw, next, karaokeMode),
+        FILTER_SETTLE_MS
+      );
     }
   }
 
@@ -264,6 +322,7 @@ export function useSongSearchState({ roomId, role }: UseSongSearchStateArgs) {
     searchError,
     lookupMode,
     resultsVia,
+    resultsSuggestionKey,
     karaokeMode,
     filters,
     runSearch,

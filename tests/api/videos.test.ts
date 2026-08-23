@@ -21,10 +21,16 @@ vi.mock("mongodb", () => ({
   },
 }));
 
+const recordAddMock = vi.fn();
+vi.mock("../../lib/songCorpus", () => ({
+  recordAdd: (...args: unknown[]) => recordAddMock(...args),
+}));
+
 process.env.MONGODB_URI = "mongodb://test";
 process.env.MONGODB_DB = "test-db";
 
 import handler from "../../pages/api/queue/[id]/videos";
+import { suggestionCatalog } from "../../lib/suggestionCatalog";
 
 function createRes() {
   let statusCode = 200;
@@ -446,6 +452,130 @@ describe("POST /api/queue/[id]/videos - Add song to queue", () => {
 
     it("collapses unrecognized values to search", async () => {
       expect(await addVia("board_claim")).toBe("search");
+    });
+  });
+
+  describe("suggestionKey provenance", () => {
+    async function addWithKey(suggestionKey: unknown): Promise<unknown> {
+      const room: Room = { id: "ROOM1", queue: [], activeVideoIndex: 0, isPlaying: false };
+      mockCollection.findOne.mockResolvedValue(room);
+      mockCollection.updateOne.mockResolvedValue({ matchedCount: 1, modifiedCount: 1 });
+
+      const req = createMockReq({
+        method: "POST",
+        query: { id: "ROOM1" },
+        body: {
+          entryId: "entry-1",
+          userName: "Anna",
+          videoId: "dQw4w9WgXcQ",
+          songTitle: "Dancing Queen",
+          suggestionKey,
+        },
+      });
+      await handler(req, createRes());
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      return mockCollection.insertOne.mock.calls[0][0].suggestionKey;
+    }
+
+    it("records a key that names a real catalog song", async () => {
+      const key = Array.from(suggestionCatalog().keys())[0];
+
+      expect(await addWithKey(key)).toBe(key);
+    });
+
+    it("drops a key that isn't in the catalog", async () => {
+      expect(await addWithKey("whatever i felt like sending karaoke")).toBeUndefined();
+    });
+
+    it("drops a non-string key", async () => {
+      expect(await addWithKey({ $ne: null })).toBeUndefined();
+    });
+  });
+
+  describe("corpus feed", () => {
+    function startAdd(
+      headers: Record<string, string>,
+      body: Record<string, unknown> = {}
+    ) {
+      const room: Room = { id: "ROOM1", queue: [], activeVideoIndex: 0, isPlaying: false };
+      mockCollection.findOne.mockResolvedValue(room);
+      mockCollection.updateOne.mockResolvedValue({ matchedCount: 1, modifiedCount: 1 });
+
+      const req = createMockReq({
+        method: "POST",
+        query: { id: "ROOM1" },
+        headers: { host: "www.karaoq.live", ...headers },
+        body: {
+          entryId: "entry-1",
+          userName: "Anna",
+          videoId: "dQw4w9WgXcQ",
+          songTitle: "Dancing Queen",
+          durationSeconds: 231,
+          ...body,
+        },
+      });
+      const res = createRes();
+      return { res, handled: handler(req, res) };
+    }
+
+    async function addFrom(
+      headers: Record<string, string>,
+      body: Record<string, unknown> = {}
+    ) {
+      const { res, handled } = startAdd(headers, body);
+      await handled;
+      return res;
+    }
+
+    it("feeds the add to the corpus, attributed the way the event is", async () => {
+      const key = Array.from(suggestionCatalog().keys())[0];
+
+      await addFrom({ "x-vercel-ip-country": "BR" }, { suggestionKey: key });
+
+      expect(recordAddMock).toHaveBeenCalledWith(
+        {
+          videoId: "dQw4w9WgXcQ",
+          title: "Dancing Queen",
+          durationSeconds: 231,
+        },
+        { roomId: "ROOM1", country: "BR", suggestionKey: key, via: "search" }
+      );
+    });
+
+    it("feeds a pasted link too — this is the only hook", async () => {
+      await addFrom({}, { via: "paste" });
+
+      expect(recordAddMock).toHaveBeenCalledWith(
+        expect.objectContaining({ videoId: "dQw4w9WgXcQ" }),
+        { roomId: "ROOM1", via: "paste" }
+      );
+    });
+
+    it("answers the singer before it waits on the corpus", async () => {
+      let finish: () => void = () => {};
+      recordAddMock.mockReturnValue(
+        new Promise<void>((resolve) => {
+          finish = resolve;
+        })
+      );
+
+      const { res, handled } = startAdd({});
+      for (let i = 0; i < 50 && res.getBody() === null; i++) await Promise.resolve();
+
+      expect(res.getStatus()).toBe(200);
+      expect(res.getBody()).toEqual({ code: 200, message: "Song added." });
+      expect(recordAddMock).toHaveBeenCalled();
+
+      finish();
+      await handled;
+    });
+
+    it("skips demo and dev traffic, as the analytics writes do", async () => {
+      // One database behind both, so a seeded room must not shape the corpus.
+      await addFrom({ host: "localhost:3000" });
+      await addFrom({ "x-karaoq-demo": "1" });
+
+      expect(recordAddMock).not.toHaveBeenCalled();
     });
   });
 });

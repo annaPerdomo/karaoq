@@ -43,6 +43,8 @@ export interface AnalyticsEvent {
   suggestionSource?: "random" | "song_pick" | "genre_chip" | "trending";
   sectionId?: string;
   categoryId?: string;
+  // Our own key, not a YouTube field, so it doesn't expire at 30 days.
+  suggestionKey?: string;
   // Absent on events from before this field existed, which were all search adds.
   // "paste" is newer than "search": pastes before it shipped are in the search bucket.
   via?: "search" | "paste" | "board_claim" | "singwithme";
@@ -62,7 +64,7 @@ export interface AnalyticsEvent {
   // …and whether the cache covered for it. roomId is the room whose singer was
   // searching, or "" from clients predating the field — and either way the
   // failure is the API's, not the room's, so geo roll-ups must exclude these.
-  searchOutcome?: "stale" | "error";
+  searchOutcome?: "stale" | "corpus" | "error";
   // link_lookup: usage telemetry, not audience data, so like search_failed it's
   // excluded from geo roll-ups and the public stats. Deliberately carries no
   // YouTube metadata, keeping these rows clear of the 30-day retention split.
@@ -107,7 +109,9 @@ export function localeFromRequest(req: NextApiRequest): Locale | null {
   return asLocale(headerString(req.headers[LOCALE_HEADER]));
 }
 
-function extractGeo(req: NextApiRequest) {
+/** Exported so a non-analytics write can attribute itself the same way an
+ *  event does — one parsing of these headers, or the two drift. */
+export function extractGeo(req: NextApiRequest) {
   return {
     country: headerString(req.headers["x-vercel-ip-country"]),
     region: headerString(req.headers["x-vercel-ip-region"]),

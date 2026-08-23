@@ -48,6 +48,8 @@ async function handleGet(
           "singwithme_queued",
           "reaction_sent",
           "search_performed",
+          // Our own catalog data, so no retention window strips the titles.
+          "suggestion_used",
           // Attributed to a room since the client began sending its code with
           // the search request; older failures carry roomId "" and never match.
           "search_failed",
@@ -151,6 +153,14 @@ async function handleGet(
   const cheersByUser = new Map<string, number>();
   let reactions = 0;
   let searches = 0;
+  const suggestions: {
+    source: string;
+    sectionId: string | null;
+    categoryId: string | null;
+    songTitle: string | null;
+    songArtist: string | null;
+    timestamp: Date;
+  }[] = [];
   // undefined = the room predates the flag, so we genuinely don't know.
   let fairStarted: boolean | undefined;
   let displayConfig: DisplayConfig | null = null;
@@ -188,6 +198,18 @@ async function handleGet(
           userName: e.userName ?? null,
           songTitle: titleOf(e),
           videoId: videoIdOf(e),
+          timestamp: e.timestamp,
+        });
+        break;
+      case "suggestion_used":
+        suggestions.push({
+          source: e.suggestionSource ?? "song_pick",
+          sectionId: e.sectionId ?? null,
+          categoryId: e.categoryId ?? null,
+          // A "trending" title is a YouTube title and lives in youtube_song_data;
+          // the rest are our own catalog names on the event.
+          songTitle: e.songTitle ?? titleOf(e),
+          songArtist: e.songArtist ?? null,
           timestamp: e.timestamp,
         });
         break;
@@ -254,6 +276,7 @@ async function handleGet(
     songs,
     requests,
     singWithMe,
+    suggestions,
     cheers: {
       total: reactions,
       byEmoji: Array.from(cheersByEmoji, ([emoji, count]) => ({ emoji, count }))
@@ -297,6 +320,7 @@ async function handleGet(
       people: people.length,
       songs: songs.length,
       requests: requests.length,
+      suggestions: suggestions.length,
       singWithMe: singWithMe.length,
       reactions,
       searches,

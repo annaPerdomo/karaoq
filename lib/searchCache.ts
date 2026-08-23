@@ -8,15 +8,10 @@ export interface SearchResult {
   viewCount?: number;
 }
 
-// Each uncached YouTube search burns 100 of the 10,000 daily quota units, so
-// caching stretches it from ~100 searches/day to ~100 *distinct* searches/day.
-//
-// Entries stay readable for 14 days (TTL index in lib/mongodb.ts) but are only
-// served outright inside the caller's freshness window. Past that they are the
-// outage fallback, so a spent quota degrades to stale results, not an error.
-//
-// Shared by /api/search and /api/video-lookup; their keys can never collide,
-// search keys always contain "|" and lookup keys are always "video:<id>".
+// The binding limit is the separate "Search Queries per day" quota: 100
+// search.list *calls* per day, project-wide. Entries stay readable for 21 days but
+// are served outright only inside the caller's freshness window; past that they
+// are the outage fallback.
 
 export interface CacheHit {
   results: SearchResult[];
@@ -28,8 +23,7 @@ export async function readCache(cacheKey: string): Promise<CacheHit | null> {
     const cache = await getSearchCacheCollection();
     const hit = await cache.findOne({ key: cacheKey });
     if (!hit) return null;
-    // A doc with no usable createdAt reads as infinitely old, so it's kept as
-    // a fallback but never served as fresh.
+    // No usable createdAt reads as infinitely old: a fallback, never fresh.
     const writtenAt =
       hit.createdAt instanceof Date ? hit.createdAt.getTime() : 0;
     return {
@@ -38,6 +32,25 @@ export async function readCache(cacheKey: string): Promise<CacheHit | null> {
     };
   } catch {
     return null; // cache is best-effort; fall through to a live search
+  }
+}
+
+/** A result set is served fresh for a fortnight, so a video the sweep found gone
+ *  has to leave those rows with it or a room queues something that can't play. */
+export async function pruneCachedVideos(videoIds: string[]): Promise<number> {
+  if (videoIds.length === 0) return 0;
+  try {
+    const cache = await getSearchCacheCollection();
+    const pruned = await cache.updateMany(
+      { "results.videoId": { $in: videoIds } },
+      { $pull: { results: { videoId: { $in: videoIds } } } }
+    );
+    // An entry pruned to nothing is served as a fresh "not on YouTube"; deleting
+    // it costs one search to redo.
+    await cache.deleteMany({ results: { $size: 0 } });
+    return pruned.modifiedCount;
+  } catch {
+    return 0;
   }
 }
 

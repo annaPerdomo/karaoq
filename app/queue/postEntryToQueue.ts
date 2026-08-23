@@ -3,7 +3,10 @@ import { QueueEntry } from "../../pages/api/types";
 export default async function postEntryToQueue(
   roomId: string,
   entry: QueueEntry,
-  via?: "search" | "paste"
+  via?: "search" | "paste",
+  /** Set when these results came from tapping a catalogued suggestion: the
+   *  corpus learns which cut singers queue from it. */
+  suggestionKey?: string
 ): Promise<boolean> {
   try {
     const resp = await fetch(`/api/queue/${roomId}/videos`, {
@@ -16,6 +19,7 @@ export default async function postEntryToQueue(
         songTitle: entry.songTitle,
         durationSeconds: entry.durationSeconds,
         ...(via ? { via } : {}),
+        ...(suggestionKey ? { suggestionKey } : {}),
       }),
     });
     return resp.ok;

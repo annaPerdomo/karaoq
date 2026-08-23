@@ -156,6 +156,15 @@ export interface RoomErrorRow {
   timestamp: string;
 }
 
+export interface RoomSuggestionRow {
+  source: string;
+  sectionId: string | null;
+  categoryId: string | null;
+  songTitle: string | null;
+  songArtist: string | null;
+  timestamp: string;
+}
+
 /** One failed /api/search attributed to this room. */
 export interface RoomSearchFailRow {
   failReason: string | null;
@@ -170,6 +179,7 @@ export interface RoomDossierData {
   songs: DossierSongRow[];
   requests: RequestRow[];
   singWithMe: SingWithMeRow[];
+  suggestions?: RoomSuggestionRow[];
   cheers?: {
     total: number;
     byEmoji: { emoji: string; count: number }[];
@@ -196,6 +206,7 @@ export interface RoomDossierData {
     songs: number;
     requests: number;
     singWithMe: number;
+    suggestions?: number;
     reactions: number;
     searches: number;
     errors?: number;

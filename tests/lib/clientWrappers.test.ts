@@ -259,6 +259,59 @@ describe("Client API wrappers", () => {
     });
   });
 
+  describe("suggestionCuts", () => {
+    const CUT = {
+      title: "ABBA &amp; friends - Dancing Queen",
+      thumbnailUrl: "https://i.ytimg.com/vi/abc/mq.jpg",
+      videoId: "abc",
+      durationSeconds: 230,
+      pinned: true,
+    };
+
+    it("asks the corpus for one song key and decodes the titles", async () => {
+      mockFetch.mockResolvedValue({ ok: true, json: async () => [CUT] });
+      const { default: suggestionCuts } = await import("../../app/queue/suggestionCuts");
+
+      const results = await suggestionCuts("abba dancing queen karaoke");
+
+      expect(results).toEqual([{ ...CUT, title: "ABBA & friends - Dancing Queen" }]);
+      const url = String(mockFetch.mock.calls[0][0]);
+      expect(url).toBe(
+        "/api/suggestions/cuts?song=abba+dancing+queen+karaoke"
+      );
+    });
+
+    it.each([
+      ["a song we hold nothing for", 404],
+      ["a rate limit", 429],
+    ])("surfaces %s as a SearchUnavailableError", async (_name, status) => {
+      mockFetch.mockResolvedValue({ ok: false, status });
+      const { default: suggestionCuts } = await import("../../app/queue/suggestionCuts");
+      const { SearchUnavailableError } = await import("../../app/queue/searchYoutube");
+
+      const err = await suggestionCuts("key").catch((e) => e);
+
+      expect(err).toBeInstanceOf(SearchUnavailableError);
+      expect(err.status).toBe(status);
+    });
+
+    it("treats an empty 200 as nothing resolved rather than no results", async () => {
+      mockFetch.mockResolvedValue({ ok: true, json: async () => [] });
+      const { default: suggestionCuts } = await import("../../app/queue/suggestionCuts");
+
+      const err = await suggestionCuts("key").catch((e) => e);
+
+      expect(err.status).toBe(404);
+    });
+
+    it("propagates a dropped connection instead of inventing a result", async () => {
+      mockFetch.mockRejectedValue(new TypeError("Failed to fetch"));
+      const { default: suggestionCuts } = await import("../../app/queue/suggestionCuts");
+
+      await expect(suggestionCuts("key")).rejects.toThrow(TypeError);
+    });
+  });
+
   describe("lookupVideo", () => {
     const VIDEO = {
       title: "Rick Astley &amp; friends",

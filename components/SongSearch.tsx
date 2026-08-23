@@ -68,6 +68,7 @@ const SongSearch: React.FC<SongSearchProps> = ({
     searchError,
     lookupMode,
     resultsVia,
+    resultsSuggestionKey,
     karaokeMode,
     filters,
     runSearch,
@@ -126,6 +127,7 @@ const SongSearch: React.FC<SongSearchProps> = ({
     onPick,
     resetSearch,
     via: resultsVia,
+    suggestionKey: resultsSuggestionKey,
   });
 
   const publicRole = role === 'display' ? undefined : role;

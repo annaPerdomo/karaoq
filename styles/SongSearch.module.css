@@ -370,6 +370,21 @@
   color: var(--text-muted);
 }
 
+/* Wraps rather than truncating — the string is a full phrase in most of the
+   languages we ship. */
+.pinnedBadge {
+  display: inline-block;
+  margin-bottom: 3px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(255, 61, 138, 0.14);
+  color: var(--brand-pink, #ff3d8a);
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: 0.2px;
+}
+
 .resultTitle {
   font-size: 0.78rem;
   color: var(--text-primary);

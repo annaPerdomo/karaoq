@@ -22,7 +22,12 @@ interface UseDiscoveryBrowseArgs {
   filters: SearchFilters;
   karaokeMode: boolean;
   setQuery: (query: string) => void;
-  runSearch: (rawQuery: string, activeFilters: SearchFilters, karaoke: boolean) => void;
+  runSearch: (
+    rawQuery: string,
+    activeFilters: SearchFilters,
+    karaoke: boolean,
+    fromSuggestion?: boolean
+  ) => void;
   trackFirstSearch: () => void;
 }
 
@@ -149,7 +154,9 @@ export function useDiscoveryBrowse({
       songArtist: song.artist,
     });
 
-    runSearch(q, filters, karaokeMode);
+    // Catalogued picks only: a trending row is a cleaned video title with no
+    // artist, so it keys to nothing the catalog holds.
+    runSearch(q, filters, karaokeMode, source !== 'trending');
   }
 
   function handleSurpriseMe() {
