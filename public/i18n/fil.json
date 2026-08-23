@@ -95,6 +95,7 @@
   "search.linkNoVideo": "Hindi tumuturo sa iisang video ang link na iyon — mag-paste ng link sa isang YouTube video",
   "search.linkNotYoutube": "Mga link lang ng YouTube ang gumagana rito",
   "search.quotaPasteHint": "Sa ngayon, maaari kang mag-paste ng YouTube link sa eksaktong kanta na gusto mong kantahin — kadalasan ay gumagana pa rin ito. Masayang pagkanta!",
+  "search.backNotice": "Magandang balita — gumagana na ulit ang paghahanap ng kanta! I-type lang ang pangalan ng kanta, hindi na kailangang mag-paste ng link.",
   "search.previewAria": "I-preview ang kantang ito",
   "search.add.choose": "Piliin ang kantang ito",
   "search.add.add": "Idagdag sa queue",

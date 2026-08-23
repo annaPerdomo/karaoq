@@ -95,6 +95,7 @@
   "search.linkNoVideo": "That link doesn't point to a single video — paste a link to one YouTube video",
   "search.linkNotYoutube": "Only YouTube links work here",
   "search.quotaPasteHint": "In the meantime, you can paste a YouTube link to the exact song you want to sing — it usually still works. Happy singing!",
+  "search.backNotice": "Good news — song search is back! Just type a song name, no need to paste links anymore.",
   "search.previewAria": "Preview this song",
   "search.add.choose": "Choose this song",
   "search.add.add": "Add to queue",

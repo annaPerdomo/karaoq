@@ -95,6 +95,7 @@
   "search.linkNoVideo": "このリンクは1本の動画を指していません — YouTube 動画1本のリンクを貼ってください",
   "search.linkNotYoutube": "ここで使えるのは YouTube のリンクだけです",
   "search.quotaPasteHint": "それまでの間は、歌いたい曲の YouTube リンクを貼り付けてください。たいていはまだ使えます。楽しい歌声を!",
+  "search.backNotice": "お知らせ — 曲の検索が復活しました！曲名を入力するだけでOK。リンクの貼り付けはもう不要です。",
   "search.previewAria": "この曲をプレビュー",
   "search.add.choose": "この曲にする",
   "search.add.add": "キューに追加",

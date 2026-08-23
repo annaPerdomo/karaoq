@@ -52,10 +52,15 @@ describe("sendQuotaAlertOnce", () => {
   it("pages on the day's first quota trip", async () => {
     await sendQuotaAlertOnce(prodReq());
 
-    expect(mockInsertOne).toHaveBeenCalledOnce();
+    // Two writes: the durable quota-out marker room polls read, then the
+    // alert mutex.
+    expect(mockInsertOne).toHaveBeenCalledTimes(2);
+    expect(mockInsertOne.mock.calls[0][0]._id).toMatch(
+      /^quota-out:\d{4}-\d{2}-\d{2}$/
+    );
     // The day rides on _id, not a secondary index: uniqueness has to hold on
     // the very first insert, before any index build could have finished.
-    expect(mockInsertOne.mock.calls[0][0]._id).toMatch(/^quota:\d{4}-\d{2}-\d{2}$/);
+    expect(mockInsertOne.mock.calls[1][0]._id).toMatch(/^quota:\d{4}-\d{2}-\d{2}$/);
     expect(fetchMock).toHaveBeenCalledOnce();
     expect(fetchMock.mock.calls[0][0]).toBe("https://ntfy.sh/karaoq-ops-test");
   });
@@ -73,7 +78,7 @@ describe("sendQuotaAlertOnce", () => {
     await sendQuotaAlertOnce(prodReq());
     await sendQuotaAlertOnce(prodReq());
 
-    expect(mockInsertOne).toHaveBeenCalledOnce();
+    expect(mockInsertOne).toHaveBeenCalledTimes(2); // marker + mutex, once each
     expect(fetchMock).toHaveBeenCalledOnce();
   });
 
@@ -83,7 +88,7 @@ describe("sendQuotaAlertOnce", () => {
     await sendQuotaAlertOnce(prodReq());
     await sendQuotaAlertOnce(prodReq());
 
-    expect(mockInsertOne).toHaveBeenCalledOnce();
+    expect(mockInsertOne).toHaveBeenCalledTimes(2); // marker + mutex, once each
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -95,12 +100,17 @@ describe("sendQuotaAlertOnce", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("does nothing at all when no topic is configured", async () => {
+  it("still records the quota-out day when no topic is configured", async () => {
     delete process.env.NTFY_TOPIC;
 
     await sendQuotaAlertOnce(prodReq());
 
-    expect(mockInsertOne).not.toHaveBeenCalled();
+    // The marker feeds the singer-facing "search is back" notice, so it must
+    // not depend on paging being set up.
+    expect(mockInsertOne).toHaveBeenCalledOnce();
+    expect(mockInsertOne.mock.calls[0][0]._id).toMatch(
+      /^quota-out:\d{4}-\d{2}-\d{2}$/
+    );
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -124,8 +134,10 @@ describe("sendQuotaAlertOnce", () => {
     fetchMock.mockRejectedValueOnce(new Error("ntfy unreachable"));
 
     await sendQuotaAlertOnce(prodReq());
+    // Only the alert mutex (second insert) is released — the quota-out marker
+    // must survive an ntfy failure.
     expect(mockDeleteOne).toHaveBeenCalledWith({
-      _id: mockInsertOne.mock.calls[0][0]._id,
+      _id: mockInsertOne.mock.calls[1][0]._id,
     });
 
     await sendQuotaAlertOnce(prodReq());

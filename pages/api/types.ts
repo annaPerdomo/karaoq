@@ -264,6 +264,9 @@ export interface Room {
   /** The server's clock at response time, so viewers can measure elapsed
    * playback against it instead of their own drifting one. Never stored. */
   serverNow?: number;
+  /** ISO time today's spent YouTube search quota frees up; absent while
+   * search is fine. Computed on GET, never stored. */
+  searchResetsAt?: string;
   reactions?: Reaction[];
   singWithMe?: SingWithMePost[];
   suggestions?: SuggestedSong[];

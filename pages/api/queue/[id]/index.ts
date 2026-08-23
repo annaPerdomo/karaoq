@@ -5,6 +5,7 @@ import { rateLimit } from "../../../../lib/limits";
 import { getRoomsCollection } from "../../../../lib/mongodb";
 import { normalizeRoomId } from "../../../../lib/roomCode";
 import { pruneRoomYoutubeData, roomPruneUpdate } from "../../../../lib/youtubeRetention";
+import { searchQuotaResetsAt } from "../../../../lib/searchQuotaStatus";
 
 const REACTION_TTL_MS = 30000;
 
@@ -166,6 +167,10 @@ export default async function handler(
           await collection.updateOne({ id: roomId }, roomPruneUpdate(pruned));
         }
 
+        // Riding on the poll every phone already makes is what lets the whole
+        // room hear "search is back" within seconds of the midnight reset.
+        const searchResetsAt = await searchQuotaResetsAt();
+
         res.status(200).json({
           ...room,
           ...(pruned
@@ -185,6 +190,7 @@ export default async function handler(
           displayConfig: room.displayConfig ?? DEFAULT_DISPLAY_CONFIG,
           reactions,
           serverNow: now,
+          ...(searchResetsAt ? { searchResetsAt } : {}),
         });
       } else {
         res.status(404).json({ code: 404, message: "Not found." });

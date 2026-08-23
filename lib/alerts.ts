@@ -7,20 +7,45 @@ import { pacificDayKey, quotaResetsAt } from "./pacificTime";
 // authority. Without it a spent-quota day adds a write round-trip to every
 // search, on the path where the user is already waiting for a degraded answer.
 let alertedDay: string | null = null;
+let markedDay: string | null = null;
 
 /** Test seam: module state outlives a `vi.clearAllMocks()`. */
 export function resetQuotaAlertMemo(): void {
   alertedDay = null;
+  markedDay = null;
+}
+
+// Durable "today's search quota is spent" marker, read by room polls (see
+// lib/searchQuotaStatus) so singers can be told when search comes back. Kept
+// separate from the alert mutex below: that doc is deleted to retry a failed
+// ntfy send, and must not blink the status flag off with it.
+async function markQuotaOutDay(day: string): Promise<void> {
+  if (markedDay === day) return;
+  try {
+    const alerts = await getOpsAlertsCollection();
+    await alerts.insertOne({ _id: `quota-out:${day}`, sentAt: new Date() });
+    markedDay = day;
+  } catch (e: unknown) {
+    if ((e as { code?: number })?.code === 11000) {
+      markedDay = day; // another instance already marked today
+      return;
+    }
+    console.warn("Quota-out marker write failed:", e);
+  }
 }
 
 // ntfy.sh topics are public-by-name: anyone who knows the topic string can
 // read it, so NTFY_TOPIC must be unguessable and is treated as a secret.
 export async function sendQuotaAlertOnce(req: NextApiRequest): Promise<void> {
-  const topic = process.env.NTFY_TOPIC;
-  if (!topic) return;
   if (isAnalyticsExempt(req)) return; // dev/demo quota trips are not incidents
 
   const day = pacificDayKey();
+  // Recorded even when paging is unconfigured — the status flag is for
+  // singers, not for ops.
+  await markQuotaOutDay(day);
+
+  const topic = process.env.NTFY_TOPIC;
+  if (!topic) return;
   if (alertedDay === day) return;
 
   const id = `quota:${day}`;

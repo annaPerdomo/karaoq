@@ -95,6 +95,7 @@
   "search.linkNoVideo": "Ce lien ne pointe pas vers une seule vidéo — collez le lien d'une vidéo YouTube",
   "search.linkNotYoutube": "Seuls les liens YouTube fonctionnent ici",
   "search.quotaPasteHint": "En attendant, vous pouvez coller le lien YouTube de la chanson exacte que vous voulez chanter — cela fonctionne généralement encore. Bon chant !",
+  "search.backNotice": "Bonne nouvelle — la recherche de chansons fonctionne à nouveau ! Tapez simplement le titre d'une chanson, plus besoin de coller des liens.",
   "search.previewAria": "Prévisualiser cette chanson",
   "search.add.choose": "Choisir cette chanson",
   "search.add.add": "Ajouter à la file",

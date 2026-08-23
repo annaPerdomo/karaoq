@@ -22,6 +22,13 @@ vi.mock("mongodb", () => ({
 process.env.MONGODB_URI = "mongodb://test";
 process.env.MONGODB_DB = "test-db";
 
+// Mocked: the real read shares the mongodb mock above, so the room-lookup
+// findOne stub would double as a quota-out marker and taint every GET body.
+const searchQuotaResetsAtMock = vi.fn();
+vi.mock("../../lib/searchQuotaStatus", () => ({
+  searchQuotaResetsAt: (...args: unknown[]) => searchQuotaResetsAtMock(...args),
+}));
+
 import handler from "../../pages/api/queue/[id]/index";
 
 function createRes() {
@@ -213,6 +220,42 @@ describe("POST /api/queue/[id] - Room creation", () => {
 describe("GET /api/queue/[id] - Room retrieval", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    searchQuotaResetsAtMock.mockResolvedValue(null);
+  });
+
+  it("reports when today's search quota is spent", async () => {
+    mockCollection.findOne.mockResolvedValue({
+      id: "XYZ99",
+      queue: [],
+      activeVideoIndex: 0,
+      isPlaying: false,
+    });
+    searchQuotaResetsAtMock.mockResolvedValue("2026-08-24T07:00:00.000Z");
+
+    const req = createMockReq({ method: "GET", query: { id: "XYZ99" } });
+    const res = createRes();
+    await handler(req, res);
+
+    expect(res.getStatus()).toBe(200);
+    expect((res.getBody() as Room).searchResetsAt).toBe(
+      "2026-08-24T07:00:00.000Z"
+    );
+  });
+
+  it("omits searchResetsAt entirely while search is fine", async () => {
+    mockCollection.findOne.mockResolvedValue({
+      id: "XYZ99",
+      queue: [],
+      activeVideoIndex: 0,
+      isPlaying: false,
+    });
+
+    const req = createMockReq({ method: "GET", query: { id: "XYZ99" } });
+    const res = createRes();
+    await handler(req, res);
+
+    // Absent, not null: the client notice keys off the field disappearing.
+    expect("searchResetsAt" in (res.getBody() as Room)).toBe(false);
   });
 
   it("returns room when it exists", async () => {

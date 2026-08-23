@@ -12,6 +12,8 @@ import postReaction from '../app/queue/postReaction';
 import { REACTION_COOLDOWN_MS, isTextReaction } from '../app/queue/cheerConstants';
 import { startSessionTracking } from '../app/queue/trackSession';
 import { startVisiblePolling } from '../app/queue/pollWhileVisible';
+import { useSearchBackNotice } from '../app/queue/useSearchBackNotice';
+import SearchBackToast from './search/SearchBackToast';
 import { DisplayTheme, QueueEntry, Reaction, normalizeDisplayConfig } from '../pages/api/types';
 import { useT } from '../lib/i18n/I18nProvider';
 import { getStoredName, setStoredName } from '../lib/username';
@@ -40,6 +42,8 @@ const Sing = (): React.ReactElement => {
   // A "sing with me" join can auto-add the song, so re-sync the queue too.
   const boards = useBoards(joinCode, (room) => setQueue(room.queue));
   const applyBoards = boards.applyRoom;
+  const searchBack = useSearchBackNotice();
+  const applySearchBack = searchBack.applyRoom;
   const [activeIndex, setActiveIndex] = React.useState(0);
   const [username, setUsername] = React.useState('');
   const [isPlaying, setIsPlaying] = React.useState(false);
@@ -176,6 +180,7 @@ const Sing = (): React.ReactElement => {
         applyTiming(room);
         setReactionsOn(room.reactionsEnabled ?? true);
         setTheme(normalizeDisplayConfig(room.displayConfig).theme);
+        applySearchBack(room);
         processReactions(room.reactions, false);
         setLoadError(false);
       }
@@ -183,7 +188,7 @@ const Sing = (): React.ReactElement => {
     }
     init();
     return () => { cancelled = true; };
-  }, [joinCode, processReactions, initNonce, applyBoards, applyTiming]);
+  }, [joinCode, processReactions, initNonce, applyBoards, applyTiming, applySearchBack]);
 
   React.useEffect(() => {
     if (!joinCode || error) return;
@@ -204,11 +209,12 @@ const Sing = (): React.ReactElement => {
       applyTiming(room);
       setReactionsOn(room.reactionsEnabled ?? true);
       setTheme(normalizeDisplayConfig(room.displayConfig).theme);
+      applySearchBack(room);
       processReactions(room.reactions);
       setLoadError(false);
       setLoading(false);
     }, POLL_INTERVAL);
-  }, [joinCode, error, processReactions, applyBoards, applyTiming]);
+  }, [joinCode, error, processReactions, applyBoards, applyTiming, applySearchBack]);
 
   function handleSongAdded(entry: QueueEntry) {
     // Functional update: the click-closure `queue` can predate a poll that
@@ -307,6 +313,7 @@ const Sing = (): React.ReactElement => {
 
   return (
     <main className={mainClass}>
+      <SearchBackToast show={searchBack.show} onDismiss={searchBack.dismiss} />
       <header className={styles.header}>
         <div className={styles.brand} onClick={() => router.push('/')}>
           KaraoQ

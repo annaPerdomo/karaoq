@@ -30,6 +30,8 @@ import postReaction from "../app/queue/postReaction";
 import { REACTION_COOLDOWN_MS } from "../app/queue/cheerConstants";
 import { startSessionTracking } from "../app/queue/trackSession";
 import { startVisiblePolling } from "../app/queue/pollWhileVisible";
+import { useSearchBackNotice } from "../app/queue/useSearchBackNotice";
+import SearchBackToast from "./search/SearchBackToast";
 import {
   DEFAULT_DISPLAY_CONFIG,
   DEFAULT_HOST_CONFIG,
@@ -365,8 +367,11 @@ const Host = ({
     reactionTimers.current.push(timer);
   }
 
+  const searchBack = useSearchBackNotice();
+
   // Adopt the room's playMode so rejoining a TV-mode room doesn't play locally.
   function applyRoomState(room: Room) {
+    searchBack.applyRoom(room);
     setQueue(room.queue);
     applyBoards(room);
     setActiveIndex(room.activeVideoIndex);
@@ -1080,6 +1085,7 @@ const Host = ({
       }
       onClick={customizing ? () => hostEdit.setSelected(null) : undefined}
     >
+      <SearchBackToast show={searchBack.show} onDismiss={searchBack.dismiss} />
       <HostHeader
         remote={remote}
         tvMode={tvMode}

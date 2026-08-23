@@ -251,7 +251,8 @@ export async function getClientErrorsCollection(): Promise<Collection<ClientErro
 const OPS_ALERT_TTL_SECONDS = 7 * 24 * 60 * 60;
 
 export interface OpsAlertDoc {
-  /** e.g. "quota:2026-08-07" — see the mutex note below. */
+  /** e.g. "quota:2026-08-07" (alert mutex — see below) or
+   * "quota-out:2026-08-07" (the day's durable quota-spent marker). */
   _id: string;
   sentAt: Date;
 }

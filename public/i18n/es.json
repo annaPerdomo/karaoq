@@ -95,6 +95,7 @@
   "search.linkNoVideo": "Ese enlace no apunta a un solo vídeo — pega el enlace de un vídeo de YouTube",
   "search.linkNotYoutube": "Aquí solo funcionan los enlaces de YouTube",
   "search.quotaPasteHint": "Mientras tanto, puedes pegar el enlace de YouTube de la canción exacta que quieres cantar — suele seguir funcionando. ¡A cantar!",
+  "search.backNotice": "¡Buenas noticias! La búsqueda de canciones vuelve a funcionar. Escribe el nombre de la canción, ya no hace falta pegar enlaces.",
   "search.previewAria": "Ver un adelanto de esta canción",
   "search.add.choose": "Elegir esta canción",
   "search.add.add": "Agregar a la fila",
