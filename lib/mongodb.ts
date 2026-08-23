@@ -245,10 +245,8 @@ export async function getClientErrorsCollection(): Promise<Collection<ClientErro
   return db.collection<ClientErrorDoc>("client_errors");
 }
 
-// One doc per catalogued suggestion (see lib/suggestionCatalog). The TTL is
-// YouTube's 30-day retention rule and hangs off refreshedAt, not a creation
-// date: the cron rewrites that field, so a maintained entry never expires and
-// an abandoned one deletes itself exactly when the policy says it must.
+// One doc per catalogued suggestion (lib/suggestionCatalog). Same refreshedAt
+// TTL as karaoke_videos below, for the same YouTube 30-day rule.
 const SUGGESTION_VIDEO_TTL_SECONDS = YOUTUBE_DATA_MAX_AGE_DAYS * 24 * 60 * 60;
 
 export interface SuggestionVideoDoc {
@@ -257,7 +255,6 @@ export interface SuggestionVideoDoc {
   results: { title: string; thumbnailUrl: string; videoId: string; durationSeconds?: number; viewCount?: number }[];
   /** Pinned to the top; absent until anyone has added one. */
   topVideoId?: string;
-  /** When the search.list call that found these ran. */
   resolvedAt: Date;
   /** The retention clock the TTL index reads. */
   refreshedAt: Date;
@@ -290,12 +287,10 @@ export async function getSuggestionVideosCollection(): Promise<Collection<Sugges
   return db.collection<SuggestionVideoDoc>("suggestion_videos");
 }
 
-// One doc per playable video the corpus knows about, and the only collection
-// holding YouTube-derived fields — which is what lets a TTL index enforce the
-// 30-day rule instead of a job that can fail to run. The clock hangs off
-// refreshedAt, not a creation date: the nightly sweep rewrites that field, so a
-// maintained video never expires and an abandoned one deletes itself exactly
-// when the policy says it must.
+// One doc per playable video, and the only collection holding YouTube-derived
+// fields — which is what lets a TTL index enforce the 30-day rule instead of a
+// job that can fail to run. The clock is refreshedAt, not a creation date: the
+// nightly sweep rewrites it, so a maintained video never expires.
 const KARAOKE_VIDEO_TTL_SECONDS = YOUTUBE_DATA_MAX_AGE_DAYS * 24 * 60 * 60;
 
 export interface KaraokeVideoDoc {
@@ -369,10 +364,9 @@ export async function getKaraokeVideosCollection(): Promise<Collection<KaraokeVi
 }
 
 // One doc per song identity: our names, our counts, and videoId *references*.
-// No YouTube content — it's hydrated from karaoke_videos at read time — so
-// nothing here needs a TTL. The references aren't self-cleaning though: a
-// karaoke_videos row deletes itself on TTL and tells nobody, so every writer of
-// `cuts` drops ids whose video is gone. A cut is only as durable as its video.
+// No YouTube content — hydrated from karaoke_videos at read time — so no TTL
+// here. The references aren't self-cleaning: a karaoke_videos row deletes itself
+// on TTL and tells nobody, so every writer of `cuts` drops ids whose video is gone.
 export interface KaraokeSongDoc {
   /** searchCacheKey(buildSearchQuery(`${artist} ${title}`, true)) — the key a
    *  suggestion tap already resolves to. */
@@ -397,8 +391,7 @@ export interface KaraokeSongDoc {
   demand: number;
   /** Searches that answered with nothing playable. */
   resolveMisses?: number;
-  /** Backed off until here; absent means eligible. Without it a song nothing
-   *  can find holds the head of the wanted queue for good. */
+  /** Backed off until here; absent means eligible. See markResolveMiss. */
   nextResolveAt?: Date;
 }
 
@@ -432,10 +425,9 @@ export interface CronStateDoc {
   /** The step name, e.g. "sweep", "harvest", "migrate-v1". */
   _id: string;
   cursor?: string;
-  /** The TTL clock, and only a resumable step sets it — hence the index below
-   *  keys on this and not updatedAt. A deleted "done" reads as "never ran", and
-   *  a migration re-run over a corpus live traffic has moved can't be undone;
-   *  a doc with no cursorAt is never a TTL candidate. */
+  /** The TTL clock, and only a resumable step sets it — hence the index keys on
+   *  this, not updatedAt. A deleted "done" reads as "never ran", and a migration
+   *  re-run over a corpus live traffic has moved can't be undone. */
   cursorAt?: Date;
   /** Set by a step that has finished: for good, if it is once-only, and until
    *  the resweep window passes for a harvested channel. */
@@ -475,18 +467,12 @@ export async function getCronStateCollection(): Promise<Collection<CronStateDoc>
   return db.collection<CronStateDoc>("cron_state");
 }
 
-// Where last night's channel harvest stopped. The sweep runs under a fixed page
-// budget and can't read a 17k-upload channel in one night, so without a saved
-// pageToken the deep end of a big channel is never reached.
-//
-// No TTL: losing one restarts that channel from its newest upload — a waste of
-// the next run's budget, not a correctness bug.
+// The pre-corpus harvest cursors, read once as a bridge by lib/corpusHarvest and
+// dropped in phase 3; cron_state holds the live ones.
 export interface HarvestCursorDoc {
   /** The channel handle, or "playlist:<id>" for an explicit playlist. */
   _id: string;
-  /** Saved so a resume skips the channels.list unit. */
   playlistId?: string;
-  /** Where the next page starts; absent means from the newest upload. */
   pageToken?: string;
   /** Set when the uploads ran out, so finished channels stop consuming the
    *  nightly budget until their resweep window passes. */

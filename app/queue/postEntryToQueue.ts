@@ -5,7 +5,7 @@ export default async function postEntryToQueue(
   entry: QueueEntry,
   via?: "search" | "paste",
   /** Set when these results came from tapping a catalogued suggestion, so the
-   *  resolver can learn which cut singers actually queue (lib/suggestionResolver). */
+   *  corpus can learn which cut singers actually queue (lib/songCorpus). */
   suggestionKey?: string
 ): Promise<boolean> {
   try {

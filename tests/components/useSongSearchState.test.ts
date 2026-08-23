@@ -161,7 +161,6 @@ describe("useSongSearchState — spending searches sparingly", () => {
         result.current.updateFilter("duration", "long");
       });
       expect(mockSearchYoutube).toHaveBeenCalledTimes(1);
-      // The spinner starts immediately, so the chips still feel instant.
       expect(result.current.searching).toBe(true);
 
       await act(async () => {
@@ -243,8 +242,6 @@ describe("useSongSearchState — suggestion attribution", () => {
   it("keys a suggestion tap the way the server keys its catalog", async () => {
     const { result } = setup();
 
-    // searchSuggestion fills the box before running, and the empty-query guard
-    // effect would otherwise wipe the results straight back out.
     await act(async () => {
       result.current.setQuery("ABBA Dancing Queen");
     });
@@ -271,8 +268,6 @@ describe("useSongSearchState — suggestion attribution", () => {
 
   it("drops the attribution when a typed search replaces the suggestion", async () => {
     const { result } = setup();
-    // searchSuggestion fills the box before running, and the empty-query guard
-    // effect would otherwise wipe the results straight back out.
     await act(async () => {
       result.current.setQuery("ABBA Dancing Queen");
     });
@@ -291,8 +286,6 @@ describe("useSongSearchState — suggestion attribution", () => {
   it("drops the attribution when a pasted link replaces the suggestion", async () => {
     mockLookupVideo.mockResolvedValue(song("dQw4w9WgXcQ"));
     const { result } = setup();
-    // searchSuggestion fills the box before running, and the empty-query guard
-    // effect would otherwise wipe the results straight back out.
     await act(async () => {
       result.current.setQuery("ABBA Dancing Queen");
     });

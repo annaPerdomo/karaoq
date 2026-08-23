@@ -9,7 +9,7 @@ export interface YoutubeResult {
   durationSeconds?: number;
   viewCount?: number;
   /** The video singers converge on for a catalogued suggestion — served first
-   * and badged. Only ever set on resolved suggestions (lib/suggestionVideos). */
+   * and badged. Only ever set on a song the corpus holds cuts for. */
   pinned?: boolean;
 }
 

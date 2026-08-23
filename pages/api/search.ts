@@ -79,9 +79,8 @@ export default async function handler(
 
   let cached = await readCache(cacheKey);
 
-  // The key used to be the raw lowercased query, so folding out punctuation
-  // orphaned every entry holding an apostrophe or accent. Retire this once the
-  // 21-day retention has cycled the old keys out.
+  // Entries written before the fold are keyed on the raw lowercased query.
+  // Retire once the 21-day retention has cycled those keys out.
   if (!cached) {
     const legacyKey = `${q.trim().toLowerCase()}|${duration}|${sortBy}`;
     if (legacyKey !== cacheKey) {
@@ -153,7 +152,7 @@ export default async function handler(
     res.setHeader("x-karaoq-search-cache", "miss");
     res.status(200).json(results);
     // A search one singer paid for fills the cuts every later tap reads for free.
-    // After the response but awaited, never dropped: two dependent writes, and a
+    // Awaited after the response, never dropped: two dependent writes, and a
     // dropped promise dies with the frozen instance (lib/songCorpus).
     if (isCatalogFilters(duration, sortBy) && banksIntoCorpus(queryKey, normalizedQ)) {
       await recordSearchResults(queryKey, results).catch(() => {});

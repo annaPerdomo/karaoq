@@ -15,10 +15,8 @@ import { MAX_CUTS, songIdentityFromCatalog } from "./songCorpus";
 import { catalogEntry, suggestionCatalog, type CatalogEntry } from "./suggestionCatalog";
 import { suggestionDemand } from "./suggestionDemand";
 
-// Only ever runs as an authenticated cron step: dev and prod share one
-// database, so an import-time or per-request trigger would rewrite live data
-// from a laptop.
-//
+// Only ever runs as an authenticated cron step: dev and prod share one database,
+// so an import-time or per-request trigger would rewrite live data from a laptop.
 // suggestion_videos stays read-only here — it's the rollback until dropped.
 
 /** Bumping the suffix is how a re-seed is authorised — the old id stays done. */
@@ -168,9 +166,8 @@ async function seedStore(
   const videos = await getKaraokeVideosCollection();
 
   // Sized off a point-in-time read: worst case a room's add lands here and a
-  // video row that never makes the final cut gets upserted a batch early.
-  // Harmless — it's the song write below, not this one, that a stale read
-  // could corrupt, so only that read gets repeated fresh.
+  // video row that never makes the cut is upserted a batch early. Harmless —
+  // only the song write below could be corrupted, so only that read is repeated.
   const early = new Map(
     (
       await songs.find({ _id: { $in: docs.map((d) => d._id) } }).toArray()
@@ -327,11 +324,9 @@ async function seedDemand(
   return batch[batch.length - 1];
 }
 
-/**
- * Resumable seed of the corpus, safe to run every night forever: it is an O(1)
- * read once it has finished, and every write it makes is idempotent, so a run
- * killed at the 300s function cap simply continues from its cursor.
- */
+/** Resumable seed, safe to run every night forever: an O(1) read once finished,
+ *  and every write idempotent, so a run killed at the 300s cap continues from
+ *  its cursor. */
 export async function migrateToCorpus(
   deadline: number
 ): Promise<{ done: boolean; report: MigrationReport }> {
@@ -343,8 +338,6 @@ export async function migrateToCorpus(
 
   let { phase, cursor } = parseCursor(saved?.cursor);
   const report = emptyReport(phase);
-  // Read once per run rather than once per batch — the aggregation is bounded
-  // and cheap, but it is still a round trip.
   let demand: Map<string, number> | null = null;
 
   while (Date.now() < deadline) {

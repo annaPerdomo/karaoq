@@ -163,7 +163,6 @@ describe("recordAdd", () => {
       { via: "search", suggestionKey: entry.key, roomId: "ROOM9" }
     );
 
-    // The stored row is what every room is shown.
     const doc = videos().get("abc123");
     expect(doc.title).toBe(cutTitle(entry));
     expect(doc.thumbnailUrl).toBe("");
@@ -247,7 +246,6 @@ describe("recordAdd", () => {
     await addCut("one");
     await addCut("one");
 
-    // Three adds from one room is still one room's claim.
     expect(songs().get(entry.key).topVideoId).toBeUndefined();
 
     await addCut("one", { roomId: "ROOM2" });
@@ -287,7 +285,6 @@ describe("recordAdd", () => {
 
     await addCut("fresh");
 
-    // The TTL deletes the video and tells karaoke_songs nothing.
     expect(songs().get(entry.key).cuts).toEqual(["fresh"]);
   });
 
@@ -312,7 +309,6 @@ describe("recordAdd", () => {
     for (let i = 1; i <= 11; i++) await addCut(`v${i}`);
     expect(songs().get(entry.key).cuts).toHaveLength(MAX_CUTS);
 
-    // A newcomer nobody else has added is the lowest-ranked of the thirteen.
     await addCut("v12");
     expect(songs().get(entry.key).cuts).not.toContain("v12");
 
@@ -377,7 +373,6 @@ describe("recordHarvestMatches", () => {
       addCount: 0,
       demand: 0,
     });
-    // Nobody has added any of them, so nothing is badged.
     expect(songs().get(entry.key).topVideoId).toBeUndefined();
   });
 
@@ -407,7 +402,6 @@ describe("recordHarvestMatches", () => {
     const report = await recordHarvestMatches(matches, details);
 
     expect(stateWithoutTimestamps()).toBe(first);
-    // The videos are re-read; the song had nothing left to gain.
     expect(report).toEqual({
       videosUpserted: 0,
       videosRefreshed: 2,

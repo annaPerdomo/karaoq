@@ -7,13 +7,10 @@ import {
 } from "../app/queue/songSuggestions";
 import { buildSearchQuery, searchCacheKey } from "./searchQuery";
 
-// The ~900 songs in "Song ideas" are a fixed catalog, yet every tap used to
-// cost a search.list call — two thirds of a day's quota per cache window, which
-// one browsing room can burn. The server keeps its own copy so it can recognise
-// a suggestion query on sight and serve it from lib/suggestionVideos.
-//
-// Recognising queries server-side rather than trusting a client flag is what
-// bounds the store: nothing outside this catalog can create an entry.
+// The ~900 songs in "Song ideas" are a fixed catalog, and a tap on one costs a
+// search.list call unless the server can recognise it on sight. Recognising
+// queries here rather than trusting a client flag is also what bounds the
+// corpus: nothing outside this catalog can create a song.
 
 // Imported rather than fetched from /public, so the server sees what the
 // browser does with no network call and no filesystem assumptions on Vercel.
@@ -97,7 +94,6 @@ function build(): void {
   cached = new Map(entries.map((e) => [e.key, e]));
 }
 
-/** Built once per instance. */
 export function suggestionCatalog(): Map<string, CatalogEntry> {
   if (!cached) build();
   return cached!;

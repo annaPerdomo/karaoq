@@ -27,12 +27,12 @@ import { suggestionCatalog } from "../../../lib/suggestionCatalog";
 
 // Nightly, not monthly: the quota is a daily allowance, so a monthly pass could
 // only ever spend one day's worth. vercel.json invokes this twice because a full
-// harvest measured 335s against a 300s function — a later slot finishes what the
-// first ran out of clock for, spending clock and not quota (lib/corpusBudget).
+// harvest outlasts the 300s function — the later slot buys clock, not quota
+// (lib/corpusBudget).
 
-// The function's ceiling, with the run's deadline held under it: work is
-// persisted as it is bought, so stopping voluntarily keeps what a run paid for
-// where being killed mid-step spent the units and wrote nothing.
+// The function's ceiling, with the run's deadline held under it: stopping
+// voluntarily keeps what a run paid for, where being killed mid-step spent the
+// units and wrote nothing.
 export const config = { maxDuration: 300 };
 const RUN_BUDGET_MS = 240_000;
 
@@ -52,9 +52,8 @@ interface StepSpec {
   run: Step;
   /** The longest this step may hold the run, whatever else is left. */
   budgetMs: number;
-  /** Held back out of the run for the steps after this one. Handed the whole
-   *  deadline the harvest will legitimately take it, and the search step then
-   *  opens on a clock that has already run out. */
+  /** Held back out of the run for the steps after this one: handed the whole
+   *  deadline, the harvest legitimately takes it and search opens on nothing. */
   floorMs: number;
 }
 
@@ -175,8 +174,6 @@ export default async function handler(
   ];
 
   const ran: Record<string, unknown> = {};
-  // Each floor is released as its step's turn comes, so the last step's
-  // deadline is the run's own.
   let reserved = steps.reduce((total, step) => total + step.floorMs, 0);
   try {
     for (const step of steps) {

@@ -104,7 +104,6 @@ export function useSongSearchState({ roomId, role }: UseSongSearchStateArgs) {
     rawQuery: string,
     activeFilters: SearchFilters,
     karaoke: boolean,
-    // True when this came from "Song ideas" rather than the search box.
     fromSuggestion = false
   ) {
     clearTimeout(debounceRef.current);
@@ -280,7 +279,6 @@ export function useSongSearchState({ roomId, role }: UseSongSearchStateArgs) {
     key: K,
     value: SearchFilters[K]
   ) {
-    // Tapping the chip that's already active changes nothing to search for.
     if (filters[key] === value) return;
     const next = { ...filters, [key]: value };
     setFilters(next);

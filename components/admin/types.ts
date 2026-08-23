@@ -156,7 +156,6 @@ export interface RoomErrorRow {
   timestamp: string;
 }
 
-/** One song idea a singer tapped in this room. */
 export interface RoomSuggestionRow {
   source: string;
   sectionId: string | null;

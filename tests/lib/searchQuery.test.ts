@@ -96,9 +96,8 @@ describe("searchCacheKey", () => {
   });
 
   it("keys a query the same however the client composed its characters", () => {
-    // An accent as one code point vs. a letter plus a combining accent: the
-    // same song typed on two keyboards must not be two live searches. Built
-    // with normalize() rather than pasted literals, so the two fixtures can't
+    // The same song typed on two keyboards must not be two live searches. Built
+    // with normalize() rather than pasted literals, so the fixtures can't
     // silently become byte-identical and turn this into a tautology.
     const song = "Cafe\u0301 del Mar";
     expect(song.normalize("NFD")).not.toBe(song.normalize("NFC"));
