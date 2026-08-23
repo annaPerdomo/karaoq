@@ -7,23 +7,39 @@ import {
   karaokeChannelHandles,
   type HarvestedVideo,
 } from "../../lib/karaokeChannels";
+import { getKaraokeSongsCollection } from "../../lib/mongodb";
+import { MAX_CUTS } from "../../lib/songCorpus";
 import { matchHarvestToCatalog } from "../../lib/suggestionMatch";
-import { suggestionCatalog } from "../../lib/suggestionCatalog";
+import { suggestionCatalog, type CatalogEntry } from "../../lib/suggestionCatalog";
 
 // Run after editing KARAOKE_CHANNELS to see which handles resolve and how much
-// of the catalog they cover. Costs 1 unit per handle plus 1 per page of 50, and
-// no search.list. Empty cursors, so it never disturbs what the cron saved.
+// of the corpus they would fill. Costs 1 unit per handle plus 1 per page of 50,
+// and no search.list. Empty cursors and no writes, so it never disturbs what the
+// cron saved.
 //
 //   PROBE_LIVE=1 PROBE_PAGES=8 pnpm tool scripts/tools/probeHarvest.tool.ts
 //   PROBE_LIVE=1 PROBE_HANDLES=SomeChannel,Another pnpm tool …
 const LIVE = Boolean(process.env.PROBE_LIVE);
 
 describe("channel harvest probe", () => {
-  it.runIf(LIVE)("reports which handles resolve and how much of the catalog they cover", async () => {
+  it.runIf(LIVE)("reports which handles resolve and how much of the corpus they cover", async () => {
     loadLocalEnv();
     const candidates = (process.env.PROBE_HANDLES ?? "").split(",").filter(Boolean);
     const handles = candidates.length > 0 ? candidates : karaokeChannelHandles();
     const pages = Number(process.env.PROBE_PAGES ?? 4);
+
+    // The two sets the harvest step works from: songs short of the cap are what
+    // it matches against, and the cutless ones are what a new handle is judged on.
+    const stored = await (await getKaraokeSongsCollection())
+      .find({}, { projection: { cuts: 1 } })
+      .toArray();
+    const cutCounts = new Map(stored.map((s) => [s._id, (s.cuts ?? []).length]));
+    const wanted: CatalogEntry[] = Array.from(suggestionCatalog().values()).filter(
+      (e) => (cutCounts.get(e.key) ?? 0) < MAX_CUTS
+    );
+    const cutless = new Set(
+      wanted.filter((e) => (cutCounts.get(e.key) ?? 0) === 0).map((e) => e.key)
+    );
 
     const videos: HarvestedVideo[] = [];
     const harvest = await harvestKaraokeChannels(handles, {
@@ -36,8 +52,8 @@ describe("channel harvest probe", () => {
         videos.push(...batch.videos);
       },
     });
-    const catalog = Array.from(suggestionCatalog().values());
-    const matches = matchHarvestToCatalog(videos, catalog, 4);
+    const matches = matchHarvestToCatalog(videos, wanted, 4);
+    const newlyServable = Array.from(matches.keys()).filter((key) => cutless.has(key));
 
     const byChannel = new Map<string, number>();
     for (const rows of Array.from(matches.values())) {
@@ -51,9 +67,17 @@ describe("channel harvest probe", () => {
       `missing handles  : ${harvest.missing.join(", ") || "(none)"}`,
       `uploads read     : ${videos.length}`,
       `units spent      : ${harvest.units}`,
-      `catalog songs    : ${catalog.length}`,
-      `songs resolved   : ${matches.size}`,
+      `songs stored     : ${stored.length}`,
+      `songs under cap  : ${wanted.length} (${cutless.size} of them cutless)`,
+      `songs matched    : ${matches.size}`,
+      `cutless filled   : ${newlyServable.length}`,
       `cuts per channel : ${JSON.stringify(Object.fromEntries(byChannel))}`,
+      "",
+      "cutless songs this harvest would make servable:",
+      ...newlyServable.slice(0, 15).map((key) => {
+        const entry = suggestionCatalog().get(key)!;
+        return `  ${entry.artist} — ${entry.title}  [${entry.packId}]`;
+      }),
       "",
       "sample matches:",
       ...Array.from(matches.entries()).slice(0, 15).flatMap(([key, rows]) => {
