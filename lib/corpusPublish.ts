@@ -10,16 +10,18 @@ import {
   type SuggestionVideoDoc,
 } from "./mongodb";
 import { catalogEntry } from "./suggestionCatalog";
-import { THIN_RESULTS } from "./suggestionVideos";
 
-// Two jobs, no YouTube units. A karaoke_videos row deletes itself on its TTL
-// and tells nobody, so a song whose cuts have all expired still looks resolved
-// to every other step — full to the harvest, cut-holding to the resolver.
-//
-// And suggestion_videos is the rollback copy until phase 3 drops it: taps read
-// the corpus now, so nothing else writes it and its TTL would empty it.
+// Two jobs, no YouTube units. A karaoke_videos row deletes itself on its TTL and
+// tells nobody, so a song whose cuts have all expired still looks resolved to
+// every other step. And suggestion_videos is the rollback copy until phase 3
+// drops it — nothing else writes it now, and its TTL would empty it.
 
 const CURSOR_ID = "publish";
+
+/** Sources fill songs unequally — a search buys fifty rows, the harvest a
+ *  handful, a human's pick one — so below this a song is stored but not
+ *  published: a tap falls through to a search whose results overwrite it. */
+const THIN_RESULTS = 10;
 
 /** A full pass over the ~900-song corpus; the cursor covers the rest. */
 export const PUBLISH_PER_RUN = 1000;
