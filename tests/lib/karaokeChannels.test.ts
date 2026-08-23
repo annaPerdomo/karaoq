@@ -16,6 +16,8 @@ interface FakeApi {
   failing?: Set<string>;
   /** Handles that don't resolve to a channel. */
   unresolvable?: Set<string>;
+  /** Page tokens the API rejects, as a stale one would be. */
+  badTokens?: Set<string>;
 }
 
 function fakeYoutube(depth: Depth, api: FakeApi = {}) {
@@ -34,6 +36,10 @@ function fakeYoutube(depth: Depth, api: FakeApi = {}) {
     const playlistId = parsed.searchParams.get("playlistId")!;
     if (api.failing?.has(playlistId)) {
       return { ok: false, status: 403, json: async () => ({}) } as Response;
+    }
+    const token = parsed.searchParams.get("pageToken");
+    if (token && api.badTokens?.has(token)) {
+      return { ok: false, status: 404, json: async () => ({}) } as Response;
     }
     const total = depth[playlistId] ?? 1;
     // The token is the 0-based index of the page it asks for.
@@ -194,17 +200,49 @@ describe("harvestKaraokeChannels", () => {
     expect(batches[0].videos[0].videoId).toBe("UP_a-v0");
   });
 
-  it("gives up after consecutive channel failures instead of grinding the list", async () => {
-    const calls = fakeYoutube(
-      {},
-      { unresolvable: new Set(["a", "b", "c", "d", "e"]) }
-    );
+  it("gives up once the API is refusing every call", async () => {
+    const calls = fakeYoutube({}, { failing: new Set(["UP_a", "UP_b", "UP_c", "UP_d"]) });
     const { opts } = options();
+
+    const report = await harvestKaraokeChannels(["a", "b", "c", "d"], opts);
+
+    expect(calls.pages).toBe(3);
+    expect(report.stoppedEarly).toBe(true);
+  });
+
+  it("walks past handles that no longer resolve", async () => {
+    // Handles get renamed, and the language-pack channels are at the tail of
+    // the list: three dead ones ending the sweep walls off everything behind.
+    const calls = fakeYoutube(
+      { UP_e: 1 },
+      { unresolvable: new Set(["a", "b", "c", "d"]) }
+    );
+    const { opts, batches } = options();
 
     const report = await harvestKaraokeChannels(["a", "b", "c", "d", "e"], opts);
 
-    expect(calls.channels).toBe(3);
-    expect(report.stoppedEarly).toBe(true);
+    expect(calls.channels).toBe(5);
+    expect(report.missing).toEqual(["a", "b", "c", "d"]);
+    expect(report.channels).toEqual(["e"]);
+    expect(batches).toHaveLength(1);
+  });
+
+  it("clears a page token the API rejects rather than retrying it nightly", async () => {
+    const calls = fakeYoutube({ UP_a: 5 }, { badTokens: new Set(["3"]) });
+    const cursors = new Map<string, HarvestCursor>([
+      ["a", { playlistId: "UP_a", pageToken: "3" }],
+    ]);
+    const { opts, batches } = options({ cursors });
+
+    const report = await harvestKaraokeChannels(["a"], opts);
+
+    expect(calls.pages).toBe(1);
+    expect(report.missing).toEqual(["a"]);
+    // Parked without the token, so the next run restarts the channel instead of
+    // buying the same rejection for good.
+    expect(batches).toHaveLength(1);
+    expect(batches[0].cursor.pageToken).toBeUndefined();
+    expect(batches[0].cursor.completedAt).toBeUndefined();
   });
 
   it("stops starting work at the deadline", async () => {

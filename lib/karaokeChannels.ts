@@ -81,11 +81,18 @@ export interface HarvestedVideo {
   channel: string;
 }
 
-/** channels.list — 1 unit. */
+/** A refusal that will refuse the next target too — a spent pool, a throttle,
+ *  an outage — as against one handle that no longer resolves. Only a wall is
+ *  worth ending a sweep on; a 404 means skip this target and keep going. */
+function isWall(status: number): boolean {
+  return status === 403 || status === 429 || status >= 500;
+}
+
+/** channels.list — 1 unit. `wall` says whether the failure was API-wide. */
 async function uploadsPlaylistId(
   handle: string,
   key: string
-): Promise<string | null> {
+): Promise<{ playlistId: string | null; wall: boolean }> {
   const params = new URLSearchParams({
     part: "contentDetails",
     forHandle: handle,
@@ -95,19 +102,26 @@ async function uploadsPlaylistId(
     "https://www.googleapis.com/youtube/v3/channels?" + params,
     { signal: AbortSignal.timeout(8000) }
   );
-  if (!resp.ok) return null;
+  if (!resp.ok) return { playlistId: null, wall: isWall(resp.status) };
   const data = await resp.json();
-  return data?.items?.[0]?.contentDetails?.relatedPlaylists?.uploads ?? null;
+  return {
+    playlistId:
+      data?.items?.[0]?.contentDetails?.relatedPlaylists?.uploads ?? null,
+    wall: false,
+  };
 }
 
-/** playlistItems.list — 1 unit per page of 50. Null means the call failed,
- *  which must not read as "no more pages": that marks a channel finished and
- *  skips it on every later run. */
+/** playlistItems.list — 1 unit per page of 50. A null page means the call
+ *  failed, which must not read as "no more pages": that marks a channel
+ *  finished and skips it on every later run. */
 async function playlistPage(
   playlistId: string,
   key: string,
   pageToken?: string
-): Promise<{ videos: Omit<HarvestedVideo, "channel">[]; next?: string } | null> {
+): Promise<{
+  page: { videos: Omit<HarvestedVideo, "channel">[]; next?: string } | null;
+  wall: boolean;
+}> {
   const params = new URLSearchParams({
     part: "snippet",
     playlistId,
@@ -119,7 +133,7 @@ async function playlistPage(
     "https://www.googleapis.com/youtube/v3/playlistItems?" + params,
     { signal: AbortSignal.timeout(8000) }
   );
-  if (!resp.ok) return null;
+  if (!resp.ok) return { page: null, wall: isWall(resp.status) };
   const data = await resp.json();
   const videos = (data?.items ?? [])
     .map((item: any) => ({
@@ -133,7 +147,7 @@ async function playlistPage(
     // A private or deleted upload still occupies a playlist row, titled
     // "Private video" with no usable id.
     .filter((v: any) => v.videoId && v.title && v.title !== "Private video");
-  return { videos, next: data?.nextPageToken };
+  return { page: { videos, next: data?.nextPageToken }, wall: false };
 }
 
 export interface HarvestReport {
@@ -175,8 +189,10 @@ export interface HarvestOptions {
   onChannel: (batch: ChannelBatch) => Promise<void>;
 }
 
-// What a spent quota or an upstream outage looks like from here. Grinding
-// through the remaining thirty handles against that wall learns nothing.
+// Grinding through the remaining thirty targets against a wall learns nothing.
+// Counted only for wall failures: handles get renamed, and letting three dead
+// ones end the sweep walls off every target behind them — which is where the
+// language packs are.
 const MAX_CONSECUTIVE_FAILURES = 3;
 
 /** Newest-first, since a channel's recent uploads track what people are
@@ -226,12 +242,13 @@ export async function harvestKaraokeChannels(
           playlistId = target.slice("playlist:".length);
         } else {
           report.units += 1;
-          playlistId = (await uploadsPlaylistId(target, key)) ?? undefined;
-        }
-        if (!playlistId) {
-          report.missing.push(target);
-          consecutiveFailures += 1;
-          continue;
+          const resolved = await uploadsPlaylistId(target, key);
+          playlistId = resolved.playlistId ?? undefined;
+          if (!playlistId) {
+            report.missing.push(target);
+            if (resolved.wall) consecutiveFailures += 1;
+            continue;
+          }
         }
         cursor.playlistId = playlistId;
       }
@@ -240,6 +257,7 @@ export async function harvestKaraokeChannels(
       let pageToken = cursor.pageToken;
       let exhausted = false;
       let failed = false;
+      let wall = false;
       for (let page = 0; page < opts.pagesPerChannel; page++) {
         if (spent()) {
           report.stoppedEarly = true;
@@ -248,21 +266,32 @@ export async function harvestKaraokeChannels(
         report.units += 1;
         report.pages += 1;
         const res = await playlistPage(playlistId, key, pageToken);
-        if (!res) {
+        if (!res.page) {
           failed = true;
+          wall = res.wall;
           break;
         }
-        for (const video of res.videos) videos.push({ ...video, channel: target });
-        if (!res.next) {
+        for (const video of res.page.videos) {
+          videos.push({ ...video, channel: target });
+        }
+        if (!res.page.next) {
           exhausted = true;
           break;
         }
-        pageToken = res.next;
+        pageToken = res.page.next;
       }
 
       if (failed && videos.length === 0) {
         report.missing.push(target);
-        consecutiveFailures += 1;
+        if (wall) {
+          consecutiveFailures += 1;
+          continue;
+        }
+        // A page YouTube rejects outright is a token it will keep rejecting, so
+        // the cursor is cleared rather than left to wedge the channel on it for
+        // good. Costs the pages already walked; being stuck costs the channel.
+        cursor.pageToken = undefined;
+        await opts.onChannel({ channel: target, videos: [], cursor });
         continue;
       }
       consecutiveFailures = 0;
