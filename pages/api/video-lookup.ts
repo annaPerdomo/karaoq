@@ -183,12 +183,18 @@ export default async function handler(
   } catch (e: any) {
     console.warn("YouTube API lookup failed:", e?.message);
 
-    const quotaExceeded = e instanceof YoutubeApiError && e.quotaExceeded;
-    const failReason = quotaExceeded ? "quota" : "upstream";
+    const limit = e instanceof YoutubeApiError ? e.limit : null;
+    // See /api/search: only a spent day may latch the marker every room reads.
+    const dailyOut = limit === "daily";
+    const failReason = dailyOut
+      ? "quota"
+      : limit === "burst"
+        ? "youtube_busy"
+        : "upstream";
 
     // Ahead of the stale-fallback return, so the day the cache quietly covers
     // for a spent quota still pages someone. Never throws.
-    if (quotaExceeded) await sendQuotaAlertOnce(req);
+    if (dailyOut) await sendQuotaAlertOnce(req);
 
     if (staleFallback) {
       await trackEvent(req, "search_failed", {
@@ -207,12 +213,22 @@ export default async function handler(
       searchOutcome: "error",
     });
 
-    if (quotaExceeded) {
+    if (dailyOut) {
       res.status(503).json({
         code: 503,
         reason: "quota",
         resetsAt: quotaResetsAt(),
         message: "Daily search limit reached.",
+      });
+      return;
+    }
+
+    if (limit === "burst") {
+      res.setHeader("Retry-After", "30");
+      res.status(503).json({
+        code: 503,
+        reason: "busy",
+        message: "Lookup is busy right now, try again in a moment.",
       });
       return;
     }

@@ -60,7 +60,10 @@ export interface AnalyticsEvent {
   // it. A duration, not a wall-clock time — no timezone rides along.
   minutesFromNow?: number | null;
   // search_failed: why /api/search couldn't run a live search…
-  failReason?: "quota" | "upstream" | "rate_limited";
+  // "quota" is the day's allowance, gone until the Pacific reset; "youtube_busy"
+  // is YouTube's short-window ceiling, which clears in seconds and must not be
+  // read as an outage; "rate_limited" is our own per-IP limiter (lib/limits).
+  failReason?: "quota" | "upstream" | "rate_limited" | "youtube_busy";
   // …and whether the cache covered for it. roomId is the room whose singer was
   // searching, or "" from clients predating the field — and either way the
   // failure is the API's, not the room's, so geo roll-ups must exclude these.

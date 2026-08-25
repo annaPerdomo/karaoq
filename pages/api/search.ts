@@ -162,12 +162,20 @@ export default async function handler(
   } catch (e: any) {
     console.warn("YouTube API search failed:", e?.message);
 
-    const quotaExceeded = e instanceof YoutubeApiError && e.quotaExceeded;
-    const failReason = quotaExceeded ? "quota" : "upstream";
+    const limit = e instanceof YoutubeApiError ? e.limit : null;
+    // A burst ceiling clears in seconds, so it must never latch the day's
+    // marker (lib/alerts) that every room poll reads: one room's busy minute
+    // would otherwise tell the whole platform search is gone until midnight.
+    const dailyOut = limit === "daily";
+    const failReason = dailyOut
+      ? "quota"
+      : limit === "burst"
+        ? "youtube_busy"
+        : "upstream";
 
     // Ahead of the stale-fallback return, so a day the cache quietly covers
     // for a spent quota still pages someone. Never throws.
-    if (quotaExceeded) await sendQuotaAlertOnce(req);
+    if (dailyOut) await sendQuotaAlertOnce(req);
 
     // Serving a stale copy beats telling someone their song doesn't exist
     // because we're out of quota.
@@ -204,12 +212,24 @@ export default async function handler(
       searchOutcome: "error",
     });
 
-    if (quotaExceeded) {
+    if (dailyOut) {
       res.status(503).json({
         code: 503,
         reason: "quota",
         resetsAt: quotaResetsAt(),
         message: "Daily search limit reached.",
+      });
+      return;
+    }
+
+    // Deliberately not `reason: "quota"`: the singer gets the "quick breather"
+    // copy and a wait measured in seconds, not a countdown to midnight.
+    if (limit === "burst") {
+      res.setHeader("Retry-After", "30");
+      res.status(503).json({
+        code: 503,
+        reason: "busy",
+        message: "Search is busy right now, try again in a moment.",
       });
       return;
     }

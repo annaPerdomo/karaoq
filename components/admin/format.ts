@@ -45,6 +45,11 @@ export const SEARCH_FAIL_LABELS: Record<string, string> = {
   'upstream:stale': 'YouTube down — served stale cache',
   'upstream:corpus': 'YouTube down — served song cuts',
   'upstream:error': 'YouTube down — nothing to serve',
+  // YouTube's short-window ceiling, not the day's allowance: one room searching
+  // hard trips it and it clears in seconds.
+  'youtube_busy:stale': 'YouTube busy — served stale cache',
+  'youtube_busy:corpus': 'YouTube busy — served song cuts',
+  'youtube_busy:error': 'YouTube busy — nothing to serve',
   'rate_limited:error': 'Caller rate-limited',
 };
 

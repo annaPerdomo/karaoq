@@ -443,6 +443,13 @@ describe("search_failed tracking", () => {
       403
     );
 
+  const burstFailure = () =>
+    jsonResponse(
+      { error: { message: "Rate limit", errors: [{ reason: "rateLimitExceeded" }] } },
+      false,
+      429
+    );
+
   it("records a spent quota the user saw an error for", async () => {
     fetchMock.mockImplementation(async () => quotaFailure());
 
@@ -586,6 +593,62 @@ describe("search_failed tracking", () => {
 
     expect(res.getStatus()).toBe(200);
     expect(sendQuotaAlertMock).toHaveBeenCalledOnce();
+  });
+
+  // One room searching hard trips YouTube's short-window ceiling while the
+  // day's allowance is barely touched. Latching the day marker on that told
+  // every other room search was gone until midnight — for hours, while it
+  // was still answering.
+  it("does not page, or write off the day, on a burst ceiling", async () => {
+    fetchMock.mockImplementation(async () => burstFailure());
+
+    const res = createRes();
+    await handler(createMockReq({ query: { q: "test" } }), res);
+
+    expect(sendQuotaAlertMock).not.toHaveBeenCalled();
+  });
+
+  it("tells a burst apart from a spent day in what the singer is shown", async () => {
+    fetchMock.mockImplementation(async () => burstFailure());
+
+    const res = createRes();
+    await handler(createMockReq({ query: { q: "test" } }), res);
+
+    // No `reason: "quota"`, so the client shows its "quick breather" copy
+    // rather than a countdown to the Pacific reset.
+    expect(res.getStatus()).toBe(503);
+    const body = res.getBody() as { reason: string; resetsAt?: string };
+    expect(body.reason).toBe("busy");
+    expect(body.resetsAt).toBeUndefined();
+    expect(res.getHeader("Retry-After")).toBe("30");
+  });
+
+  it("records a burst under its own reason, not as a spent quota", async () => {
+    fetchMock.mockImplementation(async () => burstFailure());
+
+    const res = createRes();
+    await handler(createMockReq({ query: { q: "test" } }), res);
+
+    expect(failureEvent()).toMatchObject({
+      failReason: "youtube_busy",
+      searchOutcome: "error",
+    });
+  });
+
+  it("still serves a stale copy through a burst", async () => {
+    mockCollection.findOne.mockResolvedValue({
+      key: "q|any|relevance",
+      results: [{ title: "Stale", thumbnailUrl: "t", videoId: "old" }],
+      createdAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000),
+    });
+    fetchMock.mockImplementation(async () => burstFailure());
+
+    const res = createRes();
+    await handler(createMockReq({ query: { q: "q" } }), res);
+
+    expect(res.getStatus()).toBe(200);
+    expect(res.getHeader("x-karaoq-search-cache")).toBe("stale");
+    expect(sendQuotaAlertMock).not.toHaveBeenCalled();
   });
 
   it("does not page when YouTube is merely unreachable", async () => {
