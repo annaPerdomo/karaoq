@@ -2,11 +2,11 @@
   "crons": [
     {
       "path": "/api/cron/suggestions",
-      "schedule": "15 7 * * *"
+      "schedule": "15 4 * * *"
     },
     {
       "path": "/api/cron/suggestions?slot=2",
-      "schedule": "15 8 * * *"
+      "schedule": "15 5 * * *"
     }
   ]
 }

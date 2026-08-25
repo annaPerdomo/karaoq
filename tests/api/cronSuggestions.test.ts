@@ -32,12 +32,17 @@ process.env.MONGODB_DB = "test-db";
 process.env.YOUTUBE_API_KEY = "test-key";
 
 import handler from "../../pages/api/cron/suggestions";
+import { ledgerDay, recordSpend } from "../../lib/corpusBudget";
 import { MIGRATION_ID } from "../../lib/corpusMigration";
+import { pacificDayKey } from "../../lib/pacificTime";
+import { resetSearchQuotaStatusCache } from "../../lib/searchQuotaStatus";
 import { suggestionCatalog, type CatalogEntry } from "../../lib/suggestionCatalog";
 
 const songs = () => collection("karaoke_songs");
 const videos = () => collection("karaoke_videos");
 const state = () => collection("cron_state");
+/** The day's spend doc — one per Pacific day, see lib/corpusBudget. */
+const ledger = () => state().get(`budget:${ledgerDay(Date.now())}`);
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 /** Past the sweep's 16-day cutoff, inside the 30-day TTL. */
@@ -221,6 +226,9 @@ function fakeClock(base = Date.now()): { advance: (ms: number) => void } {
 beforeEach(() => {
   vi.clearAllMocks();
   collections.clear();
+  // Memoized per instance for 30s, and module state outlives clearAllMocks —
+  // without this a seeded quota-out day leaks into the next test.
+  resetSearchQuotaStatusCache();
   api.urls = [];
   api.missing = new Set();
   api.unembeddable = new Set();
@@ -384,7 +392,7 @@ describe("GET /api/cron/suggestions - the daily quota ledger", () => {
     const steps = await run();
 
     expect(steps.resolve).toMatchObject({ error: "Atlas failover" });
-    expect(state().get("budget").spend).toMatchObject({ searches: 3 });
+    expect(ledger()).toMatchObject({ searches: 3, cronSearches: 3 });
   });
 
   it("reports the budget a run actually opened with", async () => {
@@ -396,13 +404,124 @@ describe("GET /api/cron/suggestions - the daily quota ledger", () => {
   });
 
   it("starts a new day over", async () => {
-    await run();
+    // Each Pacific day keeps its own ledger doc, so yesterday's spend isn't
+    // something today has to subtract — it is simply a key today never reads.
     state().seed({
-      ...state().get("budget"),
-      spend: { day: "1999-12-31", searches: 2, pages: 800 },
+      _id: "budget:1999-12-31",
+      searches: 99,
+      cronSearches: 99,
+      pages: 800,
+      cursorAt: new Date(),
+      updatedAt: new Date(),
     });
 
-    expect((await run()).resolve).toMatchObject({ searched: 1 });
+    expect((await run()).resolve).toMatchObject({ searched: 2 });
+  });
+
+  it("keeps a room's searches out of the cron's own nightly bite", async () => {
+    // Both bill to `searches`; only the cron's bill to `cronSearches`. Reading
+    // the wrong one would let a busy evening of singing cancel the night's run.
+    await recordSpend(Date.now(), { searches: 20 });
+
+    expect((await run()).resolve).toMatchObject({ searched: 2 });
+    expect(ledger()).toMatchObject({ searches: 22, cronSearches: 2 });
+  });
+});
+
+// The corpus is never worth an error on somebody's phone: it buys what the day's
+// rooms left, and only once they have gone home.
+describe("GET /api/cron/suggestions - giving way to the rooms", () => {
+  beforeEach(() => {
+    migrationDone();
+    process.env.SUGGESTION_RESOLVE_PER_DAY = "2";
+    seedSong(catalogEntries[0], [], 30);
+    seedSong(catalogEntries[1], [], 20);
+    api.searchHits = [{ videoId: "hit1", title: "One (Karaoke)" }];
+    api.uploads = [{ videoId: "up1", title: "Anything (Karaoke Version)" }];
+  });
+
+  function liveRoom(minutesAgo: number): void {
+    collection("rooms").seed({
+      _id: "LIVE1",
+      id: "LIVE1",
+      lastActivity: new Date(Date.now() - minutesAgo * 60_000),
+    });
+  }
+
+  function quotaOutToday(): void {
+    collection("ops_alerts").seed({
+      _id: `quota-out:${pacificDayKey()}`,
+      sentAt: new Date(),
+    });
+  }
+
+  it("leaves the day's searches to a room that is mid-session", async () => {
+    liveRoom(5);
+
+    expect((await run()).resolve).toMatchObject({ skipped: "rooms live" });
+    expect(calls("search")).toHaveLength(0);
+  });
+
+  it("holds the harvest back too, since a burst of pages trips the same ceiling", async () => {
+    liveRoom(5);
+
+    expect((await run()).harvest).toMatchObject({ skipped: "rooms live" });
+    expect(calls("playlistItems")).toHaveLength(0);
+  });
+
+  it("still does the work that costs YouTube nothing", async () => {
+    liveRoom(5);
+
+    const steps = await run();
+
+    expect(steps.publish).toMatchObject({ done: true });
+    expect(steps.demand).toMatchObject({ done: true });
+    expect(steps.propose).toMatchObject({ done: true });
+  });
+
+  it("takes its turn once the room has gone quiet", async () => {
+    liveRoom(90);
+
+    expect((await run()).resolve).toMatchObject({ searched: 2 });
+  });
+
+  it("resolves when no room has been touched at all", async () => {
+    expect((await run()).resolve).toMatchObject({ searched: 2 });
+  });
+
+  it("does not spend into a day whose quota is already gone", async () => {
+    quotaOutToday();
+
+    expect((await run()).resolve).toMatchObject({
+      skipped: "day's quota already out",
+    });
+    expect(calls("search")).toHaveLength(0);
+  });
+
+  it("harvests through a spent day, which costs no search quota", async () => {
+    quotaOutToday();
+
+    expect((await run()).harvest).toMatchObject({ done: true });
+  });
+
+  it("runs anyway when a person asks it to", async () => {
+    liveRoom(1);
+    quotaOutToday();
+
+    const steps = await run({ force: "1" });
+
+    expect(steps.resolve).toMatchObject({ searched: 2 });
+    expect(steps.harvest).toMatchObject({ done: true });
+  });
+
+  it("reports which gate turned it away", async () => {
+    liveRoom(5);
+
+    expect((await request()).getBody().gates).toMatchObject({
+      liveRooms: 1,
+      daySpent: false,
+      forced: false,
+    });
   });
 });
 

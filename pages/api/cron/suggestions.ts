@@ -24,6 +24,8 @@ import {
   SWEEP_PER_RUN,
   sweepCorpusVideos,
 } from "../../../lib/corpusSweep";
+import { LIVE_ROOM_WINDOW_MS, liveRoomCount } from "../../../lib/liveRooms";
+import { searchQuotaResetsAt } from "../../../lib/searchQuotaStatus";
 import { recordDemand } from "../../../lib/songCorpus";
 import { suggestionCatalog } from "../../../lib/suggestionCatalog";
 import { suggestionDemand } from "../../../lib/suggestionDemand";
@@ -31,6 +33,13 @@ import { suggestionDemand } from "../../../lib/suggestionDemand";
 // vercel.json invokes this twice because a full harvest outlasts the 300s
 // function — the later slot buys clock, not quota (lib/corpusBudget). The run's
 // deadline is held under the ceiling: being killed spends units and writes nothing.
+//
+// Both slots sit late in the Pacific evening (04:15/05:15 UTC ≈ 21:15/22:15 PT)
+// rather than just after the midnight reset, so the corpus spends what the day's
+// rooms left instead of taking its cut before anyone has woken up. Whatever is
+// still unspent by then expires at midnight anyway, which is what makes this the
+// cheap hour to buy in. Two slots because either may find rooms live and defer;
+// the odds both do are low, and a skipped night costs one night of resolving.
 export const config = { maxDuration: 300 };
 const RUN_BUDGET_MS = 240_000;
 
@@ -87,12 +96,32 @@ export default async function handler(
   const spent = await spentToday(started);
   const searchBudget = remaining(
     envCount("SUGGESTION_RESOLVE_PER_DAY", SEARCH_PER_DAY),
-    spent.searches
+    spent.cronSearches
   );
   const pageBudget = remaining(
     envCount("SUGGESTION_CHANNEL_PAGES", CHANNEL_PAGES_PER_DAY),
     spent.pages
   );
+
+  // The two gates that make this run the day's last claimant on YouTube rather
+  // than its first. `?force=1` is for running it by hand.
+  const forced = req.query.force === "1";
+
+  // Anyone mid-session outranks the corpus: a room that is singing now may
+  // search in the next minute, and a search it loses to us is an error on
+  // somebody's phone. Cheaper work above still runs — it costs YouTube nothing.
+  const liveRooms = forced
+    ? 0
+    : await liveRoomCount(
+        started,
+        envCount("SUGGESTION_LIVE_ROOM_WINDOW_MS", LIVE_ROOM_WINDOW_MS)
+      );
+
+  // "Is there usage left" answered by observation, not arithmetic: the day's
+  // real ceiling isn't a number we know, but a day that has already tripped the
+  // daily-quota marker has none left by definition. Only a true daily
+  // exhaustion sets it — a burst ceiling no longer can (lib/youtubeApi).
+  const daySpent = forced ? false : (await searchQuotaResetsAt()) !== null;
 
   /** Cheap and user-visible first; search is last, since rooms compete for it. */
   const steps: StepSpec[] = [
@@ -157,6 +186,12 @@ export default async function handler(
       budgetMs: 150_000,
       floorMs: 5_000,
       run: async (by, bill) => {
+        // Not the search quota, but 600-odd calls in a few minutes is exactly
+        // what trips YouTube's short-window ceiling — and the room that eats
+        // that 429 is the one with people waiting on it.
+        if (liveRooms > 0) {
+          return { done: false, report: { skipped: "rooms live", liveRooms } };
+        }
         if (pageBudget <= 0) {
           return { done: false, report: { skipped: "pages spent today" } };
         }
@@ -179,6 +214,12 @@ export default async function handler(
       floorMs: 45_000,
       run: async (by, bill) => {
         if (!useSearch) return { done: false, report: { skipped: "search=0" } };
+        if (liveRooms > 0) {
+          return { done: false, report: { skipped: "rooms live", liveRooms } };
+        }
+        if (daySpent) {
+          return { done: false, report: { skipped: "day's quota already out" } };
+        }
         if (searchBudget <= 0) {
           return { done: false, report: { skipped: "searches spent today" } };
         }
@@ -196,10 +237,13 @@ export default async function handler(
     for (const step of steps) {
       reserved -= step.floorMs;
       const by = Math.min(Date.now() + step.budgetMs, deadline - reserved);
-      const billed: DailySpend = { searches: 0, pages: 0 };
+      // A search the cron runs is both a call against the day and the cron's
+      // own share of it, so it is billed to both counters (lib/corpusBudget).
+      const billed: DailySpend = { searches: 0, cronSearches: 0, pages: 0 };
       try {
         const { done, report } = await step.run(by, (units) => {
           billed.searches += units.searches ?? 0;
+          billed.cronSearches += units.searches ?? 0;
           billed.pages += units.pages ?? 0;
         });
         ran[step.name] = { done, ...report };
@@ -225,6 +269,10 @@ export default async function handler(
     slot,
     steps: ran,
     budget: { searches: searchBudget, pages: pageBudget },
+    // What the day had already cost before this run, so a skipped night still
+    // leaves a record of why — and of what the account's real ceiling is.
+    spentBefore: spent,
+    gates: { liveRooms, daySpent, forced },
     catalog: suggestionCatalog().size,
     ms: Date.now() - started,
   };

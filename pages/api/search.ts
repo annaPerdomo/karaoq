@@ -1,4 +1,5 @@
 import { NextApiRequest, NextApiResponse } from "next";
+import { recordSpend } from "../../lib/corpusBudget";
 import { readCache, writeCache, SearchResult } from "../../lib/searchCache";
 import { YoutubeApiError } from "../../lib/youtubeApi";
 import { searchYoutubeApi } from "../../lib/youtubeSearch";
@@ -153,6 +154,11 @@ export default async function handler(
     writeCache(cacheKey, results);
     res.setHeader("x-karaoq-search-cache", "miss");
     res.status(200).json(results);
+    // Billed only on success, and to the same ledger the cron draws from, so
+    // "what did today actually cost" is one number rather than two half-views.
+    // It is what lets the nightly run see how much of the day rooms have
+    // already spent (lib/corpusBudget, pages/api/cron/suggestions).
+    await recordSpend(Date.now(), { searches: 1 }).catch(() => {});
     // Awaited after the response, never dropped: a dropped promise dies with the
     // frozen instance partway through two dependent writes (lib/songCorpus).
     if (isCatalogFilters(duration, sortBy) && banksIntoCorpus(queryKey, normalizedQ)) {

@@ -482,9 +482,14 @@ export interface CronStateDoc {
   /** The run lock's lease; only the "run" doc carries one. See lib/corpusBudget. */
   leaseUntil?: Date;
   leaseToken?: string;
-  /** The day's YouTube spend; only the "budget" doc carries it. One subdocument
-   *  so rolling to a new day can't leave yesterday's counts beside today. */
-  spend?: { day: string; searches: number; pages: number };
+  /** The day's YouTube spend; only a "budget:<pacific-day>" doc carries these.
+   *  One doc per day rather than one rolling doc, so every write is a plain
+   *  $inc — rooms bill their searches here too now (see lib/corpusBudget), and
+   *  a read-modify-write would lose them. They expire on the `cursorAt` clock
+   *  above, a week being long enough to read a spent day back. */
+  searches?: number;
+  cronSearches?: number;
+  pages?: number;
   updatedAt: Date;
 }
 
