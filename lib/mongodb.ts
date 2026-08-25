@@ -394,6 +394,77 @@ export async function getKaraokeSongsCollection(): Promise<Collection<KaraokeSon
   return db.collection<KaraokeSongDoc>("karaoke_songs");
 }
 
+// A song real rooms are singing that no catalog entry claims. Curation input
+// only: nothing here creates a karaoke_songs doc, because the catalog is what
+// bounds the corpus (lib/suggestionCatalog) — approving one means adding it to
+// a pack and letting the migration seed it.
+const SONG_PROPOSAL_TTL_SECONDS = 90 * 24 * 60 * 60;
+
+export interface SongProposalDoc {
+  /** The cluster's core tokens, sorted and joined — see proposalSignature. */
+  _id: string;
+  /** The shortest observed title backing it, channel branding stripped. */
+  label: string;
+  /** Both readings of "A - B"; which half is the artist is not knowable from
+   *  the title alone, so the choice is left to whoever approves it. */
+  candidates: { artist: string; title: string }[];
+  /** Already banked by the add, so approving costs no search. */
+  videoIds: string[];
+  addCount: number;
+  /** Distinct rooms seen, and a LOWER BOUND: sources.adds.rooms stops at
+   *  MIN_ADD_ROOMS per video, so a cluster reads high only by spanning videos. */
+  rooms: number;
+  addsByCountry: Record<string, number>;
+  /** A catalog artist whose every word this cluster covers — the difference
+   *  between "we don't have this artist" and "we have them, not this song". */
+  knownArtist?: string;
+  /** Only ever set by a person. Absent means nobody has ruled on it yet. */
+  status?: "approved" | "rejected";
+  firstSeenAt: Date;
+  /** Re-derived every run, so it also dates the evidence above. */
+  updatedAt: Date;
+}
+
+let songProposalIndexesEnsured = false;
+
+export async function getSongProposalsCollection(): Promise<
+  Collection<SongProposalDoc>
+> {
+  const client = await getMongoClient();
+  const db = client.db(process.env.MONGODB_DB);
+  if (!songProposalIndexesEnsured) {
+    songProposalIndexesEnsured = true;
+    Promise.all([
+      db.collection("song_proposals").createIndex({ rooms: -1, addCount: -1 }),
+      // Its evidence lives in karaoke_videos, which TTLs at 30 days: a proposal
+      // nothing re-observes is a song rooms stopped singing. A ruling expires
+      // with it, so renewed demand is deliberately a fresh decision.
+      db
+        .collection("song_proposals")
+        .createIndex(
+          { updatedAt: 1 },
+          { expireAfterSeconds: SONG_PROPOSAL_TTL_SECONDS }
+        )
+        .catch(() =>
+          db.command({
+            collMod: "song_proposals",
+            index: {
+              keyPattern: { updatedAt: 1 },
+              expireAfterSeconds: SONG_PROPOSAL_TTL_SECONDS,
+            },
+          })
+        )
+        .catch((e) => {
+          console.error("song_proposals TTL retune failed:", e);
+        }),
+    ]).catch((e) => {
+      console.error("Song proposal index creation failed:", e);
+      songProposalIndexesEnsured = false;
+    });
+  }
+  return db.collection<SongProposalDoc>("song_proposals");
+}
+
 // Where each nightly step stopped, so a run that hits the 300s function cap
 // resumes. A cursor untouched for a week names a step that no longer runs.
 const CRON_STATE_TTL_SECONDS = 7 * 24 * 60 * 60;

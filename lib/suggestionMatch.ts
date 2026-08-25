@@ -55,6 +55,12 @@ function tokens(text: string): string[] {
     .filter((t) => t.length > 0 && !FILLER.has(t));
 }
 
+/** Exported for the proposal feeder, which has to read a title into words the
+ *  same way the matcher does, or the two disagree about what one song is. */
+export function songTokens(text: string): string[] {
+  return tokens(text);
+}
+
 /** Order-free: channels put the artist first, last, or in a suffix. */
 function covers(haystack: Set<string>, needle: string[]): boolean {
   return needle.length > 0 && needle.every((t) => haystack.has(t));

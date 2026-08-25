@@ -16,6 +16,7 @@ import {
   harvestIntoCorpus,
 } from "../../../lib/corpusHarvest";
 import { migrateToCorpus } from "../../../lib/corpusMigration";
+import { proposeUnmappedAdds, PROPOSAL_SCAN_LIMIT } from "../../../lib/corpusProposals";
 import { publishCorpus } from "../../../lib/corpusPublish";
 import { resolveWantedSongs } from "../../../lib/corpusResolve";
 import {
@@ -134,6 +135,21 @@ export default async function handler(
         if (Date.now() >= by) return { done: false, report: { skipped: "no clock" } };
         const scored = await recordDemand(await suggestionDemand());
         return { done: true, report: { scored } };
+      },
+    },
+    {
+      // After demand and before the resolver, reading the same adds they do:
+      // what no catalog entry claimed is the only demand a song outside the
+      // catalog can show. Curation input — writes no song. Our own rows, no units.
+      name: "propose",
+      budgetMs: 20_000,
+      floorMs: 5_000,
+      run: async (by) => {
+        const { done, report } = await proposeUnmappedAdds(
+          by,
+          envCount("SUGGESTION_PROPOSAL_SCAN", PROPOSAL_SCAN_LIMIT)
+        );
+        return { done, report: { ...report } };
       },
     },
     {
