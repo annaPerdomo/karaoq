@@ -12,7 +12,6 @@ import { buildDiscoveryData } from './discoveryData';
 import CategoryGrid from './CategoryGrid';
 import CategorySongList from './CategorySongList';
 import LanguagePicker from './LanguagePicker';
-import DiscoveryFooter from './DiscoveryFooter';
 
 interface DiscoveryBrowserProps {
   orderedSections: SongSection[];
@@ -37,8 +36,6 @@ interface DiscoveryBrowserProps {
     source: 'song_pick' | 'trending'
   ) => void;
   onSurpriseMe: () => void;
-  roomId: string;
-  role?: 'host' | 'singer';
   /**
    * Rendered at the top of the scrollable browse area (above the "Song ideas"
    * tabs) while the user isn't looking at search results — home of the
@@ -63,8 +60,6 @@ const DiscoveryBrowser: React.FC<DiscoveryBrowserProps> = ({
   onSelectedLangChange,
   onSongSelect,
   onSurpriseMe,
-  roomId,
-  role,
   belowSearch,
 }) => {
   const { t } = useT();
@@ -158,7 +153,13 @@ const DiscoveryBrowser: React.FC<DiscoveryBrowserProps> = ({
             />
           )}
 
-          <DiscoveryFooter onSurpriseMe={onSurpriseMe} roomId={roomId} role={role} />
+          <div className={styles.randWrap}>
+            <span className={styles.randLabel}>{t('search.help')}</span>
+            <button className={styles.surpriseBtn} onClick={onSurpriseMe}>
+              <span className={styles.surpriseIcon}>🎲</span>
+              {t('search.surprise')}
+            </button>
+          </div>
         </>
       )}
     </div>

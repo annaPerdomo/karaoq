@@ -132,8 +132,6 @@ const SongSearch: React.FC<SongSearchProps> = ({
     fromCorpus: resultsFromCorpus,
   });
 
-  const publicRole = role === 'display' ? undefined : role;
-
   return (
     <div className={styles.container}>
       {showNameInput && (
@@ -213,8 +211,6 @@ const SongSearch: React.FC<SongSearchProps> = ({
           onSelectedLangChange={handleSelectedLangChange}
           onSongSelect={searchSuggestion}
           onSurpriseMe={handleSurpriseMe}
-          roomId={roomId}
-          role={publicRole}
           belowSearch={belowSearch}
         />
       )}
