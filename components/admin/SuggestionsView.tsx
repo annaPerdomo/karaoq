@@ -7,13 +7,16 @@ import StatTile from './charts/StatTile';
 import ColumnChart from './charts/ColumnChart';
 import BarList from './charts/BarList';
 import { SERIES } from './charts/palette';
+import CorpusPicks from './suggestions/CorpusPicks';
 
 /** Top picks are our own catalog titles, so this list isn't bound by the
  * 30-day YouTube retention window that caps the Pulse song ranking. */
 export default function SuggestionsView({
   data,
+  onOpenRoom,
 }: {
   data: AnalyticsData;
+  onOpenRoom: (roomId: string) => void;
 }): React.ReactElement {
   const { suggestions } = data;
 
@@ -23,10 +26,22 @@ export default function SuggestionsView({
         <div>
           <h1 className={styles.viewTitle}>Suggestions</h1>
           <p className={styles.viewSub}>
-            How people find something to sing when they don&rsquo;t know what to sing.
+            How people find something to sing when they don&rsquo;t know what to sing
+            &mdash; and how often the shelves, not the search box, end up filling
+            the queue.
           </p>
         </div>
       </header>
+
+      {suggestions.picks && (
+        <CorpusPicks
+          picks={suggestions.picks}
+          songsByDay={data.charts.songsByDay}
+          onOpenRoom={onOpenRoom}
+        />
+      )}
+
+      <h2 className={styles.sectionHeading}>Browsing the ideas</h2>
 
       <div className={styles.tileGrid}>
         <StatTile

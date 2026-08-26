@@ -4,8 +4,10 @@ import {
   median,
   percentile,
   resolveTimezone,
+  summarizeCorpusPicks,
   summarizeFunnel,
   summarizeLinkLookups,
+  type CorpusPickRow,
 } from "../../lib/analyticsStats";
 
 describe("resolveTimezone", () => {
@@ -164,6 +166,82 @@ describe("summarizeLinkLookups", () => {
       total: 0,
       bySrc: [],
       byOutcome: [],
+    });
+  });
+});
+
+describe("summarizeCorpusPicks", () => {
+  const rows: CorpusPickRow[] = [
+    { _id: { day: "2026-08-24", country: "PH", fromCorpus: true }, count: 3 },
+    { _id: { day: "2026-08-24", country: "FR", fromCorpus: false }, count: 1 },
+    { _id: { day: "2026-08-23", country: "PH", fromCorpus: true }, count: 2 },
+    { _id: { day: "2026-08-23", country: "PH", fromCorpus: null }, count: 4 },
+  ];
+
+  it("splits picks by whether our own store answered the tap", () => {
+    const summary = summarizeCorpusPicks(rows);
+
+    expect(summary.total).toBe(10);
+    expect(summary.corpusServed).toBe(5);
+    expect(summary.searchFallback).toBe(1);
+    expect(summary.unattributed).toBe(4);
+  });
+
+  it("keeps each breakdown summing to the total", () => {
+    const summary = summarizeCorpusPicks(rows);
+    const sum = (rs: { count: number }[]) => rs.reduce((n, r) => n + r.count, 0);
+
+    expect(sum(summary.byDay)).toBe(summary.total);
+    expect(sum(summary.byCountry)).toBe(summary.total);
+    expect(summary.corpusServed + summary.searchFallback + summary.unattributed).toBe(
+      summary.total
+    );
+  });
+
+  it("orders days oldest-first and countries by size", () => {
+    const summary = summarizeCorpusPicks(rows);
+
+    expect(summary.byDay).toEqual([
+      { _id: "2026-08-23", count: 6 },
+      { _id: "2026-08-24", count: 4 },
+    ]);
+    expect(summary.byCountry).toEqual([
+      { _id: "PH", count: 9 },
+      { _id: "FR", count: 1 },
+    ]);
+  });
+
+  it("keeps a pick with no geo instead of dropping it from the country list", () => {
+    const summary = summarizeCorpusPicks([
+      { _id: { day: "2026-08-24", country: null, fromCorpus: true }, count: 2 },
+    ]);
+
+    expect(summary.byCountry).toEqual([{ _id: "Unknown", count: 2 }]);
+  });
+
+  it("trims the series to what the panel draws without touching the totals", () => {
+    const many: CorpusPickRow[] = [
+      { _id: { day: "2026-08-22", country: "PH", fromCorpus: true }, count: 5 },
+      { _id: { day: "2026-08-23", country: "FR", fromCorpus: true }, count: 3 },
+      { _id: { day: "2026-08-24", country: "DE", fromCorpus: false }, count: 1 },
+    ];
+
+    const summary = summarizeCorpusPicks(many, { days: 2, countries: 2 });
+
+    expect(summary.byDay.map((d) => d._id)).toEqual(["2026-08-23", "2026-08-24"]);
+    expect(summary.byCountry.map((c) => c._id)).toEqual(["PH", "FR"]);
+    expect(summary.total).toBe(9);
+    expect(summary.corpusServed).toBe(8);
+  });
+
+  it("reports an explicit zero before anyone picks off a shelf", () => {
+    expect(summarizeCorpusPicks([])).toEqual({
+      total: 0,
+      corpusServed: 0,
+      searchFallback: 0,
+      unattributed: 0,
+      byDay: [],
+      byCountry: [],
     });
   });
 });

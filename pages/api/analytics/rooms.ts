@@ -110,6 +110,11 @@ export default async function handler(
                   duets: {
                     $sum: { $cond: [{ $gte: ["$singers", 2] }, 1, 0] },
                   },
+                  // Only song_added carries a suggestionKey, so this sums to the
+                  // room's picks however the groups fall.
+                  ideas: {
+                    $sum: { $cond: [{ $ifNull: ["$suggestionKey", false] }, 1, 0] },
+                  },
                 },
               },
             ],
@@ -204,6 +209,7 @@ export default async function handler(
             },
             searches: countOfType("search_performed"),
             duets: { $sum: "$eventCounts.duets" },
+            ideas: { $sum: "$eventCounts.ideas" },
             errors: {
               $ifNull: [{ $arrayElemAt: ["$errorCount.total", 0] }, 0],
             },

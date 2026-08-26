@@ -316,6 +316,15 @@
   margin-bottom: 0.8rem;
 }
 
+.sectionHeading {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  margin-top: 0.4rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
 .cardNote {
   color: var(--text-secondary);
   font-size: 0.82rem;
@@ -512,6 +521,16 @@
   font-weight: 700;
   color: #c4b5fd;
   background: rgba(167, 139, 250, 0.12);
+  border-radius: 999px;
+  padding: 0.12rem 0.5rem;
+}
+
+/* Cyan, not mint: the fair-rotation chip sits beside it and is already mint. */
+.ideaChip {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #7dd3fc;
+  background: rgba(56, 189, 248, 0.14);
   border-radius: 999px;
   padding: 0.12rem 0.5rem;
 }
@@ -781,6 +800,11 @@
   background: rgba(167, 139, 250, 0.14);
 }
 
+.dsBadgeIdea {
+  color: #7dd3fc;
+  background: rgba(56, 189, 248, 0.14);
+}
+
 .dsBadgeError {
   color: #fca5a5;
   background: rgba(208, 59, 59, 0.16);
@@ -996,7 +1020,7 @@
   align-items: center;
 }
 
-.errorRoomChip {
+.roomJumpChip {
   font-family: var(--font-mono);
   font-size: 0.75rem;
   color: var(--text-secondary);
@@ -1006,7 +1030,7 @@
   padding: 0.2rem 0.55rem;
 }
 
-.errorRoomChip:hover {
+.roomJumpChip:hover {
   color: var(--text-primary);
   border-color: rgba(167, 139, 250, 0.5);
 }
@@ -1076,7 +1100,45 @@
   white-space: nowrap;
 }
 
+.pickRow {
+  display: grid;
+  grid-template-columns: 7.2rem auto 1fr auto;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.pickSong {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.pickTitle {
+  font-size: 0.82rem;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 @media (max-width: 640px) {
+  /* Flex, not a narrower grid: in a grid track the room chip stretches to the
+     width of the card and reads as a full-width button. */
+  .pickRow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.3rem 0.6rem;
+  }
+  .pickVerdict {
+    order: 2;
+    margin-left: auto;
+  }
+  .pickSong {
+    order: 3;
+    flex-basis: 100%;
+  }
   .recentErrorRow {
     grid-template-columns: auto auto;
   }

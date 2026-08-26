@@ -69,6 +69,7 @@ export interface AnalyticsData {
     byCategory: { _id: string; count: number }[];
     topSongs: { _id: { title: string; artist: string }; count: number }[];
     byDay: DayCount[];
+    picks?: CorpusPicksData;
   };
   funnel?: {
     windowDays: number;
@@ -136,6 +137,7 @@ export interface RoomRow {
   singWithMe: number;
   searches: number;
   duets: number;
+  ideas?: number;
   errors: number;
   participants: number;
   /** Most recent participant heartbeat; drives the "live" badge. */
@@ -218,7 +220,45 @@ export interface DossierSongRow {
   songTitle: string | null;
   videoId: string | null;
   via: string;
+  /** Only on via === 'ideas'. null when the corpus was never asked. */
+  fromCorpus?: boolean | null;
   singers?: number | null;
+  timestamp: string;
+}
+
+/** Ideas tapped *and* queued; suggestions.bySource counts the taps alone. */
+export interface CorpusPicksData {
+  total: number;
+  corpusServed: number;
+  searchFallback: number;
+  unattributed: number;
+  rooms: number;
+  byDay: DayCount[];
+  byCountry: { _id: string; count: number }[];
+  topSongs: CorpusPickSong[];
+  recent: CorpusPickRow[];
+}
+
+export interface CorpusPickSong {
+  key: string;
+  title: string;
+  artist: string | null;
+  packId: string | null;
+  categoryId: string | null;
+  count: number;
+  rooms: number;
+}
+
+export interface CorpusPickRow {
+  key: string;
+  title: string;
+  artist: string | null;
+  packId: string | null;
+  categoryId: string | null;
+  roomId: string;
+  country: string | null;
+  userName: string | null;
+  fromCorpus: boolean | null;
   timestamp: string;
 }
 

@@ -97,6 +97,14 @@ export default function RoomCard({
             value={boards}
             label="board activity (requests + sing-with-me posts, joins and queues)"
           />
+          {(room.ideas ?? 0) > 0 && (
+            <span
+              className={styles.ideaChip}
+              title={`${room.ideas} songs picked from the song ideas shelves`}
+            >
+              ideas ×{room.ideas}
+            </span>
+          )}
           {room.duets > 0 && (
             <span className={styles.duetChip} title={`${room.duets} duet or group adds`}>
               duet ×{room.duets}

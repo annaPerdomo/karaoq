@@ -6,6 +6,7 @@ import {
   formatTime,
   languageLabel,
   locationLabel,
+  pickTitle,
   songTitleLabel,
   SWM_LABELS,
   VIA_LABELS,
@@ -168,8 +169,13 @@ export function TimelineSection({
           </span>
           <span
             className={`${styles.dsBadge} ${
-              s.singers && s.singers >= 2 ? styles.dsBadgeDuet : ''
+              s.singers && s.singers >= 2
+                ? styles.dsBadgeDuet
+                : s.via === 'ideas'
+                  ? styles.dsBadgeIdea
+                  : ''
             }`}
+            title={pickTitle(s)}
           >
             {s.singers && s.singers >= 2
               ? `${VIA_LABELS[s.via] || s.via} · ${s.singers} singers`

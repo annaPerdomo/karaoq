@@ -6,13 +6,20 @@ import {
   buildSongsHistogram,
   median,
   resolveTimezone,
+  summarizeCorpusPicks,
   summarizeFunnel,
   summarizeLinkLookups,
+  type CorpusPickRow,
   type FunnelRoom,
   type LinkLookupRow,
 } from "../../../lib/analyticsStats";
+import { catalogEntry } from "../../../lib/suggestionCatalog";
 
 const FUNNEL_WINDOW_DAYS = 30;
+
+// What the picks panel draws — anything past these is payload nobody renders.
+const PICKS_WINDOW_DAYS = 30;
+const PICKS_MAX_COUNTRIES = 20;
 
 // Excluded from the geo roll-ups: these say how the YouTube API behaved, not
 // that a room happened somewhere, and the roomId "" ones would each count as a
@@ -84,6 +91,7 @@ export default async function handler(
       boardSuggested,
       boardClaimed,
       addsByVia,
+      corpusPickFacets,
       displaySaves,
       displayRoomsCustomized,
       displayFieldCounts,
@@ -396,11 +404,80 @@ export default async function handler(
       events.countDocuments({ type: "suggestion_claimed" }),
 
       // Events from before the via field are search adds, hence the $ifNull.
+      // A suggestionKey outranks via: a shelf pick posts as a search-shaped
+      // request, and telling the two apart is what this panel is for.
       events
         .aggregate([
           { $match: { type: "song_added" } },
-          { $group: { _id: { $ifNull: ["$via", "search"] }, count: { $sum: 1 } } },
+          {
+            $group: {
+              _id: {
+                $cond: [
+                  { $ifNull: ["$suggestionKey", false] },
+                  "ideas",
+                  { $ifNull: ["$via", "search"] },
+                ],
+              },
+              count: { $sum: 1 },
+            },
+          },
           { $sort: { count: -1 } },
+        ])
+        .toArray(),
+
+      // Every picks panel off one pass: as separate pipelines these were four
+      // walks of the same matched set, and four chances for them to disagree.
+      events
+        .aggregate([
+          { $match: { type: "song_added", suggestionKey: { $exists: true } } },
+          {
+            $facet: {
+              breakdown: [
+                {
+                  $group: {
+                    _id: {
+                      day: { $dateToString: dayKey },
+                      country: { $ifNull: ["$country", null] },
+                      fromCorpus: { $ifNull: ["$fromCorpus", null] },
+                    },
+                    count: { $sum: 1 },
+                  },
+                },
+              ],
+              // Counted in Mongo: a room-id set to union grows with adoption.
+              rooms: [{ $group: { _id: "$roomId" } }, { $count: "rooms" }],
+              // suggestions.topSongs ranks what got opened; this, what got sung.
+              topSongs: [
+                {
+                  $group: {
+                    _id: "$suggestionKey",
+                    count: { $sum: 1 },
+                    rooms: { $addToSet: "$roomId" },
+                  },
+                },
+                { $project: { count: 1, rooms: { $size: "$rooms" } } },
+                { $sort: { count: -1, rooms: -1 } },
+                { $limit: 15 },
+              ],
+              // Titles come from the catalog, not youtube_song_data, so a pick
+              // still reads as a song name after retention blanks the rest.
+              recent: [
+                { $sort: { timestamp: -1 } },
+                { $limit: 25 },
+                {
+                  $project: {
+                    _id: 0,
+                    roomId: 1,
+                    country: 1,
+                    userName: 1,
+                    timestamp: 1,
+                    suggestionKey: 1,
+                    fromCorpus: 1,
+                  },
+                },
+              ],
+            },
+          },
         ])
         .toArray(),
 
@@ -659,6 +736,33 @@ export default async function handler(
 
     const funnel = summarizeFunnel(funnelRooms as FunnelRoom[]);
 
+    const picks = corpusPickFacets[0] as {
+      breakdown: CorpusPickRow[];
+      rooms: { rooms: number }[];
+      topSongs: { _id: string; count: number; rooms: number }[];
+      recent: {
+        roomId: string;
+        country?: string;
+        userName?: string;
+        timestamp: Date;
+        suggestionKey: string;
+        fromCorpus?: boolean;
+      }[];
+    };
+
+    // A suggestionKey is a normalised search query, so a song since dropped
+    // from the catalog still reads as words rather than as a blank row.
+    const pickLabel = (key: string) => {
+      const entry = catalogEntry(key);
+      return {
+        key,
+        title: entry?.title ?? key,
+        artist: entry?.artist ?? null,
+        packId: entry?.packId ?? null,
+        categoryId: entry?.categoryId ?? null,
+      };
+    };
+
     res.status(200).json({
       overview: {
         totalRooms,
@@ -705,6 +809,26 @@ export default async function handler(
         byCategory: suggestionByCategory,
         topSongs: suggestionTopSongs,
         byDay: suggestionsByDay,
+        picks: {
+          ...summarizeCorpusPicks(picks.breakdown, {
+            days: PICKS_WINDOW_DAYS,
+            countries: PICKS_MAX_COUNTRIES,
+          }),
+          rooms: picks.rooms[0]?.rooms ?? 0,
+          topSongs: picks.topSongs.map((s) => ({
+            ...pickLabel(s._id),
+            count: s.count,
+            rooms: s.rooms,
+          })),
+          recent: picks.recent.map((p) => ({
+            ...pickLabel(p.suggestionKey),
+            roomId: p.roomId,
+            country: p.country ?? null,
+            userName: p.userName ?? null,
+            fromCorpus: typeof p.fromCorpus === "boolean" ? p.fromCorpus : null,
+            timestamp: p.timestamp,
+          })),
+        },
       },
       funnel: {
         windowDays: FUNNEL_WINDOW_DAYS,

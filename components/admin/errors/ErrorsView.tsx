@@ -99,7 +99,7 @@ export default function ErrorsView({
                     </span>
                     {r.roomId ? (
                       <button
-                        className={styles.errorRoomChip}
+                        className={styles.roomJumpChip}
                         onClick={() => onOpenRoom(r.roomId)}
                         title={`Open ${r.roomId} in the Rooms view — its timeline shows this error in context`}
                       >

@@ -82,11 +82,23 @@ export interface RoomDetailData {
 }
 
 export const VIA_LABELS: Record<string, string> = {
+  ideas: 'Ideas',
   search: 'Search',
   paste: 'Link',
   board_claim: 'Request',
   singwithme: 'Sing With Me',
 };
+
+export function pickTitle(s: {
+  via: string;
+  fromCorpus?: boolean | null;
+}): string | undefined {
+  if (s.via !== 'ideas') return undefined;
+  if (s.fromCorpus === true) return 'Picked from the shelves — served by the corpus';
+  if (s.fromCorpus === false)
+    return 'Picked from the shelves — the corpus couldn’t answer, so it spent a live search';
+  return 'Picked from the shelves (the corpus was never asked)';
+}
 
 export const SWM_LABELS: Record<string, string> = {
   posted: 'Posted',

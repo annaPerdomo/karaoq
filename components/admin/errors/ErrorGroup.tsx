@@ -59,7 +59,7 @@ export default function ErrorGroup({
               {group.rooms.map((roomId) => (
                 <button
                   key={roomId}
-                  className={styles.errorRoomChip}
+                  className={styles.roomJumpChip}
                   onClick={() => onOpenRoom(roomId)}
                   title={`Open ${roomId} in the Rooms view`}
                 >

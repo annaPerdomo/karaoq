@@ -25,7 +25,21 @@ export const SECTION_LABELS: Record<string, string> = {
   opm: '🇵🇭 OPM',
 };
 
+// The language packs, keyed the way lib/suggestionCatalog keys an entry (pack
+// id — not the section id SECTION_LABELS above is keyed by).
+export const PACK_LABELS: Record<string, string> = {
+  core: 'Core sections',
+  br: '🇧🇷 Brasil',
+  cz: '🇨🇿 Česky',
+  de: '🇩🇪 Deutsch',
+  fr: '🇫🇷 Français',
+  id: '🇮🇩 Indonesia',
+  in: '🇮🇳 Bollywood',
+  ph: '🇵🇭 OPM',
+};
+
 export const VIA_LABELS: Record<string, string> = {
+  ideas: 'Song ideas',
   search: 'Search',
   paste: 'Pasted link',
   board_claim: 'Request board',

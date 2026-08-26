@@ -177,7 +177,10 @@ async function handleGet(
           userName: e.userName ?? null,
           songTitle: titleOf(e),
           videoId: videoIdOf(e),
-          via: e.via ?? "search",
+          // Same rule as the dashboard's adds-by-source split, which this has
+          // to agree with: a shelf pick beats the "search" its POST looks like.
+          via: e.suggestionKey ? "ideas" : e.via ?? "search",
+          fromCorpus: typeof e.fromCorpus === "boolean" ? e.fromCorpus : null,
           singers: typeof e.singers === "number" ? e.singers : null,
           timestamp: e.timestamp,
         });

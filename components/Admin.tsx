@@ -152,7 +152,9 @@ const Admin = (): React.ReactElement => {
           onOpenRoom={openRoom}
         />
       )}
-      {view === 'suggestions' && <SuggestionsView data={data} />}
+      {view === 'suggestions' && (
+        <SuggestionsView data={data} onOpenRoom={openRoom} />
+      )}
       {view === 'pulse' && <PulseView data={data} />}
       {view === 'feedback' && (
         <FeedbackView secret={secret} onUnhandledChange={setFeedbackUnhandled} />

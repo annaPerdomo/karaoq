@@ -116,3 +116,73 @@ export function summarizeLinkLookups(rows: LinkLookupRow[]): LinkLookupSummary {
     );
   return { total, bySrc: toSorted(bySrc), byOutcome: toSorted(byOutcome) };
 }
+
+export interface CorpusPickRow {
+  _id: {
+    day: string;
+    country?: string | null;
+    fromCorpus?: boolean | null;
+  };
+  count: number;
+}
+
+export interface CorpusPickSummary {
+  total: number;
+  corpusServed: number;
+  searchFallback: number;
+  /** Picks the corpus was never asked to fill. */
+  unattributed: number;
+  byDay: { _id: string; count: number }[];
+  byCountry: { _id: string; count: number }[];
+}
+
+/** One (day × country × served-by) aggregation folded into every breakdown, so
+ * they can't disagree. `days`/`countries` trim the series, never the totals. */
+export function summarizeCorpusPicks(
+  rows: CorpusPickRow[],
+  { days, countries }: { days?: number; countries?: number } = {}
+): CorpusPickSummary {
+  const byDay = new Map<string, number>();
+  const byCountry = new Map<string, number>();
+  let total = 0;
+  let corpusServed = 0;
+  let searchFallback = 0;
+  let unattributed = 0;
+  for (const row of rows) {
+    const count = row.count ?? 0;
+    total += count;
+    if (row._id?.fromCorpus === true) corpusServed += count;
+    else if (row._id?.fromCorpus === false) searchFallback += count;
+    else unattributed += count;
+    const day = row._id?.day;
+    if (day) byDay.set(day, (byDay.get(day) ?? 0) + count);
+    const country = row._id?.country || "Unknown";
+    byCountry.set(country, (byCountry.get(country) ?? 0) + count);
+  }
+  return {
+    total,
+    corpusServed,
+    searchFallback,
+    unattributed,
+    byDay: takeLast(
+      Array.from(byDay, ([_id, count]) => ({ _id, count })).sort((a, b) =>
+        a._id < b._id ? -1 : 1
+      ),
+      days
+    ),
+    byCountry: take(
+      Array.from(byCountry, ([_id, count]) => ({ _id, count })).sort(
+        (a, b) => b.count - a.count
+      ),
+      countries
+    ),
+  };
+}
+
+function take<T>(rows: T[], limit?: number): T[] {
+  return limit === undefined ? rows : rows.slice(0, limit);
+}
+
+function takeLast<T>(rows: T[], limit?: number): T[] {
+  return limit === undefined ? rows : rows.slice(-limit);
+}

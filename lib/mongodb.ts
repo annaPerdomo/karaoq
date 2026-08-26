@@ -607,6 +607,12 @@ function ensureAnalyticsIndexes(db: Db): void {
       // The landing page's country roll-up groups every event by country; on a
       // collection this size that has to be an index scan, not a table scan.
       db.collection("analytics_events").createIndex({ country: 1 }),
+      // Shelf picks are a thin slice of song_added, so {type, timestamp} still
+      // fetches every add to find them. Partial: one entry per pick, not per event.
+      db.collection("analytics_events").createIndex(
+        { suggestionKey: 1, timestamp: -1 },
+        { partialFilterExpression: { suggestionKey: { $exists: true } } }
+      ),
       db.collection("analytics_sessions").createIndex({ sessionKey: 1 }),
       db.collection("analytics_sessions").createIndex({ roomId: 1, role: 1 }),
       db.collection("analytics_events").createIndex(
