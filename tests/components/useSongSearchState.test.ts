@@ -328,6 +328,7 @@ describe("useSongSearchState — serving taps from the corpus", () => {
     expect(mockSearchYoutube).not.toHaveBeenCalled();
     expect(result.current.resultsVia).toBe("search");
     expect(result.current.resultsSuggestionKey).toBe(TAP_KEY);
+    expect(result.current.resultsFromCorpus).toBe(true);
     expect(result.current.searchError).toBeNull();
     expect(result.current.searching).toBe(false);
   });
@@ -358,6 +359,7 @@ describe("useSongSearchState — serving taps from the corpus", () => {
     await waitFor(() => expect(mockSearchYoutube).toHaveBeenCalledTimes(1));
     expect(result.current.results[0].videoId).toBe("live");
     expect(result.current.resultsSuggestionKey).toBe(TAP_KEY);
+    expect(result.current.resultsFromCorpus).toBe(false);
     expect(result.current.searchError).toBeNull();
   });
 
@@ -386,6 +388,9 @@ describe("useSongSearchState — serving taps from the corpus", () => {
     await waitFor(() => expect(mockSearchYoutube).toHaveBeenCalledTimes(1));
     expect(mockSuggestionCuts).not.toHaveBeenCalled();
     expect(result.current.resultsSuggestionKey).toBe(TAP_KEY);
+    // Null, not false: never asked, so it can't be recorded as having failed —
+    // the dashboard would read that as a gap in the corpus.
+    expect(result.current.resultsFromCorpus).toBeNull();
   });
 
   it("leaves a typed search on the search path", async () => {
@@ -395,6 +400,7 @@ describe("useSongSearchState — serving taps from the corpus", () => {
 
     await waitFor(() => expect(mockSearchYoutube).toHaveBeenCalledTimes(1));
     expect(mockSuggestionCuts).not.toHaveBeenCalled();
+    expect(result.current.resultsFromCorpus).toBeNull();
   });
 
   it("doesn't strand the spinner or buy a search when a tap is aborted", async () => {

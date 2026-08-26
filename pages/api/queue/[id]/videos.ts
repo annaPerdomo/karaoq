@@ -41,6 +41,7 @@ export default async function handler(
     durationSeconds?: unknown;
     via?: unknown;
     suggestionKey?: unknown;
+    fromCorpus?: unknown;
   };
   try {
     const parsed = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
@@ -74,6 +75,12 @@ export default async function handler(
     body.suggestionKey.length <= MAX_TITLE_LENGTH &&
     catalogEntry(body.suggestionKey)
       ? body.suggestionKey
+      : undefined;
+  // Only beside a key it belongs to, and never coerced: on its own the flag
+  // would claim a free-text search came from the corpus.
+  const fromCorpus =
+    suggestionKey && typeof body.fromCorpus === "boolean"
+      ? body.fromCorpus
       : undefined;
 
   // Stamped server-side, never taken from the body: queue time decides the running order, so a
@@ -166,6 +173,7 @@ export default async function handler(
         videoId,
         via,
         ...(suggestionKey ? { suggestionKey } : {}),
+        ...(fromCorpus !== undefined ? { fromCorpus } : {}),
         singers: singerKeys(userName).length,
       });
       res.status(200).json({ code: 200, message: "Song added." });

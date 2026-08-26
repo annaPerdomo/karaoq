@@ -57,6 +57,9 @@ export function useSongSearchState({ roomId, role }: UseSongSearchStateArgs) {
   const [resultsSuggestionKey, setResultsSuggestionKey] = React.useState<string | null>(
     null
   );
+  const [resultsFromCorpus, setResultsFromCorpus] = React.useState<boolean | null>(
+    null
+  );
   const [filters, setFilters] = React.useState<SearchFilters>({
     duration: 'any',
     sortBy: 'relevance',
@@ -126,17 +129,30 @@ export function useSongSearchState({ roomId, role }: UseSongSearchStateArgs) {
       activeFilters.duration === 'any' &&
       activeFilters.sortBy === 'relevance';
     // An aborted tap must not start a search nobody is waiting for.
-    const fetching = resolvable
-      ? suggestionCuts(suggestionKey, controller.signal).catch((err) => {
-          if (err?.name === 'AbortError' || controller.signal.aborted) throw err;
-          return searchYoutube(query, activeFilters, controller.signal, roomId);
-        })
-      : searchYoutube(query, activeFilters, controller.signal, roomId);
+    // Which branch answered rides along with the results. Only a tap the corpus
+    // was actually asked votes — an unresolvable one reports null, not false.
+    const fetching: Promise<{ res: YoutubeResult[]; corpus: boolean | null }> =
+      resolvable
+        ? suggestionCuts(suggestionKey, controller.signal)
+            .then((res) => ({ res, corpus: true as boolean | null }))
+            .catch((err) => {
+              if (err?.name === 'AbortError' || controller.signal.aborted) throw err;
+              return searchYoutube(
+                query,
+                activeFilters,
+                controller.signal,
+                roomId
+              ).then((res) => ({ res, corpus: false as boolean | null }));
+            })
+        : searchYoutube(query, activeFilters, controller.signal, roomId).then(
+            (res) => ({ res, corpus: null })
+          );
     fetching
-      .then((res) => {
+      .then(({ res, corpus }) => {
         setResults(res);
         setResultsVia('search');
         setResultsSuggestionKey(suggestionKey);
+        setResultsFromCorpus(corpus);
         setVisibleCount(INITIAL_RESULTS);
       })
       .catch((err) => {
@@ -173,6 +189,7 @@ export function useSongSearchState({ roomId, role }: UseSongSearchStateArgs) {
         setResults([result]);
         setResultsVia('paste');
         setResultsSuggestionKey(null);
+        setResultsFromCorpus(null);
         setVisibleCount(INITIAL_RESULTS);
       })
       .catch((err) => {
@@ -323,6 +340,7 @@ export function useSongSearchState({ roomId, role }: UseSongSearchStateArgs) {
     lookupMode,
     resultsVia,
     resultsSuggestionKey,
+    resultsFromCorpus,
     karaokeMode,
     filters,
     runSearch,

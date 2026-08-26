@@ -126,6 +126,39 @@ describe("Client API wrappers", () => {
       const [, options] = mockFetch.mock.calls[0];
       expect(JSON.parse(options.body).via).toBe("paste");
     });
+
+    it("sends fromCorpus alongside the key it belongs to", async () => {
+      mockFetch.mockResolvedValue({ ok: true });
+      const { default: postEntryToQueue } = await import("../../app/queue/postEntryToQueue");
+
+      await postEntryToQueue(
+        "ROOM1",
+        { id: "entry-1", userName: "Anna", videoId: "dQw4w9WgXcQ", songTitle: "Song" },
+        "search",
+        "abba dancing queen karaoke",
+        false
+      );
+
+      const [, options] = mockFetch.mock.calls[0];
+      // false has to travel: absent is how an add from an older build reads.
+      expect(JSON.parse(options.body).fromCorpus).toBe(false);
+    });
+
+    it("omits fromCorpus when there is no suggestion key", async () => {
+      mockFetch.mockResolvedValue({ ok: true });
+      const { default: postEntryToQueue } = await import("../../app/queue/postEntryToQueue");
+
+      await postEntryToQueue(
+        "ROOM1",
+        { id: "entry-1", userName: "Anna", videoId: "dQw4w9WgXcQ", songTitle: "Song" },
+        "search",
+        undefined,
+        true
+      );
+
+      const [, options] = mockFetch.mock.calls[0];
+      expect(JSON.parse(options.body)).not.toHaveProperty("fromCorpus");
+    });
   });
 
   describe("updatePosition", () => {

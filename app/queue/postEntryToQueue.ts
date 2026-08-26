@@ -6,7 +6,8 @@ export default async function postEntryToQueue(
   via?: "search" | "paste",
   /** Set when these results came from tapping a catalogued suggestion: the
    *  corpus learns which cut singers queue from it. */
-  suggestionKey?: string
+  suggestionKey?: string,
+  fromCorpus?: boolean
 ): Promise<boolean> {
   try {
     const resp = await fetch(`/api/queue/${roomId}/videos`, {
@@ -20,6 +21,7 @@ export default async function postEntryToQueue(
         durationSeconds: entry.durationSeconds,
         ...(via ? { via } : {}),
         ...(suggestionKey ? { suggestionKey } : {}),
+        ...(suggestionKey && typeof fromCorpus === "boolean" ? { fromCorpus } : {}),
       }),
     });
     return resp.ok;

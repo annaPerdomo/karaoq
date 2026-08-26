@@ -492,6 +492,55 @@ describe("POST /api/queue/[id]/videos - Add song to queue", () => {
     });
   });
 
+  describe("corpus attribution", () => {
+    async function addWith(body: Record<string, unknown>): Promise<unknown> {
+      const room: Room = { id: "ROOM1", queue: [], activeVideoIndex: 0, isPlaying: false };
+      mockCollection.findOne.mockResolvedValue(room);
+      mockCollection.updateOne.mockResolvedValue({ matchedCount: 1, modifiedCount: 1 });
+      // Per call, not per test: a second add would otherwise read the first
+      // one's event back and pass whatever the handler did.
+      mockCollection.insertOne.mockClear();
+
+      const req = createMockReq({
+        method: "POST",
+        query: { id: "ROOM1" },
+        body: {
+          entryId: "entry-1",
+          userName: "Anna",
+          videoId: "dQw4w9WgXcQ",
+          songTitle: "Dancing Queen",
+          ...body,
+        },
+      });
+      await handler(req, createRes());
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      return mockCollection.insertOne.mock.calls[0][0].fromCorpus;
+    }
+
+    it("records that the corpus served the pick", async () => {
+      const key = Array.from(suggestionCatalog().keys())[0];
+
+      expect(await addWith({ suggestionKey: key, fromCorpus: true })).toBe(true);
+    });
+
+    it("records a pick the corpus couldn't serve", async () => {
+      const key = Array.from(suggestionCatalog().keys())[0];
+
+      expect(await addWith({ suggestionKey: key, fromCorpus: false })).toBe(false);
+    });
+
+    it("ignores the flag on an add with no catalog key", async () => {
+      expect(await addWith({ fromCorpus: true })).toBeUndefined();
+      expect(await addWith({ suggestionKey: "not a song", fromCorpus: true })).toBeUndefined();
+    });
+
+    it("leaves a non-boolean flag absent rather than coercing it", async () => {
+      const key = Array.from(suggestionCatalog().keys())[0];
+
+      expect(await addWith({ suggestionKey: key, fromCorpus: "yes" })).toBeUndefined();
+    });
+  });
+
   describe("corpus feed", () => {
     function startAdd(
       headers: Record<string, string>,

@@ -45,6 +45,10 @@ export interface AnalyticsEvent {
   categoryId?: string;
   // Our own key, not a YouTube field, so it doesn't expire at 30 days.
   suggestionKey?: string;
+  // song_added, on an idea pick only: true when our corpus served the cuts,
+  // false when it was asked and couldn't. Absent means it was never asked —
+  // a filtered tap, or an add from before the field existed.
+  fromCorpus?: boolean;
   // Absent on events from before this field existed, which were all search adds.
   // "paste" is newer than "search": pastes before it shipped are in the search bucket.
   via?: "search" | "paste" | "board_claim" | "singwithme";
