@@ -68,6 +68,8 @@ export interface AnalyticsEvent {
   // is YouTube's short-window ceiling, which clears in seconds and must not be
   // read as an outage; "rate_limited" is our own per-IP limiter (lib/limits).
   failReason?: "quota" | "upstream" | "rate_limited" | "youtube_busy";
+  // …and what YouTube said. Absent on our own rate-limiting, and on older events.
+  failDetail?: string;
   // …and whether the cache covered for it. roomId is the room whose singer was
   // searching, or "" from clients predating the field — and either way the
   // failure is the API's, not the room's, so geo roll-ups must exclude these.

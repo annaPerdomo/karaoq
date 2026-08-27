@@ -45,6 +45,18 @@ export default function SearchHealthCard({
               ariaLabel="Failed searches per day, last 30 days"
             />
           </div>
+          {health.details && health.details.length > 0 && (
+            <details className={styles.rawDetails}>
+              <summary>What YouTube said</summary>
+              <ul className={styles.rawDetailList}>
+                {health.details.map((d) => (
+                  <li key={d._id} className={styles.rawDetailItem}>
+                    <span className={styles.rawDetailCount}>{d.count}×</span> {d._id}
+                  </li>
+                ))}
+              </ul>
+            </details>
+          )}
         </>
       )}
       {links && (

@@ -336,6 +336,43 @@
   margin-top: 0.9rem;
 }
 
+/* Verbatim upstream error text. Monospaced and scrollable rather than wrapped:
+   these are long single-line strings and the exact wording is the point. */
+.rawDetails {
+  margin-top: 0.9rem;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+.rawDetails summary {
+  cursor: pointer;
+  color: var(--text-muted);
+}
+
+.rawDetailList {
+  list-style: none;
+  margin: 0.6rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.rawDetailItem {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  line-height: 1.45;
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 7px;
+  padding: 0.4rem 0.55rem;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.rawDetailCount {
+  color: var(--text-muted);
+}
+
 .cardPair {
   display: grid;
   grid-template-columns: 1fr 1fr;

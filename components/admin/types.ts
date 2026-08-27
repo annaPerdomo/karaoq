@@ -116,6 +116,9 @@ export interface SearchHealthData {
   byDay: DayCount[];
   totals: { _id: { failReason?: string; searchOutcome?: string }; count: number }[];
   last24h: number;
+  /** Verbatim from YouTube, newest first — `totals` above is our reading of the
+   *  same errors. Absent on payloads predating the field. */
+  details?: { _id: string; count: number; lastSeen: string }[];
 }
 
 /** Pasted-link usage over 30 days. */

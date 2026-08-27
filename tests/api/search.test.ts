@@ -905,3 +905,31 @@ describe("riding out a burst ceiling", () => {
     expect(searchCalls()).toBe(1);
   });
 });
+
+describe("recording what YouTube said", () => {
+  it("reads a spent day out of the message, and records the message", async () => {
+    fetchMock.mockImplementation(async () =>
+      jsonResponse(
+        {
+          error: {
+            status: "RESOURCE_EXHAUSTED",
+            message:
+              "Quota exceeded for quota metric 'Queries' and limit 'Queries per day' of service 'youtube.googleapis.com'.",
+          },
+        },
+        false,
+        429
+      )
+    );
+
+    const res = createRes();
+    await handler(createMockReq({ query: { q: "test" } }), res);
+
+    const body = res.getBody() as { reason: string; resetsAt?: string };
+    expect(body.reason).toBe("quota");
+    expect(body.resetsAt).toBeTruthy();
+    expect(sendQuotaAlertMock).toHaveBeenCalled();
+    expect(failureEvent()).toMatchObject({ failReason: "quota" });
+    expect(String(failureEvent()?.failDetail)).toContain("Queries per day");
+  });
+});

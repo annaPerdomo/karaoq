@@ -111,6 +111,7 @@ export default async function handler(
       searchFailuresByDay,
       searchFailureTotals,
       searchFailuresLast24h,
+      searchFailureDetails,
       linkLookupRows,
       activityGrid,
     ] = await Promise.all([
@@ -670,6 +671,27 @@ export default async function handler(
         timestamp: { $gte: dayAgo },
       }),
 
+      events
+        .aggregate([
+          {
+            $match: {
+              type: "search_failed",
+              timestamp: { $gte: thirtyDaysAgo },
+              failDetail: { $type: "string" },
+            },
+          },
+          {
+            $group: {
+              _id: "$failDetail",
+              count: { $sum: 1 },
+              lastSeen: { $max: "$timestamp" },
+            },
+          },
+          { $sort: { lastSeen: -1 } },
+          { $limit: 6 },
+        ])
+        .toArray(),
+
       // Grouped on both fields at once so summarizeLinkLookups can derive the
       // total and both breakdowns from this one 30-day scan.
       events
@@ -878,6 +900,7 @@ export default async function handler(
         byDay: searchFailuresByDay,
         totals: searchFailureTotals,
         last24h: searchFailuresLast24h,
+        details: searchFailureDetails,
       },
       linkLookups: summarizeLinkLookups(linkLookupRows as LinkLookupRow[]),
       meta: {

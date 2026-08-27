@@ -191,6 +191,7 @@ export default async function handler(
       : limit === "burst"
         ? "youtube_busy"
         : "upstream";
+    const failDetail = e instanceof YoutubeApiError ? e.detail : undefined;
 
     // Ahead of the stale-fallback return, so the day the cache quietly covers
     // for a spent quota still pages someone. Never throws.
@@ -200,6 +201,7 @@ export default async function handler(
       await trackEvent(req, "search_failed", {
         roomId,
         failReason,
+        failDetail,
         searchOutcome: "stale",
       });
       res.setHeader("x-karaoq-search-cache", "stale");
@@ -210,6 +212,7 @@ export default async function handler(
     await trackEvent(req, "search_failed", {
       roomId,
       failReason,
+      failDetail,
       searchOutcome: "error",
     });
 
