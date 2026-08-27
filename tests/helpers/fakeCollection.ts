@@ -98,13 +98,22 @@ function compare(a: unknown, b: unknown): number {
   return (x as any) < (y as any) ? -1 : 1;
 }
 
-/** "$field" reads the doc, { $size: "$field" } counts it, anything else is a
- *  literal. */
+/** "$field" reads the doc, { $size: "$field" } counts it, { $ifNull: [a, b] }
+ *  defaults it, anything else is a literal. */
 function exprValue(doc: Doc, node: any): any {
   if (typeof node === "string" && node.charAt(0) === "$") return readPath(doc, node.slice(1));
+  if (node && typeof node === "object" && "$ifNull" in node) {
+    const [held, fallback] = node.$ifNull as [unknown, unknown];
+    const value = exprValue(doc, held);
+    return value === undefined || value === null ? exprValue(doc, fallback) : value;
+  }
   if (node && typeof node === "object" && "$size" in node) {
     const held = exprValue(doc, node.$size);
-    return Array.isArray(held) ? held.length : 0;
+    // Mongo errors on a $size over a missing field; a guard that means to
+    // tolerate one wraps it in $ifNull, so reaching here with a non-array is
+    // the test's bug and not something to paper over.
+    if (!Array.isArray(held)) throw new Error("$size over a non-array");
+    return held.length;
   }
   return node;
 }

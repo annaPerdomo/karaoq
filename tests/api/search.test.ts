@@ -35,6 +35,11 @@ vi.mock("../../lib/analytics", () => ({
   extractGeo: () => ({ country: "PH", region: "Central Visayas", city: "Cebu City" }),
 }));
 
+const recordDemandMock = vi.fn(async (..._args: unknown[]) => {});
+vi.mock("../../lib/searchDemand", () => ({
+  recordSearchDemand: (...args: unknown[]) => recordDemandMock(...args),
+}));
+
 const recordSearchResultsMock = vi.fn(async (..._args: unknown[]) => ({
   videosUpserted: 0,
   cutsAdded: 0,
@@ -57,6 +62,11 @@ vi.mock("../../lib/alerts", () => ({
   sendQuotaAlertOnce: (...args: unknown[]) => sendQuotaAlertMock(...args),
 }));
 
+function demandWrite(): Record<string, unknown> | null {
+  const call = recordDemandMock.mock.calls[0];
+  return call ? (call[0] as Record<string, unknown>) : null;
+}
+
 function failureEvent(): Record<string, unknown> | null {
   const call = trackEventMock.mock.calls.find((args) => args[1] === "search_failed");
   return call ? (call[2] as Record<string, unknown>) : null;
@@ -69,6 +79,10 @@ process.env.YOUTUBE_API_KEY = "test-key";
 import handler from "../../pages/api/search";
 import { SONG_SECTIONS, buildSongQuery } from "../../app/queue/songSuggestions";
 import { buildSearchQuery, searchCacheKey } from "../../lib/searchQuery";
+
+/** What lib/searchDemand keys a query on; inlined because that module is
+ *  mocked here. */
+const demandKey = (q: string) => searchCacheKey(buildSearchQuery(q, true));
 
 function createRes() {
   let statusCode = 200;
@@ -940,6 +954,137 @@ describe("recording what YouTube said", () => {
     expect(sendQuotaAlertMock).toHaveBeenCalled();
     expect(failureEvent()).toMatchObject({ failReason: "quota" });
     expect(String(failureEvent()?.failDetail)).toContain("Queries per day");
+  });
+});
+
+describe("search demand ledger", () => {
+  const quotaFailure = () =>
+    jsonResponse(
+      { error: { message: "Quota exceeded", errors: [{ reason: "quotaExceeded" }] } },
+      false,
+      403
+    );
+
+  const freshCache = (results: unknown[]) => ({
+    key: "k",
+    results,
+    createdAt: new Date(),
+  });
+
+  it("counts a cache hit as a song wanted, not as one paid for", async () => {
+    mockCollection.findOne.mockResolvedValue(
+      freshCache([{ title: "Cached", thumbnailUrl: "t", videoId: "c1" }])
+    );
+
+    const res = createRes();
+    await handler(
+      createMockReq({ query: { q: "abba dancing queen karaoke", roomId: "abc12" } }),
+      res
+    );
+
+    expect(res.getHeader("x-karaoq-search-cache")).toBe("fresh");
+    expect(demandWrite()).toMatchObject({
+      query: "abba dancing queen karaoke",
+      roomId: "ABC12",
+      country: "PH",
+      outcome: "served",
+    });
+  });
+
+  it("counts a live search as one of the day's hundred", async () => {
+    fetchMock.mockImplementation(async () =>
+      jsonResponse(searchItems(["v1"]))
+    );
+
+    const res = createRes();
+    await handler(createMockReq({ query: { q: "the agadiers mag dungan ta" } }), res);
+
+    expect(res.getStatus()).toBe(200);
+    expect(demandWrite()).toMatchObject({ outcome: "spent" });
+  });
+
+  it("counts a corpus rescue apart from a search that answered", async () => {
+    fetchMock.mockImplementation(async () => quotaFailure());
+    readSongCutsMock.mockResolvedValue([
+      { title: "A cut", thumbnailUrl: "t", videoId: "c1" },
+    ]);
+
+    const res = createRes();
+    await handler(createMockReq({ query: { q: "abba dancing queen karaoke" } }), res);
+
+    expect(res.getHeader("x-karaoq-search-cache")).toBe("corpus");
+    expect(demandWrite()).toMatchObject({ outcome: "corpus" });
+  });
+
+  it("counts an aging cache covering for a spent quota as stale", async () => {
+    mockCollection.findOne.mockResolvedValue({
+      key: "k",
+      results: [{ title: "Stale", thumbnailUrl: "t", videoId: "old" }],
+      createdAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000),
+    });
+    fetchMock.mockImplementation(async () => quotaFailure());
+
+    const res = createRes();
+    await handler(createMockReq({ query: { q: "q" } }), res);
+
+    expect(res.getStatus()).toBe(200);
+    expect(demandWrite()).toMatchObject({ outcome: "stale" });
+  });
+
+  it("counts a singer who got nothing as unmet demand", async () => {
+    fetchMock.mockImplementation(async () => quotaFailure());
+
+    const res = createRes();
+    await handler(createMockReq({ query: { q: "unheld song" } }), res);
+
+    expect(res.getStatus()).toBe(503);
+    expect(demandWrite()).toMatchObject({ outcome: "error" });
+  });
+
+  it("counts nothing for a search we refused to run", async () => {
+    // A row is keyed on the query, so counting rejections would let someone
+    // holding the limiter down mint a document per request with a fresh string
+    // each time — and a search we never made says nothing about the song.
+    rateLimitMock.mockReturnValue(false);
+
+    const res = createRes();
+    await handler(createMockReq({ query: { q: "some song" } }), res);
+
+    expect(res.getStatus()).toBe(429);
+    expect(recordDemandMock).not.toHaveBeenCalled();
+  });
+
+  it("writes exactly once per search, whatever the exit", async () => {
+    fetchMock.mockImplementation(async () => jsonResponse(searchItems(["v1"])));
+
+    const res = createRes();
+    await handler(createMockReq({ query: { q: "one song" } }), res);
+
+    expect(recordDemandMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("folds a search made with karaoke mode off onto the same song", async () => {
+    const song = SONG_SECTIONS[0].categories[0].songs[0];
+    const bare = buildSongQuery(song);
+    fetchMock.mockImplementation(async () => jsonResponse(searchItems(["v1"])));
+
+    const res = createRes();
+    await handler(createMockReq({ query: { q: bare } }), res);
+    const off = demandWrite()?.query as string;
+
+    recordDemandMock.mockClear();
+    mockCollection.findOne.mockResolvedValue(null);
+    await handler(
+      createMockReq({ query: { q: buildSearchQuery(bare, true) } }),
+      createRes()
+    );
+    const on = demandWrite()?.query as string;
+
+    // Two different queries, one song: the ledger keys both on the karaoke-mode
+    // form, which is the _id karaoke_songs files that song under.
+    expect(off).not.toBe(on);
+    expect(demandKey(off)).toBe(demandKey(on));
+    expect(demandKey(on)).toBe(searchCacheKey(buildSearchQuery(bare, true)));
   });
 });
 

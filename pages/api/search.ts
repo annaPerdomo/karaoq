@@ -8,7 +8,11 @@ import { bankSearchEvidence, recordSearchResults } from "../../lib/songCorpus";
 import { readSongCuts } from "../../lib/corpusRead";
 import { MAX_ENTRY_ID_LENGTH, markRateLimitNotified, rateLimit } from "../../lib/limits";
 import { normalizeRoomId } from "../../lib/roomCode";
-import { extractGeo, trackEvent } from "../../lib/analytics";
+import { extractGeo, isAnalyticsExempt, trackEvent } from "../../lib/analytics";
+import {
+  recordSearchDemand,
+  type SearchDemandOutcome,
+} from "../../lib/searchDemand";
 import { sendQuotaAlertOnce } from "../../lib/alerts";
 import { quotaResetsAt } from "../../lib/pacificTime";
 import {
@@ -100,7 +104,17 @@ export default async function handler(
   const queryKey = searchCacheKey(normalizedQ);
   const cacheKey = `${cacheEntryKey(queryKey, normalizedQ)}|${duration}|${sortBy}`;
 
+  // Counted on every exit below, not only the failures: a query the cache
+  // answered for free is still a song this room wanted.
+  //
+  // Awaited after the response, as the corpus writes below are and for the same
+  // reason: a dropped promise dies with the frozen instance.
   const country = extractGeo(req).country;
+  const exempt = isAnalyticsExempt(req);
+  const noteDemand = (outcome: SearchDemandOutcome): Promise<void> =>
+    exempt
+      ? Promise.resolve()
+      : recordSearchDemand({ query: normalizedQ, roomId, country, outcome });
 
   let cached = await readCache(cacheKey);
 
@@ -123,6 +137,7 @@ export default async function handler(
   if (cached && cached.ageMs < FRESH_CACHE_MS) {
     res.setHeader("x-karaoq-search-cache", "fresh");
     res.status(200).json(cached.results);
+    await noteDemand("served");
     return;
   }
 
@@ -138,6 +153,7 @@ export default async function handler(
       const results = await pending;
       res.setHeader("x-karaoq-search-cache", "coalesced");
       res.status(200).json(results);
+      await noteDemand("served");
       return;
     } catch {
       // The leader's own error path did the tracking; fall through and run the
@@ -151,6 +167,7 @@ export default async function handler(
     if (staleFallback) {
       res.setHeader("x-karaoq-search-cache", "stale");
       res.status(200).json(staleFallback);
+      await noteDemand("stale");
       return;
     }
     // Guarded so holding the limiter down can't fill the free tier with
@@ -164,6 +181,8 @@ export default async function handler(
         searchOutcome: "error",
       });
     }
+    // Not counted, for the reason the trackEvent above is guarded: a row is keyed
+    // on the query, so a fresh string per rejection is a document per rejection.
     res.status(429).json({ code: 429, message: "Too many searches, slow down." });
     return;
   }
@@ -175,6 +194,7 @@ export default async function handler(
     writeCache(cacheKey, results);
     res.setHeader("x-karaoq-search-cache", "miss");
     res.status(200).json(results);
+    await noteDemand("spent");
     // Billed only on success, and to the same ledger the cron draws from, so
     // "what did today actually cost" is one number rather than two half-views.
     // It is what lets the nightly run see how much of the day rooms have
@@ -219,6 +239,7 @@ export default async function handler(
       });
       res.setHeader("x-karaoq-search-cache", "stale");
       res.status(200).json(staleFallback);
+      await noteDemand("stale");
       return;
     }
 
@@ -235,6 +256,7 @@ export default async function handler(
         });
         res.setHeader("x-karaoq-search-cache", "corpus");
         res.status(200).json(cuts);
+        await noteDemand("corpus");
         return;
       }
     }
@@ -245,6 +267,12 @@ export default async function handler(
       failDetail,
       searchOutcome: "error",
     });
+    // Ahead of the three responses below rather than after each: from here on
+    // every exit is the singer getting nothing. The one ledger write that runs
+    // before its response, deliberately — on a quota-out day every request lands
+    // here, and a promise dropped into a freezing instance would lose the day.
+    await noteDemand("error");
+
     if (dailyOut) {
       res.status(503).json({
         code: 503,

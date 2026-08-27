@@ -477,6 +477,70 @@ export async function getSongProposalsCollection(): Promise<
   return db.collection<SongProposalDoc>("song_proposals");
 }
 
+// What rooms type into the search box. Counts, never a transcript: nothing here
+// records who searched, and a query nobody repeats in 90 days deletes itself.
+const SEARCH_DEMAND_TTL_SECONDS = 90 * 24 * 60 * 60;
+
+export interface SearchDemandDoc {
+  /** searchCacheKey(normalizeSearchQuery(q)) — identical to a karaoke_songs._id
+   *  when we hold the song, which is what makes the join free. */
+  _id: string;
+  /** The last text seen folding to this key: the key itself has lost the script
+   *  and accents that made it readable. */
+  label: string;
+  /** proposalSignature() of the key's tokens, so "abba dancing queen" and
+   *  "dancing queen abba" could be clustered. Nothing groups on it yet: those
+   *  two orderings are still two rows in the wanted list. */
+  signature: string;
+  count: number;
+  byCountry: Record<string, number>;
+  /** Distinct rooms, kept only up to MAX_TRACKED_ROOMS: a lower bound. */
+  rooms?: string[];
+  /** How each search ended — see SEARCH_DEMAND_OUTCOMES. */
+  outcomes: Record<string, number>;
+  firstSeenAt: Date;
+  lastSeenAt: Date;
+}
+
+let searchDemandIndexesEnsured = false;
+
+export async function getSearchDemandCollection(): Promise<
+  Collection<SearchDemandDoc>
+> {
+  const client = await getMongoClient();
+  const db = client.db(process.env.MONGODB_DB);
+  if (!searchDemandIndexesEnsured) {
+    searchDemandIndexesEnsured = true;
+    Promise.all([
+      // No index on count or signature: every read ranks on fields it computes
+      // first ($addFields, then $sort), which no index can serve.
+      // Latched even on failure and retuned via collMod, as the other TTLs are.
+      db
+        .collection("search_demand")
+        .createIndex(
+          { lastSeenAt: 1 },
+          { expireAfterSeconds: SEARCH_DEMAND_TTL_SECONDS }
+        )
+        .catch(() =>
+          db.command({
+            collMod: "search_demand",
+            index: {
+              keyPattern: { lastSeenAt: 1 },
+              expireAfterSeconds: SEARCH_DEMAND_TTL_SECONDS,
+            },
+          })
+        )
+        .catch((e) => {
+          console.error("search_demand TTL retune failed:", e);
+        }),
+    ]).catch((e) => {
+      console.error("Search demand index creation failed:", e);
+      searchDemandIndexesEnsured = false;
+    });
+  }
+  return db.collection<SearchDemandDoc>("search_demand");
+}
+
 // Where each nightly step stopped, so a run that hits the 300s function cap
 // resumes. A cursor untouched for a week names a step that no longer runs.
 const CRON_STATE_TTL_SECONDS = 7 * 24 * 60 * 60;
