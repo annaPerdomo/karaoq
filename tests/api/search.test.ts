@@ -851,3 +851,57 @@ describe("GET /api/search — banking a live search into the corpus", () => {
     expect(ended).toBe(true);
   });
 });
+
+describe("riding out a burst ceiling", () => {
+  const searchCalls = () =>
+    fetchMock.mock.calls.filter((c) =>
+      String(c[0]).includes("/youtube/v3/search")
+    ).length;
+
+  const burstBody = {
+    error: { message: "Rate limit", errors: [{ reason: "rateLimitExceeded" }] },
+  };
+  const dailyBody = {
+    error: { message: "Quota exceeded", errors: [{ reason: "quotaExceeded" }] },
+  };
+
+  it("retries once and serves what the second call returns", async () => {
+    let searches = 0;
+    fetchMock.mockImplementation(async (url: string) => {
+      if (!String(url).includes("/youtube/v3/search")) {
+        return jsonResponse({ items: [] });
+      }
+      searches += 1;
+      return searches === 1
+        ? jsonResponse(burstBody, false, 429)
+        : jsonResponse(searchItems(["v1"]));
+    });
+
+    const res = createRes();
+    await handler(createMockReq({ query: { q: "test" } }), res);
+
+    expect(res.getStatus()).toBe(200);
+    expect(searchCalls()).toBe(2);
+    expect(res.getBody()).toMatchObject([{ videoId: "v1" }]);
+  });
+
+  it("gives up after the one retry rather than hammering the ceiling", async () => {
+    fetchMock.mockImplementation(async () => jsonResponse(burstBody, false, 429));
+
+    const res = createRes();
+    await handler(createMockReq({ query: { q: "test" } }), res);
+
+    expect(res.getStatus()).toBe(503);
+    expect(searchCalls()).toBe(2);
+  });
+
+  it("never retries a spent day, which cannot clear before the reset", async () => {
+    fetchMock.mockImplementation(async () => jsonResponse(dailyBody, false, 403));
+
+    const res = createRes();
+    await handler(createMockReq({ query: { q: "test" } }), res);
+
+    expect(res.getStatus()).toBe(503);
+    expect(searchCalls()).toBe(1);
+  });
+});

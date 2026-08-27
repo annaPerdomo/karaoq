@@ -29,6 +29,25 @@ const FRESH_CACHE_MS = 14 * 24 * 60 * 60 * 1000;
 // exactly the window in which two singers tapping one song burned two searches.
 const inFlightSearches = new Map<string, Promise<SearchResult[]>>();
 
+// YouTube bills no quota for the call it refused, so a burst retry costs the
+// wait and nothing else. A spent day is never retried: it cannot clear before
+// the Pacific reset.
+const BURST_RETRY_MS = 700;
+
+async function searchWithBurstRetry(
+  q: string,
+  duration: string,
+  sortBy: string
+): Promise<SearchResult[]> {
+  try {
+    return await searchYoutubeApi(q, duration, sortBy);
+  } catch (e: any) {
+    if (!(e instanceof YoutubeApiError) || e.limit !== "burst") throw e;
+    await new Promise((resolve) => setTimeout(resolve, BURST_RETRY_MS));
+    return searchYoutubeApi(q, duration, sortBy);
+  }
+}
+
 /** Cuts are appended, never overwritten, so a crafted operator query would answer
  *  its folded song for every room. Five catalog songs wear the punctuation
  *  themselves ("NARUTO -ナルト-"), hence the exact-query escape. */
@@ -147,7 +166,7 @@ export default async function handler(
     return;
   }
 
-  const live = searchYoutubeApi(normalizedQ, duration, sortBy);
+  const live = searchWithBurstRetry(normalizedQ, duration, sortBy);
   inFlightSearches.set(cacheKey, live);
   try {
     const results = await live;
@@ -228,8 +247,8 @@ export default async function handler(
       return;
     }
 
-    // Deliberately not `reason: "quota"`: the singer gets the "quick breather"
-    // copy and a wait measured in seconds, not a countdown to midnight.
+    // Deliberately not `reason: "quota"`: the singer is told search is busy and
+    // given a wait measured in seconds, not a countdown to midnight.
     if (limit === "burst") {
       res.setHeader("Retry-After", "30");
       res.status(503).json({
