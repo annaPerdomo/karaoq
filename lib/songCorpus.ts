@@ -641,16 +641,26 @@ export async function recordSearchResults(
   return { videosUpserted, cutsAdded: fresh.length, songKnown: true };
 }
 
+export interface DemandScore {
+  demand: number;
+  wantedIn: number;
+}
+
 /** Rewritten nightly, not seeded once: the resolver's queues order on it, so a
  *  frozen score spends every later day's searches on last month's taste. */
-export async function recordDemand(demand: Map<string, number>): Promise<number> {
-  if (demand.size === 0) return 0;
+export async function recordDemand(
+  scores: Map<string, DemandScore>
+): Promise<number> {
+  if (scores.size === 0) return 0;
   const songs = await getKaraokeSongsCollection();
   const ops: AnyBulkWriteOperation<KaraokeSongDoc>[] = [];
   // No upsert: a key with no doc is a song the catalog has since retired.
-  demand.forEach((count, key) => {
+  scores.forEach((score, key) => {
     ops.push({
-      updateOne: { filter: { _id: key }, update: { $set: { demand: count } } },
+      updateOne: {
+        filter: { _id: key },
+        update: { $set: { demand: score.demand, wantedIn: score.wantedIn } },
+      },
     });
   });
   try {

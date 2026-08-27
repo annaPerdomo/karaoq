@@ -23,7 +23,10 @@ vi.mock("mongodb", () => ({
   },
 }));
 
-vi.mock("../../lib/suggestionDemand", () => ({
+// Only the analytics read is stubbed; mergeDemand is pure and the cron's
+// wiring of the two demand sources is part of what these tests cover.
+vi.mock("../../lib/suggestionDemand", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../lib/suggestionDemand")>()),
   suggestionDemand: vi.fn(async () => new Map<string, number>()),
 }));
 

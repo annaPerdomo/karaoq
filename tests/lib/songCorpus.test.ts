@@ -677,9 +677,9 @@ describe("recordDemand", () => {
   it("rewrites the order the resolver spends its searches in", async () => {
     songs().seed({ ...songIdentityFromCatalog(entry), cuts: [], demand: 0 });
 
-    await recordDemand(new Map([[entry.key, 42]]));
+    await recordDemand(new Map([[entry.key, { demand: 42, wantedIn: 6 }]]));
 
-    expect(songs().get(entry.key).demand).toBe(42);
+    expect(songs().get(entry.key)).toMatchObject({ demand: 42, wantedIn: 6 });
   });
 
   it("creates no song: the catalog is what bounds the corpus", async () => {

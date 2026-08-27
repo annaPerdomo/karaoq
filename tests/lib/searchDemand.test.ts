@@ -24,6 +24,7 @@ vi.mock("mongodb", () => ({
 process.env.MONGODB_URI = "mongodb://test";
 process.env.MONGODB_DB = "test-db";
 
+import { searchDemandScores } from "../../lib/searchDemandRead";
 import {
   MAX_TRACKED_ROOMS,
   countsAsDemand,
@@ -182,5 +183,33 @@ describe("recordSearchDemand", () => {
     };
 
     await expect(search("Killer Queen")).resolves.toBeUndefined();
+  });
+});
+
+describe("searchDemandScores", () => {
+  it("scores a song by the countries that typed it, and by how often", async () => {
+    await search("Mag Dungan Ta", { country: "PH", roomId: "R1" });
+    await search("Mag Dungan Ta", { country: "DE", roomId: "R2" });
+    await search("Killer Queen", { country: "PH", roomId: "R1" });
+
+    const scores = await searchDemandScores();
+
+    expect(scores.get(demandKey("Mag Dungan Ta"))).toEqual({
+      searches: 2,
+      countries: 2,
+    });
+    expect(scores.get(demandKey("Killer Queen"))).toEqual({
+      searches: 1,
+      countries: 1,
+    });
+  });
+
+  it("hands the resolver an empty map when the ledger cannot be read", async () => {
+    const broken = demand();
+    broken.aggregate = () => {
+      throw new Error("no");
+    };
+
+    await expect(searchDemandScores()).resolves.toEqual(new Map());
   });
 });

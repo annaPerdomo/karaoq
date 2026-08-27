@@ -208,6 +208,185 @@ function matches(doc: Doc, filter: Doc): boolean {
   });
 }
 
+/** As in an aggregation, a path crossing an array maps over it: "$song.cuts"
+ *  over a joined-but-empty `song` is [], not undefined. */
+function aggPath(doc: Doc, path: string): unknown {
+  return path.split(".").reduce<any>((node, key) => {
+    if (node == null) return undefined;
+    if (Array.isArray(node)) {
+      return node.map((item) => item?.[key]).filter((v) => v !== undefined);
+    }
+    return node[key];
+  }, doc);
+}
+
+/** Anything unsupported throws: a stage evaluating to undefined would let a
+ *  mistyped field name pass as a row of zeroes. */
+function aggValue(doc: Doc, node: any): any {
+  if (typeof node === "string" && node.charAt(0) === "$") return aggPath(doc, node.slice(1));
+  if (Array.isArray(node)) return node.map((item) => aggValue(doc, item));
+  if (!node || typeof node !== "object" || node instanceof Date) return node;
+
+  const entries = Object.entries(node);
+  const operators = entries.filter(([key]) => key.charAt(0) === "$");
+  if (operators.length === 0) {
+    const out: Doc = {};
+    for (const [key, held] of entries) out[key] = aggValue(doc, held);
+    return out;
+  }
+  if (entries.length !== 1) {
+    throw new Error(`fakeCollection: ${operators[0][0]} shares its object`);
+  }
+
+  const [op, operand] = entries[0];
+  switch (op) {
+    case "$ifNull": {
+      const [held, fallback] = operand as [unknown, unknown];
+      const value = aggValue(doc, held);
+      return value === undefined || value === null ? aggValue(doc, fallback) : value;
+    }
+    case "$size": {
+      const held = aggValue(doc, operand);
+        if (!Array.isArray(held)) throw new Error("$size over a non-array");
+      return held.length;
+    }
+    case "$objectToArray": {
+      const held = aggValue(doc, operand);
+      if (!held || typeof held !== "object" || Array.isArray(held)) {
+        throw new Error("$objectToArray over a non-object");
+      }
+      return Object.entries(held).map(([k, v]) => ({ k, v }));
+    }
+    case "$arrayElemAt": {
+      const [held, index] = operand as [unknown, number];
+      const list = aggValue(doc, held);
+      return Array.isArray(list) ? list[index] : undefined;
+    }
+    case "$gt":
+    case "$gte":
+    case "$lt":
+    case "$lte":
+    case "$eq": {
+      const [a, b] = (operand as unknown[]).map((held) => aggValue(doc, held));
+      const order = compare(a, b);
+      if (op === "$gt") return order > 0;
+      if (op === "$gte") return order >= 0;
+      if (op === "$lt") return order < 0;
+      if (op === "$lte") return order <= 0;
+      return order === 0;
+    }
+    default:
+      throw new Error(`fakeCollection has no aggregation operator ${op}`);
+  }
+}
+
+function sorted(docs: Doc[], spec: Doc): Doc[] {
+  const keys = Object.keys(spec);
+  return docs.slice().sort((a, b) => {
+    for (const field of keys) {
+      const dir = spec[field] === -1 ? -1 : 1;
+      const order = compare(aggPath(a, field), aggPath(b, field));
+      if (order !== 0) return dir * order;
+    }
+    return 0;
+  });
+}
+
+function grouped(docs: Doc[], spec: Doc): Doc[] {
+  if (spec._id !== null) throw new Error("fakeCollection groups only on a null _id");
+  if (docs.length === 0) return [];
+  const out: Doc = { _id: null };
+  for (const [field, accumulator] of Object.entries(spec)) {
+    if (field === "_id") continue;
+    const keys = Object.keys(accumulator as Doc);
+    if (keys.length !== 1 || keys[0] !== "$sum") {
+      throw new Error(`fakeCollection has no accumulator ${keys.join()}`);
+    }
+    const term = (accumulator as Doc).$sum;
+    out[field] = docs.reduce(
+      (total, doc) => total + (Number(aggValue(doc, term)) || 0),
+      0
+    );
+  }
+  return [out];
+}
+
+function projected(doc: Doc, spec: Doc): Doc {
+  const out: Doc = {};
+  if (spec._id === undefined || spec._id) out._id = doc._id;
+  for (const [field, mode] of Object.entries(spec)) {
+    if (field === "_id") continue;
+    if (mode === 1 || mode === true) {
+      const value = readPath(doc, field);
+      if (value !== undefined) setPath(out, field, value);
+      continue;
+    }
+    if (!mode) throw new Error("fakeCollection supports only inclusion projections");
+    out[field] = aggValue(doc, mode);
+  }
+  return out;
+}
+
+export type LookupFrom = (name: string) => Doc[];
+
+function runPipeline(input: Doc[], pipeline: Doc[], lookup?: LookupFrom): Doc[] {
+  return pipeline.reduce<Doc[]>((docs, stage) => {
+    const names = Object.keys(stage);
+    if (names.length !== 1) throw new Error("fakeCollection: one operator per stage");
+    const [name] = names;
+    const spec = stage[name];
+    switch (name) {
+      case "$match":
+        return docs.filter((doc) => matches(doc, spec));
+      case "$addFields":
+        return docs.map((doc) => {
+          const out = copy(doc);
+          // As in Mongo, every expression reads the stage's input: a field
+          // this stage adds is not visible to the one beside it.
+          for (const [field, expr] of Object.entries(spec as Doc)) {
+            setPath(out, field, aggValue(doc, expr));
+          }
+          return out;
+        });
+      case "$project":
+        return docs.map((doc) => projected(doc, spec));
+      case "$sort":
+        return sorted(docs, spec);
+      case "$limit":
+        return docs.slice(0, spec as number);
+      case "$count":
+        return docs.length === 0 ? [] : [{ [spec as string]: docs.length }];
+      case "$group":
+        return grouped(docs, spec);
+      case "$lookup": {
+        if (!lookup) throw new Error("fakeCollection was given no $lookup source");
+        const { from, localField, foreignField, as } = spec as Doc;
+        const foreign = lookup(from);
+        return docs.map((doc) => {
+          const local = aggPath(doc, localField);
+          const wanted = Array.isArray(local) ? local : [local];
+          const out = copy(doc);
+          out[as] = foreign.filter((row) => {
+            const value = aggPath(row, foreignField);
+            const held = Array.isArray(value) ? value : [value];
+            return held.some((one) => wanted.indexOf(one) >= 0);
+          });
+          return out;
+        });
+      }
+      case "$facet": {
+        const out: Doc = {};
+        for (const [field, sub] of Object.entries(spec as Doc)) {
+          out[field] = runPipeline(docs, sub as Doc[], lookup);
+        }
+        return [out];
+      }
+      default:
+        throw new Error(`fakeCollection has no aggregation stage ${name}`);
+    }
+  }, input);
+}
+
 /** Inclusion only, _id riding along as in Mongo. Applied rather than ignored,
  *  so an unprojected read is undefined here as it is in production. */
 function project(doc: Doc, projection?: Doc): Doc {
@@ -222,7 +401,7 @@ function project(doc: Doc, projection?: Doc): Doc {
   return out;
 }
 
-export function fakeCollection() {
+export function fakeCollection(lookup?: LookupFrom) {
   const docs = new Map<string, Doc>();
 
   function apply(id: string, update: UpdateSpec, options: UpdateOptions = {}) {
@@ -283,13 +462,17 @@ export function fakeCollection() {
       let found = Array.from(docs.values()).filter((doc) => matches(doc, filter));
       const cursor = {
         sort: (spec: Doc) => {
+          // Key order carries the tie-break, as it does in Mongo: the resolver
+          // ranks breadth first and falls back to volume.
           const keys = Object.keys(spec);
-          if (keys.length !== 1) throw new Error("fakeCollection sorts on one field");
-          const [field] = keys;
-          const dir = spec[field] === -1 ? -1 : 1;
-          found = found
-            .slice()
-            .sort((a, b) => dir * compare(readPath(a, field), readPath(b, field)));
+          found = found.slice().sort((a, b) => {
+            for (const field of keys) {
+              const dir = spec[field] === -1 ? -1 : 1;
+              const order = compare(readPath(a, field), readPath(b, field));
+              if (order !== 0) return dir * order;
+            }
+            return 0;
+          });
           return cursor;
         },
         limit: (n: number) => {
@@ -363,6 +546,14 @@ export function fakeCollection() {
       for (const id of ids) docs.delete(id);
       return { deletedCount: ids.length };
     },
+    aggregate: (pipeline: Doc[]) => ({
+      toArray: async () =>
+        runPipeline(
+          Array.from(docs.values()).map((doc) => copy(doc)),
+          pipeline,
+          lookup
+        ),
+    }),
     createIndex: async () => "ok",
     command: async () => ({}),
   };

@@ -28,6 +28,10 @@ function songQuery(song: KaraokeSongDoc): string {
   return buildSearchQuery(`${artist} ${title}`.trim(), true);
 }
 
+/** Breadth before volume. Absent wantedIn sorts last in Mongo, which is where a
+ *  song nobody has searched for belongs. */
+const RESOLVE_ORDER = { wantedIn: -1, demand: -1 } as const;
+
 /** Absent is eligible, so no backfill onto songs seeded before the field. */
 function eligibleNow(now: Date): Filter<KaraokeSongDoc> {
   return {
@@ -111,7 +115,7 @@ export async function resolveWantedSongs(
   report.wanted = await songs.countDocuments({ cuts: [] });
   const wanted = await songs
     .find({ cuts: [], ...ready })
-    .sort({ demand: -1 })
+    .sort(RESOLVE_ORDER)
     .limit(budget)
     .toArray();
   report.eligible = wanted.length;
@@ -129,7 +133,7 @@ export async function resolveWantedSongs(
     const thin = (
       await songs
         .find({ $expr: { $lt: [{ $size: "$cuts" }, THIN_CUTS] }, ...ready })
-        .sort({ demand: -1 })
+        .sort(RESOLVE_ORDER)
         .limit(remaining + attempted.size)
         .toArray()
     ).filter((song) => !attempted.has(song._id));

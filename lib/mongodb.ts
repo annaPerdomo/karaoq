@@ -376,8 +376,10 @@ export interface KaraokeSongDoc {
   lastAddedAt?: Date;
   /** Curated packs referencing this song ("core", "cz", …). */
   packIds?: string[];
-  /** suggestion_used taps — the resolver's priority order for cuts: []. */
+  /** suggestion_used taps plus searches typed for it (lib/searchDemand). */
   demand: number;
+  /** Distinct countries that searched for it. The resolver's first sort key. */
+  wantedIn?: number;
   resolveMisses?: number;
   /** Backed off until here; absent means eligible. See markResolveMiss. */
   nextResolveAt?: Date;
@@ -392,6 +394,7 @@ export async function getKaraokeSongsCollection(): Promise<Collection<KaraokeSon
     karaokeSongIndexesEnsured = true;
     Promise.all([
       db.collection("karaoke_songs").createIndex({ demand: -1 }),
+      db.collection("karaoke_songs").createIndex({ wantedIn: -1, demand: -1 }),
       db.collection("karaoke_songs").createIndex({ cuts: 1 }),
     ]).catch((e) => {
       console.error("Karaoke song index creation failed:", e);

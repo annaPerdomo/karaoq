@@ -28,7 +28,8 @@ import { LIVE_ROOM_WINDOW_MS, liveRoomCount } from "../../../lib/liveRooms";
 import { searchQuotaResetsAt } from "../../../lib/searchQuotaStatus";
 import { recordDemand } from "../../../lib/songCorpus";
 import { suggestionCatalog } from "../../../lib/suggestionCatalog";
-import { suggestionDemand } from "../../../lib/suggestionDemand";
+import { mergeDemand, suggestionDemand } from "../../../lib/suggestionDemand";
+import { searchDemandScores } from "../../../lib/searchDemandRead";
 import { CLAIM_SCAN_LIMIT, claimBankedVideos } from "../../../lib/corpusClaim";
 
 // vercel.json invokes this twice because a full harvest outlasts the 300s
@@ -163,8 +164,12 @@ export default async function handler(
       floorMs: 5_000,
       run: async (by) => {
         if (Date.now() >= by) return { done: false, report: { skipped: "no clock" } };
-        const scored = await recordDemand(await suggestionDemand());
-        return { done: true, report: { scored } };
+        const [taps, searches] = await Promise.all([
+          suggestionDemand(),
+          searchDemandScores(),
+        ]);
+        const scored = await recordDemand(mergeDemand(taps, searches));
+        return { done: true, report: { scored, tapped: taps.size, searched: searches.size } };
       },
     },
     {

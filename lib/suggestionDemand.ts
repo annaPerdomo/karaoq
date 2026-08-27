@@ -1,4 +1,6 @@
 import { getAnalyticsDb } from "./mongodb";
+import type { SearchDemandScore } from "./searchDemandRead";
+import type { DemandScore } from "./songCorpus";
 import { buildSearchQuery, searchCacheKey } from "./searchQuery";
 import { suggestionCatalog } from "./suggestionCatalog";
 
@@ -48,4 +50,30 @@ export async function suggestionDemand(): Promise<Map<string, number>> {
     // No demand data just means the catalog resolves in its natural order.
   }
   return demand;
+}
+
+/**
+ * The two halves of wanting, added. They can't double-count the resolver queue:
+ * a tap needs a shelf, and a cutless song renders on none.
+ *
+ * `wantedIn` is ledger-only — a tap carries no country — and recordDemand
+ * rewrites it nightly, so a reach the ledger stops seeing decays rather than
+ * ranking a song forever on a month it once had.
+ */
+export function mergeDemand(
+  taps: Map<string, number>,
+  searches: Map<string, SearchDemandScore>
+): Map<string, DemandScore> {
+  const merged = new Map<string, DemandScore>();
+  taps.forEach((count, key) => {
+    merged.set(key, { demand: count, wantedIn: 0 });
+  });
+  searches.forEach((score, key) => {
+    const held = merged.get(key);
+    merged.set(key, {
+      demand: (held ? held.demand : 0) + score.searches,
+      wantedIn: score.countries,
+    });
+  });
+  return merged;
 }
