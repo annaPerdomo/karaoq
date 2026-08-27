@@ -7,9 +7,9 @@ import { MIN_ADD_ROOMS } from "./songCorpus";
 import { songTokens } from "./suggestionMatch";
 import { suggestionCatalog } from "./suggestionCatalog";
 
-// What rooms sing that the catalog has never heard of. An add whose video no
-// catalog entry claims is the only demand signal a song outside the catalog can
-// ever produce: `demand` counts suggestion taps, and nothing untapped renders.
+// Two kinds of evidence, both banked as videos no catalog entry claims: an add,
+// where a person found the cut and queued it, and a search we paid for, which is
+// the only trace a song we could not answer ever leaves.
 //
 // Curation input, never a writer of karaoke_songs — the catalog is what bounds
 // the corpus, so approving a proposal means adding it to a pack.
@@ -54,6 +54,11 @@ export interface ProposalCluster {
   addCount: number;
   rooms: number;
   addsByCountry: Record<string, number>;
+  /** Searches banked against this cluster's videos: wanting rather than singing,
+   *  so ranked under the add counts above. */
+  searchCount: number;
+  searchRooms: number;
+  searchesByCountry: Record<string, number>;
   knownArtist?: string;
   lastAddedAt?: Date;
 }
@@ -140,9 +145,13 @@ function knownArtistFor(
 function seedOrder(a: Candidate, b: Candidate): number {
   return (
     a.tokens.length - b.tokens.length ||
-    (b.video.sources?.adds?.count ?? 0) - (a.video.sources?.adds?.count ?? 0) ||
+    evidenceCount(b.video) - evidenceCount(a.video) ||
     (a.video._id < b.video._id ? -1 : 1)
   );
+}
+
+function evidenceCount(video: KaraokeVideoDoc): number {
+  return (video.sources?.adds?.count ?? 0) + (video.sources?.search?.count ?? 0);
 }
 
 export function clusterProposals(videos: KaraokeVideoDoc[]): ProposalCluster[] {
@@ -156,6 +165,7 @@ export function clusterProposals(videos: KaraokeVideoDoc[]): ProposalCluster[] {
   const clusters: ProposalCluster[] = [];
   const byToken = new Map<string, ProposalCluster[]>();
   const rooms = new Map<string, Set<string>>();
+  const searchers = new Map<string, Set<string>>();
   const labels = new Map<string, string>();
   const index = artistIndex();
 
@@ -193,10 +203,14 @@ export function clusterProposals(videos: KaraokeVideoDoc[]): ProposalCluster[] {
         addCount: 0,
         rooms: 0,
         addsByCountry: {},
+        searchCount: 0,
+        searchRooms: 0,
+        searchesByCountry: {},
         ...(known ? { knownArtist: known } : {}),
       };
       clusters.push(home);
       rooms.set(home.signature, new Set<string>());
+      searchers.set(home.signature, new Set<string>());
       labels.set(home.signature, home.label);
       for (const token of candidate.tokens) {
         const bucket = byToken.get(token) ?? [];
@@ -217,17 +231,41 @@ export function clusterProposals(videos: KaraokeVideoDoc[]): ProposalCluster[] {
     }
     const at = adds?.lastAt;
     if (at && (!home.lastAddedAt || at > home.lastAddedAt)) home.lastAddedAt = at;
+
+    const searched = candidate.video.sources?.search;
+    home.searchCount += searched?.count ?? 0;
+    const asked = searchers.get(home.signature)!;
+    for (const roomId of searched?.rooms ?? []) asked.add(roomId);
+    const searchCountries = searched?.byCountry ?? {};
+    for (const country of Object.keys(searchCountries)) {
+      home.searchesByCountry[country] =
+        (home.searchesByCountry[country] ?? 0) + searchCountries[country];
+    }
   }
 
-  for (const cluster of clusters) cluster.rooms = rooms.get(cluster.signature)!.size;
+  for (const cluster of clusters) {
+    cluster.rooms = rooms.get(cluster.signature)!.size;
+    cluster.searchRooms = searchers.get(cluster.signature)!.size;
+  }
   // Rooms before adds, as cuts are ranked: one room adding a song ten times is
   // a claim, and the bar for a proposal is the same consensus a cut has to meet.
-  clusters.sort((a, b) => b.rooms - a.rooms || b.addCount - a.addCount);
+  //
+  // Searching only breaks ties: an add says "this is the cut", a search may have
+  // got nothing back. Search-only demand is read on the ledger panel.
+  clusters.sort(
+    (a, b) =>
+      b.rooms - a.rooms ||
+      b.searchRooms - a.searchRooms ||
+      b.addCount - a.addCount ||
+      b.searchCount - a.searchCount
+  );
   return clusters;
 }
 
 export interface ProposalReport {
   scanned: number;
+  scannedAdds: number;
+  scannedSearches: number;
   clustered: number;
   /** Of those, the ones meeting MIN_ADD_ROOMS — the queue worth reading. */
   seconded: number;
@@ -240,6 +278,8 @@ export async function proposeUnmappedAdds(
 ): Promise<{ done: boolean; report: ProposalReport }> {
   const report: ProposalReport = {
     scanned: 0,
+    scannedAdds: 0,
+    scannedSearches: 0,
     clustered: 0,
     seconded: 0,
     written: 0,
@@ -249,23 +289,41 @@ export async function proposeUnmappedAdds(
   const videos = await getKaraokeVideosCollection();
   // No songKeys is the whole signal: the matcher saw this title and no catalog
   // entry claimed it.
-  const unmapped = await videos
-    .find(
-      {
-        "sources.adds": { $exists: true },
-        $or: [{ songKeys: { $exists: false } }, { songKeys: { $size: 0 } }],
-      },
-      { projection: { title: 1, sources: 1 } }
-    )
-    .sort({ "sources.adds.lastAt": -1 })
-    .limit(limit)
-    .toArray();
+  const unclaimed = {
+    $or: [{ songKeys: { $exists: false } }, { songKeys: { $size: 0 } }],
+  };
+  const projection = { projection: { title: 1, sources: 1 } };
 
+  // Two reads rather than one $or, so each keeps its own recency and a short run
+  // can't let one source crowd the other out.
+  const [added, searched] = await Promise.all([
+    videos
+      .find({ "sources.adds": { $exists: true }, ...unclaimed }, projection)
+      .sort({ "sources.adds.lastAt": -1 })
+      .limit(limit)
+      .toArray(),
+    videos
+      .find({ "sources.search.count": { $exists: true }, ...unclaimed }, projection)
+      .sort({ "sources.search.at": -1 })
+      .limit(limit)
+      .toArray(),
+  ]);
+
+  report.scannedAdds = added.length;
+  report.scannedSearches = searched.length;
+
+  // A video can carry both, and clustering it twice would double its evidence.
+  const byId = new Map<string, KaraokeVideoDoc>();
+  for (const video of added.concat(searched)) byId.set(video._id, video);
+  const unmapped = Array.from(byId.values());
   report.scanned = unmapped.length;
   const clusters = clusterProposals(unmapped);
   report.clustered = clusters.length;
   report.seconded = clusters.filter((c) => c.rooms >= MIN_ADD_ROOMS).length;
-  if (clusters.length === 0) return { done: report.scanned < limit, report };
+  // Either read at its cap may have left rows behind.
+  const readEverything =
+    report.scannedAdds < limit && report.scannedSearches < limit;
+  if (clusters.length === 0) return { done: readEverything, report };
 
   const now = new Date();
   const proposals = await getSongProposalsCollection();
@@ -282,6 +340,9 @@ export async function proposeUnmappedAdds(
           addCount: cluster.addCount,
           rooms: cluster.rooms,
           addsByCountry: cluster.addsByCountry,
+          searchCount: cluster.searchCount,
+          searchRooms: cluster.searchRooms,
+          searchesByCountry: cluster.searchesByCountry,
           ...(cluster.knownArtist ? { knownArtist: cluster.knownArtist } : {}),
           updatedAt: now,
         },
@@ -301,5 +362,5 @@ export async function proposeUnmappedAdds(
   } catch (e: any) {
     console.warn("Proposal write partly failed:", e?.message);
   }
-  return { done: report.scanned < limit, report };
+  return { done: readEverything, report };
 }

@@ -32,14 +32,19 @@ const trackEventMock = vi.fn(async (..._args: unknown[]) => {});
 vi.mock("../../lib/analytics", () => ({
   trackEvent: (...args: unknown[]) => trackEventMock(...args),
   isAnalyticsExempt: () => false,
+  extractGeo: () => ({ country: "PH", region: "Central Visayas", city: "Cebu City" }),
 }));
 
 const recordSearchResultsMock = vi.fn(async (..._args: unknown[]) => ({
   videosUpserted: 0,
   cutsAdded: 0,
+  // The default is the ordinary case: the query named a song the corpus carries.
+  songKnown: true,
 }));
+const bankEvidenceMock = vi.fn(async (..._args: unknown[]) => 0);
 vi.mock("../../lib/songCorpus", () => ({
   recordSearchResults: (...args: unknown[]) => recordSearchResultsMock(...args),
+  bankSearchEvidence: (...args: unknown[]) => bankEvidenceMock(...args),
 }));
 
 const readSongCutsMock = vi.fn(async (..._args: unknown[]) => null as unknown);
@@ -106,7 +111,11 @@ beforeEach(() => {
   vi.clearAllMocks();
   rateLimitMock.mockReturnValue(true);
   markNotifiedMock.mockReturnValue(true);
-  recordSearchResultsMock.mockResolvedValue({ videosUpserted: 0, cutsAdded: 0 });
+  recordSearchResultsMock.mockResolvedValue({
+    videosUpserted: 0,
+    cutsAdded: 0,
+    songKnown: true,
+  });
   readSongCutsMock.mockResolvedValue(null);
   mockCollection.findOne.mockResolvedValue(null);
   mockCollection.updateOne.mockResolvedValue({});
@@ -931,5 +940,89 @@ describe("recording what YouTube said", () => {
     expect(sendQuotaAlertMock).toHaveBeenCalled();
     expect(failureEvent()).toMatchObject({ failReason: "quota" });
     expect(String(failureEvent()?.failDetail)).toContain("Queries per day");
+  });
+});
+
+describe("banking a search that named no song we carry", () => {
+  beforeEach(() => {
+    fetchMock.mockImplementation(async () => jsonResponse(searchItems(["v1", "v2"])));
+  });
+
+  it("keeps what the search already cost, so nobody buys it twice", async () => {
+    recordSearchResultsMock.mockResolvedValue({
+      videosUpserted: 0,
+      cutsAdded: 0,
+      songKnown: false,
+    });
+
+    const res = createRes();
+    await handler(
+      createMockReq({ query: { q: "the agadiers mag dungan ta", roomId: "abc12" } }),
+      res
+    );
+
+    expect(res.getStatus()).toBe(200);
+    expect(bankEvidenceMock).toHaveBeenCalledTimes(1);
+    expect(bankEvidenceMock.mock.calls[0][1]).toMatchObject({
+      roomId: "ABC12",
+      country: "PH",
+    });
+  });
+
+  it("banks nothing when the corpus already carries the song", async () => {
+    // recordSearchResults has filed it under that song; a second copy with no
+    // songKeys would show up in the curation queue as a song we don't have.
+    recordSearchResultsMock.mockResolvedValue({
+      videosUpserted: 2,
+      cutsAdded: 2,
+      songKnown: true,
+    });
+
+    await handler(createMockReq({ query: { q: "abba dancing queen karaoke" } }), createRes());
+
+    expect(bankEvidenceMock).not.toHaveBeenCalled();
+  });
+
+  it("banks nothing from a filtered search", async () => {
+    recordSearchResultsMock.mockResolvedValue({
+      videosUpserted: 0,
+      cutsAdded: 0,
+      songKnown: false,
+    });
+
+    await handler(
+      createMockReq({ query: { q: "some song", duration: "short" } }),
+      createRes()
+    );
+
+    // The corpus serves the default combination; another filter's results are
+    // answers to a different question.
+    expect(recordSearchResultsMock).not.toHaveBeenCalled();
+    expect(bankEvidenceMock).not.toHaveBeenCalled();
+  });
+
+  it("banks nothing from an operator query", async () => {
+    recordSearchResultsMock.mockResolvedValue({
+      videosUpserted: 0,
+      cutsAdded: 0,
+      songKnown: false,
+    });
+
+    await handler(
+      createMockReq({ query: { q: "abba dancing queen -karaoke" } }),
+      createRes()
+    );
+
+    expect(bankEvidenceMock).not.toHaveBeenCalled();
+  });
+
+  it("still answers the singer when the banking write fails", async () => {
+    recordSearchResultsMock.mockRejectedValue(new Error("Atlas failover"));
+
+    const res = createRes();
+    await handler(createMockReq({ query: { q: "some song" } }), res);
+
+    expect(res.getStatus()).toBe(200);
+    expect(bankEvidenceMock).not.toHaveBeenCalled();
   });
 });

@@ -4,11 +4,11 @@ import { readCache, writeCache, SearchResult } from "../../lib/searchCache";
 import { YoutubeApiError } from "../../lib/youtubeApi";
 import { searchYoutubeApi } from "../../lib/youtubeSearch";
 import { catalogEntry, isCatalogFilters } from "../../lib/suggestionCatalog";
-import { recordSearchResults } from "../../lib/songCorpus";
+import { bankSearchEvidence, recordSearchResults } from "../../lib/songCorpus";
 import { readSongCuts } from "../../lib/corpusRead";
 import { MAX_ENTRY_ID_LENGTH, markRateLimitNotified, rateLimit } from "../../lib/limits";
 import { normalizeRoomId } from "../../lib/roomCode";
-import { trackEvent } from "../../lib/analytics";
+import { extractGeo, trackEvent } from "../../lib/analytics";
 import { sendQuotaAlertOnce } from "../../lib/alerts";
 import { quotaResetsAt } from "../../lib/pacificTime";
 import {
@@ -100,6 +100,8 @@ export default async function handler(
   const queryKey = searchCacheKey(normalizedQ);
   const cacheKey = `${cacheEntryKey(queryKey, normalizedQ)}|${duration}|${sortBy}`;
 
+  const country = extractGeo(req).country;
+
   let cached = await readCache(cacheKey);
 
   // Entries written before the fold are keyed on the raw lowercased query.
@@ -181,7 +183,10 @@ export default async function handler(
     // Awaited after the response, never dropped: a dropped promise dies with the
     // frozen instance partway through two dependent writes (lib/songCorpus).
     if (isCatalogFilters(duration, sortBy) && banksIntoCorpus(queryKey, normalizedQ)) {
-      await recordSearchResults(queryKey, results).catch(() => {});
+      const written = await recordSearchResults(queryKey, results).catch(() => null);
+      if (written && !written.songKnown) {
+        await bankSearchEvidence(results, { roomId, country });
+      }
     }
     return;
   } catch (e: any) {
@@ -240,7 +245,6 @@ export default async function handler(
       failDetail,
       searchOutcome: "error",
     });
-
     if (dailyOut) {
       res.status(503).json({
         code: 503,

@@ -334,3 +334,119 @@ describe("re-derived hints", () => {
     expect(proposals().all()[0].knownArtist).toBe("Ben&Ben");
   });
 });
+
+describe("search evidence", () => {
+  /** A row banked by bankSearchEvidence: a search paid for it, nobody sang it. */
+  function searched(
+    id: string,
+    title: string,
+    opts: { rooms?: string[]; count?: number; byCountry?: Record<string, number> } = {}
+  ): KaraokeVideoDoc {
+    return {
+      _id: id,
+      title,
+      thumbnailUrl: "",
+      sources: {
+        search: {
+          at: LAST_AT,
+          count: opts.count ?? 1,
+          byCountry: opts.byCountry ?? { PH: opts.count ?? 1 },
+          rooms: opts.rooms ?? [`room-${id}`],
+        },
+      },
+      firstSeenAt: LAST_AT,
+      refreshedAt: LAST_AT,
+    } as KaraokeVideoDoc;
+  }
+
+  it("counts a song nobody sang but people asked for", () => {
+    const [cluster] = clusterProposals([
+      searched("a", "The Agadiers - Mag Dungan Ta", {
+        rooms: ["r1", "r2"],
+        count: 5,
+        byCountry: { PH: 3, DE: 2 },
+      }),
+    ]);
+
+    expect(cluster).toMatchObject({
+      searchCount: 5,
+      searchRooms: 2,
+      searchesByCountry: { PH: 3, DE: 2 },
+      // Nobody queued it, so it has no add consensus at all.
+      rooms: 0,
+      addCount: 0,
+    });
+  });
+
+  it("adds both kinds of evidence to one song", () => {
+    const [cluster, ...rest] = clusterProposals([
+      video("a", "The Agadiers - Mag Dungan Ta", { rooms: ["r1"] }),
+      searched("b", "Mag Dungan ta - The Agadiers (Karaoke Version)", {
+        rooms: ["r2"],
+        count: 4,
+      }),
+    ]);
+
+    expect(rest).toHaveLength(0);
+    expect(cluster).toMatchObject({ rooms: 1, addCount: 1, searchRooms: 1, searchCount: 4 });
+    // Both cuts ride along, so approving it costs no search either way.
+    expect(cluster.videoIds.sort()).toEqual(["a", "b"]);
+  });
+
+  it("ranks a song rooms sang above one rooms only searched for", () => {
+    const clusters = clusterProposals([
+      video("a", "Someone - Actually Sung This", { rooms: ["r1"] }),
+      searched("b", "Nobody - Only Asked For This", {
+        rooms: ["r2", "r3", "r4"],
+        count: 30,
+      }),
+    ]);
+
+    expect(clusters.map((c) => c.label)).toEqual([
+      "Someone - Actually Sung This",
+      "Nobody - Only Asked For This",
+    ]);
+  });
+
+  it("breaks a tie between equally-sung songs on who also searched", () => {
+    const clusters = clusterProposals([
+      video("a", "Alpha - Sung Once", { rooms: ["r1"] }),
+      video("b", "Beta - Sung Once Too", { rooms: ["r2"] }),
+      searched("c", "Beta - Sung Once Too (Karaoke Version)", { rooms: ["r9"] }),
+    ]);
+
+    expect(clusters[0].label).toBe("Beta - Sung Once Too");
+  });
+
+  it("reads both kinds of banked row out of the store", async () => {
+    videos().seed(video("a", "The Agadiers - Mag Dungan Ta", { rooms: ["r1"] }));
+    videos().seed(searched("b", "Nobody - Only Asked For This", { rooms: ["r2"] }));
+
+    const { report } = await proposeUnmappedAdds(Date.now() + 30_000);
+
+    expect(report).toMatchObject({ scannedAdds: 1, scannedSearches: 1, scanned: 2 });
+    expect(proposals().all()).toHaveLength(2);
+  });
+
+  it("counts a row carrying both kinds of evidence once", async () => {
+    const both = video("a", "The Agadiers - Mag Dungan Ta", { rooms: ["r1"] });
+    both.sources.search = { at: LAST_AT, count: 2, byCountry: { PH: 2 }, rooms: ["r2"] };
+    videos().seed(both);
+
+    const { report } = await proposeUnmappedAdds(Date.now() + 30_000);
+
+    // Both reads return it; clustering it twice would double its evidence.
+    expect(report).toMatchObject({ scannedAdds: 1, scannedSearches: 1, scanned: 1 });
+    expect(proposals().all()[0]).toMatchObject({ addCount: 1, searchCount: 2 });
+  });
+
+  it("is unfinished when either read hit its cap", async () => {
+    videos().seed(video("a", "Alpha - One", { rooms: ["r1"] }));
+    videos().seed(video("b", "Beta - Two", { rooms: ["r2"] }));
+    videos().seed(searched("c", "Gamma - Three", { rooms: ["r3"] }));
+
+    const { done } = await proposeUnmappedAdds(Date.now() + 30_000, 2);
+
+    expect(done).toBe(false);
+  });
+});

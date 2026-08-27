@@ -29,6 +29,8 @@ import {
   MAX_CUTS,
   MIN_ADD_ROOMS,
   recordAdd,
+  SEARCH_EVIDENCE_CUTS,
+  bankSearchEvidence,
   recordDemand,
   recordHarvestMatches,
   recordSearchResults,
@@ -478,7 +480,9 @@ describe("recordSearchResults", () => {
   it("can name a song but never create one", async () => {
     const written = await recordSearchResults("no song has this key", [result("a")]);
 
-    expect(written).toEqual({ videosUpserted: 0, cutsAdded: 0 });
+    // songKnown is what /api/search reads to decide the results are worth
+    // banking as evidence instead of being thrown away.
+    expect(written).toEqual({ videosUpserted: 0, cutsAdded: 0, songKnown: false });
     // Were this an upsert, any query anyone typed would file itself as a song.
     expect(songs().all()).toEqual([]);
     expect(videos().all()).toEqual([]);
@@ -588,6 +592,7 @@ describe("recordSearchResults", () => {
     expect(await recordSearchResults(entry.key, [])).toEqual({
       videosUpserted: 0,
       cutsAdded: 0,
+      songKnown: true,
     });
   });
 });
@@ -683,5 +688,117 @@ describe("songIdentityFromCatalog", () => {
 
     expect(identity.nativeTitle).toBe(nativeEntry.nativeTitle);
     expect(identity.nativeArtist).toBe(nativeEntry.nativeArtist);
+  });
+});
+
+describe("bankSearchEvidence", () => {
+  const found = (videoId: string) => ({
+    videoId,
+    title: `The Agadiers - Mag Dungan Ta (Karaoke) ${videoId}`,
+    thumbnailUrl: `thumb-${videoId}`,
+    durationSeconds: 240,
+    viewCount: 900,
+  });
+
+  it("keeps what a search already paid to find", async () => {
+    await bankSearchEvidence([found("a")], { roomId: "ROOM1", country: "PH" });
+
+    expect(videos().get("a")).toMatchObject({
+      title: "The Agadiers - Mag Dungan Ta (Karaoke) a",
+      durationSeconds: 240,
+      viewCount: 900,
+      sources: {
+        search: { count: 1, byCountry: { PH: 1 }, rooms: ["ROOM1"] },
+      },
+    });
+  });
+
+  it("files it under no song, so the catalogue still bounds the corpus", async () => {
+    await bankSearchEvidence([found("a")], { roomId: "ROOM1" });
+
+    // No songKeys is what puts it in front of a person rather than in a room.
+    expect(videos().get("a").songKeys).toBeUndefined();
+    expect(songs().all()).toEqual([]);
+  });
+
+  it("keeps a few cuts as evidence, not a shelf", async () => {
+    const many = ["a", "b", "c", "d", "e", "f"].map(found);
+
+    await bankSearchEvidence(many, { roomId: "ROOM1" });
+
+    expect(videos().all()).toHaveLength(SEARCH_EVIDENCE_CUTS);
+  });
+
+  it("adds up the rooms and countries that asked for it", async () => {
+    await bankSearchEvidence([found("a")], { roomId: "R1", country: "PH" });
+    await bankSearchEvidence([found("a")], { roomId: "R2", country: "DE" });
+    await bankSearchEvidence([found("a")], { roomId: "R1", country: "PH" });
+
+    expect(videos().get("a").sources.search).toMatchObject({
+      count: 3,
+      byCountry: { PH: 2, DE: 1 },
+      rooms: ["R1", "R2"],
+    });
+  });
+
+  it("stops collecting room ids rather than growing the document", async () => {
+    for (let i = 0; i < 12; i++) {
+      await bankSearchEvidence([found("a")], { roomId: `R${i}` });
+    }
+
+    const banked = videos().get("a").sources.search;
+    expect(banked.rooms.length).toBeLessThan(12);
+    // The count is not what is bounded: only the list of who is.
+    expect(banked.count).toBe(12);
+  });
+
+  it("records a country-less search without breaking the map", async () => {
+    await bankSearchEvidence([found("a")], { roomId: "R1" });
+
+    expect(videos().get("a").sources.search.byCountry).toEqual({});
+  });
+
+  it("never unfiles a cut a song already claims", async () => {
+    await addCut("a");
+    const before = videos().get("a").songKeys;
+
+    await bankSearchEvidence([found("a")], { roomId: "R1" });
+
+    expect(videos().get("a").songKeys).toEqual(before);
+  });
+
+  it("leaves a filed row alone rather than promoting it", async () => {
+    // An add files a cut on the client's word and no thumbnail, which is what
+    // keeps it out of readSongCuts. Banking over it would grant the thumbnail
+    // and the sources.search that makes unfileUnprovenCuts skip it forever.
+    await addCut("a");
+    const before = videos().get("a");
+
+    const written = await bankSearchEvidence([found("a")], { roomId: "R1" });
+
+    expect(written).toBe(0);
+    expect(videos().get("a")).toEqual(before);
+  });
+
+  it("still banks the rows of the same search that no song claims", async () => {
+    await addCut("a");
+
+    await bankSearchEvidence([found("a"), found("b")], { roomId: "R1" });
+
+    expect(videos().get("b").sources.search.count).toBe(1);
+  });
+
+  it("swallows a failed write rather than erroring into the search", async () => {
+    const broken = videos();
+    const held = broken.bulkWrite;
+    broken.bulkWrite = async () => {
+      throw new Error("no");
+    };
+
+    await expect(
+      bankSearchEvidence([found("a")], { roomId: "R1" })
+    ).resolves.toBe(0);
+
+    broken.bulkWrite = held;
   });
 });

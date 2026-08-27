@@ -76,7 +76,7 @@ export interface AddSource {
 
 // The value becomes a field name in addsByCountry: dots would write a nested
 // path, "$" is rejected outright, and anything longer grows the map unbounded.
-function countryField(country?: string): string | undefined {
+export function countryField(country?: string): string | undefined {
   return country && /^[A-Za-z]{2}$/.test(country) ? country.toUpperCase() : undefined;
 }
 
@@ -544,16 +544,25 @@ export async function unfileUnprovenCuts(
 
 /** Only rows that become cuts are stored: every extra id is one the sweep must
  *  re-read forever for a song that will never serve it. */
+export interface SearchResultsWritten {
+  videosUpserted: number;
+  cutsAdded: number;
+  songKnown: boolean;
+}
+
 export async function recordSearchResults(
   songKey: string,
   results: SearchResult[]
-): Promise<{ videosUpserted: number; cutsAdded: number }> {
-  if (results.length === 0) return { videosUpserted: 0, cutsAdded: 0 };
+): Promise<SearchResultsWritten> {
   const songs = await getKaraokeSongsCollection();
   const videos = await getKaraokeVideosCollection();
   // No upsert: a search result can name a song but never create one.
   const song = await songs.findOne({ _id: songKey });
-  if (!song) return { videosUpserted: 0, cutsAdded: 0 };
+  // Looked up even with nothing to file: songKnown answers about the key, not
+  // about the results.
+  if (results.length === 0 || !song) {
+    return { videosUpserted: 0, cutsAdded: 0, songKnown: !!song };
+  }
 
   // An expired cut still occupies a slot until a writer drops it.
   const held = song.cuts ?? [];
@@ -589,7 +598,7 @@ export async function recordSearchResults(
             title: row.title,
             thumbnailUrl: row.thumbnailUrl,
             refreshedAt: now,
-            "sources.search": { at: now },
+            "sources.search.at": now,
             ...(row.durationSeconds !== undefined
               ? { durationSeconds: row.durationSeconds }
               : {}),
@@ -621,7 +630,7 @@ export async function recordSearchResults(
       }
     );
   }
-  return { videosUpserted, cutsAdded: fresh.length };
+  return { videosUpserted, cutsAdded: fresh.length, songKnown: true };
 }
 
 /** Rewritten nightly, not seeded once: the resolver's queues order on it, so a
@@ -642,4 +651,108 @@ export async function recordDemand(demand: Map<string, number>): Promise<number>
     console.warn("Demand write partly failed:", e?.message);
     return 0;
   }
+}
+
+/** Kept small on purpose: these are evidence for a curation decision, not a
+ *  shelf, and YouTube's relevance order is a guess where an add is a pick. */
+export const SEARCH_EVIDENCE_CUTS = 3;
+
+/** Rooms kept per banked video. A bound, not a log, as sources.adds.rooms is. */
+const MAX_EVIDENCE_ROOMS = 4;
+
+export interface SearchEvidence {
+  roomId: string;
+  country?: string;
+}
+
+/**
+ * Banks what a search already cost us. A live search outside the catalogue is
+ * thrown away once search_cache expires, so the next room buys it again.
+ *
+ * Files no songKeys and creates no song — which is both what keeps the catalogue
+ * bounding the corpus, and the shape proposeUnmappedAdds reads for approval.
+ */
+export function bankSearchEvidence(
+  results: SearchResult[],
+  opts: SearchEvidence
+): Promise<number> {
+  return writeSearchEvidence(results, opts).catch((e: any) => {
+    console.warn("Search evidence write failed:", e?.message);
+    return 0;
+  });
+}
+
+async function writeSearchEvidence(
+  results: SearchResult[],
+  opts: SearchEvidence
+): Promise<number> {
+  const kept = results.slice(0, SEARCH_EVIDENCE_CUTS);
+  if (kept.length === 0) return 0;
+
+  const country = countryField(opts.country);
+  const now = new Date();
+  const videos = await getKaraokeVideosCollection();
+  // Read before writing for the same reason recordAdd does: $addToSet cannot be
+  // made conditional, and an unbounded room list is an unbounded document.
+  const held = new Map(
+    (
+      await videos
+        .find(
+          { _id: { $in: kept.map((row) => row.videoId) } },
+          { projection: { sources: 1, songKeys: 1 } }
+        )
+        .toArray()
+    ).map((row) => [row._id, row])
+  );
+
+  // Never over a filed row: that would hand a cut filed on a client's title the
+  // two things making it permanent — the thumbnailUrl readSongCuts needs to serve
+  // it, and the sources.search unfileUnprovenCuts skips. The query is the
+  // caller's to choose, so relevance cannot be what stands between them.
+  const fresh = kept.filter(
+    (row) => (held.get(row.videoId)?.songKeys ?? []).length === 0
+  );
+  if (fresh.length === 0) return 0;
+
+  const ops: AnyBulkWriteOperation<KaraokeVideoDoc>[] = fresh.map((row) => {
+    const inc: Record<string, number> = { "sources.search.count": 1 };
+    if (country) inc[`sources.search.byCountry.${country}`] = 1;
+
+    const set: Record<string, unknown> = {
+      // Straight off the API a moment ago, so refreshing the TTL clock is the
+      // policy working rather than traffic renewing stale data.
+      title: row.title,
+      thumbnailUrl: row.thumbnailUrl,
+      refreshedAt: now,
+      "sources.search.at": now,
+    };
+    if (row.durationSeconds !== undefined) set.durationSeconds = row.durationSeconds;
+    if (row.viewCount !== undefined) set.viewCount = row.viewCount;
+
+    const onInsert: Record<string, unknown> = { firstSeenAt: now };
+    // $inc creates the map; seeding it here as well collides on the same path.
+    if (!country) onInsert["sources.search.byCountry"] = {};
+
+    const rooms = held.get(row.videoId)?.sources?.search?.rooms ?? [];
+    const addToSet: Record<string, unknown> = {};
+    if (opts.roomId && rooms.length < MAX_EVIDENCE_ROOMS) {
+      addToSet["sources.search.rooms"] = opts.roomId;
+    }
+
+    return {
+      updateOne: {
+        filter: { _id: row.videoId },
+        update: {
+          $set: set,
+          $inc: inc,
+          $setOnInsert: onInsert,
+          ...(Object.keys(addToSet).length > 0 ? { $addToSet: addToSet } : {}),
+        },
+        upsert: true,
+      },
+    };
+  });
+
+  const written = await videos.bulkWrite(ops, { ordered: false });
+  return written.upsertedCount;
 }

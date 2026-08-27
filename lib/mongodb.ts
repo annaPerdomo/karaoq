@@ -304,7 +304,13 @@ export interface KaraokeVideoDoc {
     };
     harvest?: { channel: string; matchedAt: Date };
     seed?: boolean;
-    search?: { at: Date };
+    /** `at` alone until bankSearchEvidence adds counters to it. */
+    search?: {
+      at: Date;
+      count?: number;
+      byCountry?: Record<string, number>;
+      rooms?: string[];
+    };
   };
   firstSeenAt: Date;
   refreshedAt: Date;
@@ -415,6 +421,11 @@ export interface SongProposalDoc {
    *  MIN_ADD_ROOMS per video, so a cluster reads high only by spanning videos. */
   rooms: number;
   addsByCountry: Record<string, number>;
+  /** Searches banked against these videos: wanting rather than singing, so it
+   *  breaks ties rather than setting the order. */
+  searchCount?: number;
+  searchRooms?: number;
+  searchesByCountry?: Record<string, number>;
   /** A catalog artist whose every word this cluster covers — the difference
    *  between "we don't have this artist" and "we have them, not this song". */
   knownArtist?: string;
