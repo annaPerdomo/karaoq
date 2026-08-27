@@ -1236,3 +1236,61 @@
   font-size: 0.8rem;
   font-variant-numeric: tabular-nums;
 }
+
+/* ─── Wanted songs ─── */
+
+.wantedFilters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.8rem;
+}
+
+.wantedToggle {
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--text-secondary);
+  border-radius: 999px;
+  padding: 0.3rem 0.8rem;
+  font-size: 0.78rem;
+}
+
+.wantedToggle:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.wantedToggleOn {
+  border-color: #a78bfa;
+  color: #c4b5fd;
+  background: rgba(167, 139, 250, 0.12);
+}
+
+.wantedFlags {
+  font-size: 0.9rem;
+  letter-spacing: 0.05em;
+  margin-right: 0.35rem;
+}
+
+.wantedTag {
+  font-size: 0.66rem;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 0.1rem 0.45rem;
+  margin-left: 0.45rem;
+  white-space: nowrap;
+}
+
+.wantedTagGap {
+  color: #fca5a5;
+  background: rgba(208, 59, 59, 0.16);
+}
+
+.wantedTagNear {
+  color: #fcd34d;
+  background: rgba(252, 211, 77, 0.14);
+}
+
+.wantedTagHeld {
+  color: #86efac;
+  background: rgba(34, 197, 94, 0.14);
+}

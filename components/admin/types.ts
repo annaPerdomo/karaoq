@@ -170,6 +170,34 @@ export interface RoomSuggestionRow {
   timestamp: string;
 }
 
+export interface WantedSongRow {
+  key: string;
+  label: string;
+  count: number;
+  countries: { code: string; count: number }[];
+  rooms: number;
+  spent: number;
+  unmet: number;
+  catalogued: boolean;
+  hasCuts: boolean;
+  lastSeenAt: string;
+}
+
+export interface WantedSongsData {
+  totals: {
+    queries: number;
+    searches: number;
+    served: number;
+    spent: number;
+    stale: number;
+    corpus: number;
+    error: number;
+  };
+  rows: WantedSongRow[];
+  matched: number;
+  limit: number;
+}
+
 /** One failed /api/search attributed to this room. */
 export interface RoomSearchFailRow {
   failReason: string | null;

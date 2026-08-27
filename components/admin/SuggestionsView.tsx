@@ -8,14 +8,17 @@ import ColumnChart from './charts/ColumnChart';
 import BarList from './charts/BarList';
 import { SERIES } from './charts/palette';
 import CorpusPicks from './suggestions/CorpusPicks';
+import WantedSongs from './suggestions/WantedSongs';
 
 /** Top picks are our own catalog titles, so this list isn't bound by the
  * 30-day YouTube retention window that caps the Pulse song ranking. */
 export default function SuggestionsView({
   data,
+  secret,
   onOpenRoom,
 }: {
   data: AnalyticsData;
+  secret: string;
   onOpenRoom: (roomId: string) => void;
 }): React.ReactElement {
   const { suggestions } = data;
@@ -27,11 +30,15 @@ export default function SuggestionsView({
           <h1 className={styles.viewTitle}>Suggestions</h1>
           <p className={styles.viewSub}>
             How people find something to sing when they don&rsquo;t know what to sing
-            &mdash; and how often the shelves, not the search box, end up filling
-            the queue.
+            &mdash; how often the shelves, not the search box, end up filling the
+            queue, and which songs the search box is still being asked for.
           </p>
         </div>
       </header>
+
+      <h2 className={styles.sectionHeading}>Filling the gaps</h2>
+
+      <WantedSongs secret={secret} />
 
       {suggestions.picks && (
         <CorpusPicks

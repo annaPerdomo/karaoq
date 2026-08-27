@@ -153,7 +153,7 @@ const Admin = (): React.ReactElement => {
         />
       )}
       {view === 'suggestions' && (
-        <SuggestionsView data={data} onOpenRoom={openRoom} />
+        <SuggestionsView data={data} secret={secret} onOpenRoom={openRoom} />
       )}
       {view === 'pulse' && <PulseView data={data} />}
       {view === 'feedback' && (
