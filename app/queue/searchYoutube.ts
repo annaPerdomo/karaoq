@@ -31,6 +31,9 @@ export class SearchUnavailableError extends Error {
 export interface SearchFailure {
   /** Day's YouTube search budget is spent, as opposed to a transient blip. */
   quota: boolean;
+  /** The server named YouTube's short-window ceiling. Not the same as `!quota`,
+   * which also covers an outage and a dropped phone — those hit no limit. */
+  busy?: boolean;
   /** ISO time the quota frees up, when the server knows it. */
   resetsAt?: string;
   /** Which flow failed — the quota message differs, because telling someone to

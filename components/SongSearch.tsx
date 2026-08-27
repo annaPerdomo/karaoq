@@ -67,6 +67,7 @@ const SongSearch: React.FC<SongSearchProps> = ({
     hasSearched,
     searchError,
     lookupMode,
+    searchedQuery,
     resultsVia,
     resultsSuggestionKey,
     resultsFromCorpus,
@@ -75,6 +76,7 @@ const SongSearch: React.FC<SongSearchProps> = ({
     runSearch,
     toggleKaraokeMode,
     search,
+    pasteLink,
     clearSearch,
     resetSearch,
     updateFilter,
@@ -189,6 +191,8 @@ const SongSearch: React.FC<SongSearchProps> = ({
         visibleCount={visibleCount}
         canAdd={canAdd}
         pickMode={!!onPick}
+        searchedQuery={searchedQuery}
+        onPasteLink={pasteLink}
         onPreview={(song) => openConfirm(song, true)}
         onAdd={(song) => (onPick ? handlePick(song) : openConfirm(song, false))}
         onShowMore={() => setVisibleCount((c) => c + INITIAL_RESULTS)}

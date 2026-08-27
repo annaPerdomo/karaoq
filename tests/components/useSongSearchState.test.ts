@@ -428,3 +428,210 @@ describe("useSongSearchState — serving taps from the corpus", () => {
     expect(result.current.searchError).toBeNull();
   });
 });
+
+describe("useSongSearchState — pasting a link off the clipboard", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+    global.fetch = vi.fn().mockResolvedValue({ ok: true }) as never;
+    mockSearchYoutube.mockResolvedValue([song("a")]);
+    mockLookupVideo.mockResolvedValue(song("dQw4w9WgXcQ"));
+  });
+
+  it("looks up a copied YouTube link and shows it in the box", async () => {
+    const { result } = setup();
+
+    await act(async () => {
+      result.current.pasteLink(PASTE_URL);
+    });
+
+    await waitFor(() => expect(mockLookupVideo).toHaveBeenCalled());
+    expect(mockLookupVideo.mock.calls[0][0]).toBe("dQw4w9WgXcQ");
+    expect(mockSearchYoutube).not.toHaveBeenCalled();
+    expect(result.current.query).toBe(PASTE_URL);
+  });
+
+  it("stays in lookup mode even though the paste wrote the box", async () => {
+    const { result } = setup();
+
+    await act(async () => {
+      result.current.pasteLink(PASTE_URL);
+    });
+
+    await waitFor(() => expect(result.current.results).toHaveLength(1));
+    expect(result.current.lookupMode).toBe(true);
+  });
+
+  it("leaves no control able to re-search the pasted URL", async () => {
+    const { result } = setup();
+
+    await act(async () => {
+      result.current.pasteLink(PASTE_URL);
+    });
+    await waitFor(() => expect(result.current.results).toHaveLength(1));
+
+    await act(async () => {
+      result.current.updateFilter("duration", "short");
+    });
+    await act(async () => {
+      result.current.toggleKaraokeMode();
+    });
+
+    expect(mockSearchYoutube).not.toHaveBeenCalled();
+    expect(result.current.resultsVia).toBe("paste");
+  });
+
+  it("takes a bare video id, which is what a copied share link often is", async () => {
+    const { result } = setup();
+
+    await act(async () => {
+      result.current.pasteLink("dQw4w9WgXcQ");
+    });
+
+    await waitFor(() => expect(mockLookupVideo).toHaveBeenCalled());
+    expect(mockSearchYoutube).not.toHaveBeenCalled();
+  });
+
+  it("never falls through to a search when a copied id-shaped string misses", async () => {
+    mockLookupVideo.mockRejectedValueOnce(new SearchUnavailableError(404));
+    const { result } = setup();
+
+    await act(async () => {
+      result.current.pasteLink("Xk3jP9qLm2Z");
+    });
+
+    await waitFor(() => expect(result.current.searching).toBe(false));
+    expect(mockSearchYoutube).not.toHaveBeenCalled();
+  });
+
+  it("still falls through for an id-shaped string the singer typed", async () => {
+    mockLookupVideo.mockRejectedValueOnce(new SearchUnavailableError(404));
+    const { result } = setup();
+
+    await runQuery(result, "Xk3jP9qLm2Z");
+
+    await waitFor(() => expect(mockSearchYoutube).toHaveBeenCalledTimes(1));
+  });
+
+  it("refuses clipboard text that isn't a link rather than spending a search", async () => {
+    const { result } = setup();
+    await act(async () => {
+      result.current.setQuery("dido karaoke");
+    });
+
+    let accepted: boolean | undefined;
+    await act(async () => {
+      accepted = result.current.pasteLink(
+        "a shopping list, or the last thing they copied"
+      );
+    });
+
+    expect(accepted).toBe(false);
+    expect(mockSearchYoutube).not.toHaveBeenCalled();
+    expect(mockLookupVideo).not.toHaveBeenCalled();
+  });
+
+  it("refuses without setting an error that would replace the panel", async () => {
+    const { result } = setup();
+    await runQuery(result, "dido");
+    await waitFor(() => expect(result.current.results).toHaveLength(1));
+
+    await act(async () => {
+      result.current.pasteLink("a shopping list");
+    });
+
+    expect(result.current.searchError).toBeNull();
+    expect(result.current.results).toHaveLength(1);
+  });
+
+  it("refuses a non-YouTube URL the same way", async () => {
+    const { result } = setup();
+    await act(async () => {
+      result.current.setQuery("dido karaoke");
+    });
+
+    let accepted: boolean | undefined;
+    await act(async () => {
+      accepted = result.current.pasteLink("https://example.com/song");
+    });
+
+    expect(accepted).toBe(false);
+    expect(mockSearchYoutube).not.toHaveBeenCalled();
+    expect(result.current.searchError).toBeNull();
+  });
+
+  it("refuses a YouTube link that isn't one video", async () => {
+    const { result } = setup();
+
+    let accepted: boolean | undefined;
+    await act(async () => {
+      accepted = result.current.pasteLink(
+        "https://www.youtube.com/playlist?list=PL123"
+      );
+    });
+
+    expect(accepted).toBe(false);
+    expect(mockLookupVideo).not.toHaveBeenCalled();
+    expect(result.current.searchError).toBeNull();
+  });
+
+  it("ignores an empty clipboard without touching the current results", async () => {
+    const { result } = setup();
+
+    let accepted: boolean | undefined;
+    await act(async () => {
+      accepted = result.current.pasteLink("   ");
+    });
+
+    expect(accepted).toBe(false);
+    expect(mockSearchYoutube).not.toHaveBeenCalled();
+    expect(mockLookupVideo).not.toHaveBeenCalled();
+  });
+});
+
+describe("useSongSearchState — the query a failure carries", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+    global.fetch = vi.fn().mockResolvedValue({ ok: true }) as never;
+    mockSearchYoutube.mockResolvedValue([song("a")]);
+    mockLookupVideo.mockResolvedValue(song("dQw4w9WgXcQ"));
+  });
+
+  it("holds the query that ran, not what was typed after it", async () => {
+    const { result } = setup();
+
+    await runQuery(result, "abba");
+    await waitFor(() => expect(result.current.searchedQuery).toBe("abba karaoke"));
+
+    await act(async () => {
+      result.current.setQuery("queen");
+    });
+
+    expect(result.current.searchedQuery).toBe("abba karaoke");
+  });
+
+  it("carries nothing when the box holds a pasted URL", async () => {
+    const { result } = setup();
+
+    await runQuery(result, "abba");
+    await act(async () => {
+      result.current.pasteLink(PASTE_URL);
+    });
+
+    await waitFor(() => expect(result.current.searchedQuery).toBe(""));
+  });
+
+  it("is cleared along with everything else on a reset", async () => {
+    const { result } = setup();
+
+    await runQuery(result, "abba");
+    await waitFor(() => expect(result.current.searchedQuery).toBe("abba karaoke"));
+
+    await act(async () => {
+      result.current.clearSearch();
+    });
+
+    expect(result.current.searchedQuery).toBe("");
+  });
+});

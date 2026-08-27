@@ -21,6 +21,7 @@ function lookupFailure(err: unknown): SearchFailure {
     if (err.reason === 'quota') {
       return { quota: true, resetsAt: err.resetsAt, source: 'lookup' };
     }
+    if (err.reason === 'busy') return { quota: false, busy: true, source: 'lookup' };
   }
   return { quota: false, source: 'lookup' };
 }
@@ -49,6 +50,9 @@ export function useSongSearchState({ roomId, role }: UseSongSearchStateArgs) {
   // control that would re-search it must sit still, or we spend 101 units on
   // guaranteed-garbage results.
   const [lookupMode, setLookupMode] = React.useState(false);
+  // The query the last search ran, not what the box holds: text typed but never
+  // submitted must not retarget the "find it on YouTube" way out.
+  const [searchedQuery, setSearchedQuery] = React.useState('');
   // Moves with the results, not with the box: lookupMode is set when a lookup
   // starts and cleared on any keystroke, so deriving via from it misattributes adds.
   const [resultsVia, setResultsVia] = React.useState<'search' | 'paste'>('search');
@@ -67,6 +71,7 @@ export function useSongSearchState({ roomId, role }: UseSongSearchStateArgs) {
 
   const debounceRef = React.useRef<ReturnType<typeof setTimeout>>();
   const abortRef = React.useRef<AbortController>();
+  const pastedQueryRef = React.useRef<string | null>(null);
 
   // Closing the sheet just after tapping a filter chip would otherwise still
   // fire the debounced search, spending one of the day's live searches.
@@ -88,7 +93,10 @@ export function useSongSearchState({ roomId, role }: UseSongSearchStateArgs) {
 
   // Editing the box always ends lookup mode — the text hasn't been classified
   // yet. Safe against search(): setting the flag there doesn't touch `query`.
+  // pasteLink does, so its text is exempt, or every filter is free to re-search
+  // the pasted URL.
   React.useEffect(() => {
+    if (query === pastedQueryRef.current) return;
     setLookupMode(false);
   }, [query]);
 
@@ -117,6 +125,7 @@ export function useSongSearchState({ roomId, role }: UseSongSearchStateArgs) {
     setHasSearched(true);
     setSearchError(null);
     const query = buildSearchQuery(rawQuery, karaoke);
+    setSearchedQuery(query);
     // Keyed as the server keys the catalog, so the two agree without the client
     // naming the song. Always the karaoke form: those are the only keys held.
     const suggestionKey = fromSuggestion
@@ -165,7 +174,12 @@ export function useSongSearchState({ roomId, role }: UseSongSearchStateArgs) {
         // connection must not render as "your song isn't on YouTube".
         setSearchError(
           err instanceof SearchUnavailableError
-            ? { quota: err.reason === 'quota', resetsAt: err.resetsAt, source: 'search' }
+            ? {
+                quota: err.reason === 'quota',
+                busy: err.reason === 'busy',
+                resetsAt: err.resetsAt,
+                source: 'search',
+              }
             : { quota: false, source: 'search' }
         );
       })
@@ -174,7 +188,12 @@ export function useSongSearchState({ roomId, role }: UseSongSearchStateArgs) {
       });
   }
 
-  function runLookup(videoId: string, from: 'url' | 'bare', rawQuery: string) {
+  function runLookup(
+    videoId: string,
+    from: 'url' | 'bare',
+    rawQuery: string,
+    fromClipboard = false
+  ) {
     clearTimeout(debounceRef.current);
     abortRef.current?.abort();
     const controller = new AbortController();
@@ -184,6 +203,7 @@ export function useSongSearchState({ roomId, role }: UseSongSearchStateArgs) {
     setHasSearched(true);
     setSearchError(null);
     setLookupMode(true);
+    setSearchedQuery('');
     lookupVideo(videoId, 'paste', controller.signal, roomId)
       .then((result) => {
         setResults([result]);
@@ -194,11 +214,12 @@ export function useSongSearchState({ roomId, role }: UseSongSearchStateArgs) {
       })
       .catch((err) => {
         if (err?.name === 'AbortError' || controller.signal.aborted) return;
-        // An 11-character *word* is likelier a real query than a typo'd id, so
-        // a bare miss falls through to the search it would have been. A URL
-        // that misses never does — searching a URL string is 101 wasted units.
+        // A *typed* 11-character word is likelier a real query than a typo'd id,
+        // so a bare miss falls through to search. Off the clipboard it's a token,
+        // not a word. A URL that misses never falls through: 101 wasted units.
         if (
           from === 'bare' &&
+          !fromClipboard &&
           err instanceof SearchUnavailableError &&
           err.status === 404
         ) {
@@ -225,6 +246,7 @@ export function useSongSearchState({ roomId, role }: UseSongSearchStateArgs) {
     setHasSearched(true);
     setLookupMode(true);
     setResults([]);
+    setSearchedQuery('');
     setSearchError({ quota: false, source: 'lookup', link });
   }
 
@@ -247,15 +269,18 @@ export function useSongSearchState({ roomId, role }: UseSongSearchStateArgs) {
     }
   }
 
-  function search(overrideFilters?: SearchFilters) {
-    const raw = query.trim();
+  function submitQuery(
+    raw: string,
+    overrideFilters?: SearchFilters,
+    fromClipboard = false
+  ) {
     if (!raw) return;
     // A pasted link is still "this room searched".
     trackFirstSearch();
 
     const input = classifySearchInput(raw);
     if (input.kind === 'video') {
-      runLookup(input.id, input.from, raw);
+      runLookup(input.id, input.from, raw, fromClipboard);
       return;
     }
     if (input.kind === 'youtube-url' || input.kind === 'url') {
@@ -263,6 +288,25 @@ export function useSongSearchState({ roomId, role }: UseSongSearchStateArgs) {
       return;
     }
     runSearch(raw, overrideFilters ?? filters, karaokeMode);
+  }
+
+  function search(overrideFilters?: SearchFilters) {
+    submitQuery(query.trim(), overrideFilters);
+  }
+
+  /** A link off the clipboard, offered when search is down. Anything else is
+   *  refused rather than searched — the clipboard holds whatever was last
+   *  copied, and a query costs one of the day's ~100. Returns false and sets no
+   *  error, so the panel that offered it survives to say so itself. */
+  function pasteLink(text: string): boolean {
+    const raw = text.trim();
+    if (!raw) return false;
+    const input = classifySearchInput(raw);
+    if (input.kind !== 'video') return false;
+    pastedQueryRef.current = raw;
+    setQuery(raw);
+    submitQuery(raw, undefined, true);
+    return true;
   }
 
   // Return from search results to the browse view (song ideas + room boards).
@@ -275,6 +319,7 @@ export function useSongSearchState({ roomId, role }: UseSongSearchStateArgs) {
     setSearching(false);
     setSearchError(null);
     setLookupMode(false);
+    setSearchedQuery('');
   }
 
   // Same reset as clearSearch(), used after a song is successfully added or
@@ -285,6 +330,7 @@ export function useSongSearchState({ roomId, role }: UseSongSearchStateArgs) {
     setHasSearched(false);
     setSearchError(null);
     setLookupMode(false);
+    setSearchedQuery('');
   }
 
   function updateFilter<K extends keyof SearchFilters>(
@@ -338,6 +384,7 @@ export function useSongSearchState({ roomId, role }: UseSongSearchStateArgs) {
     hasSearched,
     searchError,
     lookupMode,
+    searchedQuery,
     resultsVia,
     resultsSuggestionKey,
     resultsFromCorpus,
@@ -346,6 +393,7 @@ export function useSongSearchState({ roomId, role }: UseSongSearchStateArgs) {
     runSearch,
     toggleKaraokeMode,
     search,
+    pasteLink,
     clearSearch,
     resetSearch,
     updateFilter,

@@ -554,6 +554,96 @@
   margin-right: auto;
 }
 
+/* Pasting a link is the one thing that still works whichever ceiling we hit, so
+   it gets a panel rather than a third line of muted apology under the title.
+   Left-aligned inside the centred panel: it holds tap targets, not prose.
+
+   Tinted from --acc-b, the room's own secondary accent — set per theme on the
+   Host/Sing roots (classic cyan, minimal near-white, neon cyan on black) and
+   inherited down here. --acc-a is the pink the Search button already owns, so
+   the panel leans on the other half of the pair and stands apart from the CTA
+   without inventing a colour the theme never picked. The flat rgba line under
+   each color-mix is the fallback for engines that lack it. */
+.unavailablePaste {
+  max-width: 34ch;
+  margin: 0 auto 16px;
+  padding: 0.7rem 0.85rem;
+  background: rgba(255, 255, 255, 0.05);
+  background: color-mix(in srgb, var(--acc-b, #00f0ff) 11%, transparent);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-color: color-mix(in srgb, var(--acc-b, #00f0ff) 42%, transparent);
+  border-radius: 10px;
+  text-align: left;
+}
+
+.unavailablePasteText {
+  margin: 0;
+  color: var(--acc-b, #00f0ff);
+  font-size: 0.85rem;
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+/* Full-width tap targets: this is a phone, mid-party, with search already
+   broken — the way out shouldn't need aiming. */
+.unavailableAction {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  margin-top: 0.55rem;
+  padding: 0.55rem 0.7rem;
+  background: rgba(255, 255, 255, 0.09);
+  background: color-mix(in srgb, var(--acc-b, #00f0ff) 18%, transparent);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-color: color-mix(in srgb, var(--acc-b, #00f0ff) 52%, transparent);
+  border-radius: 8px;
+  /* White rather than the accent: minimal's accent is near-white already, and a
+     tinted label on a tinted button loses the contrast a CTA needs. */
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.3;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.unavailableAction:hover {
+  background: rgba(255, 255, 255, 0.16);
+  background: color-mix(in srgb, var(--acc-b, #00f0ff) 30%, transparent);
+}
+
+/* The typed query rides in the label and can be long; keep the button one line
+   rather than letting it grow into a paragraph. */
+.unavailableActionLabel {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.unavailableDenied {
+  margin: 0.55rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  line-height: 1.4;
+}
+
+/* Set below the rest and off to itself: it's for the singer who keeps reading
+   once they've been handed something that works, never competing with it. */
+.unavailableFooter {
+  max-width: 32ch;
+  margin: 4px auto 0;
+  padding-top: 13px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
 /* Karaoke-flavoured "finding songs" header: five bouncing equalizer bars in
    the brand gradient. */
 .loadingHeader {

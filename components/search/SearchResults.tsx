@@ -2,10 +2,9 @@ import * as React from 'react';
 
 import styles from '../../styles/SongSearch.module.css';
 import { YoutubeResult, SearchFailure } from '../../app/queue/searchYoutube';
-import { formatCountdown, formatDuration } from '../../lib/duration';
+import { formatDuration } from '../../lib/duration';
 import { useT } from '../../lib/i18n/I18nProvider';
-import BrokenLinkIcon from './BrokenLinkIcon';
-import NotesIcon from './NotesIcon';
+import SearchUnavailable from './SearchUnavailable';
 
 interface SearchResultsProps {
   hasSearched: boolean;
@@ -20,19 +19,14 @@ interface SearchResultsProps {
   canAdd: boolean;
   /** Picker mode ("Sing with me" / Suggestions boards) vs. add-to-queue. */
   pickMode: boolean;
+  searchedQuery: string;
+  onPasteLink: (text: string) => boolean;
   onPreview: (song: YoutubeResult) => void;
   onAdd: (song: YoutubeResult) => void;
   onShowMore: () => void;
 }
 
 const SKELETON_COUNT = 8;
-// About what the singer typed, so these replace the "we're popular" framing.
-const LINK_MESSAGE_KEYS: Record<NonNullable<SearchFailure['link']>, string> = {
-  not_found: 'search.linkNotFound',
-  not_embeddable: 'search.linkNotEmbeddable',
-  no_video: 'search.linkNoVideo',
-  not_youtube: 'search.linkNotYoutube',
-};
 // Stagger resets each "Show more" batch so newly revealed rows animate in
 // from the top of the batch instead of waiting out the full list's delays.
 const STAGGER_BATCH = 8;
@@ -46,6 +40,8 @@ const SearchResults: React.FC<SearchResultsProps> = ({
   visibleCount,
   canAdd,
   pickMode,
+  searchedQuery,
+  onPasteLink,
   onPreview,
   onAdd,
   onShowMore,
@@ -61,45 +57,12 @@ const SearchResults: React.FC<SearchResultsProps> = ({
   );
 
   if (hasSearched && !searching && results.length === 0 && searchError) {
-    // An unparseable resetsAt stays null rather than becoming NaN, so a mangled
-    // error body falls back to the generic copy, not "resets in about NaN min".
-    const msLeft = searchError.resetsAt
-      ? new Date(searchError.resetsAt).getTime() - Date.now()
-      : NaN;
-    const secondsLeft = Number.isFinite(msLeft) ? Math.max(0, msLeft / 1000) : null;
-    const linkKey = searchError.link ? LINK_MESSAGE_KEYS[searchError.link] : null;
-    // No apology title: a link that didn't resolve isn't our mistake to own.
-    if (linkKey) {
-      return (
-        <div className={styles.unavailable}>
-          <BrokenLinkIcon className={styles.unavailableIcon} />
-          <p className={styles.unavailableBody}>{t(linkKey)}</p>
-        </div>
-      );
-    }
-    const quotaMessage = searchError.quota && secondsLeft !== null;
     return (
-      <div className={styles.unavailable}>
-        <NotesIcon className={styles.unavailableIcon} />
-        <p className={styles.unavailableTitle}>
-          {quotaMessage ? t('search.unavailable.quotaTitle') : t('search.unavailable.title')}
-        </p>
-        <p className={styles.unavailableBody}>
-          {quotaMessage
-            ? t('search.unavailable.quotaBody', { time: formatCountdown(secondsLeft, t) })
-            : t('search.unavailable.body')}
-        </p>
-        {/* Cuts come from the corpus, which spends no quota, so ideas outlive
-            it however it was spent — including on a paste. */}
-        {searchError.quota && (
-          <p className={styles.unavailableBody}>{t('search.quotaIdeasHint')}</p>
-        )}
-        {/* A spent quota still leaves the 1-unit lookups working, so a searcher
-            is told to paste a link. Someone whose paste hit it isn't. */}
-        {searchError.quota && searchError.source !== 'lookup' && (
-          <p className={styles.unavailableBody}>{t('search.quotaPasteHint')}</p>
-        )}
-      </div>
+      <SearchUnavailable
+        searchError={searchError}
+        searchedQuery={searchedQuery}
+        onPasteLink={onPasteLink}
+      />
     );
   }
 
