@@ -89,6 +89,62 @@ describe("telling YouTube's limits apart", () => {
     expect(e.limit).toBe("burst");
   });
 
+  it("reads a spent day out of the message when no reason code says so", async () => {
+    const e = await limitOf(429, {
+      error: {
+        code: 429,
+        status: "RESOURCE_EXHAUSTED",
+        message:
+          "Quota exceeded for quota metric 'Queries' and limit 'Queries per day' of service 'youtube.googleapis.com'.",
+      },
+    });
+
+    expect(e.limit).toBe("daily");
+  });
+
+  it("leaves a per-minute ceiling in the same shape as burst", async () => {
+    const e = await limitOf(429, {
+      error: {
+        status: "RESOURCE_EXHAUSTED",
+        message:
+          "Quota exceeded for quota metric 'Queries' and limit 'Queries per minute per user'.",
+      },
+    });
+
+    expect(e.limit).toBe("burst");
+  });
+});
+
+describe("recording what YouTube said", () => {
+  it("carries the status, the reason and the message, markup stripped", async () => {
+    const e = await limitOf(403, {
+      error: {
+        message:
+          'The request cannot be completed because you have exceeded your <a href="/youtube/v3/getting-started#quota">quota</a>.',
+        errors: [{ reason: "quotaExceeded" }],
+      },
+    });
+
+    expect(e.detail).toContain("403");
+    expect(e.detail).toContain("quotaExceeded");
+    expect(e.detail).toContain("exceeded your quota");
+    expect(e.detail).not.toContain("<a");
+  });
+
+  it("falls back to the API status when there is no reason code", async () => {
+    const e = await limitOf(429, {
+      error: { status: "RESOURCE_EXHAUSTED", message: "Quota exceeded." },
+    });
+
+    expect(e.detail).toContain("RESOURCE_EXHAUSTED");
+  });
+
+  it("caps the detail so a long message can't bloat every analytics row", async () => {
+    const e = await limitOf(500, { error: { message: "x".repeat(500) } });
+
+    expect(e.detail.length).toBeLessThanOrEqual(200);
+  });
+
   it("leaves an ordinary failure unflagged, so nothing degrades on a bad key", async () => {
     const e = await limitOf(400, {
       error: { message: "API key not valid", errors: [{ reason: "badRequest" }] },

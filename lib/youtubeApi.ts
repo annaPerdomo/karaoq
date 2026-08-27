@@ -14,30 +14,57 @@ export class YoutubeApiError extends Error {
   /** Either limit degrades a caller the same way (stale cache, then corpus).
    *  Only `limit === "daily"` may tell a room search is gone for the day. */
   quotaExceeded: boolean;
-  constructor(message: string, limit: YoutubeLimit | null) {
+  /** What YouTube actually said; `limit` above is only our reading of it. Kept
+   *  because the Vercel log holding the same words is gone within the hour. */
+  detail: string;
+  constructor(message: string, limit: YoutubeLimit | null, detail: string) {
     super(message);
     this.name = "YoutubeApiError";
     this.limit = limit;
     this.quotaExceeded = limit !== null;
+    this.detail = detail;
   }
 }
 
 const DAILY_REASONS = ["quotaExceeded", "dailyLimitExceeded"];
 const BURST_REASONS = ["rateLimitExceeded", "userRateLimitExceeded"];
 
+// Google's newer quota layer answers a spent *daily* allowance with a bare 429 +
+// RESOURCE_EXHAUSTED and no `errors[].reason` — the shape a short-window ceiling
+// arrives in too. Only the message parts them: "…and limit 'Queries per day'".
+const PER_DAY_LIMIT = /per[\s-]*day/i;
+
 function limitFrom(
   reason: string,
   status: string,
-  httpStatus: number
+  httpStatus: number,
+  message: string
 ): YoutubeLimit | null {
   if (DAILY_REASONS.indexOf(reason) !== -1) return "daily";
   if (BURST_REASONS.indexOf(reason) !== -1) return "burst";
-  // RESOURCE_EXHAUSTED and a bare 429 name a limit without saying which one.
-  // Read them as burst: retrying costs a single call and corrects itself,
-  // where wrongly latching the day is a one-way flag that tells every room
-  // search is dead until midnight while it is in fact still working.
-  if (status === "RESOURCE_EXHAUSTED" || httpStatus === 429) return "burst";
+  if (status === "RESOURCE_EXHAUSTED" || httpStatus === 429) {
+    // Burst when the message names no window: a wrong burst costs one retry,
+    // where wrongly latching the day tells every room search is dead til midnight.
+    return PER_DAY_LIMIT.test(message) ? "daily" : "burst";
+  }
   return null;
+}
+
+const MAX_DETAIL = 200;
+
+/** YouTube's quota message carries markup ("exceeded your <a href=…>quota</a>"),
+ *  which is noise in an analytics row. */
+function compactDetail(
+  httpStatus: number,
+  reason: string,
+  status: string,
+  message: string
+): string {
+  const said = message.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+  return [String(httpStatus), reason || status, said]
+    .filter(Boolean)
+    .join(" · ")
+    .slice(0, MAX_DETAIL);
 }
 
 export async function fetchYoutubeApi(
@@ -50,13 +77,13 @@ export async function fetchYoutubeApi(
   const data = await resp.json().catch(() => null);
   const apiError = data?.error;
   if (!resp.ok || apiError) {
+    const reason = apiError?.errors?.[0]?.reason ?? "";
+    const status = apiError?.status ?? "";
+    const message = apiError?.message || `YouTube API ${resp.status}`;
     throw new YoutubeApiError(
-      apiError?.message || `YouTube API ${resp.status}`,
-      limitFrom(
-        apiError?.errors?.[0]?.reason ?? "",
-        apiError?.status ?? "",
-        resp.status
-      )
+      message,
+      limitFrom(reason, status, resp.status, message),
+      compactDetail(resp.status, reason, status, message)
     );
   }
   return data;
