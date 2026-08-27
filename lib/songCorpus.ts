@@ -208,10 +208,13 @@ async function fileCut(
   await songs.updateOne({ _id: entry.key }, update, { upsert: true });
 }
 
+export type MatchProvenance = "harvest" | "claim";
+
 /** Idempotent: a run that dies mid-sweep can simply be run again. */
 export async function recordHarvestMatches(
   matches: Map<string, MatchedVideo[]>,
-  details: Map<string, SearchResult>
+  details: Map<string, SearchResult>,
+  provenance: MatchProvenance = "harvest"
 ): Promise<{
   videosUpserted: number;
   videosRefreshed: number;
@@ -243,8 +246,11 @@ export async function recordHarvestMatches(
       const set: Record<string, unknown> = {
         title: enriched?.title ?? row.title,
         thumbnailUrl: enriched?.thumbnailUrl || row.thumbnailUrl,
-        refreshedAt: now,
-        "sources.harvest": { channel: row.channel, matchedAt: now },
+        // A claim fetched nothing, so it may not renew the TTL clock.
+        ...(provenance === "harvest" ? { refreshedAt: now } : {}),
+        ...(provenance === "harvest"
+          ? { "sources.harvest": { channel: row.channel, matchedAt: now } }
+          : { "sources.claim": { matchedAt: now } }),
       };
       if (enriched?.durationSeconds !== undefined) {
         set.durationSeconds = enriched.durationSeconds;
@@ -264,7 +270,9 @@ export async function recordHarvestMatches(
           $addToSet: { songKeys: { $each: row.songKeys } },
           $setOnInsert: { firstSeenAt: now },
         },
-        upsert: true,
+        // And so must not upsert: a row the TTL took between the read and here
+        // would come back with no refreshedAt, invisible to both TTL and sweep.
+        upsert: provenance === "harvest",
       },
     });
   });

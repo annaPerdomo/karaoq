@@ -359,6 +359,29 @@ describe("recordHarvestMatches", () => {
     expect(songs().get(entry.key).topVideoId).toBeUndefined();
   });
 
+  it("does not put a claimed row the retention sweep took back", async () => {
+    // A claim sets no refreshedAt, so an upsert would recreate a TTL'd row with
+    // none at all — which neither the TTL nor the sweep's filter can match.
+    const report = await recordHarvestMatches(
+      new Map([[entry.key, [matched("gone")]]]),
+      new Map(),
+      "claim"
+    );
+
+    expect(videos().get("gone")).toBeNull();
+    expect(report.videosUpserted).toBe(0);
+  });
+
+  it("still opens a row for a harvest, which has just fetched it", async () => {
+    await recordHarvestMatches(
+      new Map([[entry.key, [matched("h1")]]]),
+      new Map(),
+      "harvest"
+    );
+
+    expect(videos().get("h1").refreshedAt).toBeInstanceOf(Date);
+  });
+
   it("files one upload under every song it matches", async () => {
     await recordHarvestMatches(
       new Map([

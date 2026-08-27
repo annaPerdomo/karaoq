@@ -29,6 +29,7 @@ import { searchQuotaResetsAt } from "../../../lib/searchQuotaStatus";
 import { recordDemand } from "../../../lib/songCorpus";
 import { suggestionCatalog } from "../../../lib/suggestionCatalog";
 import { suggestionDemand } from "../../../lib/suggestionDemand";
+import { CLAIM_SCAN_LIMIT, claimBankedVideos } from "../../../lib/corpusClaim";
 
 // vercel.json invokes this twice because a full harvest outlasts the 300s
 // function — the later slot buys clock, not quota (lib/corpusBudget). The run's
@@ -177,6 +178,20 @@ export default async function handler(
         const { done, report } = await proposeUnmappedAdds(
           by,
           envCount("SUGGESTION_PROPOSAL_SCAN", PROPOSAL_SCAN_LIMIT)
+        );
+        return { done, report: { ...report } };
+      },
+    },
+    {
+      // After propose, before anything that spends: every cut it finds is one
+      // the resolver below no longer has to buy.
+      name: "claim",
+      budgetMs: 45_000,
+      floorMs: 5_000,
+      run: async (by) => {
+        const { done, report } = await claimBankedVideos(
+          by,
+          envCount("SUGGESTION_CLAIM_SCAN", CLAIM_SCAN_LIMIT)
         );
         return { done, report: { ...report } };
       },

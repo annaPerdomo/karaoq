@@ -303,6 +303,7 @@ export interface KaraokeVideoDoc {
       lastAt: Date;
     };
     harvest?: { channel: string; matchedAt: Date };
+    claim?: { matchedAt: Date };
     seed?: boolean;
     /** `at` alone until bankSearchEvidence adds counters to it. */
     search?: {
