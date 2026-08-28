@@ -202,7 +202,7 @@
   "home.proof.countries": "pays",
   "home.proof.cheers": "encouragements",
   "home.reach.title": "La soirée karaoké, partout",
-  "home.reach.sub": "Chaque point allumé est un pays où quelqu'un a ouvert un salon KaraoQ.",
+  "home.reach.sub": "KaraoQ rassemble les gens partout dans le monde, par la musique.",
   "home.reach.mapLabel": "Carte du monde avec {count} pays allumés où KaraoQ a été utilisé",
   "home.resume.open": "Ta salle {code} est toujours ouverte",
   "home.resume.queued.one": " — {count} chanson dans la file",
