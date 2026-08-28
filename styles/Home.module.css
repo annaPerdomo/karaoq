@@ -3360,7 +3360,7 @@
 }
 
 /* Keep the duration in step with LIT_DURATION_MS in lib/home/worldMapAnim —
-   it dates the twinkle off the end of this animation. */
+   it dates the sparkle off the end of this animation. */
 .reachLit {
   opacity: 0;
 }
@@ -3375,26 +3375,44 @@
   to { opacity: 1; stroke-width: 0.82; }
 }
 
-/* The idle twinkle, once the sweep has landed. WorldDotMap varies the period
-   and offset per dot, so a few are always mid-flare and the map never pulses
-   as one. */
-.reachTwinkle {
+/* The idle sparkle, once the sweep has landed. WorldDotMap varies the period,
+   the offset and the angle per dot, so a few are always mid-glint and the field
+   never pulses as one or reads as one stamp repeated. */
+.reachSparkle {
   opacity: 0;
+  /* The glyph is drawn at its dot's absolute coordinates, so it needs its own
+     box to turn and grow around — without fill-box both would pivot on the
+     map's top-left corner and fling the sparkle across the world. */
+  transform-box: fill-box;
+  transform-origin: center;
 }
-.reachPlaying .reachTwinkle {
-  animation-name: reachTwinkle;
+.reachPlaying .reachSparkle {
+  animation-name: reachSparkle;
   animation-timing-function: ease-in-out;
   animation-iteration-count: infinite;
 }
-/* This one never ends, and stroke-width can't be composited: left running it
-   repaints every frame for as long as the tab is open, wherever the reader has
-   scrolled to. */
-.reachParked .reachTwinkle {
+/* This one never ends: left running it repaints for as long as the tab is open,
+   wherever the reader has scrolled to. */
+.reachParked .reachSparkle {
   animation-play-state: paused;
 }
-@keyframes reachTwinkle {
-  0%, 30%, 100% { opacity: 0; stroke-width: 0.82; }
-  65% { opacity: 0.9; stroke-width: 1.4; }
+/* Scale rather than stroke-width — a scaling glyph doesn't rebuild stroke
+   geometry every frame, which is what makes a field this size affordable.
+   It peaks and then settles back a little before fading, so the glint reads as
+   catching and passing rather than as a shape being resized. Uses the standalone
+   `scale` property so it composes with the per-dot `rotate` the component sets
+   inline; writing either as `transform` would overwrite the other.
+
+   The glint sits at the FRONT of the cycle and the dark stretch trails it. That
+   ordering is load-bearing: an idle head — which is the natural way to write
+   this — costs every sparkle that fraction of a multi-second cycle before it
+   first shows, so the map reads as static for a beat after it lands. Leading
+   with the flare means a sparkle appears the moment its delay is up. */
+@keyframes reachSparkle {
+  0% { opacity: 0; scale: 0.3; }
+  8% { opacity: 0.95; scale: 1; }
+  18% { opacity: 0.72; scale: 0.82; }
+  46%, 100% { opacity: 0; scale: 0.3; }
 }
 
 .reachStats {
@@ -3449,8 +3467,8 @@
   .reachPlaying .reachLand,
   .reachPlaying .reachLit,
   .reachPlaying .reachGlowBand { animation: none; opacity: 1; }
-  /* The twinkle is pure decoration layered over a dot that's already lit, so it
+  /* The sparkle is pure decoration layered over a dot that's already lit, so it
      just goes away rather than resting in its flared state. */
-  .reachPlaying .reachTwinkle { animation: none; opacity: 0; }
+  .reachPlaying .reachSparkle { animation: none; opacity: 0; }
 }
 

@@ -60,6 +60,15 @@ export function decodeWorld(): DecodedWorld {
 /** A dot's `d` command — a zero-length line that a round linecap turns into a dot. */
 export const dotPath = (d: Dot): string => `M${d.x} ${d.y}h.01`;
 
+/** Filled, not stroked: the rays have to taper to a point. Both control points
+ *  of every cubic sit on the centre — move them outward and the concave waist
+ *  rounds off into a blob. */
+export function sparklePath(d: Dot, r: number): string {
+  const { x, y } = d;
+  const c = `C${x} ${y} ${x} ${y} `;
+  return `M${x} ${y - r}${c}${x + r} ${y}${c}${x} ${y + r}${c}${x - r} ${y}${c}${x} ${y - r}Z`;
+}
+
 /* The entrance: the world draws itself west to east, and the lit countries
    ignite just behind the wave as it passes.
 
@@ -86,29 +95,34 @@ export const BAND_COUNT = Math.ceil(GRID.cols / BAND_COLS);
 export const bandOf = (x: number): number => Math.floor(x / BAND_COLS);
 export const bandDelay = (band: number): number => SWEEP_START_MS + band * BAND_STEP_MS;
 
-/* The twinkle: once the map has settled, a scatter of lit dots keeps flaring on
-   a slow loop so the band reads as alive rather than as a finished graphic.
+/* Overlays on top of the lit bands, not members of them — a sparkle only ever
+   brightens, so it never needs cutting out of the band beneath. Animating
+   opacity and transform rather than stroke-width is what makes a scatter this
+   size affordable: a scaling glyph doesn't re-tessellate a stroke every frame. */
 
-   These are overlay dots drawn on top of the lit bands, not members of them —
-   a sparkle brightens, it never dims, so it can sit above its band without
-   needing to be cut out of it. Kept to a fixed handful because this animation
-   runs forever, and a band spans the map's full height: animating one would
-   dirty a tall column every frame, where a lone dot dirties a few pixels. */
-
-/** How many lit dots twinkle. Every one is an element animating indefinitely. */
-export const TWINKLE_COUNT = 34;
-/** Window the twinkle start times are scattered over, so they never pulse in unison.
-    Short enough that the whole scatter is cycling a few seconds after it starts —
-    stretch it much further and the map sits visibly dead in between. */
-export const TWINKLE_SPREAD_MS = 2800;
-/** The last moment of the entrance — nothing twinkles until the map has landed.
-    Takes whichever entrance animation finishes last, so retuning either one
-    can't start the twinkle over a dot that's still arriving. */
-export const ENTRANCE_END_MS =
-  bandDelay(BAND_COUNT - 1) + LIT_LAG_MS + Math.max(LIT_DURATION_MS, GLOW_DURATION_MS);
+/** A budget, not a target: every sparkle animates for as long as the tab is open. */
+export const SPARKLE_COUNT = 150;
+/** Jitter on a sparkle's start, about one cycle wide on purpose: narrow it and
+    the field stays in phase, flaring as one and going near-dark between waves. */
+export const SPARKLE_SPREAD_MS = 2400;
+/** One sparkle's cycle, plus up to SPARKLE_CYCLE_RANGE_MS more per dot so
+    matching periods can't drift back into lockstep. */
+export const SPARKLE_CYCLE_MIN_MS = 2600;
+export const SPARKLE_CYCLE_RANGE_MS = 2000;
+/** How far a sparkle's rays reach, in grid cells. Bigger than the dot it sits
+    on because the outer half of that reach is gradient falloff, not solid. */
+export const SPARKLE_RADIUS = 1.75;
+/**
+ * When a sparkle may first glint: once its OWN band has landed, not once the
+ * whole map has, so the glints chase the sweep rather than all waiting on the
+ * slowest band. LIT_DURATION_MS and not the longer GLOW_DURATION_MS — the halo
+ * underneath reads fine still fading in.
+ */
+export const sparkleStart = (d: Dot): number =>
+  bandDelay(bandOf(d.x)) + LIT_LAG_MS + LIT_DURATION_MS;
 
 // Deterministic 0..1 from a pair of numbers. The scatter has to be stable across
-// re-renders — a fresh Math.random() each pass would re-roll which dots twinkle.
+// re-renders — a fresh Math.random() each pass would re-roll which dots sparkle.
 export function hash01(a: number, b: number): number {
   const n = Math.sin(a * 127.1 + b * 311.7) * 43758.5453;
   return n - Math.floor(n);
@@ -126,15 +140,11 @@ export interface LitBand {
 export interface Bands {
   landBands: string[];
   litBands: (LitBand | null)[];
-  twinkles: Dot[];
+  sparkles: Dot[];
 }
 
-export const NO_BANDS: Bands = { landBands: [], litBands: [], twinkles: [] };
+export const NO_BANDS: Bands = { landBands: [], litBands: [], sparkles: [] };
 
-/**
- * Splits the world into the paths the map animates: one land path per band, one
- * lit path per band for the countries given, and the dots that twinkle after.
- */
 export function buildBands(countryCodes: string[]): Bands {
   const world = decodeWorld();
   const lit = new Set<number>();
@@ -148,7 +158,6 @@ export function buildBands(countryCodes: string[]): Bands {
   // countries in it rather than to the whole map.
   const bounds: ({ x0: number; y0: number; x1: number; y1: number } | null)[] =
     Array(BAND_COUNT).fill(null);
-  const litDots: Dot[] = [];
 
   for (const dot of world.land) landBands[bandOf(dot.x)] += dotPath(dot);
   lit.forEach((index) => {
@@ -164,7 +173,6 @@ export function buildBands(countryCodes: string[]): Bands {
     } else {
       bounds[band] = { x0: dot.x, y0: dot.y, x1: dot.x, y1: dot.y };
     }
-    litDots.push(dot);
   });
 
   const litBands = litPaths.map((d, band) => {
@@ -181,13 +189,67 @@ export function buildBands(countryCodes: string[]): Bands {
     };
   });
 
-  // Ordering by hash is a deterministic shuffle: taking the head of it spreads
-  // the twinkles over the whole lit area, and a short country list simply
-  // twinkles every dot it has rather than none.
-  const twinkles = litDots
-    .slice()
-    .sort((a, b) => hash01(a.x, a.y) - hash01(b.x, b.y))
-    .slice(0, TWINKLE_COUNT);
+  return { landBands, litBands, sparkles: pickSparkles(countryCodes, world) };
+}
 
-  return { landBands, litBands, twinkles };
+/**
+ * One sparkle per country first, the rest apportioned by the dots a country
+ * owns. Breadth first because dots track landmass, so ordering by hash alone
+ * leaves Singapore, Malta and Korea dark. That remainder tracks area, not
+ * activity — it says "people here", never "more people here".
+ */
+function pickSparkles(countryCodes: string[], world: DecodedWorld): Dot[] {
+  // Taking the head of a hash-ordered list scatters a country's picks across it
+  // rather than clustering them where the grid happened to encode them first.
+  const byHash = (a: Dot, b: Dot) => hash01(a.x, a.y) - hash01(b.x, b.y);
+
+  const seenCode = new Set<string>();
+  const queues = countryCodes
+    .map((code) => code.toUpperCase())
+    .filter((code) => {
+      if (seenCode.has(code) || !world.byCountry.has(code)) return false;
+      seenCode.add(code);
+      return true;
+    })
+    .map((code) =>
+      world.byCountry
+        .get(code)!
+        .map((index) => world.land[index])
+        .sort(byHash)
+    );
+
+  const sparkles: Dot[] = [];
+  // A microstate and its host share a cell (see SHARED_DOTS); without this the
+  // two would stack sparkles on the same point and spend the budget twice.
+  const taken = new Set<string>();
+  const cursor = queues.map(() => 0);
+  const take = (i: number): boolean => {
+    if (sparkles.length >= SPARKLE_COUNT) return false;
+    const dot = queues[i][cursor[i]];
+    if (!dot) return false;
+    cursor[i]++;
+    const key = `${dot.x},${dot.y}`;
+    if (!taken.has(key)) {
+      taken.add(key);
+      sparkles.push(dot);
+    }
+    return true;
+  };
+
+  // One each, in rank order so a list longer than the budget keeps the busiest.
+  for (let i = 0; i < queues.length; i++) take(i);
+
+  const totalDots = queues.reduce((n, q) => n + q.length, 0);
+  const remaining = SPARKLE_COUNT - sparkles.length;
+  if (remaining > 0 && totalDots > 0) {
+    for (let i = 0; i < queues.length; i++) {
+      const share = Math.floor((remaining * queues[i].length) / totalDots);
+      for (let k = 0; k < share; k++) if (!take(i)) break;
+    }
+    for (let spent = 1; spent > 0 && sparkles.length < SPARKLE_COUNT; ) {
+      spent = 0;
+      for (let i = 0; i < queues.length; i++) if (take(i)) spent++;
+    }
+  }
+  return sparkles;
 }

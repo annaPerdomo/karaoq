@@ -4,12 +4,15 @@ import { GRID } from '../../lib/home/worldDots';
 import {
   buildBands,
   bandDelay,
-  dotPath,
   hash01,
-  ENTRANCE_END_MS,
   LIT_LAG_MS,
   NO_BANDS,
-  TWINKLE_SPREAD_MS,
+  SPARKLE_CYCLE_MIN_MS,
+  SPARKLE_CYCLE_RANGE_MS,
+  SPARKLE_RADIUS,
+  SPARKLE_SPREAD_MS,
+  sparklePath,
+  sparkleStart,
 } from '../../lib/home/worldMapAnim';
 import useOnScreen from './hooks/useOnScreen';
 
@@ -35,7 +38,7 @@ export default function WorldDotMap({ countryCodes, label, play }: WorldDotMapPr
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => setMounted(true), []);
 
-  const { landBands, litBands, twinkles } = React.useMemo(
+  const { landBands, litBands, sparkles } = React.useMemo(
     () => (mounted ? buildBands(countryCodes) : NO_BANDS),
     [mounted, countryCodes]
   );
@@ -67,6 +70,18 @@ export default function WorldDotMap({ countryCodes, label, play }: WorldDotMapPr
           <stop offset="45%" stopColor="#9d4edd" />
           <stop offset="100%" stopColor="#00d9ff" />
         </linearGradient>
+        {/* One gradient serves every sparkle: in the default objectBoundingBox
+            units it re-fits to whichever glyph references it, so the hot core
+            lands on each sparkle's own centre. The dots can't do this — a
+            zero-area path has no box to resolve against, which is why the band
+            gradient above is userSpaceOnUse. */}
+        <radialGradient id="reachSparkleShine">
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="1" />
+          <stop offset="18%" stopColor="#ffffff" stopOpacity="0.97" />
+          <stop offset="42%" stopColor="#e4f9ff" stopOpacity="0.62" />
+          <stop offset="72%" stopColor="#8fe6ff" stopOpacity="0.22" />
+          <stop offset="100%" stopColor="#6fd9ff" stopOpacity="0" />
+        </radialGradient>
         {/* One blur per band, sized to that band's own dots. A filter's input is
             whatever its subtree renders, so a single filter over the whole glow
             group re-runs a map-sized Gaussian blur on every frame any one band
@@ -143,24 +158,23 @@ export default function WorldDotMap({ countryCodes, label, play }: WorldDotMapPr
         ) : null
       )}
 
-      {twinkles.map((d) => (
+      {sparkles.map((s) => (
         <path
-          key={`twinkle-${d.x}-${d.y}`}
-          className={styles.reachTwinkle}
+          key={`sparkle-${s.x}-${s.y}`}
+          className={styles.reachSparkle}
           style={{
-            animationDelay: `${ENTRANCE_END_MS + hash01(d.y, d.x) * TWINKLE_SPREAD_MS}ms`,
+            animationDelay: `${sparkleStart(s) + hash01(s.y, s.x) * SPARKLE_SPREAD_MS}ms`,
             // Varied per dot as well as offset: matching periods would drift
             // back into lockstep however far apart they started.
-            animationDuration: `${3400 + hash01(d.x + 7, d.y + 3) * 2800}ms`,
+            animationDuration: `${
+              SPARKLE_CYCLE_MIN_MS + hash01(s.x + 7, s.y + 3) * SPARKLE_CYCLE_RANGE_MS
+            }ms`,
+            rotate: `${hash01(s.x + 3, s.y + 11) * 90 - 45}deg`,
           }}
-          d={dotPath(d)}
-          // White rather than the gradient: over a dot that's already magenta or
-          // cyan, a bloom in its own colour barely registers, where a white core
-          // reads as light catching on it.
-          stroke="#fff"
-          strokeWidth="0.82"
-          strokeLinecap="round"
-          fill="none"
+          d={sparklePath(s, SPARKLE_RADIUS)}
+          // A white core rather than the band's own colour: over a dot already
+          // magenta or cyan, a bloom in that colour barely registers.
+          fill="url(#reachSparkleShine)"
         />
       ))}
     </svg>
