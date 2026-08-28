@@ -29,7 +29,8 @@ vi.mock("mongodb", () => ({
 process.env.MONGODB_URI = "mongodb://test";
 process.env.MONGODB_DB = "test-db";
 
-import { LIVE_ROOM_WINDOW_MS, liveRoomCount } from "../../lib/liveRooms";
+import { CORPUS_BUSY_WINDOW_MS } from "../../lib/liveWindows";
+import { liveRoomCount } from "../../lib/liveRooms";
 
 const rooms = () => collection("rooms");
 const MINUTE = 60_000;
@@ -53,7 +54,7 @@ describe("counting the rooms in use", () => {
 
   it("lets go of a party that ended before the window", async () => {
     const now = Date.now();
-    room("AAA11", new Date(now - LIVE_ROOM_WINDOW_MS - MINUTE));
+    room("AAA11", new Date(now - CORPUS_BUSY_WINDOW_MS - MINUTE));
 
     expect(await liveRoomCount(now)).toBe(0);
   });

@@ -24,7 +24,8 @@ import {
   SWEEP_PER_RUN,
   sweepCorpusVideos,
 } from "../../../lib/corpusSweep";
-import { LIVE_ROOM_WINDOW_MS, liveRoomCount } from "../../../lib/liveRooms";
+import { CORPUS_BUSY_WINDOW_MS } from "../../../lib/liveWindows";
+import { liveRoomCount } from "../../../lib/liveRooms";
 import { searchQuotaResetsAt } from "../../../lib/searchQuotaStatus";
 import { recordDemand } from "../../../lib/songCorpus";
 import { suggestionCatalog } from "../../../lib/suggestionCatalog";
@@ -116,7 +117,7 @@ export default async function handler(
     ? 0
     : await liveRoomCount(
         started,
-        envCount("SUGGESTION_LIVE_ROOM_WINDOW_MS", LIVE_ROOM_WINDOW_MS)
+        envCount("SUGGESTION_LIVE_ROOM_WINDOW_MS", CORPUS_BUSY_WINDOW_MS)
       );
 
   // "Is there usage left" answered by observation, not arithmetic: the day's
