@@ -1,11 +1,12 @@
 import * as React from 'react';
 import styles from '../../../styles/Admin.module.css';
 import type { RoomRow } from '../types';
-import { isLive } from '../format';
+import { LIVE_EXPLANATION } from '../format';
 import RoomCard from './RoomCard';
 
 const PAGE_SIZE = 25;
 const SEARCH_DEBOUNCE_MS = 300;
+const LIVE_TIP_ID = 'rooms-live-tip';
 
 /** Search filters server-side, so it reaches rooms past the loaded pages. */
 export default function RoomsView({
@@ -24,6 +25,10 @@ export default function RoomsView({
   onMutate: () => void;
 }): React.ReactElement {
   const [rooms, setRooms] = React.useState<RoomRow[]>([]);
+  const [liveOnly, setLiveOnly] = React.useState(false);
+  // Counted server-side over every room, not over the loaded pages: a room
+  // created days ago can be live now, and newest-first would bury it.
+  const [liveCount, setLiveCount] = React.useState(0);
   const [hasMore, setHasMore] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
   const [failed, setFailed] = React.useState(false);
@@ -36,7 +41,7 @@ export default function RoomsView({
   const requestSeq = React.useRef(0);
 
   const loadRooms = React.useCallback(
-    async (skip: number, replace: boolean, q: string) => {
+    async (skip: number, replace: boolean, q: string, live: boolean) => {
       const seq = ++requestSeq.current;
       setLoading(true);
       setFailed(false);
@@ -46,6 +51,7 @@ export default function RoomsView({
           limit: String(PAGE_SIZE),
         });
         if (q) params.set('q', q);
+        if (live) params.set('live', '1');
         const res = await fetch(`/api/analytics/rooms?${params}`, {
           headers: { 'x-analytics-secret': secret },
         });
@@ -54,6 +60,7 @@ export default function RoomsView({
         if (seq !== requestSeq.current) return;
         setRooms((prev) => (replace ? json.rooms : [...prev, ...json.rooms]));
         setHasMore(Boolean(json.hasMore));
+        setLiveCount(json.liveCount ?? 0);
       } catch {
         if (seq !== requestSeq.current) return;
         setHasMore(false);
@@ -66,11 +73,11 @@ export default function RoomsView({
 
   React.useEffect(() => {
     const timer = setTimeout(
-      () => loadRooms(0, true, query),
+      () => loadRooms(0, true, query, liveOnly),
       query ? SEARCH_DEBOUNCE_MS : 0
     );
     return () => clearTimeout(timer);
-  }, [query, refreshToken, loadRooms]);
+  }, [query, liveOnly, refreshToken, loadRooms]);
 
   React.useEffect(() => {
     if (!hasMore || loading) return;
@@ -78,13 +85,14 @@ export default function RoomsView({
     if (!el) return;
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting) loadRooms(rooms.length, false, query);
+        if (entries[0].isIntersecting)
+          loadRooms(rooms.length, false, query, liveOnly);
       },
       { rootMargin: '300px' }
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, [hasMore, loading, rooms.length, query, loadRooms]);
+  }, [hasMore, loading, rooms.length, query, liveOnly, loadRooms]);
 
   async function handleDelete(roomId: string) {
     if (!confirm(`Delete all data for room ${roomId}?`)) return;
@@ -96,7 +104,7 @@ export default function RoomsView({
       if (!res.ok) throw new Error('Delete failed');
       if (mergeSource === roomId) setMergeSource(null);
       if (expanded === roomId) setExpanded(null);
-      loadRooms(0, true, query);
+      loadRooms(0, true, query, liveOnly);
       onMutate();
     } catch {
       alert('Failed to delete room');
@@ -131,14 +139,21 @@ export default function RoomsView({
       });
       if (!res.ok) throw new Error('Merge failed');
       setMergeSource(null);
-      loadRooms(0, true, query);
+      loadRooms(0, true, query, liveOnly);
       onMutate();
     } catch {
       alert('Failed to merge rooms');
     }
   }
 
-  const liveCount = rooms.filter((r) => isLive(r.lastSeen)).length;
+  function emptyMessage(): string {
+    if (loading) return 'Loading…';
+    if (failed) return 'Couldn’t load rooms.';
+    if (liveOnly && query) return `No live rooms matching “${query}”`;
+    if (liveOnly) return 'No rooms are live right now.';
+    if (query) return `No rooms matching “${query}”`;
+    return 'No rooms created yet';
+  }
 
   return (
     <div className={styles.view}>
@@ -146,22 +161,41 @@ export default function RoomsView({
         <div>
           <h1 className={styles.viewTitle}>Rooms</h1>
           <p className={styles.viewSub}>
-            Every room, newest first — click one for the whole story.
-            {liveCount > 0 && (
-              <span className={styles.liveNote}>
-                {' '}● {liveCount} live now
-              </span>
-            )}
+            {liveOnly
+              ? 'Live rooms only — click one for the whole story.'
+              : 'Every room, newest first — click one for the whole story.'}
           </p>
         </div>
-        <input
-          type="search"
-          className={styles.roomSearch}
-          placeholder="Find a room code…"
-          value={query}
-          onChange={(e) => onQueryChange(e.target.value)}
-          aria-label="Search rooms by code"
-        />
+        <div className={styles.roomsTools}>
+          {/* Kept mounted while filtering even at zero, so the last room going
+              dormant can't strand the operator in an empty filtered list. */}
+          {(liveCount > 0 || liveOnly) && (
+            <span className={styles.liveToggleWrap}>
+              <button
+                type="button"
+                className={`${styles.liveToggle} ${
+                  liveOnly ? styles.liveToggleOn : ''
+                }`}
+                onClick={() => setLiveOnly((on) => !on)}
+                aria-pressed={liveOnly}
+                aria-describedby={LIVE_TIP_ID}
+              >
+                ● {liveCount} live now
+              </button>
+              <span role="tooltip" id={LIVE_TIP_ID} className={styles.liveTip}>
+                {LIVE_EXPLANATION}
+              </span>
+            </span>
+          )}
+          <input
+            type="search"
+            className={styles.roomSearch}
+            placeholder="Find a room code…"
+            value={query}
+            onChange={(e) => onQueryChange(e.target.value)}
+            aria-label="Search rooms by code"
+          />
+        </div>
       </header>
 
       {mergeSource && (
@@ -177,16 +211,18 @@ export default function RoomsView({
 
       {rooms.length === 0 ? (
         <p className={styles.empty}>
-          {loading
-            ? 'Loading…'
-            : failed
-              ? 'Couldn’t load rooms.'
-              : query
-                ? `No rooms matching “${query}”`
-                : 'No rooms created yet'}
+          {emptyMessage()}
           {failed && (
-            <button className={styles.retryBtn} onClick={() => loadRooms(0, true, query)}>
+            <button
+              className={styles.retryBtn}
+              onClick={() => loadRooms(0, true, query, liveOnly)}
+            >
               Retry
+            </button>
+          )}
+          {liveOnly && !loading && !failed && (
+            <button className={styles.retryBtn} onClick={() => setLiveOnly(false)}>
+              Show all rooms
             </button>
           )}
         </p>
@@ -216,14 +252,16 @@ export default function RoomsView({
               Couldn&rsquo;t load more rooms.{' '}
               <button
                 className={styles.retryBtn}
-                onClick={() => loadRooms(rooms.length, false, query)}
+                onClick={() => loadRooms(rooms.length, false, query, liveOnly)}
               >
                 Retry
               </button>
             </p>
           ) : (
             !hasMore && !loading && (
-              <p className={styles.roomsEnd}>{rooms.length} rooms</p>
+              <p className={styles.roomsEnd}>
+                {rooms.length} {liveOnly ? 'live rooms' : 'rooms'}
+              </p>
             )
           )}
         </>

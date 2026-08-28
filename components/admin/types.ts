@@ -143,8 +143,8 @@ export interface RoomRow {
   ideas?: number;
   errors: number;
   participants: number;
-  /** Most recent participant heartbeat; drives the "live" badge. */
-  lastSeen?: string | null;
+  /** Last time anything was done in the room; drives the "live" badge. */
+  lastActivity?: string | null;
   /** null where the room predates the flag. */
   fairMode?: boolean | null;
   fairToggled?: boolean;

@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { isAuthorizedAdmin } from "../../../lib/adminAuth";
+import { ADMIN_LIVE_WINDOW_MS } from "../../../lib/liveWindows";
 import { getAnalyticsDb } from "../../../lib/mongodb";
 
 const DEFAULT_LIMIT = 25;
@@ -58,6 +59,7 @@ export default async function handler(
     typeof req.query.q === "string"
       ? req.query.q.trim().slice(0, MAX_QUERY_LENGTH)
       : "";
+  const liveOnly = req.query.live === "1";
 
   const createdMatch: Record<string, unknown> = { type: "room_created" };
   if (q) {
@@ -72,9 +74,38 @@ export default async function handler(
     const db = await getAnalyticsDb();
     const events = db.collection("analytics_events");
 
-    const docs = await events
+    // Rides the TTL index already on rooms.lastActivity, and fetches only the
+    // live rooms rather than the collection.
+    const liveRoomIds: Promise<string[]> = db
+      .collection("rooms")
+      .distinct("id", {
+        lastActivity: { $gte: new Date(Date.now() - ADMIN_LIVE_WINDOW_MS) },
+      });
+
+    // Narrowing roomId rather than filtering after the $limit, so paging still
+    // walks the filtered set instead of thinning out whole pages.
+    const liveMatch = (ids: string[]) => ({
+      ...createdMatch,
+      roomId: {
+        ...((createdMatch.roomId as Record<string, unknown>) ?? {}),
+        $in: ids,
+      },
+    });
+
+    // Awaited only when the filter is on: the default list doesn't depend on
+    // this, so it goes out in parallel rather than a round trip behind it.
+    const match = liveOnly ? liveMatch(await liveRoomIds) : createdMatch;
+
+    // Not narrowed by `q`: a search matching nothing live must not blank the
+    // badge. Counts events, not ids, so unsearched it agrees exactly with the
+    // rows the filter shows — a room with two room_created docs is two rows.
+    const liveCountPromise = liveRoomIds.then((ids) =>
+      events.countDocuments({ type: "room_created", roomId: { $in: ids } })
+    );
+
+    const roomsPromise = events
       .aggregate([
-        { $match: createdMatch },
+        { $match: match },
         { $sort: { timestamp: -1 } },
         { $skip: skip },
         { $limit: limit + 1 },
@@ -123,8 +154,7 @@ export default async function handler(
         },
         {
           // Non-display session docs only, for the real head count. Grouped by locale rather than
-          // counted so the head count and the language mix come from one lookup, not two; the
-          // per-group max(lastSeen) rolls up into the room's last-activity stamp.
+          // counted so the head count and the language mix come from one lookup, not two.
           $lookup: {
             from: "analytics_sessions",
             let: { rid: "$roomId" },
@@ -149,7 +179,6 @@ export default async function handler(
                     ],
                   },
                   people: { $sum: 1 },
-                  lastSeen: { $max: "$lastSeen" },
                 },
               },
             ],
@@ -177,6 +206,19 @@ export default async function handler(
               { $project: { _id: 0, fairMode: 1 } },
             ],
             as: "lastFairToggle",
+          },
+        },
+        {
+          // Gone once the 30-day TTL reaps the room, which reads as not live —
+          // right. Projected down because a room doc carries its whole queue.
+          $lookup: {
+            from: "rooms",
+            let: { rid: "$roomId" },
+            pipeline: [
+              { $match: { $expr: { $eq: ["$id", "$$rid"] } } },
+              { $project: { _id: 0, lastActivity: 1 } },
+            ],
+            as: "roomDoc",
           },
         },
         {
@@ -214,7 +256,9 @@ export default async function handler(
               $ifNull: [{ $arrayElemAt: ["$errorCount.total", 0] }, 0],
             },
             participants: { $sum: "$participantLocales.people" },
-            lastSeen: { $max: "$participantLocales.lastSeen" },
+            lastActivity: {
+              $ifNull: [{ $arrayElemAt: ["$roomDoc.lastActivity", 0] }, null],
+            },
             // Last toggle wins, else the created value; null on rooms predating both.
             fairMode: {
               $ifNull: [
@@ -245,8 +289,15 @@ export default async function handler(
       ])
       .toArray();
 
+    // Awaited together so neither can be left dangling as an unhandled
+    // rejection when the other fails.
+    const [docs, liveCount] = await Promise.all([
+      roomsPromise,
+      liveCountPromise,
+    ]);
+
     const hasMore = docs.length > limit;
-    res.status(200).json({ rooms: docs.slice(0, limit), hasMore });
+    res.status(200).json({ rooms: docs.slice(0, limit), hasMore, liveCount });
   } catch (e) {
     console.error("Rooms query error:", e);
     res.status(500).json({ code: 500, message: "Internal server error." });

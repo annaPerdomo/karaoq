@@ -2,6 +2,7 @@ import * as React from 'react';
 import styles from '../../../styles/Admin.module.css';
 import type { RoomRow } from '../types';
 import {
+  LIVE_EXPLANATION,
   countryFlag,
   formatTimestamp,
   isLive,
@@ -59,7 +60,7 @@ export default function RoomCard({
   onMerge: () => void;
   onDelete: () => void;
 }): React.ReactElement {
-  const live = isLive(room.lastSeen);
+  const live = isLive(room.lastActivity);
   const boards = room.requests + room.singWithMe;
 
   return (
@@ -77,7 +78,10 @@ export default function RoomCard({
         <span className={styles.roomCode}>
           {room.roomId}
           {live && (
-            <span className={styles.liveBadge} title={`Active ${timeAgo(room.lastSeen)}`}>
+            <span
+              className={styles.liveBadge}
+              title={`${LIVE_EXPLANATION} Last action ${timeAgo(room.lastActivity)}.`}
+            >
               ● live
             </span>
           )}

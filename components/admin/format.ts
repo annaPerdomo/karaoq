@@ -2,6 +2,8 @@
 // design: the dashboard is a single-operator surface (see the i18n note in
 // CLAUDE.md — the product is translated, the admin deliberately isn't).
 
+import { ADMIN_LIVE_WINDOW_MS } from '../../lib/liveWindows';
+
 export const SOURCE_LABELS: Record<string, string> = {
   random: 'Random button',
   song_pick: 'Song picks',
@@ -144,13 +146,22 @@ export function timeAgo(iso: string | null | undefined): string {
   return `${Math.round(hours / 24)}d ago`;
 }
 
-/** A session heartbeat this recent means someone is in the room right now. */
-export const LIVE_WINDOW_MS = 30 * 60 * 1000;
+export { ADMIN_LIVE_WINDOW_MS };
 
-export function isLive(lastSeen: string | null | undefined): boolean {
-  if (!lastSeen) return false;
-  const at = new Date(lastSeen).getTime();
-  return Number.isFinite(at) && Date.now() - at < LIVE_WINDOW_MS;
+export const LIVE_WINDOW_MINUTES = Math.round(ADMIN_LIVE_WINDOW_MS / 60_000);
+
+/** Read by both the Rooms toggle and the per-room badge, so the two can't
+ *  describe the same window differently. */
+export const LIVE_EXPLANATION =
+  `Live means something actually happened in the room in the last ` +
+  `${LIVE_WINDOW_MINUTES} minutes — a song queued or skipped, a cheer sent. ` +
+  `A page someone left open doesn't count on its own: it pings every minute ` +
+  `whether or not anybody is still there.`;
+
+export function isLive(lastActivity: string | null | undefined): boolean {
+  if (!lastActivity) return false;
+  const at = new Date(lastActivity).getTime();
+  return Number.isFinite(at) && Date.now() - at < ADMIN_LIVE_WINDOW_MS;
 }
 
 /** "US" → 🇺🇸. Anything that isn't two ASCII letters gets no flag. */

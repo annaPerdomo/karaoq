@@ -295,9 +295,89 @@
   margin-top: 0.15rem;
 }
 
-.liveNote {
+.roomsTools {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+/* Anchors the tooltip; the button itself can't, being a flex item. */
+.liveToggleWrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.liveToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: rgba(52, 211, 153, 0.1);
+  border: 1px solid rgba(52, 211, 153, 0.28);
+  border-radius: 999px;
+  padding: 0.5rem 0.85rem;
   color: #34d399;
+  font-family: inherit;
+  font-size: 0.82rem;
   font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.liveToggle:hover {
+  background: rgba(52, 211, 153, 0.18);
+  border-color: rgba(52, 211, 153, 0.5);
+}
+
+.liveToggle:focus-visible {
+  outline: 2px solid #34d399;
+  outline-offset: 2px;
+}
+
+.liveToggleOn {
+  background: rgba(52, 211, 153, 0.9);
+  border-color: rgba(52, 211, 153, 0.9);
+  color: #04231a;
+}
+
+.liveToggleOn:hover {
+  background: #34d399;
+  border-color: #34d399;
+}
+
+.liveTip {
+  position: absolute;
+  top: calc(100% + 0.45rem);
+  right: 0;
+  z-index: 20;
+  width: max-content;
+  max-width: min(320px, 78vw);
+  background: #10131c;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+  padding: 0.55rem 0.7rem;
+  color: var(--text-secondary);
+  font-size: 0.76rem;
+  font-weight: 400;
+  line-height: 1.5;
+  text-align: left;
+  white-space: normal;
+  /* Faded rather than display:none so it can transition; a hidden element that
+     aria-describedby references directly still supplies its description text.
+     pointer-events off so the tip can't sit between the cursor and the button. */
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.12s ease, visibility 0.12s ease;
+}
+
+.liveToggleWrap:hover .liveTip,
+.liveToggle:focus-visible + .liveTip {
+  opacity: 1;
+  visibility: visible;
 }
 
 .card {
@@ -420,7 +500,11 @@
   padding: 0.55rem 0.9rem;
   color: var(--text-primary);
   font-size: 0.9rem;
-  width: min(240px, 100%);
+  /* Definite width + max-width rather than min(240px, 100%): a percentage here
+     makes the toolbar's intrinsic width circular, and the live toggle beside it
+     gets bumped onto its own line. */
+  width: 240px;
+  max-width: 100%;
 }
 
 .roomSearch:focus {
