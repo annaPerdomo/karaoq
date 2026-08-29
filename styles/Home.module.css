@@ -17,6 +17,7 @@
   .heroTitle,
   .titleLine,
   .heroSub,
+  .resumeCard,
   .hostCard,
   .heroNote,
   .spotPool,
@@ -482,7 +483,9 @@
 }
 
 /* Resume banner — a returning host's room from earlier tonight. Green reads
-   as "live/ongoing", distinct from the purple create/join paths below it. */
+   as "live/ongoing", distinct from the purple create/join paths below it.
+   The 1.35s delay counts from mount, and mount waits on an API check
+   (Home.tsx) — a late check gets `resumeCardLate` instead of a blank box. */
 .resumeCard {
   width: 100%;
   max-width: 380px;
@@ -494,6 +497,10 @@
   border-radius: 14px;
   background: linear-gradient(160deg, rgba(16, 185, 129, 0.12), rgba(16, 185, 129, 0.03));
   border: 1px solid rgba(16, 185, 129, 0.35);
+  animation: fadeSlideIn 0.7s ease 1.35s both;
+}
+
+.resumeCardLate {
   animation: fadeSlideIn 0.3s ease;
 }
 

@@ -6,6 +6,8 @@ export interface ResumeBannerProps {
   code: string;
   /** Songs still ahead of the playhead — what "resuming" actually gets them. */
   songCount: number;
+  /** Room check resolved after the hero cascade landed — fade in at once. */
+  late?: boolean;
   onResume: () => void;
   onDismiss: () => void;
 }
@@ -13,13 +15,14 @@ export interface ResumeBannerProps {
 export default function ResumeBanner({
   code,
   songCount,
+  late,
   onResume,
   onDismiss,
 }: ResumeBannerProps) {
   const { t, tn } = useT();
 
   return (
-    <div className={styles.resumeCard}>
+    <div className={late ? `${styles.resumeCard} ${styles.resumeCardLate}` : styles.resumeCard}>
       <span className={styles.resumeDot} aria-hidden="true" />
       <span className={styles.resumeText}>
         {t('home.resume.open').split(/(\{code\})/).map((part, i) =>

@@ -37,6 +37,10 @@ function generateCode(): string {
 
 const CUSTOM_CODE_PATTERN = /^[A-Z0-9]{3,12}$/;
 
+// Past this, the hero cascade has landed (host card beat, 1.7s) — a banner
+// arriving later skips its 1.35s cascade delay instead of holding a blank box.
+const LATE_RESUME_CHECK_MS = 1700;
+
 export interface HomeProps {
   /** Social-proof figures baked in by the page's ISR pass. */
   stats?: PublicStats;
@@ -56,6 +60,7 @@ const Home = ({ stats = EMPTY_STATS }: HomeProps): React.ReactElement => {
   const [resumeRoom, setResumeRoom] = React.useState<{
     code: string;
     songCount: number;
+    late: boolean;
   } | null>(null);
 
   // Pre-fill the host's name from a previous session so returning hosts can
@@ -74,6 +79,7 @@ const Home = ({ stats = EMPTY_STATS }: HomeProps): React.ReactElement => {
     const last = getLastHostedRoom();
     if (!last) return;
     let cancelled = false;
+    const startedAt = performance.now();
     getRoom(last.code).then((room) => {
       if (cancelled) return;
       // Only a definitive 404 clears the stored pointer. A transient
@@ -88,6 +94,7 @@ const Home = ({ stats = EMPTY_STATS }: HomeProps): React.ReactElement => {
         code: last.code,
         // Songs still ahead of the playhead — what "resuming" gets them.
         songCount: Math.max(0, room.queue.length - room.activeVideoIndex),
+        late: performance.now() - startedAt > LATE_RESUME_CHECK_MS,
       });
     });
     return () => {
@@ -211,6 +218,7 @@ const Home = ({ stats = EMPTY_STATS }: HomeProps): React.ReactElement => {
                 <ResumeBanner
                   code={resumeRoom.code}
                   songCount={resumeRoom.songCount}
+                  late={resumeRoom.late}
                   onResume={() => router.push(`/host/${resumeRoom.code}`)}
                   onDismiss={dismissResume}
                 />
