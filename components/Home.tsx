@@ -195,7 +195,6 @@ const Home = ({ stats = EMPTY_STATS }: HomeProps): React.ReactElement => {
           <HeroBeams />
           <div className={styles.heroInner}>
             <div className={styles.heroContent}>
-              <div className={styles.spotPool} aria-hidden="true" />
               {/* Two lines, one key each — the break is authored, not wrapped,
                   so every language controls where its own headline turns. */}
               <h1 className={styles.heroTitle}>

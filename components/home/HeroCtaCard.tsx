@@ -33,6 +33,7 @@ export default function HeroCtaCard(props: HeroCtaCardProps) {
       {/* One glass card holds the whole way in: host a room (custom
           codes tucked behind a small toggle), or join with a code. */}
       <div className={styles.hostCard}>
+        <div className={styles.spotPool} aria-hidden="true" />
         <span className={styles.hostCardKicker}>
           {t('home.host.kicker')}
         </span>
