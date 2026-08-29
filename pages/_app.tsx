@@ -35,7 +35,9 @@ function MyApp({ Component, pageProps }: AppProps) {
   const isHost = router.pathname.startsWith('/host');
   const isAdmin = router.pathname.startsWith('/admin');
   const isSing = router.pathname.startsWith('/sing');
-  const showFooter = !isLanding && !isDisplay && !isHost && !isAdmin && !isSing;
+  // /demo/hero-video is a capture canvas — any chrome would end up in the film.
+  const isDemo = router.pathname.startsWith('/demo');
+  const showFooter = !isLanding && !isDisplay && !isHost && !isAdmin && !isSing && !isDemo;
 
   return (
     <I18nProvider
