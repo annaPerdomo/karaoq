@@ -35,10 +35,13 @@ const HomePage: NextPage<HomePageProps> = ({ pageLocale, stats }) => {
 
   // English keeps its hand-tuned, keyword-rich meta; other languages derive
   // theirs from the already-translated hero copy (professional, zero new work).
+  // The headline is authored as two display lines — rejoin them for meta,
+  // where there is nothing to break across.
+  const heroTitle = `${t('home.hero.titleLine1')} ${t('home.hero.titleLine2')}`;
   const title = isEn
     ? 'KaraoQ — YouTube Karaoke App | No Downloads, No Sign-Up'
-    : `KaraoQ — ${t('home.hero.title')}`;
-  const ogTitle = isEn ? 'KaraoQ — YouTube Karaoke App' : `KaraoQ — ${t('home.hero.title')}`;
+    : `KaraoQ — ${heroTitle}`;
+  const ogTitle = isEn ? 'KaraoQ — YouTube Karaoke App' : `KaraoQ — ${heroTitle}`;
   const description = isEn
     ? 'Turn any gathering into karaoke night with KaraoQ. Search YouTube for songs, build a shared queue from your phone, and sing with friends. No downloads, works on any device.'
     : t('home.hero.sub');
