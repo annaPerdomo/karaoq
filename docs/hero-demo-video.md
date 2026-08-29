@@ -193,9 +193,16 @@ bash video/hero-demo/build.sh          # → public/demo/hero-demo.{webm,mp4}, p
   port rather than debugging it.
 - `build.sh` encodes VP9+alpha (crf 36, and `-auto-alt-ref 0` — libvpx silently
   drops the alpha plane without it) and HEVC+alpha via VideoToolbox (`hvc1`, not
-  `hev1`, or WebKit won't play it), both at 1200×900/30fps, and pulls the poster
+  `hev1`, or WebKit won't play it), both at 1200×770/30fps, and pulls the poster
   from the payoff frame (`f0505.png`, ~t=16.8s) through `cwebp`, since homebrew
   ffmpeg has no webp encoder.
+- **The HEVC must be premultiplied** (`premultiply=inplace=1` in its filter
+  chain). WebKit composites HEVC alpha as premultiplied — `out = C + (1−a)·bg`
+  — while the captured PNGs, the VP9/WebM (which Chromium composites straight)
+  and the poster all carry straight alpha. Encode the straight color unchanged
+  and every low-alpha pixel renders at full brightness on iOS: the phones' soft
+  purple glow shadow came out as an opaque pink/purple ring around them, while
+  desktop (WebM) looked fine.
 - **Judge the HEVC in WebKit, never by decoding it with ffmpeg.** ffmpeg mangles
   the alpha-layered HEVC on the way back in, and the ringing it shows is its own
   — the shipped file is clean. The damage below ~`-q:v 40` *is* real, though:
