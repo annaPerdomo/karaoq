@@ -235,5 +235,9 @@ stage, not a framed panel and not wallpaper:
 - Grid order is pitch → stage → form, so stacking under 1280px puts the film
   between them: a phone visitor sees what KaraoQ is before it asks for a name.
 - `.beamA`/`.beamB` (stage beams) and `.spotPool` (the follow-spot behind the
-  copy) are CSS-only and strike after the headline, at 2.3s/3s/3.9s; the stage
-  comes up at 2.4–2.9s, as if the beams lit it.
+  copy) are CSS-only and strike after the headline, at 2.3s/3s/3.9s. On
+  desktop the stage comes up last, at 6.2–6.7s; stacked under 1280px it sits
+  between pitch and form, so it lights at 2.2–2.7s instead — right on the
+  first beam strike, straight after the pitch cascade (title → sub → resume
+  banner → host card). `REVEAL_MS_*` in `HeroStage.tsx` starts playback on the
+  same beat as `.stageFilm`'s delay for each layout.

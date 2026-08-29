@@ -2476,9 +2476,12 @@
   /* Stacked, a full-width 4:3 would tower over the fold — keep the stage to
      the same measure as the copy above it. */
   .heroStage { width: 100%; max-width: 40rem; }
-  /* Stacked, the stage sits between pitch and form; the desktop's 6.4s delay
-     would leave a blank gap here, so start immediately instead. */
-  .stageGlow, .stageFilm, .stageFloor { animation-delay: 0s; }
+  /* Stacked, the stage sits between pitch and form: the desktop 6.4s delay
+     would leave a blank gap here, 0s would skip the arrival beat. Keep
+     .stageFilm in sync with REVEAL_MS_MOBILE, which starts playback. */
+  .stageGlow { animation-delay: 2.2s; }
+  .stageFilm { animation-delay: 2.4s; }
+  .stageFloor { animation-delay: 2.7s; }
 }
 
 @media (max-width: 820px) {

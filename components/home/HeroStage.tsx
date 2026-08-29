@@ -10,10 +10,10 @@ const POSTER = '/demo/hero-demo-poster.webp';
  * doesn't start mid-story before the hero's follow-spot has even settled.
  *
  * Stacked below 1280px, the stage sits between pitch and form; the desktop
- * delay would leave the poster frozen there, so start almost immediately.
+ * delay would leave the poster frozen there, so the reveal moves up.
  */
 const REVEAL_MS_DESKTOP = 6400;
-const REVEAL_MS_MOBILE = 150;
+const REVEAL_MS_MOBILE = 2400;
 const STACKED_QUERY = '(max-width: 1280px)';
 const WEBM = '/demo/hero-demo.webm';
 const HEVC = '/demo/hero-demo.mp4';
