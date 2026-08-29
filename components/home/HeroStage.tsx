@@ -8,8 +8,13 @@ const POSTER = '/demo/hero-demo-poster.webp';
  * When the film becomes visible — must match `.stageFilm`'s animation-delay.
  * Held paused until then rather than autoplaying under opacity 0, so it
  * doesn't start mid-story before the hero's follow-spot has even settled.
+ *
+ * Stacked below 1280px, the stage sits between pitch and form; the desktop
+ * delay would leave the poster frozen there, so start almost immediately.
  */
-const REVEAL_MS = 6400;
+const REVEAL_MS_DESKTOP = 6400;
+const REVEAL_MS_MOBILE = 150;
+const STACKED_QUERY = '(max-width: 1280px)';
 const WEBM = '/demo/hero-demo.webm';
 const HEVC = '/demo/hero-demo.mp4';
 
@@ -43,11 +48,14 @@ export default function HeroStage() {
   // Start the film on the beat it appears, from frame one.
   React.useEffect(() => {
     if (!src) return;
+    const revealMs = window.matchMedia?.(STACKED_QUERY).matches
+      ? REVEAL_MS_MOBILE
+      : REVEAL_MS_DESKTOP;
     const id = window.setTimeout(() => {
       // Muted, so autoplay policy allows this; if it's refused anyway the
       // poster stays, which is the same fallback every other path uses.
       videoRef.current?.play().catch(() => {});
-    }, REVEAL_MS);
+    }, revealMs);
     return () => window.clearTimeout(id);
   }, [src]);
 
