@@ -9,29 +9,25 @@
   .reveal { transition: none !important; }
   .eqBar { animation: none !important; height: 12px !important; }
 
-  /* Hero: hold the moment after Sarah's song has landed — results showing,
-     queue at 4 songs, lyrics part-lit mid-song, a cheer just sent. */
-  .hpResultsCycle, .hpAddTap, .hpCheerTap { animation: none !important; }
-  .hpToast { animation: none !important; opacity: 0 !important; }
-  .hpCheerSent { animation: none !important; opacity: 1 !important; }
-  .hpDrawerDot, .hpNowDot { animation: none !important; }
-  .hpBadgeA { animation: none !important; opacity: 0 !important; }
-  .hpBadgeB { animation: none !important; opacity: 1 !important; }
-  .hdQueueItemNew {
-    animation: none !important;
-    opacity: 1 !important;
-    transform: none !important;
-    background: rgba(255, 255, 255, 0.035) !important;
-  }
-  .hdCountA { animation: none !important; opacity: 0 !important; }
-  .hdCountB { animation: none !important; opacity: 1 !important; }
-  .hdReaction { animation: none !important; display: none !important; }
-  .hdNowDot, .hdVideoProgressFill { animation: none !important; }
-  .hdLyrics { animation: none !important; opacity: 1 !important; }
-  .hdLyricLine { animation: none !important; }
-  .hdSweepA { background-position: 0% 0 !important; }
-  .hdSweepB { background-position: 50% 0 !important; }
-  .hdSweepC { background-position: 100% 0 !important; }
+  /* Hero: the film swaps to its poster (HeroStage renders an <img> under
+     reduced motion), and the lights simply arrive already on. The spot pool
+     and the stage need opacity forced — their `both` fill would otherwise hold
+     the 0% frame once the animation is cancelled, leaving them dark. */
+  .beam,
+  .heroTitle,
+  .titleLine,
+  .heroSub,
+  .hostCard,
+  .heroNote,
+  .spotPool,
+  .stageGlow,
+  .stageFilm,
+  .stageFloor { animation: none !important; }
+  .heroTitle,
+  .spotPool,
+  .stageGlow,
+  .stageFilm,
+  .stageFloor { opacity: 1 !important; }
 
   /* Step 1: hold the "stage is ready" beat. */
   .srFrame1, .srFrame3 { display: none !important; }
@@ -101,7 +97,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.85rem 2rem;
+  /* Matches .hero's gutter so the logo stays aligned with the headline. */
+  padding: 0.85rem clamp(2rem, 4vw, 5.5rem);
   background: rgba(15, 15, 35, 0.85);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
@@ -178,7 +175,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 6.5rem 2rem 3.5rem;
+  /* Scales with the viewport: 2rem still on a laptop, ~69px at 1720px, capped
+     at 5.5rem. A fixed 2rem gutter left the headline almost touching the edge
+     on a wide screen, where there is the most room to give it. */
+  padding: 6.5rem clamp(2rem, 4vw, 5.5rem) 3.5rem;
   position: relative;
   overflow: hidden;
   background:
@@ -188,67 +188,261 @@
     linear-gradient(to bottom, #0f0f23 0%, #1a1a2e 55%, #0f0f23 100%);
 }
 
-/* Grid with both columns truly centered against each other; the scene is in
-   normal document flow (no negative-offset overflow), so the optical center
-   is the real center.
-   Three items — copy, scene, CTA. Desktop stacks copy over CTA in the left
-   column (scene spans both rows); when the hero goes single-column the DOM
-   order takes over: pitch → scene → form. */
+/* Two stage beams raking across the hero. They strike after the headline has
+   flickered up, then sway forever — the room's lights, not a loading state. */
+.beam {
+  position: absolute;
+  top: -30vh;
+  width: 230px;
+  height: 160vh;
+  pointer-events: none;
+  transform-origin: top center;
+  filter: blur(32px);
+}
+
+.beamA {
+  left: 10%;
+  transform: rotate(13deg);
+  background: linear-gradient(to bottom, rgba(157, 45, 255, 0.32), rgba(157, 45, 255, 0) 70%);
+  animation: beamOn 0.7s steps(1, end) 2.3s both, swayA 12s ease-in-out 3.2s infinite;
+}
+
+.beamB {
+  right: 12%;
+  transform: rotate(-21deg);
+  background: linear-gradient(to bottom, rgba(0, 240, 255, 0.22), rgba(0, 240, 255, 0) 70%);
+  animation: beamOn 0.7s steps(1, end) 3s both, swayB 14s ease-in-out 3.6s infinite;
+}
+
+/* steps(1, end): a lamp striking is a hard cut between on and off, never a
+   crossfade — easing these would read as a dimmer instead. */
+@keyframes beamOn {
+  0% { opacity: 0; }
+  35% { opacity: 1; }
+  50% { opacity: 0.15; }
+  70%, 100% { opacity: 1; }
+}
+@keyframes swayA {
+  0%, 100% { transform: rotate(13deg); }
+  50% { transform: rotate(22deg); }
+}
+@keyframes swayB {
+  0%, 100% { transform: rotate(-21deg); }
+  50% { transform: rotate(-12deg); }
+}
+
+/* DOM order is pitch → stage → form (see the stacked breakpoint below). The
+   copy column is fixed at 40rem — enough for the English headline's two
+   authored lines (~620px) — so every px above that lands on the stage. */
 .heroInner {
-  max-width: 1240px;
+  max-width: 1800px;
   width: 100%;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 40rem) minmax(0, 1fr);
   grid-template-rows: auto auto;
+  column-gap: 2.5rem;
   align-items: center;
-  column-gap: 5rem;
-  row-gap: 0;
   position: relative;
   z-index: 1;
 }
 
-/* Pinned to the shared row boundary from both sides, the two left blocks read
-   as one centered column — their own margins provide the space between them,
-   and any extra row height lands above/below the pair, like the old layout. */
-.heroCopy {
+/* Pinned to the shared row boundary from both sides, the pitch and the form
+   read as one centered column — their own margins provide the space between
+   them, and any extra row height lands above and below the pair. */
+.heroContent {
+  position: relative;
   min-width: 0;
   grid-column: 1;
+  grid-row: 1;
   align-self: end;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
 }
 
 .heroCta {
+  width: 100%;
   min-width: 0;
   grid-column: 1;
+  grid-row: 2;
   align-self: start;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+/* A follow-spot finding its mark behind the copy: strikes, stutters, hunts
+   past the mark, then settles. Sits under the text (z-index-free: it is the
+   first child of .heroContent, everything after it paints on top). */
+.spotPool {
+  position: absolute;
+  left: 230px;
+  top: 66%;
+  width: 700px;
+  height: 700px;
+  border-radius: 50%;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle,
+    rgba(255, 245, 220, 0.26) 0%,
+    rgba(255, 240, 210, 0.12) 34%,
+    rgba(200, 230, 255, 0.05) 55%,
+    transparent 70%);
+  animation: poolOn 2.5s cubic-bezier(0.22, 0.61, 0.36, 1) 3.9s both;
+}
+
+@keyframes poolOn {
+  0% { opacity: 0; filter: blur(9px); transform: translate(-64%, -61%) scale(0.5); }
+  5% { opacity: 0.5; }
+  8% { opacity: 0.08; }
+  12% { opacity: 0.75; }
+  16% { opacity: 0.18; }
+  22% { opacity: 1; filter: blur(6px); }
+  40% { transform: translate(-35%, -39%) scale(1.24); filter: blur(3px); }
+  58% { transform: translate(-59%, -54%) scale(0.88); filter: blur(1.5px); }
+  74% { transform: translate(-45%, -48%) scale(1.06); filter: blur(0.5px); }
+  88% { transform: translate(-51.5%, -50.5%) scale(0.98); filter: blur(0); }
+  100% { opacity: 1; transform: translate(-50%, -50%) scale(1); filter: blur(0); }
 }
 
 .heroTitle {
   font-family: var(--font-headline);
   font-weight: 700;
-  font-size: clamp(2.4rem, 4.9vw, 3.9rem);
+  font-size: clamp(2.4rem, 4.3vw, 3.6rem);
   letter-spacing: -0.02em;
-  line-height: 1.04;
+  line-height: 1.06;
   margin-bottom: 1.25rem;
-  /* Gradient across the whole headline — both lines carry the brand. */
-  background: linear-gradient(100deg, #da2eff 8%, #9d4edd 42%, #00d9ff 94%);
+  /* Neon bleed onto the film behind it — the glow has to come from filter,
+     not text-shadow, because the glyphs themselves are gradient-clipped. */
+  filter:
+    drop-shadow(0 0 12px rgba(255, 45, 120, 0.28))
+    drop-shadow(0 0 22px rgba(157, 45, 255, 0.2))
+    drop-shadow(0 0 28px rgba(0, 240, 255, 0.16));
+  animation: neonFlicker 1.8s steps(1, end) 0.35s both;
+}
+
+/* Per line, so each can shimmer on its own offset. Sized 170% and panned, so
+   the gradient drifts through the letterforms instead of re-clipping them. */
+.titleLine {
+  display: inline-block;
+  background: linear-gradient(95deg, #ff2d78 0%, #9d2dff 55%, #00e5ff 100%);
+  background: linear-gradient(95deg in oklch, #ff2d78 0%, #ff53a0 26%, #9d2dff 58%, #00e5ff 100%);
+  background-size: 170% 100%;
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
+  animation: titleShimmer 9s ease-in-out infinite alternate;
+}
+
+/* Negative delay offsets line two mid-cycle so the two lines never shimmer in
+   lockstep. */
+.titleLineAccent {
+  animation-delay: -3s;
+}
+
+@keyframes titleShimmer {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 100% 50%; }
+}
+
+/* A tube striking cold: stutters a few times before it holds. */
+@keyframes neonFlicker {
+  0% { opacity: 0; }
+  6% { opacity: 1; }
+  10% { opacity: 0.25; }
+  15% { opacity: 1; }
+  21% { opacity: 0.4; }
+  26% { opacity: 1; }
+  32% { opacity: 0.75; }
+  38%, 100% { opacity: 1; }
 }
 
 .heroSub {
   font-size: 1.08rem;
   color: #c0c0d0;
   line-height: 1.7;
-  margin-bottom: 2rem;
-  max-width: 480px;
+  margin: 0 0 2rem;
+  max-width: 560px;
+  text-wrap: pretty;
+  animation: neonFlicker 1.2s steps(1, end) 1s both;
+}
+
+/* ── The stage: the demo film as the thing being lit ──
+   Not framed and not wallpaper — the beams rake across it, a bloom sits
+   behind it, a pool of light sits under it, and it has no edge of its own
+   (see .stageMedia). Comes up after the beams strike, as if they lit it. */
+.heroStage {
+  position: relative;
+  min-width: 0;
+  grid-column: 2;
+  grid-row: 1 / 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@keyframes stageUp {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* The light the film sits in — deliberately larger than the film so the spill
+   reads as coming from behind it rather than as a glow drawn on its edge. */
+.stageGlow {
+  position: absolute;
+  inset: -14% -10%;
+  border-radius: 50%;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 44% 42%, rgba(157, 45, 255, 0.22) 0%, transparent 62%),
+    radial-gradient(ellipse at 66% 58%, rgba(0, 240, 255, 0.14) 0%, transparent 60%);
+  filter: blur(44px);
+  animation: stageUp 1.6s ease 6.2s both;
+}
+
+.stageFilm {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1200 / 770;
+  animation: stageUp 1.6s ease 6.4s both;
+}
+
+/* No background of its own: alpha video (see .stage in HeroVideo.module.css)
+   lets the hero's ramp, radials, beams and .stageGlow show straight through.
+   No mask or mix-blend-mode needed any more — see docs/hero-demo-video.md. */
+.stageMedia {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* The pool on the floor beneath it — the same warm follow-spot light that
+   finds the copy, landing under the stage so the two read as one room. */
+.stageFloor {
+  position: absolute;
+  left: 50%;
+  bottom: 4%;
+  width: 58%;
+  height: 76px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(ellipse,
+    rgba(255, 240, 210, 0.17) 0%,
+    rgba(255, 235, 200, 0.07) 45%,
+    transparent 72%);
+  filter: blur(18px);
+  animation: stageUp 1.6s ease 6.7s both;
 }
 
 /* The host form, code toggle, and join link grouped into one glass card, so
    the left column reads as exactly two things: the pitch, and the way in. */
 .hostCard {
   width: 100%;
-  max-width: 400px;
+  max-width: 380px;
+  margin: 0;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
@@ -259,30 +453,35 @@
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+  animation: fadeSlideIn 0.7s ease 1.7s both;
 }
 
+/* Warm marquee gold, lit — it names the one thing this card is for, and has to
+   hold its own against the film playing behind the glass. */
 .hostCardKicker {
-  font-size: 0.68rem;
+  font-size: 0.85rem;
   font-weight: 700;
-  letter-spacing: 1.6px;
+  letter-spacing: 1.8px;
   text-transform: uppercase;
-  color: #707080;
+  color: #ffe9a8;
+  text-shadow: 0 0 14px rgba(255, 233, 168, 0.45);
 }
 
 .heroNote {
-  margin-top: 0.85rem;
-  max-width: 400px;
+  margin: 0.85rem 0 0;
+  max-width: 380px;
   text-align: center;
   font-size: 0.8rem;
   color: #707080;
   letter-spacing: 0.5px;
+  animation: fadeSlideIn 0.7s ease 1.95s both;
 }
 
 /* Resume banner — a returning host's room from earlier tonight. Green reads
    as "live/ongoing", distinct from the purple create/join paths below it. */
 .resumeCard {
   width: 100%;
-  max-width: 400px;
+  max-width: 380px;
   margin-bottom: 0.85rem;
   display: flex;
   align-items: center;
@@ -506,891 +705,6 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* ═══════════════════════════════════════════
-   Hero scene: the real product in one frame
-   The TV mirrors Display.tsx; the phone mirrors Sing.tsx. No float/bounce, and
-   no invented features (the app plays YouTube videos, it doesn't render its own
-   synced lyrics) so the demo stays an honest descriptor.
-   One tidy column — caption, TV, phones, caption: the phones sit in front of
-   the TV stand and the two caption pills bookend the scene.
-   ═══════════════════════════════════════════ */
-.heroScene {
-  grid-column: 2;
-  grid-row: 1 / 3;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 560px;
-  max-width: 100%;
-}
-
-/* Caption pills bookending the scene. */
-.heroTvTag,
-.heroPhonesTag {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.3rem 0.85rem;
-  font-size: 0.66rem;
-  font-weight: 700;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  white-space: nowrap;
-  border-radius: 50px;
-}
-.heroTvTag {
-  margin-bottom: 0.7rem;
-  color: rgba(220, 200, 255, 0.95);
-  background: rgba(20, 16, 40, 0.85);
-  border: 1px solid rgba(180, 140, 255, 0.35);
-}
-.heroPhonesTag {
-  margin-top: 0.8rem;
-  color: #fff;
-  background: linear-gradient(135deg, #ec4899, #f97316);
-  box-shadow: 0 4px 14px rgba(236, 72, 153, 0.35);
-}
-
-/* ── Big screen (TV) ── */
-.heroTv {
-  position: relative;
-  z-index: 1;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.heroTvScreen {
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  border-radius: 14px;
-  border: 3px solid rgba(180, 140, 255, 0.22);
-  background: #0a0a1a;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  box-shadow:
-    0 24px 60px rgba(0, 0, 0, 0.5),
-    0 0 40px rgba(139, 92, 246, 0.12);
-}
-
-.heroTvStand {
-  width: 90px;
-  height: 16px;
-  background: linear-gradient(to bottom, rgba(180, 140, 255, 0.15), rgba(180, 140, 255, 0.05));
-  border-radius: 0 0 10px 10px;
-}
-
-/* Display header: KaraoQ brand + an add bar (add a song right from the screen). */
-.hdHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 6px 10px 6px 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(10, 10, 25, 0.6);
-}
-.hdBrand {
-  font-family: var(--font-brand);
-  font-weight: 400;
-  font-size: 14px;
-  letter-spacing: 2px;
-  flex-shrink: 0;
-  background: linear-gradient(135deg, #ff2d78, #00f0ff);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-/* "Search to add a song +" — the on-screen add path. */
-.hdAddBar {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  max-width: 200px;
-  flex: 1;
-  padding: 3px 3px 3px 8px;
-  border-radius: 50px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(180, 140, 255, 0.22);
-}
-.hdAddIcon {
-  width: 9px;
-  height: 9px;
-  flex-shrink: 0;
-  border-radius: 50%;
-  border: 1.5px solid rgba(200, 180, 255, 0.6);
-  position: relative;
-}
-.hdAddIcon::after {
-  content: '';
-  position: absolute;
-  right: -2px;
-  bottom: -2px;
-  width: 4px;
-  height: 1.5px;
-  border-radius: 2px;
-  background: rgba(200, 180, 255, 0.6);
-  transform: rotate(45deg);
-}
-.hdAddText {
-  flex: 1;
-  min-width: 0;
-  font-size: 8px;
-  color: rgba(200, 180, 255, 0.6);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.hdAddBtn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  flex-shrink: 0;
-  border-radius: 50%;
-  font-size: 13px;
-  font-weight: 700;
-  color: #fff;
-  background: linear-gradient(135deg, #ec4899, #f97316);
-}
-
-.hdBody {
-  flex: 1;
-  display: flex;
-  min-height: 0;
-}
-
-/* Main video column */
-.hdMain {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-/* The currently-playing YouTube karaoke video. */
-.hdVideo {
-  flex: 1;
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background:
-    radial-gradient(ellipse at 30% 30%, rgba(139, 92, 246, 0.28) 0%, transparent 55%),
-    radial-gradient(ellipse at 72% 68%, rgba(236, 72, 153, 0.2) 0%, transparent 55%),
-    linear-gradient(135deg, #1a0633 0%, #0a0118 55%, #12022a 100%);
-}
-
-/* Subtle YouTube cue — the source of every karaoke track. */
-.hdYtBadge {
-  position: absolute;
-  top: 8px;
-  left: 10px;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 8px;
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.85);
-}
-.hdYtPlay {
-  display: inline-block;
-  width: 16px;
-  height: 11px;
-  border-radius: 3px;
-  background: #ff0000;
-  position: relative;
-}
-.hdYtPlay::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-40%, -50%);
-  border-left: 5px solid #fff;
-  border-top: 3px solid transparent;
-  border-bottom: 3px solid transparent;
-}
-
-/* Karaoke lyrics — light up line-by-line as the song plays (the karaoke cue).
-   This mirrors what people see: YouTube karaoke videos carry highlighted lyrics.
-   The block fades out once every line is sung and fades back in unsung — a
-   verse change — so lines never visibly wipe backwards in unison. */
-.hdLyrics {
-  position: absolute;
-  top: 43%;
-  left: 50%;
-  transform: translate(-50%, -54%);
-  width: 82%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 7px;
-  text-align: center;
-  pointer-events: none;
-  animation: hdVerse 8s ease infinite;
-}
-@keyframes hdVerse {
-  0%, 2% { opacity: 0; }
-  8% { opacity: 1; }
-  88% { opacity: 1; }
-  95%, 100% { opacity: 0; }
-}
-.hdLyricLine {
-  font-size: 13px;
-  font-weight: 800;
-  line-height: 1.25;
-  letter-spacing: 0.3px;
-  /* Filled (sung) text is solid white; unsung text is dim — the gradient
-     position animates left→right to "sweep" the highlight across the line. */
-  background: linear-gradient(90deg, #ffffff 50%, rgba(255, 255, 255, 0.28) 50%);
-  background-size: 200% 100%;
-  background-position: 100% 0;
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.35);
-}
-.hdSweepA { animation: hdSweepA 8s linear infinite; }
-.hdSweepB { animation: hdSweepB 8s linear infinite; }
-.hdSweepC { animation: hdSweepC 8s linear infinite; }
-/* Each line sweeps once and HOLDS lit; the reset to unsung happens while the
-   whole block is faded out (hdVerse), never on screen. */
-@keyframes hdSweepA {
-  0%, 8% { background-position: 100% 0; }
-  26%, 100% { background-position: 0% 0; }
-}
-@keyframes hdSweepB {
-  0%, 30% { background-position: 100% 0; }
-  48%, 100% { background-position: 0% 0; }
-}
-@keyframes hdSweepC {
-  0%, 52% { background-position: 100% 0; }
-  70%, 100% { background-position: 0% 0; }
-}
-
-/* Floating reactions (real app behavior). Confined to a lane along the right
-   edge so they never drift through the lyrics, and sparse on purpose —
-   roughly one on screen at a time, so they read as the crowd cheering rather
-   than confetti. The ❤️ launches right after the cheer phone taps ❤️. */
-.hdReactions {
-  position: absolute;
-  right: 8px;
-  bottom: 30px;
-  width: 25%;
-  height: 70%;
-  pointer-events: none;
-  overflow: hidden;
-}
-.hdReaction {
-  position: absolute;
-  bottom: 0;
-  font-size: 14px;
-  opacity: 0;
-  animation: hdFloat 10s ease-out infinite;
-  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.5));
-}
-@keyframes hdFloat {
-  0% { opacity: 0; transform: translateY(0) scale(0.6); }
-  3% { opacity: 1; transform: translateY(-10px) scale(1); }
-  20% { opacity: 0.85; }
-  26%, 100% { opacity: 0; transform: translateY(-112px) scale(0.7); }
-}
-.hdR1 { left: 12%; animation-delay: 0.4s; }
-.hdR2 { left: 55%; animation-delay: 2.9s; }
-.hdR3 { left: 30%; animation-delay: 5.3s; }
-.hdR4 { left: 62%; animation-delay: 7.8s; }
-
-/* YouTube-style control bar. */
-.hdVideoBar {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 8px;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.6), transparent);
-}
-.hdVideoTime {
-  font-size: 7px;
-  color: rgba(255, 255, 255, 0.8);
-  font-variant-numeric: tabular-nums;
-}
-.hdVideoProgress {
-  flex: 1;
-  height: 3px;
-  border-radius: 2px;
-  background: rgba(255, 255, 255, 0.25);
-  overflow: hidden;
-}
-.hdVideoProgressFill {
-  display: block;
-  height: 100%;
-  border-radius: 2px;
-  background: #ff0000;
-  animation: hdProgress 16s linear infinite;
-}
-@keyframes hdProgress {
-  0% { width: 22%; }
-  100% { width: 78%; }
-}
-
-/* Now-playing bar — who's on stage right now. */
-.hdNowBar {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
-  background: rgba(236, 72, 153, 0.12);
-  border-top: 1px solid rgba(236, 72, 153, 0.2);
-}
-.hdNowDot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #ec4899;
-  flex-shrink: 0;
-  animation: liveDot 1.5s ease-in-out infinite;
-}
-/* Shared "live" pulse — mirrors the real ON STAGE indicator. */
-@keyframes liveDot {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.3; }
-}
-.hdNowLabel {
-  font-size: 8px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  color: rgba(236, 72, 153, 0.95);
-  flex-shrink: 0;
-}
-.hdNowSinger {
-  font-size: 10px;
-  font-weight: 700;
-  color: #fff;
-  flex-shrink: 0;
-}
-.hdNowSong {
-  font-size: 9px;
-  color: rgba(220, 200, 255, 0.7);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 120px;
-}
-
-/* Sidebar: scan-to-join QR + live queue. */
-.hdSidebar {
-  width: 126px;
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  border-left: 1px solid rgba(180, 120, 255, 0.12);
-  background: rgba(15, 15, 35, 0.6);
-}
-.hdQr {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 3px;
-  padding: 8px 6px;
-  border-bottom: 1px solid rgba(180, 120, 255, 0.1);
-}
-.hdQrCode {
-  width: 50px;
-  height: 50px;
-  border-radius: 4px;
-  /* Dark modules on white — reads as a QR rather than a transparency grid. */
-  background:
-    repeating-conic-gradient(#0d0d1f 0% 25%, #ffffff 0% 50%) 0 0 / 8px 8px;
-  box-shadow: 0 0 0 3px #fff;
-}
-.hdQrLabel {
-  font-size: 7px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  color: rgba(200, 180, 255, 0.6);
-}
-.hdQrText {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 2px;
-  color: #ffd700;
-  text-shadow: 0 0 8px rgba(255, 215, 0, 0.3);
-}
-.hdQueue {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 7px 6px;
-  overflow: hidden;
-}
-.hdQueueTitle {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 8px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  color: rgba(200, 180, 255, 0.6);
-}
-.hdQueueCount {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 13px;
-  height: 13px;
-  padding: 0 3px;
-  border-radius: 7px;
-  background: rgba(139, 92, 246, 0.3);
-  color: #fff;
-  font-size: 7px;
-}
-/* The count ticks 3 → 4 the moment Sarah's song lands. */
-.hdCountA,
-.hdCountB {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.hdCountA { animation: hdCountA 10s infinite; }
-.hdCountB { opacity: 0; animation: hdCountB 10s infinite; }
-@keyframes hdCountA {
-  0%, 36% { opacity: 1; }
-  39%, 100% { opacity: 0; }
-}
-@keyframes hdCountB {
-  0%, 36% { opacity: 0; }
-  39%, 97% { opacity: 1; }
-  100% { opacity: 0; }
-}
-.hdQueueItem {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  padding: 4px 5px;
-  background: rgba(255, 255, 255, 0.035);
-  border-radius: 5px;
-}
-/* Sarah's song arriving from her phone: slides in a beat after the toast on
-   the front phone, flashes as "new", then settles into the list. The slot is
-   reserved (opacity-only) so nothing else jumps. */
-.hdQueueItemNew {
-  opacity: 0;
-  animation: hdQueueLand 10s ease infinite;
-}
-@keyframes hdQueueLand {
-  0%, 34% { opacity: 0; transform: translateY(6px); background: rgba(139, 92, 246, 0.35); }
-  39% { opacity: 1; transform: translateY(0); background: rgba(139, 92, 246, 0.35); }
-  56% { background: rgba(255, 255, 255, 0.035); }
-  97% { opacity: 1; transform: translateY(0); background: rgba(255, 255, 255, 0.035); }
-  100% { opacity: 0; transform: translateY(6px); }
-}
-.hdQueueNum {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: rgba(139, 92, 246, 0.22);
-  color: rgba(200, 180, 255, 0.7);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 7px;
-  font-weight: 700;
-  flex-shrink: 0;
-}
-.hdQueueInfo {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-.hdQueueSinger {
-  font-size: 7px;
-  color: rgba(0, 240, 255, 0.65);
-}
-.hdQueueSong {
-  font-size: 9px;
-  color: #fff;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* ── Phones (SongSearch view) — a centered pair in front of the TV stand.
-   Multiple phones = anyone joins the session and adds from their own device. ── */
-.heroPhones {
-  position: relative;
-  z-index: 5;
-  width: 308px;
-  height: 306px;
-  margin-top: -30px;
-}
-.heroPhone {
-  position: absolute;
-  width: 142px;
-}
-.heroPhoneFront {
-  left: 0;
-  top: 0;
-  z-index: 7;
-  transform: rotate(-3deg);
-}
-.heroPhoneBack {
-  right: 0;
-  top: 14px;
-  z-index: 6;
-  transform: rotate(4deg) scale(0.97);
-}
-/* Phone silhouette — the aspect ratio does the work. Height comes from the
-   handset proportion (~1:2), NOT from the content, so the body can't collapse
-   into the squat "smartwatch" shape when the demo UI is short. The flex column
-   keeps the app honest on the taller canvas: header/search stay at the top,
-   the drawer/cheer bar pin to the thumb zone, and the space between is screen. */
-.heroPhoneBody {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  aspect-ratio: 9 / 18.5;
-  padding: 18px 8px 13px;
-  border-radius: 26px;
-  background: linear-gradient(160deg, #14102a, #0d0820);
-  border: 2px solid rgba(180, 140, 255, 0.3);
-  box-shadow:
-    0 22px 50px rgba(0, 0, 0, 0.6),
-    0 0 28px rgba(236, 72, 153, 0.15);
-}
-.hpNotch {
-  position: absolute;
-  top: 7px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 44px;
-  height: 8px;
-  border-radius: 5px;
-  background: #050310;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
-}
-.hpHomeBar {
-  position: absolute;
-  bottom: 5px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 46px;
-  height: 3px;
-  border-radius: 2px;
-  background: rgba(255, 255, 255, 0.22);
-}
-.hpHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding-bottom: 5px;
-  margin-bottom: 5px;
-  border-bottom: 1px solid rgba(180, 120, 255, 0.12);
-}
-.hpBrand {
-  font-family: var(--font-brand);
-  font-weight: 400;
-  font-size: 11px;
-  letter-spacing: 1.5px;
-  background: linear-gradient(135deg, #ff2d78, #00f0ff);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-.hpRoom {
-  font-family: var(--font-mono);
-  font-size: 8px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  color: rgba(200, 180, 255, 0.75);
-  background: rgba(139, 92, 246, 0.18);
-  padding: 2px 7px;
-  border-radius: 20px;
-}
-.hpSearchRow {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 5px;
-}
-.hpSearchInput {
-  flex: 1;
-  min-width: 0;
-  padding: 6px 9px;
-  border-radius: 7px;
-  background: rgba(255, 255, 255, 0.08);
-  font-size: 10px;
-  color: #fff;
-}
-.hpSearchBtn {
-  padding: 6px 10px;
-  border-radius: 7px;
-  background: linear-gradient(135deg, #ec4899, #db2777);
-  font-size: 9px;
-  font-weight: 700;
-  color: #fff;
-  white-space: nowrap;
-}
-/* Wraps the results so the add-confirmation toast can swap in over them,
-   exactly like results clearing after an add in the real app. */
-.hpStage {
-  position: relative;
-}
-.hpResults {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-.hpResultsCycle {
-  animation: hpResultsCycle 10s ease infinite;
-}
-@keyframes hpResultsCycle {
-  0%, 30% { opacity: 1; }
-  34%, 76% { opacity: 0; }
-  80%, 100% { opacity: 1; }
-}
-/* The real post-add toast from SongSearch.tsx, shown while results clear. */
-.hpToast {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: 4px 10px;
-  border-radius: 8px;
-  background: rgba(34, 197, 94, 0.16);
-  border: 1px solid rgba(34, 197, 94, 0.4);
-  color: #86efac;
-  font-size: 8.5px;
-  line-height: 1.4;
-  opacity: 0;
-  animation: hpToast 10s ease infinite;
-}
-@keyframes hpToast {
-  0%, 33% { opacity: 0; transform: translateY(4px); }
-  37% { opacity: 1; transform: translateY(0); }
-  72% { opacity: 1; transform: translateY(0); }
-  76%, 100% { opacity: 0; transform: translateY(4px); }
-}
-.hpResult {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.04);
-}
-.hpThumb {
-  width: 34px;
-  height: 26px;
-  border-radius: 4px;
-  flex-shrink: 0;
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.5), rgba(236, 72, 153, 0.35));
-}
-.hpTitle {
-  flex: 1;
-  min-width: 0;
-  font-size: 8.5px;
-  color: #fff;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.hpAdd,
-.hpAddDim {
-  width: 22px;
-  height: 22px;
-  flex-shrink: 0;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  font-weight: 700;
-}
-.hpAdd {
-  color: #fff;
-  background: linear-gradient(135deg, #ec4899, #f97316);
-}
-.hpAddDim {
-  color: rgba(255, 255, 255, 0.4);
-  background: rgba(255, 255, 255, 0.08);
-}
-/* A single tap on the +, right before the toast — a press, not a pulse. */
-.hpAddTap {
-  animation: hpTap 10s ease infinite;
-}
-@keyframes hpTap {
-  0%, 24% { transform: scale(1); filter: none; }
-  26% { transform: scale(0.82); filter: brightness(0.75); }
-  28%, 100% { transform: scale(1); filter: none; }
-}
-
-/* The Sing view's bottom drawer handle: on-stage singer + live queue count.
-   The count ticks 3 → 4 in step with the TV sidebar. margin-top: auto pins it
-   to the bottom of the flex-column body — like the real drawer, with the
-   empty screen between it and the results. */
-.hpDrawer {
-  margin-top: auto;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  padding: 6px 7px;
-  border-radius: 9px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(180, 120, 255, 0.14);
-}
-.hpDrawerDot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: #ec4899;
-  flex-shrink: 0;
-  animation: liveDot 1.5s ease-in-out infinite;
-}
-.hpDrawerNow {
-  flex: 1;
-  min-width: 0;
-  font-size: 7.5px;
-  color: rgba(220, 200, 255, 0.75);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.hpDrawerBadge {
-  position: relative;
-  flex-shrink: 0;
-  min-width: 38px;
-  height: 13px;
-  border-radius: 7px;
-  background: rgba(139, 92, 246, 0.22);
-  font-size: 6.5px;
-  font-weight: 700;
-  color: rgba(220, 200, 255, 0.9);
-}
-.hpBadgeA,
-.hpBadgeB {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  white-space: nowrap;
-}
-.hpBadgeA { animation: hdCountA 10s infinite; }
-.hpBadgeB { opacity: 0; animation: hdCountB 10s infinite; }
-
-/* ── Cheer phone — mirrors the Sing view mid-song: Now Playing + CheerBar ── */
-.hpNow {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 7px;
-  margin-bottom: 5px;
-  border-radius: 9px;
-  background: rgba(236, 72, 153, 0.1);
-  border: 1px solid rgba(236, 72, 153, 0.25);
-}
-.hpNowDot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: #ec4899;
-  flex-shrink: 0;
-  animation: liveDot 1.5s ease-in-out infinite;
-}
-.hpNowInfo {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-.hpNowLabel {
-  font-size: 6.5px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  color: rgba(236, 72, 153, 0.95);
-}
-.hpNowSong {
-  font-size: 8px;
-  color: #fff;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-/* CheerBar, condensed: gold/pink wash, emoji grid, quick messages.
-   Pinned toward the bottom (thumb zone) of the tall body via margin auto. */
-.hpCheer {
-  margin-top: auto;
-  margin-bottom: 5px;
-  padding: 7px;
-  border-radius: 9px;
-  border: 1px solid rgba(255, 215, 0, 0.18);
-  background: linear-gradient(135deg, rgba(255, 215, 0, 0.07), rgba(255, 45, 120, 0.07));
-}
-.hpCheerHead {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 5px;
-}
-.hpCheerLabel {
-  font-size: 7.5px;
-  font-weight: 700;
-  letter-spacing: 0.4px;
-  color: #ffd700;
-}
-/* "❤️ Sent!" appears right as the tapped reaction starts up the TV. */
-.hpCheerSent {
-  font-size: 7px;
-  font-weight: 600;
-  color: #22c55e;
-  opacity: 0;
-  animation: hpSent 10s ease infinite;
-}
-@keyframes hpSent {
-  0%, 52% { opacity: 0; transform: translateY(3px); }
-  55% { opacity: 1; transform: translateY(0); }
-  78% { opacity: 1; }
-  82%, 100% { opacity: 0; }
-}
-.hpCheerGrid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 4px;
-  margin-bottom: 5px;
-}
-.hpCheerBtn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 22px;
-  font-size: 12px;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-/* One tap on ❤️ — the reaction that then floats up the big screen. */
-.hpCheerTap {
-  animation: hpCheerTap 10s ease infinite;
-}
-@keyframes hpCheerTap {
-  0%, 50% { transform: scale(1); background: rgba(255, 255, 255, 0.06); }
-  52% { transform: scale(0.8); background: rgba(255, 215, 0, 0.2); }
-  54%, 100% { transform: scale(1); background: rgba(255, 255, 255, 0.06); }
-}
 /* ═══════════════════════════════════════════
    Device Frames
    ═══════════════════════════════════════════ */
@@ -3110,38 +2424,45 @@
 /* ═══════════════════════════════════════════
    Responsive
    ═══════════════════════════════════════════ */
-/* Hero stacks before the rest of the page: the two grid columns need
-   ~1140px side by side. The scene is in normal flow, so no clearance
-   margins — the column just centers. Stacking follows DOM order, so the
-   demo lands between the pitch and the host form: see what it is, then
-   start a room. */
-@media (max-width: 1120px) {
+/* Side by side is only worth it while the stage keeps ~520px — below that the
+   film stops being readable as a demo. Stacking follows DOM order, so the
+   stage lands between the pitch and the form: read it, see it, start a room. */
+@media (max-width: 1280px) {
   .heroInner {
-    /* minmax(0, …): a plain 1fr's auto minimum would let the 560px scene
-       widen the track past small viewports instead of shrinking. */
+    /* minmax(0, …): a plain 1fr's auto minimum would let the film widen the
+       track past small viewports instead of shrinking. */
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: none;
     justify-items: center;
-    gap: 3.5rem;
+    row-gap: 2.5rem;
   }
-  .heroCopy,
-  .heroCta {
-    grid-column: auto;
-    align-self: auto;
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
-  .heroScene {
+  .heroContent,
+  .heroCta,
+  .heroStage {
     grid-column: auto;
     grid-row: auto;
+    align-self: auto;
   }
+  .heroContent {
+    text-align: center;
+    align-items: center;
+  }
+  .heroCta { align-items: center; }
   .heroSub { margin-left: auto; margin-right: auto; }
-  /* The scene sits right below and the grid gap provides the rhythm; the
-     copy block shouldn't add its own trailing space (sub or resume banner,
-     whichever comes last). */
-  .heroCopy > :last-child { margin-bottom: 0; }
+  .spotPool { left: 50%; }
+  /* The stage sits right below and the row gap provides the rhythm; the pitch
+     shouldn't add its own trailing space (sub or resume banner, whichever
+     comes last). */
+  .heroContent > :last-child { margin-bottom: 0; }
+  /* Stacked, a full-width 4:3 would tower over the fold — keep the stage to
+     the same measure as the copy above it. */
+  .heroStage { width: 100%; max-width: 40rem; }
+}
+
+@media (max-width: 820px) {
+  .beam { width: 150px; }
+  .spotPool { width: 460px; height: 460px; }
+  .stageFloor { height: 52px; }
 }
 
 @media (max-width: 900px) {
@@ -3206,16 +2527,6 @@
   .srPanelDim { margin-top: 8px; }
   /* The laptop logo beats share .demoLogo — shrink it so beat 3 fits. */
   .demoLogo { font-size: 18px; margin-bottom: 4px; }
-  /* The phones sit below the TV in normal flow, so the whole pair just
-     scales down — no hiding, no repositioning. */
-  .heroScene { width: 100%; }
-  .heroPhones {
-    transform: scale(0.85);
-    transform-origin: top center;
-    margin-bottom: -40px;
-  }
-  /* The TV shrinks to ~350px — slightly smaller lyrics keep each line whole. */
-  .hdLyricLine { font-size: 11px; }
   /* Step 2's phone shrinks to 200×400 — drop the third result so the list
      doesn't clip against the always-visible queue below it, and tighten the
      category cards so their names fit. */

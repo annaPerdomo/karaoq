@@ -9,8 +9,10 @@ import {
 import styles from '../styles/Home.module.css';
 import { useT } from '../lib/i18n/I18nProvider';
 import LanguageSwitcher from './LanguageSwitcher';
-import HeroDemo from './home/HeroDemo';
+import HeroBeams from './home/HeroBeams';
+import HeroStage from './home/HeroStage';
 import HeroCtaCard from './home/HeroCtaCard';
+import ResumeBanner from './home/ResumeBanner';
 import HowItWorksSection from './home/HowItWorksSection';
 import SetupSection from './home/SetupSection';
 import FeaturesSection from './home/FeaturesSection';
@@ -42,7 +44,7 @@ export interface HomeProps {
 
 const Home = ({ stats = EMPTY_STATS }: HomeProps): React.ReactElement => {
   const router = useRouter();
-  const { t, tn } = useT();
+  const { t } = useT();
   const [joinCode, setJoinCode] = React.useState('');
   const [showJoin, setShowJoin] = React.useState(false);
   const [showCustom, setShowCustom] = React.useState(false);
@@ -187,49 +189,37 @@ const Home = ({ stats = EMPTY_STATS }: HomeProps): React.ReactElement => {
 
       <main>
         <section className={styles.hero}>
-          {/* Three grid blocks — copy, demo scene, CTA card. Desktop places
-              copy+CTA in the left column with the scene alongside; when the
-              hero stacks, DOM order puts the scene between the pitch and the
-              form, so newcomers see what KaraoQ is before it asks for a name. */}
+          {/* One room: the beams light it, the copy stands on the left, and the
+              demo film is the lit thing on the right — bounded by light falling
+              off rather than by any frame of its own. */}
+          <HeroBeams />
           <div className={styles.heroInner}>
-            <div className={styles.heroCopy}>
-              <h1 className={styles.heroTitle}>{t('home.hero.title')}</h1>
+            <div className={styles.heroContent}>
+              <div className={styles.spotPool} aria-hidden="true" />
+              {/* Two lines, one key each — the break is authored, not wrapped,
+                  so every language controls where its own headline turns. */}
+              <h1 className={styles.heroTitle}>
+                <span className={styles.titleLine}>{t('home.hero.titleLine1')}</span>
+                <br />
+                <span className={`${styles.titleLine} ${styles.titleLineAccent}`}>
+                  {t('home.hero.titleLine2')}
+                </span>
+              </h1>
               <p className={styles.heroSub}>
                 {t('home.hero.sub')}
               </p>
-              {/* A room from earlier tonight outranks starting a new one —
-                  the duplicate-room path this banner exists to close. */}
               {resumeRoom && (
-                <div className={styles.resumeCard}>
-                  <span className={styles.resumeDot} aria-hidden="true" />
-                  <span className={styles.resumeText}>
-                    {t('home.resume.open').split(/(\{code\})/).map((part, i) =>
-                      part === '{code}'
-                        ? <strong key={i}>{resumeRoom.code.toUpperCase()}</strong>
-                        : <React.Fragment key={i}>{part}</React.Fragment>
-                    )}
-                    {resumeRoom.songCount > 0 &&
-                      tn('home.resume.queued', resumeRoom.songCount)}
-                  </span>
-                  <button
-                    className={styles.resumeBtn}
-                    onClick={() => router.push(`/host/${resumeRoom.code}`)}
-                  >
-                    {t('home.resume.button')}
-                  </button>
-                  <button
-                    className={styles.resumeDismiss}
-                    onClick={dismissResume}
-                    aria-label={t('home.resume.dismiss')}
-                    title={t('home.resume.dismiss')}
-                  >
-                    &times;
-                  </button>
-                </div>
+                <ResumeBanner
+                  code={resumeRoom.code}
+                  songCount={resumeRoom.songCount}
+                  onResume={() => router.push(`/host/${resumeRoom.code}`)}
+                  onDismiss={dismissResume}
+                />
               )}
+
             </div>
 
-            <HeroDemo />
+            <HeroStage />
 
             <HeroCtaCard
               hostName={hostName}
