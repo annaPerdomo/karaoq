@@ -1159,6 +1159,7 @@ const Host = ({
           <SongStage
             loading={loading}
             currentSong={currentSong}
+            songsSung={historyItems.length}
             remote={remote}
             cohostControlsLive={cohostControlsLive}
             tvMode={tvMode}

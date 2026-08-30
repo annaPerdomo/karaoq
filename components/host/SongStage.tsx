@@ -1,9 +1,9 @@
 import * as React from "react";
-import { QRCodeSVG } from "qrcode.react";
 import styles from "../../styles/Host.module.css";
 import { QueueEntry } from "../../pages/api/types";
 import { useT } from "../../lib/i18n/I18nProvider";
 import { Icons } from "./icons";
+import { InviteBlock } from "./InviteBlock";
 import { formatSongTitle } from "./utils";
 
 // The main stage: loading spinner, the current song's player/status panel (which
@@ -12,6 +12,7 @@ import { formatSongTitle } from "./utils";
 export function SongStage({
   loading,
   currentSong,
+  songsSung,
   remote,
   cohostControlsLive,
   tvMode,
@@ -31,6 +32,9 @@ export function SongStage({
 }: {
   loading: boolean;
   currentSong: QueueEntry | undefined;
+  /** Entries behind the active index. With no current song, any history means
+   * the queue drained mid-night rather than the room being brand new. */
+  songsSung: number;
   remote: boolean;
   /** Host.tsx's single gate for co-host playback commands — shared with the
    * transport bar so the note and the buttons can't disagree. */
@@ -50,7 +54,7 @@ export function SongStage({
   onPrintQr: () => void;
   onAddFirst: () => void;
 }) {
-  const { t } = useT();
+  const { t, tn } = useT();
   return loading ? (
     <div className={styles.emptyState}>
       <div className={styles.spinner} />
@@ -176,6 +180,34 @@ export function SongStage({
         </p>
       </div>
     )
+  ) : songsSung > 0 ? (
+    <div className={`${styles.emptyState} ${styles.emptyStateFinished}`}>
+      <div className={styles.emptyStage}>
+        <h2 className={styles.emptyTitle}>{t('host.finished.title')}</h2>
+        <p className={styles.emptyStageLede}>
+          {tn('host.finished.sung', songsSung)}
+        </p>
+        {remote ? (
+          <p className={styles.cohostNote}>{t('host.finished.cohostAdd')}</p>
+        ) : (
+          <button
+            className={styles.emptyAddBtn}
+            onClick={onAddFirst}
+          >
+            {Icons.plus} {t('host.finished.addAnother')}
+          </button>
+        )}
+      </div>
+
+      {!remote && (
+        <InviteBlock
+          joinUrl={joinUrl}
+          displayUrl={displayUrl}
+          joinCode={joinCode}
+          onPrintQr={onPrintQr}
+        />
+      )}
+    </div>
   ) : remote ? (
     /* Co-host, empty queue. */
     <div className={styles.emptyState}>
@@ -204,35 +236,12 @@ export function SongStage({
         </button>
       </div>
 
-      <div className={styles.emptyInvite}>
-        <span className={styles.emptyInviteLabel}>
-          {t('host.empty.inviteLabel')}
-        </span>
-        <div className={styles.emptyInviteRow}>
-          {joinUrl && (
-            <div className={styles.emptyInviteQr}>
-              <QRCodeSVG
-                value={joinUrl}
-                size={92}
-                bgColor="transparent"
-                fgColor="#ffffff"
-                level="M"
-              />
-            </div>
-          )}
-          <div className={styles.emptyInviteInfo}>
-            <div className={styles.emptyJoinKicker}>
-              {t('host.empty.scanVisit', { url: displayUrl })}
-            </div>
-            <div className={styles.emptyInviteCode}>
-              {joinCode?.toUpperCase()}
-            </div>
-            <button className={styles.emptyJoinPrint} onClick={onPrintQr}>
-              {t('host.empty.printCode')}
-            </button>
-          </div>
-        </div>
-      </div>
+      <InviteBlock
+        joinUrl={joinUrl}
+        displayUrl={displayUrl}
+        joinCode={joinCode}
+        onPrintQr={onPrintQr}
+      />
     </div>
   );
 }

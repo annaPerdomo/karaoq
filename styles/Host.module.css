@@ -1675,6 +1675,13 @@
     padding-top: 1rem;
   }
 
+  /* A drained queue keeps its transport bar and sidebar, unlike a brand-new
+     room, so there is far less height here. The sidebar's QR shelf still has
+     the join code. */
+  .emptyStateFinished .emptyInvite {
+    display: none;
+  }
+
   .queueActions {
     opacity: 1;
   }
