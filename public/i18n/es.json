@@ -375,7 +375,7 @@
   "host.cohost.step1": "Pídele a tu co-organizador que escanee el código de abajo o envíale el enlace.",
   "host.cohost.step2": "Se abre KaraoQ en su teléfono, listo para ayudar.",
   "host.cohost.step3": "Puede buscar canciones, manejar la fila y saltar a la siguiente canción.",
-  "host.cohost.step4": "Tú sigues a cargo de reproducir y pausar.",
+  "host.cohost.step4": "Tú sigues decidiendo dónde se reproduce el video.",
   "host.cohost.sendLink": "o envíale este enlace:",
   "host.cohost.copyLink": "Copiar enlace de co-organizador",
   "host.cohost.playbackNote": "Reproducir y pausar se controlan en la pantalla del organizador",

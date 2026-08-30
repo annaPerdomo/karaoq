@@ -375,7 +375,7 @@
   "host.cohost.step1": "Minta co-host kamu scan kode di bawah, atau kirim tautannya.",
   "host.cohost.step2": "Tautannya membuka KaraoQ di HP mereka, siap membantu.",
   "host.cohost.step3": "Mereka bisa mencari lagu, mengatur antrean, dan lanjut ke lagu berikutnya.",
-  "host.cohost.step4": "Kamu tetap pegang kendali memutar dan jeda.",
+  "host.cohost.step4": "Kamu tetap yang menentukan di mana video diputar.",
   "host.cohost.sendLink": "atau kirim tautan ini:",
   "host.cohost.copyLink": "Salin tautan co-host",
   "host.cohost.playbackNote": "Putar dan jeda dikendalikan di layar host",

@@ -375,7 +375,7 @@
   "host.cohost.step1": "Faire scanner le code ci-dessous au co-animateur, ou lui envoyer le lien.",
   "host.cohost.step2": "Cela ouvre KaraoQ sur son téléphone, prêt pour l'animation.",
   "host.cohost.step3": "Il peut chercher des chansons, gérer la file et passer à la chanson suivante.",
-  "host.cohost.step4": "Vous conservez le contrôle de la lecture et des pauses.",
+  "host.cohost.step4": "Vous décidez toujours où la vidéo est diffusée.",
   "host.cohost.sendLink": "ou envoie-lui ce lien :",
   "host.cohost.copyLink": "Copier le lien co-animateur",
   "host.cohost.playbackNote": "La lecture et la pause sont contrôlées sur l'écran de l'animateur",

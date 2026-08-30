@@ -13,6 +13,7 @@ export function SongStage({
   loading,
   currentSong,
   remote,
+  cohostControlsLive,
   tvMode,
   isPlaying,
   displayPaused,
@@ -31,6 +32,9 @@ export function SongStage({
   loading: boolean;
   currentSong: QueueEntry | undefined;
   remote: boolean;
+  /** Host.tsx's single gate for co-host playback commands — shared with the
+   * transport bar so the note and the buttons can't disagree. */
+  cohostControlsLive: boolean;
   tvMode: boolean;
   isPlaying: boolean;
   displayPaused: boolean;
@@ -70,9 +74,13 @@ export function SongStage({
         <p className={styles.controlSong}>
           {formatSongTitle(currentSong.songTitle)}
         </p>
-        <p className={styles.cohostNote}>
-          {t('host.cohost.playbackNote')}
-        </p>
+        {/* With a live display the co-host's transport bar has play/pause,
+            so the "controlled on the host screen" note would be wrong. */}
+        {!cohostControlsLive && (
+          <p className={styles.cohostNote}>
+            {t('host.cohost.playbackNote')}
+          </p>
+        )}
       </div>
     ) : tvMode ? (
       /* TV Display mode: status panel; playback runs from the

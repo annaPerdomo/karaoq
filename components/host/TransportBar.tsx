@@ -9,8 +9,10 @@ import { formatSongTitle } from "./utils";
 
 // Transport bar. For hosts the control cluster branches by where the video
 // plays: TV display (pause/stop), here (pause-toggle/stop), or idle/takeover
-// (a single Play). Co-hosts (`remote`) get previous/next only — they can
-// advance the queue, but play/pause stays on the host devices.
+// (a single Play). Co-hosts (`remote`) always get previous/next; while a live
+// display drives playback they also get play and pause — remote commands that
+// only flip room flags the display obeys. When the video plays on the host's
+// own screen, play/pause stays there.
 export function TransportBar({
   roomId,
   roomEmpty,
@@ -24,6 +26,7 @@ export function TransportBar({
   activeIndex,
   queueLength,
   remote = false,
+  cohostControlsLive = false,
   onPrevious,
   onToggleDisplayPause,
   onStop,
@@ -43,6 +46,9 @@ export function TransportBar({
   activeIndex: number;
   queueLength: number;
   remote?: boolean;
+  /** Host.tsx's single gate for co-host playback commands (a live display is
+   * driving playback) — shared with SongStage's note so they can't disagree. */
+  cohostControlsLive?: boolean;
   onPrevious: () => void;
   onToggleDisplayPause: () => void;
   onStop: () => void;
@@ -90,7 +96,34 @@ export function TransportBar({
           >
             {Icons.prev}
           </button>
-          {remote ? null : isPlaying && tvMode ? (
+          {remote ? (
+            // Co-host playback commands need a live display to receive them;
+            // otherwise (here-mode, or TV mode with no display) skip-only.
+            cohostControlsLive ? (
+              isPlaying ? (
+                <button
+                  className={`${styles.tBtn} ${styles.tPause}`}
+                  onClick={onToggleDisplayPause}
+                  title={
+                    displayPaused
+                      ? t('host.transport.resumeDisplay')
+                      : t('host.transport.pauseDisplay')
+                  }
+                >
+                  {displayPaused ? Icons.resume : Icons.pause}
+                </button>
+              ) : (
+                <button
+                  className={`${styles.tBtn} ${styles.tPlay}`}
+                  onClick={onStart}
+                  disabled={!currentSong}
+                  title={t('host.transport.playOther')}
+                >
+                  {Icons.play}
+                </button>
+              )
+            ) : null
+          ) : isPlaying && tvMode ? (
             // Playing on a separate display: pause/resume that screen
             // from here (only useful with a live display to receive
             // it), plus a Stop.

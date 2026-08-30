@@ -129,7 +129,8 @@ const Host = ({
   const videoRef = React.useRef<HTMLIFrameElement>(null);
 
   // null until chosen/restored — that's what triggers the first-run chooser.
-  // Co-hosts never play video, so they stay "here".
+  // Co-hosts never see the chooser: they start at "here" and adopt the room's
+  // real mode on the first fetch, without ever choosing or persisting one.
   const [playMode, setPlayMode] = React.useState<PlayMode | null>(
     remote ? "here" : null,
   );
@@ -370,7 +371,9 @@ const Host = ({
 
   const searchBack = useSearchBackNotice();
 
-  // Adopt the room's playMode so rejoining a TV-mode room doesn't play locally.
+  // Everyone adopts the room's playMode: hosts so rejoining a TV-mode room
+  // doesn't play locally, co-hosts so the transport knows when a live display
+  // is driving playback.
   function applyRoomState(room: Room) {
     searchBack.applyRoom(room);
     setQueue(room.queue);
@@ -386,7 +389,7 @@ const Host = ({
     timing.adoptRoom(room);
     setDisplayConfigState(normalizeDisplayConfig(room.displayConfig));
     setHostConfigState(normalizeHostConfig(room.hostConfig));
-    if (!remote && room.playMode) setPlayMode(room.playMode);
+    if (room.playMode) setPlayMode(room.playMode);
   }
 
   // Customize: the real elements render from a staged draft; nothing reaches
@@ -819,6 +822,18 @@ const Host = ({
     }
   }
 
+  // Co-host TV-mode play: flip the room to playing without claiming the
+  // playback surface — no token is minted, the live display just obeys
+  // isPlaying (its playsVideoHere is mode-based, never token-based).
+  async function startSongOnDisplay() {
+    if (!joinCode) return;
+    const ok = await setPlaying(joinCode, true);
+    if (ok) {
+      setIsPlaying(true);
+      broadcast(queue, activeIndex, true, timing.markStarted());
+    }
+  }
+
   async function stopSong() {
     if (!joinCode) return;
     const ok = await setPlaying(joinCode, false);
@@ -1000,6 +1015,11 @@ const Host = ({
   // hostView is the staged draft while customizing, the room's config otherwise.
   const customizing = !remote && hostEdit.editing;
 
+  // Single gate for the co-host's play/pause commands AND the "controlled on
+  // the host screen" note — deciding it in one place keeps the transport bar
+  // and the stage note from ever disagreeing.
+  const cohostControlsLive = remote && tvMode && displayConnected;
+
   const transportBar = (
     <TransportBar
       roomId={joinCode}
@@ -1014,11 +1034,12 @@ const Host = ({
       activeIndex={activeIndex}
       queueLength={queue.length}
       remote={remote}
+      cohostControlsLive={cohostControlsLive}
       onPrevious={playPrevious}
       onToggleDisplayPause={toggleDisplayPause}
       onStop={stopSong}
       onToggleHereVideo={toggleHereVideo}
-      onStart={startSong}
+      onStart={remote ? startSongOnDisplay : startSong}
       onNext={playNext}
     />
   );
@@ -1147,6 +1168,7 @@ const Host = ({
             loading={loading}
             currentSong={currentSong}
             remote={remote}
+            cohostControlsLive={cohostControlsLive}
             tvMode={tvMode}
             isPlaying={isPlaying}
             displayPaused={displayPaused}

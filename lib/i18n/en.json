@@ -375,7 +375,7 @@
   "host.cohost.step1": "Have your co-host scan the code below, or send them the link.",
   "host.cohost.step2": "It opens KaraoQ on their phone, ready to help.",
   "host.cohost.step3": "They can search for songs, manage the queue, and skip to the next song.",
-  "host.cohost.step4": "You stay in charge of playing and pausing.",
+  "host.cohost.step4": "You stay in charge of where the video plays.",
   "host.cohost.sendLink": "or send them this link:",
   "host.cohost.copyLink": "Copy co-host link",
   "host.cohost.playbackNote": "Play and pause are controlled on the host screen",

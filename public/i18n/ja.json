@@ -375,7 +375,7 @@
   "host.cohost.step1": "共同ホストに下のコードをスキャンしてもらうか、リンクを送ろう。",
   "host.cohost.step2": "その人のスマホで KaraoQ が開いて、手伝う準備が完了。",
   "host.cohost.step3": "曲を検索したり、キューを管理したり、次の曲へスキップしたりできるよ。",
-  "host.cohost.step4": "再生と一時停止はあなたが仕切ったまま。",
+  "host.cohost.step4": "動画をどこで再生するかはあなたが決めたまま。",
   "host.cohost.sendLink": "またはこのリンクを送ってね：",
   "host.cohost.copyLink": "共同ホストのリンクをコピー",
   "host.cohost.playbackNote": "再生と一時停止はホスト画面で操作します",

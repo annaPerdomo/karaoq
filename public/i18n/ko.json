@@ -375,7 +375,7 @@
   "host.cohost.step1": "공동 호스트에게 아래 코드를 스캔하게 하거나, 링크를 보내세요.",
   "host.cohost.step2": "그러면 그 사람 폰에서 KaraoQ가 열려 도울 준비가 돼요.",
   "host.cohost.step3": "곡을 검색하고, 대기열을 관리하고, 다음 곡으로 건너뛸 수 있어요.",
-  "host.cohost.step4": "재생과 일시정지는 계속 당신이 맡아요.",
+  "host.cohost.step4": "영상을 어디서 재생할지는 계속 당신이 정해요.",
   "host.cohost.sendLink": "또는 이 링크를 보내세요:",
   "host.cohost.copyLink": "공동 호스트 링크 복사",
   "host.cohost.playbackNote": "재생과 일시정지는 호스트 화면에서 제어돼요",
