@@ -582,25 +582,17 @@ const Host = ({
   onVideoEndedRef.current = async () => {
     if (!joinCode || endedHandledRef.current) return;
     endedHandledRef.current = true;
+    // Past the last song too — bounding this parks on the finished entry, which
+    // then replays ahead of anything added afterwards.
     const nextIdx = activeIndex + 1;
-    if (nextIdx < queue.length) {
-      const ok = await updatePosition(joinCode, nextIdx);
-      if (ok) {
-        setActiveIndex(nextIdx);
-        setIsPlaying(false);
-        broadcast(queue, nextIdx, false);
-      } else {
-        // Advance didn't land — allow the next end event to retry.
-        endedHandledRef.current = false;
-      }
+    const ok = await updatePosition(joinCode, nextIdx);
+    if (ok) {
+      setActiveIndex(nextIdx);
+      setIsPlaying(false);
+      broadcast(queue, nextIdx, false);
     } else {
-      const ok = await setPlaying(joinCode, false);
-      if (ok) {
-        setIsPlaying(false);
-        broadcast(queue, activeIndex, false);
-      } else {
-        endedHandledRef.current = false;
-      }
+      // Advance didn't land — allow the next end event to retry.
+      endedHandledRef.current = false;
     }
   };
 

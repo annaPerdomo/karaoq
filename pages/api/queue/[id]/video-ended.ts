@@ -37,27 +37,30 @@ export default async function handler(
       return;
     }
 
-    // Advance to the next song when there is one; either way the song stops
-    // and waits for the host to start the next one (same behavior as the
-    // host-side end handling).
-    const hasNext = endedIndex + 1 < room.queue.length;
-    const update = hasNext
-      ? { activeVideoIndex: endedIndex + 1, isPlaying: false }
-      : { isPlaying: false };
-
+    // Past the last song too — `queue.length` is the legitimate "queue
+    // finished" state, and parking on the finished entry replays it ahead of
+    // anything added afterwards.
+    // A pipeline so the bound is `$size` at write time: removing the song that
+    // just ended leaves both guarded fields untouched (remove.ts shifts the
+    // index only when it is `$gt` the removal), so a length read above is stale.
     const result = await collection.updateOne(
       { id: roomId, activeVideoIndex: endedIndex, isPlaying: true },
-      {
-        $set: { ...update, lastActivity: new Date() },
+      [
+        {
+          $set: {
+            activeVideoIndex: {
+              $min: [endedIndex + 1, { $size: "$queue" }],
+            },
+            isPlaying: false,
+            lastActivity: new Date(),
+          },
+        },
         // playPausedAt goes with playStartedAt — a stamp that outlives its
         // song freezes the next one's clock at a pause that already ended.
-        $unset: {
-          playToken: "",
-          displayPaused: "",
-          playStartedAt: "",
-          playPausedAt: "",
+        {
+          $unset: ["playToken", "displayPaused", "playStartedAt", "playPausedAt"],
         },
-      }
+      ]
     );
 
     res.status(200).json({

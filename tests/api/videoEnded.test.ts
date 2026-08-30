@@ -68,19 +68,22 @@ describe("POST /api/queue/[id]/video-ended - Display reports a finished song", (
     expect((res.getBody() as { advanced: boolean }).advanced).toBe(true);
     expect(mockCollection.updateOne).toHaveBeenCalledWith(
       { id: "ROOM1", activeVideoIndex: 0, isPlaying: true },
-      {
-        $set: { activeVideoIndex: 1, isPlaying: false, lastActivity: expect.any(Date) },
-        $unset: {
-          playToken: "",
-          displayPaused: "",
-          playStartedAt: "",
-          playPausedAt: "",
+      [
+        {
+          $set: {
+            activeVideoIndex: { $min: [1, { $size: "$queue" }] },
+            isPlaying: false,
+            lastActivity: expect.any(Date),
+          },
         },
-      }
+        {
+          $unset: ["playToken", "displayPaused", "playStartedAt", "playPausedAt"],
+        },
+      ]
     );
   });
 
-  it("only stops playback when the last song ends", async () => {
+  it("advances past the last song into the finished state", async () => {
     mockCollection.findOne.mockResolvedValue(roomWithSongs(3, 2));
     mockCollection.updateOne.mockResolvedValue({ modifiedCount: 1 });
 
@@ -92,17 +95,22 @@ describe("POST /api/queue/[id]/video-ended - Display reports a finished song", (
     await handler(req, res);
 
     expect(res.getStatus()).toBe(200);
+    // Pins `$size` rather than a literal 3: the bound has to be evaluated
+    // against the queue being written, not one read a round-trip earlier.
     expect(mockCollection.updateOne).toHaveBeenCalledWith(
       { id: "ROOM1", activeVideoIndex: 2, isPlaying: true },
-      {
-        $set: { isPlaying: false, lastActivity: expect.any(Date) },
-        $unset: {
-          playToken: "",
-          displayPaused: "",
-          playStartedAt: "",
-          playPausedAt: "",
+      [
+        {
+          $set: {
+            activeVideoIndex: { $min: [3, { $size: "$queue" }] },
+            isPlaying: false,
+            lastActivity: expect.any(Date),
+          },
         },
-      }
+        {
+          $unset: ["playToken", "displayPaused", "playStartedAt", "playPausedAt"],
+        },
+      ]
     );
   });
 
