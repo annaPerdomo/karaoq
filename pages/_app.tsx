@@ -30,14 +30,15 @@ function MyApp({ Component, pageProps }: AppProps) {
   useEffect(() => {
     installErrorReporting();
   }, []);
-  const isLanding = router.pathname === '/';
-  const isDisplay = router.pathname.startsWith('/display');
-  const isHost = router.pathname.startsWith('/host');
-  const isAdmin = router.pathname.startsWith('/admin');
-  const isSing = router.pathname.startsWith('/sing');
-  // /demo/hero-video is a capture canvas — any chrome would end up in the film.
-  const isDemo = router.pathname.startsWith('/demo');
-  const showFooter = !isLanding && !isDisplay && !isHost && !isAdmin && !isSing && !isDemo;
+  // Allowlisted rather than excluding app screens one by one: the footer is
+  // `position: fixed`, so a screen that isn't listed here only has to exist to
+  // get 28px of its bottom row covered — /remote shipped that way, painting over
+  // the sidebar's boards card. Room, display, admin and capture routes all carry
+  // their own footer; /demo is a capture canvas where any chrome lands in the film.
+  const FOOTER_ROUTES = ['/guide', '/privacy', '/terms'];
+  const showFooter = FOOTER_ROUTES.some((route) =>
+    router.pathname.startsWith(route)
+  );
 
   return (
     <I18nProvider
