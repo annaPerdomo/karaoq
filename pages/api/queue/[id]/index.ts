@@ -16,7 +16,9 @@ const ROOM_CODE_PATTERN = /^[A-Z0-9]{3,12}$/;
 // Displays heartbeat ~10s from a Web Worker; the window still survives a worst-case once-per-minute
 // throttled beat so a hidden-but-playing display is never mistaken for a dead one.
 const DISPLAY_LIVE_MS = 75_000;
-// Time for a display to load and start heartbeating after play before playback counts as orphaned.
+// Time for a display to load and start heartbeating after play — and, in here-mode, for a host page
+// to claim the surface — before playback counts as orphaned. A host mid-drag re-arms its polling
+// hold, so a co-host's Play during a long reorder can expire this and appear to do nothing.
 const PLAY_GRACE_MS = 15_000;
 
 export default async function handler(
@@ -141,8 +143,17 @@ export default async function handler(
             ? now - new Date(room.playStartedAt).getTime()
             : Infinity;
           if (playAge > PLAY_GRACE_MS) {
-            await collection.updateOne(
-              { id: roomId, isPlaying: true },
+            // The write carries the condition the heal decided on, so a host page
+            // claiming between this read and the write isn't clobbered — that
+            // would stop a song a moment after it legitimately started.
+            const result = await collection.updateOne(
+              {
+                id: roomId,
+                isPlaying: true,
+                ...(room.playMode === "here"
+                  ? { playToken: { $exists: false } }
+                  : {}),
+              },
               {
                 $set: { isPlaying: false },
                 $unset: {
@@ -153,7 +164,7 @@ export default async function handler(
                 },
               }
             );
-            isPlaying = false;
+            if (result.matchedCount > 0) isPlaying = false;
           }
         }
 

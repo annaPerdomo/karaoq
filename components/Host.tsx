@@ -48,7 +48,7 @@ import {
 import { v4 as uuidv4 } from "uuid";
 import { useT } from "../lib/i18n/I18nProvider";
 import { POLL_INTERVAL, DISPLAY_GONE_CONFIRM_MS } from "./host/constants";
-import { formatSongTitle } from "./host/utils";
+import { formatSongTitle, shouldClaimPlayback } from "./host/utils";
 import {
   playModeStorageKey,
   readStoredPlayToken,
@@ -643,20 +643,40 @@ const Host = ({
   // A co-host's Play flips isPlaying with no surface attached to it. In here-mode
   // this page is the surface, so claim it — otherwise the room reads as playing
   // while the host sits on the "playing on another device" panel and nothing
-  // sounds. Visible tabs only: a forgotten background tab grabbing the room would
-  // put the night's audio on the wrong screen. Polling re-fires on becoming
-  // visible, so a tab brought forward still picks up a pending start, and the
-  // room GET stops an unclaimed one after its grace window.
+  // sounds.
+  //
+  // Visible tabs only: a forgotten background tab grabbing the room would put the
+  // night's audio on the wrong screen, and an admin peeking at a live room from
+  // Mission Control would steal the venue's playback outright. The claim is a
+  // server-side CAS, so of several eligible tabs exactly one wins and the rest
+  // yield rather than double-playing the song.
+  //
+  // Nothing cued up means the co-host's Play was a poll stale (queue edits hold
+  // polling) and the song it aimed at has already finished. Claiming it would
+  // leave the room reporting isPlaying with silence — and the GET's heal keys on
+  // the token being absent, so claiming would disarm the very thing that
+  // recovers it.
   const claimingRef = React.useRef(false);
+  const [claimNonce, setClaimNonce] = React.useState(0);
   React.useEffect(() => {
-    if (remote || tvMode || !joinCode) return;
-    if (!isPlaying || serverPlayToken || claimingRef.current) return;
-    if (document.visibilityState !== "visible") return;
+    if (!joinCode || claimingRef.current) return;
+    // Visibility is re-armed by the nonce below — polling alone can't retry
+    // this, since a repeat poll writes identical state and never re-runs.
+    const claimable = shouldClaimPlayback({
+      remote,
+      tvMode,
+      adminPeek,
+      isPlaying,
+      serverPlayToken,
+      hasCurrentSong: !!queue[activeIndex],
+      visible: document.visibilityState === "visible",
+    });
+    if (!claimable) return;
     claimingRef.current = true;
     (async () => {
       const token = uuidv4();
-      const ok = await setPlaying(joinCode, true, token);
-      if (ok) {
+      const claimed = await setPlaying(joinCode, true, token, true);
+      if (claimed) {
         setOwnedPlayToken(token);
         setServerPlayToken(token);
         storePlayToken(joinCode, token);
@@ -664,7 +684,28 @@ const Host = ({
       }
       claimingRef.current = false;
     })();
-  }, [remote, tvMode, joinCode, isPlaying, serverPlayToken]);
+  }, [
+    remote,
+    tvMode,
+    adminPeek,
+    joinCode,
+    isPlaying,
+    serverPlayToken,
+    queue,
+    activeIndex,
+    claimNonce,
+  ]);
+
+  // A tab that mounted hidden over a pending start has already run the effect and
+  // bailed; every later poll writes the same state, so only this re-arms it.
+  React.useEffect(() => {
+    if (remote || tvMode) return;
+    const onVisible = () => {
+      if (document.visibilityState === "visible") setClaimNonce((n) => n + 1);
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [remote, tvMode]);
 
   // The click is the user gesture that lets a blocked player start with sound.
   function toggleHereVideo() {
@@ -1193,6 +1234,7 @@ const Host = ({
             songsSung={historyItems.length}
             remote={remote}
             cohostCanPlay={cohostCanPlay}
+            cohostControlsLive={cohostControlsLive}
             tvMode={tvMode}
             isPlaying={isPlaying}
             displayPaused={displayPaused}

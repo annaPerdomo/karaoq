@@ -104,7 +104,7 @@ describe("POST /api/queue/[id] - Room creation", () => {
       playToken: "tok-owner",
     };
     mockCollection.findOne.mockResolvedValue(existing);
-    mockCollection.updateOne.mockResolvedValue({ modifiedCount: 1 });
+    mockCollection.updateOne.mockResolvedValue({ matchedCount: 1, modifiedCount: 1 });
 
     const req = createMockReq({
       method: "POST",
@@ -140,7 +140,7 @@ describe("POST /api/queue/[id] - Room creation", () => {
       playToken: "tok-owner",
     };
     mockCollection.findOne.mockResolvedValue(existing);
-    mockCollection.updateOne.mockResolvedValue({ modifiedCount: 1 });
+    mockCollection.updateOne.mockResolvedValue({ matchedCount: 1, modifiedCount: 1 });
 
     const req = createMockReq({ method: "POST", query: { id: "ABC12" } });
     const res = createRes();
@@ -164,7 +164,7 @@ describe("POST /api/queue/[id] - Room creation", () => {
       playToken: "tok-current-owner",
     };
     mockCollection.findOne.mockResolvedValue(existing);
-    mockCollection.updateOne.mockResolvedValue({ modifiedCount: 1 });
+    mockCollection.updateOne.mockResolvedValue({ matchedCount: 1, modifiedCount: 1 });
 
     const req = createMockReq({
       method: "POST",
@@ -190,7 +190,7 @@ describe("POST /api/queue/[id] - Room creation", () => {
       playToken: "tok-owner",
     };
     mockCollection.findOne.mockResolvedValue(existing);
-    mockCollection.updateOne.mockResolvedValue({ modifiedCount: 1 });
+    mockCollection.updateOne.mockResolvedValue({ matchedCount: 1, modifiedCount: 1 });
 
     const req = createMockReq({
       method: "POST",
@@ -301,7 +301,7 @@ describe("GET /api/queue/[id] - Room retrieval", () => {
       displayLastSeen: new Date(Date.now() - 300_000),
     };
     mockCollection.findOne.mockResolvedValue(room);
-    mockCollection.updateOne.mockResolvedValue({ modifiedCount: 1 });
+    mockCollection.updateOne.mockResolvedValue({ matchedCount: 1, modifiedCount: 1 });
 
     const req = createMockReq({ method: "GET", query: { id: "XYZ99" } });
     const res = createRes();

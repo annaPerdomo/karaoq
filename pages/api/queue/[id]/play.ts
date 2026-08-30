@@ -19,6 +19,9 @@ export default async function handler(
     typeof req.query.playToken === "string" && req.query.playToken
       ? req.query.playToken
       : null;
+  // A here-mode host page adopting someone else's surface-less start, rather
+  // than a host deliberately starting a song here.
+  const claim = req.query.claim === "1";
 
   if (typeof roomId !== "string") {
     res.status(400).json({ code: 400, message: "Invalid request." });
@@ -50,14 +53,35 @@ export default async function handler(
                 $set: { isPlaying, lastActivity: new Date() },
                 $unset: { playToken: "", displayPaused: "", playStartedAt: "", playPausedAt: "" },
               };
-      // A tokenless start is a surface-less remote command (co-host → whichever
-      // screen holds the player). Both modes take it: a TV room's display obeys
-      // isPlaying directly, and a here-mode host page claims the surface on its
-      // next poll. The room GET stops an unclaimed here-mode start after the
-      // grace window, so this can't strand playback with nothing playing it.
-      const result = await collection.updateOne({ id: roomId }, update);
+      // Three shapes of start, and only the host's own is unconditional:
+      //
+      // - claim: a here-mode host page adopting a surface-less start. CAS on the
+      //   token still being absent, so of two visible host tabs exactly one wins
+      //   and the loser yields instead of both playing the song out of sync.
+      // - tokenless: a co-host's Play, which claims no surface. A TV room's
+      //   display obeys isPlaying directly; in here-mode a host page claims it
+      //   and the room GET heals the start if none does. Guarded on the room not
+      //   already playing — a co-host's view can be a poll stale (queue edits
+      //   hold polling), and re-landing this mid-song would rewrite
+      //   playStartedAt and jump every phone's ETA back to a full song.
+      // - tokened: the host starting here. Deliberate takeover, always wins.
+      //
+      // NB: only the stop branch clears playToken. The tokenless start must
+      // leave it intact — unsetting it would orphan a running here-mode song,
+      // and the GET's heal would cut it mid-performance 15s later.
+      const filter = claim
+        ? { id: roomId, isPlaying: true, playToken: { $exists: false } }
+        : isPlaying && !playToken
+          ? { id: roomId, isPlaying: { $ne: true } }
+          : { id: roomId };
+      const result = await collection.updateOne(filter, update);
       if (result.matchedCount === 0) {
-        res.status(404).json({ code: 404, message: "Room not found." });
+        res.status(409).json({
+          code: 409,
+          message: claim
+            ? "Another screen already claimed playback."
+            : "Room is already playing.",
+        });
         return;
       }
       res.status(200).json({ code: 200, message: "Play state updated." });

@@ -15,6 +15,7 @@ export function SongStage({
   songsSung,
   remote,
   cohostCanPlay,
+  cohostControlsLive,
   tvMode,
   isPlaying,
   displayPaused,
@@ -36,9 +37,10 @@ export function SongStage({
    * the queue drained mid-night rather than the room being brand new. */
   songsSung: number;
   remote: boolean;
-  /** Host.tsx's gate for the co-host's Play — shared with the transport bar so
-   * the note and the buttons can't disagree. */
+  /** Host.tsx's gates for the co-host's Play and Pause — shared with the
+   * transport bar so the note and the buttons can't disagree. */
   cohostCanPlay: boolean;
+  cohostControlsLive: boolean;
   tvMode: boolean;
   isPlaying: boolean;
   displayPaused: boolean;
@@ -78,9 +80,11 @@ export function SongStage({
         <p className={styles.controlSong}>
           {formatSongTitle(currentSong.songTitle)}
         </p>
-        {/* Gated on Play, not Pause: once the co-host's bar has a Play button,
-            "play and pause are controlled on the host screen" is wrong. */}
-        {!cohostCanPlay && (
+        {/* Shown whenever the bar has no playback button, which is what the note
+            explains. A here-mode co-host has Play while stopped (so the note
+            would contradict it) but not Pause once a song runs, and an empty
+            middle slot with no explanation reads as a bug. */}
+        {(isPlaying ? !cohostControlsLive : !cohostCanPlay) && (
           <p className={styles.cohostNote}>
             {t('host.cohost.playbackNote')}
           </p>
