@@ -7,9 +7,10 @@ import FeedbackTrigger from "../feedback/FeedbackTrigger";
 import { Icons } from "./icons";
 import { formatSongTitle } from "./utils";
 
-// Transport bar — host only; co-hosts don't control playback. The control
-// cluster branches by where the video plays: TV display (pause/stop), here
-// (pause-toggle/stop), or idle/takeover (a single Play).
+// Transport bar. For hosts the control cluster branches by where the video
+// plays: TV display (pause/stop), here (pause-toggle/stop), or idle/takeover
+// (a single Play). Co-hosts (`remote`) get previous/next only — they can
+// advance the queue, but play/pause stays on the host devices.
 export function TransportBar({
   roomId,
   roomEmpty,
@@ -22,6 +23,7 @@ export function TransportBar({
   hereVideoPlaying,
   activeIndex,
   queueLength,
+  remote = false,
   onPrevious,
   onToggleDisplayPause,
   onStop,
@@ -40,6 +42,7 @@ export function TransportBar({
   hereVideoPlaying: boolean;
   activeIndex: number;
   queueLength: number;
+  remote?: boolean;
   onPrevious: () => void;
   onToggleDisplayPause: () => void;
   onStop: () => void;
@@ -87,7 +90,7 @@ export function TransportBar({
           >
             {Icons.prev}
           </button>
-          {isPlaying && tvMode ? (
+          {remote ? null : isPlaying && tvMode ? (
             // Playing on a separate display: pause/resume that screen
             // from here (only useful with a live display to receive
             // it), plus a Stop.
@@ -160,7 +163,11 @@ export function TransportBar({
           >
             {Icons.next}
           </button>
-          <FullscreenToggle className={`${styles.tBtn} ${styles.tFullscreen}`} />
+          {!remote && (
+            <FullscreenToggle
+              className={`${styles.tBtn} ${styles.tFullscreen}`}
+            />
+          )}
         </div>
       </div>
       <div className={styles.transportFooter}>

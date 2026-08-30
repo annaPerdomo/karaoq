@@ -81,7 +81,8 @@ const HOST_THEME_CLASS: Record<DisplayTheme, string> = {
   neon: styles.themeNeon,
 };
 
-// `remote` = co-host surface: queue management only, no player or transport.
+// `remote` = co-host surface: queue management plus previous/next skip — no
+// player, and play/pause stays on the host devices.
 const Host = ({
   remote = false,
 }: { remote?: boolean } = {}): React.ReactElement => {
@@ -777,6 +778,9 @@ const Host = ({
     if (!joinCode) return;
     const nextIndex = activeIndex + 1;
     if (nextIndex >= queue.length) return;
+    // Hold polling so a poll fetched just before the write can't snap the
+    // index back for a tick.
+    pausePolling();
     const ok = await updatePosition(joinCode, nextIndex);
     if (ok) {
       setActiveIndex(nextIndex);
@@ -790,6 +794,7 @@ const Host = ({
     if (!joinCode) return;
     const prevIndex = activeIndex - 1;
     if (prevIndex < 0) return;
+    pausePolling();
     const ok = await updatePosition(joinCode, prevIndex);
     if (ok) {
       setActiveIndex(prevIndex);
@@ -1008,6 +1013,7 @@ const Host = ({
       hereVideoPlaying={hereVideoPlaying}
       activeIndex={activeIndex}
       queueLength={queue.length}
+      remote={remote}
       onPrevious={playPrevious}
       onToggleDisplayPause={toggleDisplayPause}
       onStop={stopSong}
@@ -1162,9 +1168,14 @@ const Host = ({
           )}
 
           {/* The display's now-playing bar, plus playback controls. Hide/restore
-              mirrors Display.tsx so both surfaces customize it the same way. */}
-          {!remote &&
-            (customizing ? (
+              mirrors Display.tsx so both surfaces customize it the same way.
+              Co-hosts always get the bar (skip-only variant) — showTransport is
+              the host's preference for their own screen, and the bar is the
+              co-host's only queue-advance control. */}
+          {remote ? (
+            transportBar
+          ) : (
+            customizing ? (
               hostView.showTransport ? (
                 <Spot
                   id="transport"
