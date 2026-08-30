@@ -50,18 +50,14 @@ export default async function handler(
                 $set: { isPlaying, lastActivity: new Date() },
                 $unset: { playToken: "", displayPaused: "", playStartedAt: "", playPausedAt: "" },
               };
-      // A tokenless start is a surface-less remote command (co-host → display).
-      // Landing on a here-mode room would strand isPlaying with nothing to
-      // play it and no self-heal (the orphan reset exempts here-mode), so the
-      // write is mode-filtered here — the caller's view is exactly what can be
-      // stale. Unset playMode counts as TV, matching the display's convention.
-      const filter =
-        isPlaying && !playToken
-          ? { id: roomId, playMode: { $ne: "here" as const } }
-          : { id: roomId };
-      const result = await collection.updateOne(filter, update);
+      // A tokenless start is a surface-less remote command (co-host → whichever
+      // screen holds the player). Both modes take it: a TV room's display obeys
+      // isPlaying directly, and a here-mode host page claims the surface on its
+      // next poll. The room GET stops an unclaimed here-mode start after the
+      // grace window, so this can't strand playback with nothing playing it.
+      const result = await collection.updateOne({ id: roomId }, update);
       if (result.matchedCount === 0) {
-        res.status(409).json({ code: 409, message: "Room is not on a display." });
+        res.status(404).json({ code: 404, message: "Room not found." });
         return;
       }
       res.status(200).json({ code: 200, message: "Play state updated." });

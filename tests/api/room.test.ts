@@ -393,7 +393,30 @@ describe("GET /api/queue/[id] - Room retrieval", () => {
     expect(mockCollection.updateOne).not.toHaveBeenCalled();
   });
 
-  it("never heals here-mode playback (its player is a host page)", async () => {
+  it("never heals claimed here-mode playback (a host page holds the token)", async () => {
+    const room: Room = {
+      id: "XYZ99",
+      queue: [],
+      activeVideoIndex: 0,
+      isPlaying: true,
+      reactionsEnabled: true,
+      playMode: "here",
+      playToken: "host-tab-token",
+      playStartedAt: new Date(Date.now() - 60_000),
+    };
+    mockCollection.findOne.mockResolvedValue(room);
+
+    const req = createMockReq({ method: "GET", query: { id: "XYZ99" } });
+    const res = createRes();
+    await handler(req, res);
+
+    expect((res.getBody() as Room).isPlaying).toBe(true);
+    expect(mockCollection.updateOne).not.toHaveBeenCalled();
+  });
+
+  it("heals here-mode playback no host page ever claimed", async () => {
+    // A co-host's Play with no host page open: isPlaying is set but no token was
+    // ever minted for it, so nothing is playing the song.
     const room: Room = {
       id: "XYZ99",
       queue: [],
@@ -402,6 +425,28 @@ describe("GET /api/queue/[id] - Room retrieval", () => {
       reactionsEnabled: true,
       playMode: "here",
       playStartedAt: new Date(Date.now() - 60_000),
+    };
+    mockCollection.findOne.mockResolvedValue(room);
+
+    const req = createMockReq({ method: "GET", query: { id: "XYZ99" } });
+    const res = createRes();
+    await handler(req, res);
+
+    expect((res.getBody() as Room).isPlaying).toBe(false);
+    expect(mockCollection.updateOne).toHaveBeenCalled();
+  });
+
+  it("gives an unclaimed here-mode start its grace window before healing", async () => {
+    // The host page claims on its next poll; healing inside that window would
+    // stop the song a co-host just legitimately started.
+    const room: Room = {
+      id: "XYZ99",
+      queue: [],
+      activeVideoIndex: 0,
+      isPlaying: true,
+      reactionsEnabled: true,
+      playMode: "here",
+      playStartedAt: new Date(Date.now() - 2_000),
     };
     mockCollection.findOne.mockResolvedValue(room);
 

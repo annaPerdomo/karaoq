@@ -27,6 +27,7 @@ export function TransportBar({
   queueLength,
   remote = false,
   cohostControlsLive = false,
+  cohostCanPlay = false,
   onPrevious,
   onToggleDisplayPause,
   onStop,
@@ -46,9 +47,11 @@ export function TransportBar({
   activeIndex: number;
   queueLength: number;
   remote?: boolean;
-  /** Host.tsx's single gate for co-host playback commands (a live display is
-   * driving playback) — shared with SongStage's note so they can't disagree. */
+  /** Host.tsx's gate for the co-host's Pause (a live display is driving playback)
+   * — shared with SongStage's note so they can't disagree. */
   cohostControlsLive?: boolean;
+  /** Host.tsx's gate for the co-host's Play, which here-mode also satisfies. */
+  cohostCanPlay?: boolean;
   onPrevious: () => void;
   onToggleDisplayPause: () => void;
   onStop: () => void;
@@ -97,10 +100,10 @@ export function TransportBar({
             {Icons.prev}
           </button>
           {remote ? (
-            // Co-host playback commands need a live display to receive them;
-            // otherwise (here-mode, or TV mode with no display) skip-only.
-            cohostControlsLive ? (
-              isPlaying ? (
+            // Pause needs a live display to receive it and report back; Play only
+            // needs a screen that will pick the command up, which here-mode has.
+            isPlaying ? (
+              cohostControlsLive ? (
                 <button
                   className={`${styles.tBtn} ${styles.tPause}`}
                   onClick={onToggleDisplayPause}
@@ -112,16 +115,16 @@ export function TransportBar({
                 >
                   {displayPaused ? Icons.resume : Icons.pause}
                 </button>
-              ) : (
-                <button
-                  className={`${styles.tBtn} ${styles.tPlay}`}
-                  onClick={onStart}
-                  disabled={!currentSong}
-                  title={t('host.transport.playOther')}
-                >
-                  {Icons.play}
-                </button>
-              )
+              ) : null
+            ) : cohostCanPlay ? (
+              <button
+                className={`${styles.tBtn} ${styles.tPlay}`}
+                onClick={onStart}
+                disabled={!currentSong}
+                title={t('host.transport.playOther')}
+              >
+                {Icons.play}
+              </button>
             ) : null
           ) : isPlaying && tvMode ? (
             // Playing on a separate display: pause/resume that screen

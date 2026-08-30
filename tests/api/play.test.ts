@@ -38,7 +38,7 @@ function createRes() {
 describe("POST /api/queue/[id]/play - Set play state", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("sets isPlaying to true, mode-filtering the surface-less start", async () => {
+  it("sets isPlaying to true on a surface-less start", async () => {
     const room: Room = { id: "ROOM1", queue: [], activeVideoIndex: 0, isPlaying: false };
     mockCollection.findOne.mockResolvedValue(room);
     mockCollection.updateOne.mockResolvedValue({ matchedCount: 1 });
@@ -52,7 +52,7 @@ describe("POST /api/queue/[id]/play - Set play state", () => {
 
     expect(res.getStatus()).toBe(200);
     expect(mockCollection.updateOne).toHaveBeenCalledWith(
-      { id: "ROOM1", playMode: { $ne: "here" } },
+      { id: "ROOM1" },
       {
         $set: { isPlaying: true, playStartedAt: expect.any(Date), lastActivity: expect.any(Date) },
         $unset: { displayPaused: "", playPausedAt: "" },
@@ -60,12 +60,12 @@ describe("POST /api/queue/[id]/play - Set play state", () => {
     );
   });
 
-  it("rejects a tokenless start when the room raced into here-mode", async () => {
-    // A co-host's Play can be up to a poll stale; a here-mode room has no
-    // display to obey isPlaying and no self-heal, so the write must not land.
+  it("accepts a tokenless start on a here-mode room", async () => {
+    // The co-host's Play: no surface is claimed here, the host page claims it on
+    // its next poll, and the room GET heals the start if none ever does.
     const room: Room = { id: "ROOM1", queue: [], activeVideoIndex: 0, isPlaying: false, playMode: "here" };
     mockCollection.findOne.mockResolvedValue(room);
-    mockCollection.updateOne.mockResolvedValue({ matchedCount: 0 });
+    mockCollection.updateOne.mockResolvedValue({ matchedCount: 1 });
 
     const req = createMockReq({
       method: "POST",
@@ -74,7 +74,13 @@ describe("POST /api/queue/[id]/play - Set play state", () => {
     const res = createRes();
     await handler(req, res);
 
-    expect(res.getStatus()).toBe(409);
+    expect(res.getStatus()).toBe(200);
+    expect(mockCollection.updateOne).toHaveBeenCalledWith(
+      { id: "ROOM1" },
+      expect.objectContaining({
+        $set: expect.objectContaining({ isPlaying: true }),
+      })
+    );
   });
 
   it("sets isPlaying to false for any value other than 'true'", async () => {

@@ -640,6 +640,32 @@ const Host = ({
     return () => clearTimeout(timer);
   }, [playsVideoHere, tvMode, remote, activeIndex]);
 
+  // A co-host's Play flips isPlaying with no surface attached to it. In here-mode
+  // this page is the surface, so claim it — otherwise the room reads as playing
+  // while the host sits on the "playing on another device" panel and nothing
+  // sounds. Visible tabs only: a forgotten background tab grabbing the room would
+  // put the night's audio on the wrong screen. Polling re-fires on becoming
+  // visible, so a tab brought forward still picks up a pending start, and the
+  // room GET stops an unclaimed one after its grace window.
+  const claimingRef = React.useRef(false);
+  React.useEffect(() => {
+    if (remote || tvMode || !joinCode) return;
+    if (!isPlaying || serverPlayToken || claimingRef.current) return;
+    if (document.visibilityState !== "visible") return;
+    claimingRef.current = true;
+    (async () => {
+      const token = uuidv4();
+      const ok = await setPlaying(joinCode, true, token);
+      if (ok) {
+        setOwnedPlayToken(token);
+        setServerPlayToken(token);
+        storePlayToken(joinCode, token);
+        timing.markStarted();
+      }
+      claimingRef.current = false;
+    })();
+  }, [remote, tvMode, joinCode, isPlaying, serverPlayToken]);
+
   // The click is the user gesture that lets a blocked player start with sound.
   function toggleHereVideo() {
     const playing = hereVideoPlaying;
@@ -814,10 +840,11 @@ const Host = ({
     }
   }
 
-  // Co-host TV-mode play: flip the room to playing without claiming the
-  // playback surface — no token is minted, the live display just obeys
-  // isPlaying (its playsVideoHere is mode-based, never token-based).
-  async function startSongOnDisplay() {
+  // Co-host play: flip the room to playing without claiming the playback
+  // surface — no token is minted. A live display obeys isPlaying directly (its
+  // playsVideoHere is mode-based, never token-based); a here-mode host page
+  // claims the start and mints the token itself.
+  async function startSongRemotely() {
     if (!joinCode) return;
     const ok = await setPlaying(joinCode, true);
     if (ok) {
@@ -1007,9 +1034,12 @@ const Host = ({
   // hostView is the staged draft while customizing, the room's config otherwise.
   const customizing = !remote && hostEdit.editing;
 
-  // Single gate for the co-host's play/pause commands AND the "controlled on
-  // the host screen" note — deciding it in one place keeps the transport bar
-  // and the stage note from ever disagreeing.
+  // Co-host playback gates, decided here so the transport bar and the stage note
+  // can't disagree. Play works in both modes: a TV room needs a live display to
+  // obey it, a here-mode room needs only a host page, which claims the start on
+  // its next poll. Pause stays TV-only — it flips a shared flag that the display
+  // reports its real state back against, and the here-mode player reports nothing.
+  const cohostCanPlay = remote && (tvMode ? displayConnected : true);
   const cohostControlsLive = remote && tvMode && displayConnected;
 
   const transportBar = (
@@ -1027,11 +1057,12 @@ const Host = ({
       queueLength={queue.length}
       remote={remote}
       cohostControlsLive={cohostControlsLive}
+      cohostCanPlay={cohostCanPlay}
       onPrevious={playPrevious}
       onToggleDisplayPause={toggleDisplayPause}
       onStop={stopSong}
       onToggleHereVideo={toggleHereVideo}
-      onStart={remote ? startSongOnDisplay : startSong}
+      onStart={remote ? startSongRemotely : startSong}
       onNext={playNext}
     />
   );
@@ -1161,7 +1192,7 @@ const Host = ({
             currentSong={currentSong}
             songsSung={historyItems.length}
             remote={remote}
-            cohostControlsLive={cohostControlsLive}
+            cohostCanPlay={cohostCanPlay}
             tvMode={tvMode}
             isPlaying={isPlaying}
             displayPaused={displayPaused}

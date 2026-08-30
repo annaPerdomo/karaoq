@@ -127,11 +127,16 @@ export default async function handler(
           now - new Date(room.displayLastSeen).getTime() < DISPLAY_LIVE_MS
         );
 
-        // Self-heal orphaned playback: a TV room can't be playing with no live display. Here-mode
-        // rooms are exempt (their player is a host page); display readers are exempt — a display must never heal-stop its own playback.
+        // Self-heal orphaned playback. A TV room can't be playing with no live display; a here-mode
+        // room can't be playing with no playToken, since its player is a host page and every host
+        // page claims the surface with a token — an unclaimed start is a co-host's Play that no
+        // host page was open to pick up. Display readers are exempt: a display must never
+        // heal-stop its own playback.
         const isDisplayReader = req.query.display === "1";
+        const orphaned =
+          room.playMode === "here" ? !room.playToken : !displayConnected;
         let isPlaying = room.isPlaying ?? false;
-        if (isPlaying && !isDisplayReader && room.playMode !== "here" && !displayConnected) {
+        if (isPlaying && !isDisplayReader && orphaned) {
           const playAge = room.playStartedAt
             ? now - new Date(room.playStartedAt).getTime()
             : Infinity;
