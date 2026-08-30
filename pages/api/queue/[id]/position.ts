@@ -35,6 +35,13 @@ export default async function handler(
       // Clamp to just past the last entry (== queue.length is the legitimate
       // "queue finished" empty state, same bound video-ended enforces).
       const nextIndex = Math.min(activeVideoIndex, room.queue.length);
+      // Same-index writes only come from a stale skip (a second device's view
+      // lagging one poll behind an advance that already landed) — treat them as
+      // already-applied instead of stopping whatever is playing.
+      if (nextIndex === room.activeVideoIndex) {
+        res.status(200).json({ code: 200, message: "Position unchanged." });
+        return;
+      }
       await collection.updateOne(
         { id: roomId },
         {

@@ -74,6 +74,23 @@ describe("POST /api/queue/[id]/position - Advance song position", () => {
     );
   });
 
+  it("treats a same-index write as already applied without touching play state", async () => {
+    // A second device's stale skip (its view one poll behind an advance that
+    // already landed) must not stop whatever is playing.
+    const room: Room = { id: "ROOM1", queue: makeQueue(3), activeVideoIndex: 1, isPlaying: true };
+    mockCollection.findOne.mockResolvedValue(room);
+
+    const req = createMockReq({
+      method: "POST",
+      query: { id: "ROOM1", activeVideoIndex: "1" },
+    });
+    const res = createRes();
+    await handler(req, res);
+
+    expect(res.getStatus()).toBe(200);
+    expect(mockCollection.updateOne).not.toHaveBeenCalled();
+  });
+
   it("clamps an out-of-range index to just past the queue", async () => {
     const room: Room = { id: "ROOM1", queue: makeQueue(2), activeVideoIndex: 0, isPlaying: true };
     mockCollection.findOne.mockResolvedValue(room);
