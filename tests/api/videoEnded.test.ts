@@ -83,6 +83,27 @@ describe("POST /api/queue/[id]/video-ended - Display reports a finished song", (
     );
   });
 
+  it("leaves a one-song room empty, not replaying its only song", async () => {
+    // The whole reported bug in its smallest form: one song, nothing behind it.
+    // Parking on index 0 re-offered it as up next and replayed it.
+    mockCollection.findOne.mockResolvedValue(roomWithSongs(1, 0));
+    mockCollection.updateOne.mockResolvedValue({ modifiedCount: 1 });
+
+    const req = createMockReq({
+      method: "POST",
+      query: { id: "ROOM1", index: "0" },
+    });
+    const res = createRes();
+    await handler(req, res);
+
+    expect(res.getStatus()).toBe(200);
+    const [, update] = mockCollection.updateOne.mock.calls[0];
+    expect(update[0].$set.activeVideoIndex).toEqual({
+      $min: [1, { $size: "$queue" }],
+    });
+    expect(update[0].$set.isPlaying).toBe(false);
+  });
+
   it("advances past the last song into the finished state", async () => {
     mockCollection.findOne.mockResolvedValue(roomWithSongs(3, 2));
     mockCollection.updateOne.mockResolvedValue({ modifiedCount: 1 });
