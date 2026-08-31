@@ -8,6 +8,7 @@ import type { SearchResult } from "./searchCache";
 import { MAX_CUTS, recordHarvestMatches } from "./songCorpus";
 import { catalogEntry } from "./suggestionCatalog";
 import { matchHarvestToCatalog } from "./suggestionMatch";
+import { filterBlockedIds } from "./videoBlocklist";
 import type { HarvestedVideo } from "./karaokeChannels";
 import type { CatalogEntry } from "./suggestionCatalog";
 
@@ -98,8 +99,12 @@ export async function claimBankedVideos(
 
   if (Date.now() >= deadline) return { done: false, report };
 
+  // Nothing here re-reads the video, so a tombstoned one files on a title alone.
+  const blocked = await filterBlockedIds(unclaimed.map((video) => video._id));
+  const banked = unclaimed.filter((video) => !blocked.has(video._id));
+
   const matches = matchHarvestToCatalog(
-    unclaimed.map(harvested),
+    banked.map(harvested),
     entries,
     MAX_CUTS
   );
@@ -109,7 +114,7 @@ export async function claimBankedVideos(
   if (matches.size === 0) return { done: report.scanned < limit, report };
 
   const details = new Map<string, SearchResult>(
-    unclaimed.map((video) => [video._id, detail(video)] as [string, SearchResult])
+    banked.map((video) => [video._id, detail(video)] as [string, SearchResult])
   );
   const written = await recordHarvestMatches(matches, details, "claim");
   report.songsFilled = written.songsFilled;

@@ -13,6 +13,7 @@ import {
   type CatalogEntry,
 } from "./suggestionCatalog";
 import { isCutOf, type MatchedVideo } from "./suggestionMatch";
+import { filterBlockedIds } from "./videoBlocklist";
 
 export const MAX_CUTS = 12;
 
@@ -582,12 +583,17 @@ export async function recordSearchResults(
           .toArray();
   const alive = new Set(rows.map((r) => r._id));
 
+  // search.list's videoEmbeddable filter leaks, and the enrich that catches it
+  // gives up when videos.list fails — so a search returns what a sweep threw out.
+  const blocked = await filterBlockedIds(results.map((row) => row.videoId));
+
   const cuts = held.filter((id) => alive.has(id));
   // Servable rows only: unnamed rows must not turn a paid search away.
   let serving = rows.filter((row) => isServable(row)).length;
   const fresh: SearchResult[] = [];
   for (const row of results) {
     if (serving >= MAX_CUTS) break;
+    if (blocked.has(row.videoId)) continue;
     // Appended: relevance order is YouTube's opinion, the leading cuts are ours.
     if (cuts.indexOf(row.videoId) >= 0) continue;
     cuts.push(row.videoId);

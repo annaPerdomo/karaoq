@@ -128,6 +128,22 @@ describe("claimBankedVideos", () => {
     expect(songs().get(entry.key).cuts).toEqual([]);
   });
 
+  it("refuses a row the sweep tombstoned, since nothing here re-reads it", async () => {
+    wanted();
+    banked("v1");
+    collection("blocked_videos").seed({
+      _id: "v1",
+      reason: "unembeddable",
+      blockedAt: new Date(),
+    });
+
+    const { report } = await claimBankedVideos(soon());
+
+    // Read and rejected, not skipped: the cap is about the scan, not the match.
+    expect(report).toMatchObject({ scanned: 1, matched: 0, songsFilled: 0 });
+    expect(songs().get(entry.key).cuts).toEqual([]);
+  });
+
   it("leaves a row another song already claims alone", async () => {
     wanted();
     banked("v1", { songKeys: ["some other song"] });
