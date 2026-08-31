@@ -42,8 +42,9 @@ export async function searchYoutubeApi(
   return enrichWithVideoDetails(results, key);
 }
 
-// 1 unit per 50 ids, so the badges cost ~1% extra. Any failure returns the bare
-// results.
+// 1 unit per 50 ids however many parts, so the badges and the embeddable check
+// cost ~1% extra. search.list's videoEmbeddable filter leaks; a blocked video is
+// dropped here or it reaches a player. Any failure returns the bare results.
 export async function enrichWithVideoDetails(
   results: SearchResult[],
   key: string
@@ -51,7 +52,7 @@ export async function enrichWithVideoDetails(
   if (results.length === 0) return results;
   try {
     const params = new URLSearchParams({
-      part: "contentDetails,statistics",
+      part: "contentDetails,statistics,status",
       id: results.map((r) => r.videoId).join(","),
       key,
     });
@@ -65,11 +66,14 @@ export async function enrichWithVideoDetails(
     const byId = new Map<string, any>(
       (data.items ?? []).map((item: any) => [item.id, item])
     );
-    return results.map((r) => {
-      const item = byId.get(r.videoId);
-      if (!item) return r;
-      return { ...r, ...videoDetailFields(item) };
-    });
+    return results
+      .map((r) => {
+        const item = byId.get(r.videoId);
+        if (!item) return r;
+        if (item.status?.embeddable === false) return null;
+        return { ...r, ...videoDetailFields(item) };
+      })
+      .filter((r): r is SearchResult => r !== null);
   } catch {
     return results;
   }
