@@ -5,14 +5,22 @@ import { videoDetailFields } from "./youtubeSearch";
  *  a different pool from the 100 search.list calls a day. */
 export const ID_BATCH = 50;
 
-/** Null when the call failed; an empty map when YouTube answered and none of the
+export interface VideoRows {
+  rows: Map<string, SearchResult>;
+  /** Not the ids YouTube left unanswered: these the owner blocked, so callers
+   *  tombstone them. */
+  unembeddable: string[];
+}
+
+/** Null when the call failed; empty rows when YouTube answered and none of the
  *  videos exist. Collapsed, one 403 read as every video being gone. */
 export async function fetchVideoRows(
   videoIds: string[],
   key: string
-): Promise<Map<string, SearchResult> | null> {
+): Promise<VideoRows | null> {
   const rows = new Map<string, SearchResult>();
-  if (videoIds.length === 0) return rows;
+  const unembeddable: string[] = [];
+  if (videoIds.length === 0) return { rows, unembeddable };
   const params = new URLSearchParams({
     part: "snippet,contentDetails,statistics,status",
     id: videoIds.slice(0, ID_BATCH).join(","),
@@ -31,7 +39,10 @@ export async function fetchVideoRows(
   const data = await resp.json();
   for (const item of data.items ?? []) {
     // Unembeddable can't play in the room, so it's as good as deleted.
-    if (item?.status?.embeddable === false) continue;
+    if (item?.status?.embeddable === false) {
+      if (item.id) unembeddable.push(item.id);
+      continue;
+    }
     const snippet = item?.snippet;
     if (!snippet || !item.id) continue;
     rows.set(item.id, {
@@ -42,5 +53,5 @@ export async function fetchVideoRows(
       ...videoDetailFields(item),
     });
   }
-  return rows;
+  return { rows, unembeddable };
 }

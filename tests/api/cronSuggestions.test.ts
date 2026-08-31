@@ -44,6 +44,7 @@ import { suggestionCatalog, type CatalogEntry } from "../../lib/suggestionCatalo
 const songs = () => collection("karaoke_songs");
 const videos = () => collection("karaoke_videos");
 const state = () => collection("cron_state");
+const blocklist = () => collection("blocked_videos");
 /** The day's spend doc — one per Pacific day, see lib/corpusBudget. */
 const ledger = () => state().get(`budget:${ledgerDay(Date.now())}`);
 
@@ -60,6 +61,9 @@ const api = {
   unembeddable: new Set<string>(),
   /** Ids videos.list answers for with no picture, so nothing can serve them. */
   unpictured: new Set<string>(),
+  /** videos.list down, which enrichWithVideoDetails answers with the unchecked
+   *  search results. */
+  videosListDown: false,
   titles: new Map<string, string>(),
   uploads: [] as { videoId: string; title: string }[],
   /** Pages before the channel runs out; more than one lets it outlast a run. */
@@ -97,6 +101,7 @@ function fakeYoutube(): void {
       const endpoint = url.pathname.split("/").pop();
       if (endpoint === "videos") {
         api.onVideosList();
+        if (api.videosListDown) return json({ error: { message: "down" } }, 500);
         const ids = (url.searchParams.get("id") ?? "").split(",").filter(Boolean);
         return json({ items: ids.filter((id) => !api.missing.has(id)).map(videoItem) });
       }
@@ -236,6 +241,7 @@ beforeEach(() => {
   api.missing = new Set();
   api.unembeddable = new Set();
   api.unpictured = new Set();
+  api.videosListDown = false;
   api.titles = new Map();
   api.uploads = [];
   api.uploadPages = 1;
@@ -590,6 +596,39 @@ describe("GET /api/cron/suggestions - sweep", () => {
     expect(songs().get(PLAIN.key).topVideoId).toBeUndefined();
   });
 
+  it("tombstones the video the owner blocked, but not the one that vanished", async () => {
+    seedSong(PLAIN, ["gone1", "blocked1"]);
+    seedVideo("gone1");
+    seedVideo("blocked1");
+    api.missing.add("gone1");
+    api.unembeddable.add("blocked1");
+
+    const steps = await run({ search: "0" });
+
+    expect(steps.sweep).toMatchObject({ dropped: 2, blocked: 1 });
+    expect(blocklist().get("blocked1")).toMatchObject({ reason: "unembeddable" });
+    // A video YouTube stopped answering for may be back tomorrow.
+    expect(blocklist().get("gone1")).toBeNull();
+  });
+
+  it("refuses to buy back a tombstoned video the enrich can no longer catch", async () => {
+    seedSong(PLAIN, ["blocked1"]);
+    seedVideo("blocked1");
+    api.unembeddable.add("blocked1");
+    await run({ search: "0" });
+
+    // With videos.list down the tombstone is all that stands between the search
+    // and the corpus.
+    api.searchHits = [{ videoId: "blocked1", title: "One (Karaoke)" }];
+    api.videosListDown = true;
+
+    const steps = await run();
+
+    expect(steps.resolve).toMatchObject({ searched: 1, filled: 0, missed: 1 });
+    expect(songs().get(PLAIN.key).cuts).toEqual([]);
+    expect(videos().get("blocked1")).toBeNull();
+  });
+
   it("rewrites the retention clock and the fields the browse view shows", async () => {
     seedSong(PLAIN, ["live1"]);
     seedVideo("live1");
@@ -876,6 +915,30 @@ describe("GET /api/cron/suggestions - harvest", () => {
       cursor: "UP_test|",
       done: true,
     });
+  });
+
+  it("tombstones a blocked upload instead of filing it on the playlist row", async () => {
+    api.uploads = [{ videoId: "up1", title: `${PLAIN.artist} ${PLAIN.title} (Karaoke)` }];
+    api.unembeddable.add("up1");
+
+    const steps = await run({ search: "0" });
+
+    // The playlist page carries a title and a picture, so an unanswered lookup
+    // is not what keeps a blocked upload out.
+    expect(steps.harvest.songsFilled).toBe(0);
+    expect(videos().get("up1")).toBeNull();
+    expect(blocklist().get("up1")).toMatchObject({ reason: "unembeddable" });
+  });
+
+  it("spends no lookup unit re-reading an upload already tombstoned", async () => {
+    api.uploads = [{ videoId: "up1", title: `${PLAIN.artist} ${PLAIN.title} (Karaoke)` }];
+    blocklist().seed({ _id: "up1", reason: "unembeddable", blockedAt: new Date() });
+
+    const steps = await run({ search: "0" });
+
+    expect(calls("videos")).toEqual([]);
+    expect(steps.harvest.songsFilled).toBe(0);
+    expect(videos().get("up1")).toBeNull();
   });
 
   it("resumes from the pre-corpus cursor store rather than re-walking a channel", async () => {

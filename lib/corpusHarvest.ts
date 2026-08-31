@@ -17,6 +17,7 @@ import type { SearchResult } from "./searchCache";
 import { MAX_CUTS, recordHarvestMatches } from "./songCorpus";
 import { matchHarvestToCatalog, type MatchedVideo } from "./suggestionMatch";
 import { suggestionCatalog, type CatalogEntry } from "./suggestionCatalog";
+import { blockVideos, filterBlockedIds } from "./videoBlocklist";
 import { fetchVideoRows, ID_BATCH } from "./youtubeVideos";
 
 /** Slice of CHANNEL_PAGES_PER_DAY, so one channel can't starve the rest. */
@@ -108,13 +109,7 @@ async function wantedEntries(): Promise<CatalogEntry[]> {
   return Array.from(suggestionCatalog().values()).filter((e) => !done.has(e.key));
 }
 
-/** Durations and view counts aren't in a playlist row. Best-effort — the
- *  playlist title stands where the lookup fails. */
-async function enrichMatches(
-  matches: Map<string, MatchedVideo[]>,
-  key: string,
-  deadline: number
-): Promise<{ details: Map<string, SearchResult>; units: number }> {
+function matchedVideoIds(matches: Map<string, MatchedVideo[]>): string[] {
   const ids: string[] = [];
   const seen = new Set<string>();
   matches.forEach((rows) => {
@@ -124,15 +119,45 @@ async function enrichMatches(
       ids.push(row.videoId);
     }
   });
+  return ids;
+}
+
+function withoutVideos(
+  matches: Map<string, MatchedVideo[]>,
+  drop: Set<string>
+): Map<string, MatchedVideo[]> {
+  if (drop.size === 0) return matches;
+  const kept = new Map<string, MatchedVideo[]>();
+  matches.forEach((rows, songKey) => {
+    const live = rows.filter((row) => !drop.has(row.videoId));
+    if (live.length > 0) kept.set(songKey, live);
+  });
+  return kept;
+}
+
+/** Durations and view counts aren't in a playlist row. Best-effort — the
+ *  playlist title stands where the lookup fails. */
+async function enrichMatches(
+  matches: Map<string, MatchedVideo[]>,
+  key: string,
+  deadline: number
+): Promise<{
+  details: Map<string, SearchResult>;
+  unembeddable: string[];
+  units: number;
+}> {
+  const ids = matchedVideoIds(matches);
 
   const details = new Map<string, SearchResult>();
+  const unembeddable: string[] = [];
   let units = 0;
   for (let i = 0; i < ids.length && Date.now() < deadline; i += ID_BATCH) {
     units += 1;
-    const rows = await fetchVideoRows(ids.slice(i, i + ID_BATCH), key);
-    rows?.forEach((row, id) => details.set(id, row));
+    const fetched = await fetchVideoRows(ids.slice(i, i + ID_BATCH), key);
+    fetched?.rows.forEach((row, id) => details.set(id, row));
+    for (const id of fetched?.unembeddable ?? []) unembeddable.push(id);
   }
-  return { details, units };
+  return { details, unembeddable, units };
 }
 
 export interface HarvestStepReport {
@@ -190,11 +215,22 @@ export async function harvestIntoCorpus(
     await saveCursor(state, channel, cursor);
     if (videos.length === 0 || open.length === 0) return;
 
-    const matches = matchHarvestToCatalog(videos, open, opts.maxCutsPerSong);
+    let matches = matchHarvestToCatalog(videos, open, opts.maxCutsPerSong);
+    if (matches.size === 0) return;
+
+    // Before the lookup: re-reading a tombstoned upload spends a unit for nothing.
+    const blocked = await filterBlockedIds(matchedVideoIds(matches));
+    matches = withoutVideos(matches, blocked);
     if (matches.size === 0) return;
 
     const enriched = await enrichMatches(matches, key, deadline);
     extraUnits += enriched.units;
+    // recordHarvestMatches falls back to the playlist title and picture, so a
+    // blocked upload files as a servable cut unless it is pulled here.
+    await blockVideos(enriched.unembeddable, "unembeddable");
+    matches = withoutVideos(matches, new Set(enriched.unembeddable));
+    if (matches.size === 0) return;
+
     const written = await recordHarvestMatches(matches, enriched.details);
     report.videosUpserted += written.videosUpserted;
     report.videosRefreshed += written.videosRefreshed;

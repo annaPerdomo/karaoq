@@ -3,6 +3,7 @@ import type { Filter } from "mongodb";
 import { getKaraokeVideosCollection, type KaraokeVideoDoc } from "./mongodb";
 import { pruneCachedVideos } from "./searchCache";
 import { dropVideos, refreshVideos, unfileUnprovenCuts } from "./songCorpus";
+import { blockVideos } from "./videoBlocklist";
 import { fetchVideoRows, ID_BATCH } from "./youtubeVideos";
 
 /** ~900 songs × 12 cuts over the 14 days between cutoff and TTL is ~770 rows a
@@ -22,6 +23,8 @@ export interface SweepReport {
   pending: number;
   refreshed: number;
   dropped: number;
+  /** Of those, the ones tombstoned rather than merely deleted. */
+  blocked: number;
   cutsPulled: number;
   unpinned: number;
   /** Cuts an add filed on a title YouTube has now contradicted. */
@@ -51,6 +54,7 @@ export async function sweepCorpusVideos(
     pending: 0,
     refreshed: 0,
     dropped: 0,
+    blocked: 0,
     cutsPulled: 0,
     unpinned: 0,
     unproven: 0,
@@ -79,11 +83,12 @@ export async function sweepCorpusVideos(
     if (ids.every((id) => seen.has(id))) return "stopped";
     for (const id of ids) seen.add(id);
 
-    const live = await fetchVideoRows(ids, apiKey);
-    if (!live) {
+    const fetched = await fetchVideoRows(ids, apiKey);
+    if (!fetched) {
       report.stalled = true;
       return "stopped";
     }
+    const live = fetched.rows;
     report.checked += ids.length;
     report.refreshed += await refreshVideos(Array.from(live.values()));
 
@@ -91,6 +96,10 @@ export async function sweepCorpusVideos(
     const unproven = await unfileUnprovenCuts(live);
     report.unproven += unproven.pulled;
     report.unpinned += unproven.unpinned;
+
+    // Deleting the row alone forgets why: the next resolve would buy the same
+    // blocked video back out of the same leaky search.
+    report.blocked += await blockVideos(fetched.unembeddable, "unembeddable");
 
     // fetchVideoRows drops missing and unembeddable alike; neither plays.
     const dead = ids.filter((id) => !live.has(id));
