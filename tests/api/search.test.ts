@@ -325,6 +325,35 @@ describe("GET /api/search", () => {
     await vi.waitFor(() => expect(mockCollection.updateOne).toHaveBeenCalled());
   });
 
+  it("neither serves nor caches a cut whose owner disabled embedding", async () => {
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url.includes("/youtube/v3/search")) return jsonResponse(searchItems(["a", "b"]));
+      if (url.includes("/youtube/v3/videos")) {
+        return jsonResponse({
+          items: [
+            { id: "a", status: { embeddable: false } },
+            { id: "b", status: { embeddable: true } },
+          ],
+        });
+      }
+      throw new Error("unexpected fetch " + url);
+    });
+
+    const res = createRes();
+    await handler(createMockReq({ query: { q: "let it go" } }), res);
+
+    expect(res.getStatus()).toBe(200);
+    expect(res.getBody()).toEqual([
+      { title: "Song b", thumbnailUrl: "https://i.ytimg.com/vi/b/mq.jpg", videoId: "b" },
+    ]);
+    // A fortnight of cache, so a blocked cut banked here outlives the search.
+    await vi.waitFor(() => expect(mockCollection.updateOne).toHaveBeenCalled());
+    const cached = mockCollection.updateOne.mock.calls[0][1] as {
+      $set: { results: { videoId: string }[] };
+    };
+    expect(cached.$set.results.map((r) => r.videoId)).toEqual(["b"]);
+  });
+
   it("still returns results when enrichment fails", async () => {
     fetchMock.mockImplementation(async (url: string) => {
       if (url.includes("/youtube/v3/search")) return jsonResponse(searchItems(["a"]));
