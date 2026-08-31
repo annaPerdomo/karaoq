@@ -354,6 +354,49 @@ export async function getKaraokeVideosCollection(): Promise<Collection<KaraokeVi
   return db.collection<KaraokeVideoDoc>("karaoke_videos");
 }
 
+// Tombstones for videos the corpus threw out, so a later resolve can't buy the
+// same one back. The TTL re-tests rather than tidies: an owner can re-enable
+// embedding.
+const BLOCKED_VIDEO_TTL_SECONDS = 90 * 24 * 60 * 60;
+
+export interface BlockedVideoDoc {
+  /** The videoId. */
+  _id: string;
+  reason: string;
+  blockedAt: Date;
+}
+
+let blockedVideoIndexesEnsured = false;
+
+export async function getBlockedVideosCollection(): Promise<
+  Collection<BlockedVideoDoc>
+> {
+  const client = await getMongoClient();
+  const db = client.db(process.env.MONGODB_DB);
+  if (!blockedVideoIndexesEnsured) {
+    // Latched even on failure, and retuned via collMod, as search_cache is.
+    blockedVideoIndexesEnsured = true;
+    db.collection("blocked_videos")
+      .createIndex(
+        { blockedAt: 1 },
+        { expireAfterSeconds: BLOCKED_VIDEO_TTL_SECONDS }
+      )
+      .catch(() =>
+        db.command({
+          collMod: "blocked_videos",
+          index: {
+            keyPattern: { blockedAt: 1 },
+            expireAfterSeconds: BLOCKED_VIDEO_TTL_SECONDS,
+          },
+        })
+      )
+      .catch((e) => {
+        console.error("blocked_videos TTL retune failed:", e);
+      });
+  }
+  return db.collection<BlockedVideoDoc>("blocked_videos");
+}
+
 // No YouTube content — hydrated from karaoke_videos at read time — so no TTL here.
 // A karaoke_videos row deletes itself on TTL and tells nobody, so every writer of
 // `cuts` drops ids whose video is gone.
