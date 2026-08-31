@@ -315,6 +315,7 @@
   "display.boards.cta": "上のQRコードをスキャンして参加しよう！",
   "display.errorTitle": "ルームが見つかりません",
   "display.errorBody": "ルームコードを確認してもう一度試してね。",
+  "player.unplayable": "この動画はここでは再生できないみたい。別のバージョンを選んでね。",
   "print.pageTitle": "KaraoQ — QR コードを印刷",
   "print.scanToJoin": "スキャンして参加",
   "print.orJoin": "または {url} にアクセスして {code} を入力",

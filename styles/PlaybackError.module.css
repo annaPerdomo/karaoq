@@ -1,0 +1,20 @@
+/* A strip across the top of the video rather than a full cover: the host's
+   transport bar shares this box and has to stay visible and clickable. */
+.notice {
+  position: absolute;
+  /* Surfaces that pad their video area set the offset; a variable rather than an
+     overriding class, whose ordering against this file isn't ours to decide. */
+  top: var(--notice-top, 0px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  padding: 0.7rem 1rem;
+  background: rgba(0, 0, 0, 0.82);
+  backdrop-filter: blur(6px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-align: center;
+  pointer-events: none;
+}

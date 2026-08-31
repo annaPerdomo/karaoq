@@ -315,6 +315,7 @@
   "display.boards.cta": "¡Escanea el código QR de arriba y súmate!",
   "display.errorTitle": "Sala no encontrada",
   "display.errorBody": "Revisa el código de la sala e inténtalo de nuevo.",
+  "player.unplayable": "Este vídeo no se puede reproducir aquí — elige otra versión.",
   "print.pageTitle": "KaraoQ — Imprimir código QR",
   "print.scanToJoin": "Escanea para unirte",
   "print.orJoin": "o entra a {url} e ingresa {code}",

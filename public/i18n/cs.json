@@ -315,6 +315,7 @@
   "display.boards.cta": "Naskenuj QR kód nahoře a přidej se!",
   "display.errorTitle": "Místnost nenalezena",
   "display.errorBody": "Zkontroluj kód místnosti a zkus to znovu.",
+  "player.unplayable": "Tohle video tady nejde přehrát — vyber jinou verzi.",
   "print.pageTitle": "KaraoQ — Tisk QR kódu",
   "print.scanToJoin": "Naskenuj a přidej se",
   "print.orJoin": "nebo se přidej na {url} a zadej {code}",

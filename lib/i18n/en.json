@@ -315,6 +315,7 @@
   "display.boards.cta": "Scan the QR code above to jump in!",
   "display.errorTitle": "Room not found",
   "display.errorBody": "Check the room code and try again.",
+  "player.unplayable": "This video can't be played here — pick another version.",
   "print.pageTitle": "KaraoQ — Print QR Code",
   "print.scanToJoin": "Scan to join",
   "print.orJoin": "or join {url} and enter {code}",

@@ -210,6 +210,12 @@
   background: #000;
 }
 
+/* Clears the fixed header: an absolute child is placed against the padding box,
+   which starts above .videoArea's own padding-top. */
+.videoNotice {
+  --notice-top: 56px;
+}
+
 .headerEdit {
   display: flex;
   align-items: center;

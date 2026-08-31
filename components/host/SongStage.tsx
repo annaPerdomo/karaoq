@@ -4,6 +4,7 @@ import { QueueEntry } from "../../pages/api/types";
 import { useT } from "../../lib/i18n/I18nProvider";
 import { Icons } from "./icons";
 import { InviteBlock } from "./InviteBlock";
+import { embedSrc } from "../player/embed";
 import { formatSongTitle } from "./utils";
 
 // The main stage: loading spinner, the current song's player/status panel (which
@@ -153,7 +154,7 @@ export function SongStage({
         ref={videoRef}
         key={currentSong.id}
         className={styles.video}
-        src={`https://www.youtube.com/embed/${currentSong.videoId}?autoplay=1&rel=0&enablejsapi=1`}
+        src={embedSrc(currentSong.videoId, "autoplay=1&rel=0&enablejsapi=1")}
         allow="autoplay; encrypted-media"
         allowFullScreen
         onLoad={onIframeLoad}

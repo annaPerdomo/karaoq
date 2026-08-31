@@ -315,6 +315,7 @@
   "display.boards.cta": "I-scan ang QR code sa taas para sumali!",
   "display.errorTitle": "Hindi nahanap ang room",
   "display.errorBody": "I-check ang room code at subukan ulit.",
+  "player.unplayable": "Hindi mapa-play dito ang video na ito — pumili ng ibang bersyon.",
   "print.pageTitle": "KaraoQ — I-print ang QR Code",
   "print.scanToJoin": "I-scan para sumali",
   "print.orJoin": "o sumali sa {url} at ilagay ang {code}",

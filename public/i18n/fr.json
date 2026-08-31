@@ -315,6 +315,7 @@
   "display.boards.cta": "Scanne le QR code ci-dessus pour participer !",
   "display.errorTitle": "Salle introuvable",
   "display.errorBody": "Vérifie le code de salle et réessaie.",
+  "player.unplayable": "Cette vidéo ne peut pas être lue ici — choisis une autre version.",
   "print.pageTitle": "KaraoQ — Imprimer le QR code",
   "print.scanToJoin": "Scanne pour rejoindre",
   "print.orJoin": "ou rejoins {url} et entre {code}",

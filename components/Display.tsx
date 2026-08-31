@@ -21,6 +21,9 @@ import FullscreenToggle from './FullscreenToggle';
 import formatSongTitle from '../lib/songTitle';
 import DisplaySidebar from './display/DisplaySidebar';
 import NowPlayingBar from './display/NowPlayingBar';
+import { PlaybackErrorNotice } from './player/PlaybackErrorNotice';
+import { usePlaybackError } from './player/usePlaybackError';
+import { embedSrc } from './player/embed';
 import p from '../styles/DisplayDesigner.module.css';
 import { useDisplayEdit } from './display/edit/useDisplayEdit';
 import { Spot, HideButton } from './edit/EditChrome';
@@ -377,6 +380,12 @@ const Display = (): React.ReactElement => {
   }
 
   const currentSong = queue[activeIndex];
+  const playbackFailed = usePlaybackError({
+    videoRef,
+    entryId: currentSong?.id,
+    videoId: currentSong?.videoId,
+    active: !loading && !!currentSong && isPlaying && playsVideoHere,
+  });
   const upNext = currentSong && !isPlaying
     ? queue.slice(activeIndex)
     : queue.slice(activeIndex + 1);
@@ -462,7 +471,10 @@ const Display = (): React.ReactElement => {
             ref={videoRef}
             key={currentSong.id}
             className={styles.video}
-            src={`https://www.youtube.com/embed/${currentSong.videoId}?autoplay=1&rel=0&modestbranding=1&iv_load_policy=3&enablejsapi=1`}
+            src={embedSrc(
+              currentSong.videoId,
+              'autoplay=1&rel=0&modestbranding=1&iv_load_policy=3&enablejsapi=1'
+            )}
             allow="autoplay; encrypted-media"
             allowFullScreen
             onLoad={handleIframeLoad}
@@ -518,6 +530,8 @@ const Display = (): React.ReactElement => {
             </span>
           </button>
         )}
+
+        {playbackFailed && <PlaybackErrorNotice className={styles.videoNotice} />}
 
         {reactionsOn && visibleReactions.length > 0 && (
           <div className={styles.reactionOverlay}>

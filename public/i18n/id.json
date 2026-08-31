@@ -315,6 +315,7 @@
   "display.boards.cta": "Scan kode QR di atas dan ikutan!",
   "display.errorTitle": "Room tidak ditemukan",
   "display.errorBody": "Cek kode room dan coba lagi.",
+  "player.unplayable": "Video ini tidak bisa diputar di sini — pilih versi lain.",
   "print.pageTitle": "KaraoQ — Cetak Kode QR",
   "print.scanToJoin": "Scan untuk gabung",
   "print.orJoin": "atau kunjungi {url} dan masukkan {code}",

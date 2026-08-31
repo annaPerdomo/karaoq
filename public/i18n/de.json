@@ -315,6 +315,7 @@
   "display.boards.cta": "Scanne den QR-Code oben und mach mit!",
   "display.errorTitle": "Raum nicht gefunden",
   "display.errorBody": "Prüfe den Raumcode und versuch es nochmal.",
+  "player.unplayable": "Dieses Video lässt sich hier nicht abspielen — wähl eine andere Version.",
   "print.pageTitle": "KaraoQ – QR-Code drucken",
   "print.scanToJoin": "Zum Mitmachen scannen",
   "print.orJoin": "oder tritt {url} bei und gib {code} ein",

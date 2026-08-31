@@ -315,6 +315,7 @@
   "display.boards.cta": "위 QR 코드를 스캔하고 함께해요!",
   "display.errorTitle": "방을 찾을 수 없어요",
   "display.errorBody": "방 코드를 확인하고 다시 시도해 주세요.",
+  "player.unplayable": "이 영상은 여기서 재생할 수 없어요 — 다른 버전을 골라 주세요.",
   "print.pageTitle": "KaraoQ — QR 코드 인쇄",
   "print.scanToJoin": "스캔해서 참여하기",
   "print.orJoin": "또는 {url}에 접속해서 {code} 입력",
