@@ -930,6 +930,34 @@ describe("GET /api/cron/suggestions - harvest", () => {
     expect(blocklist().get("up1")).toMatchObject({ reason: "unembeddable" });
   });
 
+  it("unfiles the cut an earlier run filed when the upload turns out blocked", async () => {
+    // Fresh, so the sweep leaves it for the harvest to find.
+    seedSong(PLAIN, ["up1"]);
+    seedVideo("up1", new Date());
+    api.uploads = [{ videoId: "up1", title: `${PLAIN.artist} ${PLAIN.title} (Karaoke)` }];
+    api.unembeddable.add("up1");
+
+    const steps = await run({ search: "0" });
+
+    expect(steps.harvest.videosBlocked).toBe(1);
+    expect(blocklist().get("up1")).toMatchObject({ reason: "unembeddable" });
+    expect(videos().get("up1")).toBeNull();
+    expect(songs().get(PLAIN.key).cuts).toEqual([]);
+  });
+
+  it("files nothing for an upload the lookup never vouched for", async () => {
+    seedSong(PLAIN, []);
+    api.uploads = [{ videoId: "up1", title: `${PLAIN.artist} ${PLAIN.title} (Karaoke)` }];
+    api.missing.add("up1");
+
+    const steps = await run({ search: "0" });
+
+    // The playlist row carries a title and a picture, so nothing else keeps it out.
+    expect(steps.harvest.songsFilled).toBe(0);
+    expect(videos().get("up1")).toBeNull();
+    expect(songs().get(PLAIN.key).cuts).not.toContain("up1");
+  });
+
   it("spends no lookup unit re-reading an upload already tombstoned", async () => {
     api.uploads = [{ videoId: "up1", title: `${PLAIN.artist} ${PLAIN.title} (Karaoke)` }];
     blocklist().seed({ _id: "up1", reason: "unembeddable", blockedAt: new Date() });

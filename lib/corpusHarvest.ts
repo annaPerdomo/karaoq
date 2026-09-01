@@ -14,7 +14,8 @@ import {
   type HarvestCursor,
 } from "./karaokeChannels";
 import type { SearchResult } from "./searchCache";
-import { MAX_CUTS, recordHarvestMatches } from "./songCorpus";
+import { pruneCachedVideos } from "./searchCache";
+import { dropVideos, MAX_CUTS, recordHarvestMatches } from "./songCorpus";
 import { matchHarvestToCatalog, type MatchedVideo } from "./suggestionMatch";
 import { suggestionCatalog, type CatalogEntry } from "./suggestionCatalog";
 import { blockVideos, filterBlockedIds } from "./videoBlocklist";
@@ -135,8 +136,20 @@ function withoutVideos(
   return kept;
 }
 
-/** Durations and view counts aren't in a playlist row. Best-effort — the
- *  playlist title stands where the lookup fails. */
+function keepVideos(
+  matches: Map<string, MatchedVideo[]>,
+  keep: Set<string>
+): Map<string, MatchedVideo[]> {
+  const kept = new Map<string, MatchedVideo[]>();
+  matches.forEach((rows, songKey) => {
+    const live = rows.filter((row) => keep.has(row.videoId));
+    if (live.length > 0) kept.set(songKey, live);
+  });
+  return kept;
+}
+
+/** Durations, view counts and embeddability aren't in a playlist row. An id in
+ *  neither map was never asked about — the deadline, or fetchVideoRows on null. */
 async function enrichMatches(
   matches: Map<string, MatchedVideo[]>,
   key: string,
@@ -169,6 +182,7 @@ export interface HarvestStepReport {
   wanted: number;
   videosUpserted: number;
   videosRefreshed: number;
+  videosBlocked: number;
   songsFilled: number;
 }
 
@@ -194,6 +208,7 @@ export async function harvestIntoCorpus(
     wanted: 0,
     videosUpserted: 0,
     videosRefreshed: 0,
+    videosBlocked: 0,
     songsFilled: 0,
   };
   const key = process.env.YOUTUBE_API_KEY;
@@ -225,10 +240,16 @@ export async function harvestIntoCorpus(
 
     const enriched = await enrichMatches(matches, key, deadline);
     extraUnits += enriched.units;
-    // recordHarvestMatches falls back to the playlist title and picture, so a
-    // blocked upload files as a servable cut unless it is pulled here.
-    await blockVideos(enriched.unembeddable, "unembeddable");
-    matches = withoutVideos(matches, new Set(enriched.unembeddable));
+    // An earlier run may have filed the upload as a cut, and a tombstone alone
+    // leaves that cut servable until a sweep reaches the row 16+ days later.
+    if (enriched.unembeddable.length > 0) {
+      report.videosBlocked += await blockVideos(enriched.unembeddable, "unembeddable");
+      await dropVideos(enriched.unembeddable);
+      await pruneCachedVideos(enriched.unembeddable);
+    }
+    // Only what the lookup vouched for: recordHarvestMatches falls back to the
+    // playlist title and picture, so anything else files as a servable cut.
+    matches = keepVideos(matches, new Set(enriched.details.keys()));
     if (matches.size === 0) return;
 
     const written = await recordHarvestMatches(matches, enriched.details);
