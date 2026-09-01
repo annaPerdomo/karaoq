@@ -66,8 +66,6 @@ import { ConfirmRemoveModal } from "./host/ConfirmRemoveModal";
 import { WelcomePrompt } from "./host/WelcomePrompt";
 import { HostHeader } from "./host/HostHeader";
 import { SongStage } from "./host/SongStage";
-import { PlaybackErrorNotice } from "./player/PlaybackErrorNotice";
-import { usePlaybackError } from "./player/usePlaybackError";
 import { TransportBar } from "./host/TransportBar";
 import { QueueSidebar } from "./host/QueueSidebar";
 import { useHostEdit } from "./host/edit/useHostEdit";
@@ -1071,13 +1069,6 @@ const Host = ({
 
   const roomEmpty = queue.length === 0;
 
-  const playbackFailed = usePlaybackError({
-    videoRef,
-    entryId: currentSong?.id,
-    videoId: currentSong?.videoId,
-    active: !loading && !!currentSong && !remote && !tvMode && playsVideoHere,
-  });
-
   // Counted the way the rotation groups people — a duet entry counts each member.
   const uniqueSingers = new Set(upNext.flatMap((s) => singerKeys(s.userName))).size;
 
@@ -1259,8 +1250,6 @@ const Host = ({
             onPrintQr={printQr}
             onAddFirst={() => setSearchOpen(true)}
           />
-
-          {playbackFailed && <PlaybackErrorNotice />}
 
           {!remote && reactionsOn && visibleReactions.length > 0 && (
             <ReactionOverlay reactions={visibleReactions} />

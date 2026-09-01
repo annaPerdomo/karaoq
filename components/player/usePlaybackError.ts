@@ -1,12 +1,13 @@
 import * as React from "react";
 import postUnplayableVideo from "../../app/queue/postUnplayableVideo";
-
-// 101 and 150 are the owner disabling embedding, 100 a video gone or private.
-// The rest (2, 5) are player faults that say nothing about the video.
-const UNPLAYABLE_CODES = [100, 101, 150];
+import { UNPLAYABLE_PLAYER_CODES } from "../../lib/playbackCodes";
 
 // One script and one ready callback per page, so every player waits on this.
 let apiReady: Promise<any> | null = null;
+
+/** A captive portal answers the connection and then says nothing, firing neither
+ *  load nor error — unbounded, no song after it is ever watched. */
+const API_TIMEOUT_MS = 10_000;
 
 function loadIframeApi(): Promise<any> {
   if (apiReady) return apiReady;
@@ -16,20 +17,26 @@ function loadIframeApi(): Promise<any> {
       resolve(w.YT);
       return;
     }
+    const script = document.createElement("script");
+    const giveUp = () => {
+      apiReady = null;
+      script.remove();
+      resolve(null);
+    };
+    const timer = setTimeout(giveUp, API_TIMEOUT_MS);
     // Chained rather than replaced: the callback is a global anyone may own.
     const previous = w.onYouTubeIframeAPIReady;
     w.onYouTubeIframeAPIReady = () => {
       if (typeof previous === "function") previous();
+      clearTimeout(timer);
       resolve(w.YT);
     };
-    const script = document.createElement("script");
-    script.src = "https://www.youtube.com/iframe_api";
-    // An ad blocker or a captive portal eats the script; unlatching lets the next
-    // song retry rather than wait on a promise that never settles.
+    // An ad blocker eats the script outright.
     script.onerror = () => {
-      apiReady = null;
-      resolve(null);
+      clearTimeout(timer);
+      giveUp();
     };
+    script.src = "https://www.youtube.com/iframe_api";
     document.head.appendChild(script);
   });
   return apiReady;
@@ -42,11 +49,15 @@ function loadIframeApi(): Promise<any> {
  */
 export function usePlaybackError({
   videoRef,
+  roomId,
   entryId,
   videoId,
   active,
 }: {
   videoRef: React.RefObject<HTMLIFrameElement>;
+  /** The endpoint accepts a report only for a room that has the video queued —
+   *  that guard is what keeps its re-verification from being free to buy. */
+  roomId: string | undefined;
   /** The queue entry the iframe is keyed on. Two entries can hold the same
    *  video, and each mounts an iframe that needs its own player. */
   entryId: string | undefined;
@@ -56,6 +67,12 @@ export function usePlaybackError({
   const [failedEntry, setFailedEntry] = React.useState<string | null>(null);
   // YouTube repeats onError; the corpus only needs to hear it once.
   const reportedRef = React.useRef(new Set<string>());
+
+  // Fetched during setup, not at the first song: onError is dispatched and never
+  // replayed, so an embed that gives up before the script lands is unheard.
+  React.useEffect(() => {
+    void loadIframeApi();
+  }, []);
 
   React.useEffect(() => {
     if (!active || !entryId || !videoId) return;
@@ -71,11 +88,11 @@ export function usePlaybackError({
         events: {
           onError: (e: { data?: number }) => {
             const code = Number(e?.data);
-            if (UNPLAYABLE_CODES.indexOf(code) < 0) return;
+            if (UNPLAYABLE_PLAYER_CODES.indexOf(code) < 0) return;
             setFailedEntry(entryId);
-            if (reportedRef.current.has(videoId)) return;
+            if (!roomId || reportedRef.current.has(videoId)) return;
             reportedRef.current.add(videoId);
-            postUnplayableVideo(videoId, code);
+            postUnplayableVideo(roomId, videoId, code);
           },
         },
       });
@@ -83,14 +100,19 @@ export function usePlaybackError({
 
     return () => {
       dropped = true;
-      // destroy() removes the iframe itself, but a passive cleanup runs after the
-      // commit, so React has already taken it out and only the widget is freed.
+      // destroy() ends by removing the iframe from its parent, which React took
+      // out first: parentless it throws part-way, leaking the window listener.
+      if (player && !iframe.parentNode) {
+        document.createDocumentFragment().appendChild(iframe);
+      }
       try {
         player?.destroy();
-      } catch {}
+      } catch (e: any) {
+        console.warn("Player teardown failed:", e?.message);
+      }
       player = null;
     };
-  }, [videoRef, entryId, videoId, active]);
+  }, [videoRef, roomId, entryId, videoId, active]);
 
-  return active && failedEntry !== null && failedEntry === entryId;
+  return active && failedEntry === entryId;
 }

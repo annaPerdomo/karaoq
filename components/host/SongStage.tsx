@@ -5,6 +5,8 @@ import { useT } from "../../lib/i18n/I18nProvider";
 import { Icons } from "./icons";
 import { InviteBlock } from "./InviteBlock";
 import { embedSrc } from "../player/embed";
+import { PlaybackErrorNotice } from "../player/PlaybackErrorNotice";
+import { usePlaybackError } from "../player/usePlaybackError";
 import { formatSongTitle } from "./utils";
 
 // The main stage: loading spinner, the current song's player/status panel (which
@@ -58,6 +60,13 @@ export function SongStage({
   onAddFirst: () => void;
 }) {
   const { t, tn } = useT();
+  const playbackFailed = usePlaybackError({
+    videoRef,
+    roomId: joinCode,
+    entryId: currentSong?.id,
+    videoId: currentSong?.videoId,
+    active: !loading && !!currentSong && !remote && !tvMode && playsVideoHere,
+  });
   return loading ? (
     <div className={styles.emptyState}>
       <div className={styles.spinner} />
@@ -150,15 +159,18 @@ export function SongStage({
       </div>
     ) : /* All-in-one mode: video plays here. */
     playsVideoHere ? (
-      <iframe
-        ref={videoRef}
-        key={currentSong.id}
-        className={styles.video}
-        src={embedSrc(currentSong.videoId, "autoplay=1&rel=0&enablejsapi=1")}
-        allow="autoplay; encrypted-media"
-        allowFullScreen
-        onLoad={onIframeLoad}
-      />
+      <>
+        <iframe
+          ref={videoRef}
+          key={currentSong.id}
+          className={styles.video}
+          src={embedSrc(currentSong.videoId, "autoplay=1&rel=0&enablejsapi=1")}
+          allow="autoplay; encrypted-media"
+          allowFullScreen
+          onLoad={onIframeLoad}
+        />
+        {playbackFailed && <PlaybackErrorNotice />}
+      </>
     ) : isPlaying ? (
       /* Song is playing on a different host device: show status instead
          of double-playing it. Starting it here mints a new token, so the

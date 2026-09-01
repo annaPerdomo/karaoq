@@ -18,16 +18,18 @@ const FAKE_YT = {
 const fetchMock = vi.fn(async () => ({ ok: true }) as Response);
 
 function Player({
+  roomId,
   entryId,
   videoId,
   active,
 }: {
+  roomId?: string;
   entryId?: string;
   videoId?: string;
   active: boolean;
 }) {
   const ref = React.useRef<HTMLIFrameElement>(null);
-  const failed = usePlaybackError({ videoRef: ref, entryId, videoId, active });
+  const failed = usePlaybackError({ videoRef: ref, roomId, entryId, videoId, active });
   return (
     <>
       {active && entryId ? <iframe key={entryId} ref={ref} title="player" /> : null}
@@ -59,7 +61,7 @@ afterEach(() => {
 
 describe("usePlaybackError", () => {
   it("flags the song and reports the video once when embedding is disabled", async () => {
-    render(<Player entryId="entry-1" videoId="dQw4w9WgXcQ" active />);
+    render(<Player roomId="ABCD" entryId="entry-1" videoId="dQw4w9WgXcQ" active />);
     await attach();
 
     act(() => {
@@ -72,13 +74,26 @@ describe("usePlaybackError", () => {
     const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toBe("/api/queue/unplayable");
     expect(JSON.parse(String(init.body))).toEqual({
+      roomId: "ABCD",
       videoId: "dQw4w9WgXcQ",
       code: 150,
     });
   });
 
+  it("shows the notice but files no report with no room to name", async () => {
+    render(<Player roomId={undefined} entryId="entry-1" videoId="dQw4w9WgXcQ" active />);
+    await attach();
+
+    act(() => {
+      raiseError!({ data: 150 });
+    });
+
+    expect(noticeText()).toBe("failed");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("ignores errors that say nothing about the video", async () => {
-    render(<Player entryId="entry-1" videoId="dQw4w9WgXcQ" active />);
+    render(<Player roomId="ABCD" entryId="entry-1" videoId="dQw4w9WgXcQ" active />);
     await attach();
 
     act(() => {
@@ -91,7 +106,7 @@ describe("usePlaybackError", () => {
 
   it("watches the next entry even when it holds the same video", async () => {
     const { rerender } = render(
-      <Player entryId="entry-1" videoId="dQw4w9WgXcQ" active />
+      <Player roomId="ABCD" entryId="entry-1" videoId="dQw4w9WgXcQ" active />
     );
     await attach();
 
@@ -101,7 +116,7 @@ describe("usePlaybackError", () => {
     expect(noticeText()).toBe("failed");
 
     raiseError = null;
-    rerender(<Player entryId="entry-2" videoId="dQw4w9WgXcQ" active />);
+    rerender(<Player roomId="ABCD" entryId="entry-2" videoId="dQw4w9WgXcQ" active />);
     await attach();
 
     expect(destroy).toHaveBeenCalledOnce();
@@ -115,7 +130,7 @@ describe("usePlaybackError", () => {
 
   it("drops the notice when this screen stops showing the video", async () => {
     const { rerender } = render(
-      <Player entryId="entry-1" videoId="dQw4w9WgXcQ" active />
+      <Player roomId="ABCD" entryId="entry-1" videoId="dQw4w9WgXcQ" active />
     );
     await attach();
 
@@ -124,13 +139,13 @@ describe("usePlaybackError", () => {
     });
     expect(noticeText()).toBe("failed");
 
-    rerender(<Player entryId="entry-1" videoId="dQw4w9WgXcQ" active={false} />);
+    rerender(<Player roomId="ABCD" entryId="entry-1" videoId="dQw4w9WgXcQ" active={false} />);
 
     expect(noticeText()).toBe("playing");
   });
 
   it("attaches nothing while the player isn't the one showing the video", async () => {
-    render(<Player entryId="entry-1" videoId="dQw4w9WgXcQ" active={false} />);
+    render(<Player roomId="ABCD" entryId="entry-1" videoId="dQw4w9WgXcQ" active={false} />);
 
     await Promise.resolve();
     expect(raiseError).toBeNull();
