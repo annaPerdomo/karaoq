@@ -16,6 +16,12 @@ const LOCK_ID = "run";
  *  pages/api/cron/suggestions. */
 export const SEARCH_PER_DAY = 40;
 
+/** What the last slot of the day assumes the day held, rooms' searches included.
+ *  A target, never a gate: the real ceiling is not a number we know, so what
+ *  actually stops the mop-up is YouTube saying no (see the daySpent gate). Kept
+ *  under the nominal 100 so a room singing before the reset still has room. */
+export const SEARCH_DAY_TARGET = 90;
+
 /** ~835 units for 800 playlistItems.list pages — ~40,000 uploads a day. */
 export const CHANNEL_PAGES_PER_DAY = 800;
 

@@ -255,6 +255,7 @@ beforeEach(() => {
   process.env.KARAOKE_CHANNELS = CHANNEL;
   delete process.env.KARAOKE_PLAYLISTS;
   delete process.env.SUGGESTION_RESOLVE_PER_DAY;
+  delete process.env.SUGGESTION_DAY_TARGET;
 });
 
 afterEach(() => {
@@ -434,6 +435,55 @@ describe("GET /api/cron/suggestions - the daily quota ledger", () => {
 
     expect((await run()).resolve).toMatchObject({ searched: 2 });
     expect(ledger()).toMatchObject({ searches: 22, cronSearches: 2 });
+  });
+});
+
+// Everything unspent at the Pacific reset is wasted, so the day's last slot
+// trades the nightly cap for whatever the day actually left.
+describe("GET /api/cron/suggestions - the mop-up slot", () => {
+  const mop = () => run({ slot: "3", mopUp: "1" });
+
+  beforeEach(() => {
+    migrationDone();
+    process.env.SUGGESTION_RESOLVE_PER_DAY = "2";
+    process.env.SUGGESTION_DAY_TARGET = "10";
+    for (const entry of catalogEntries.slice(0, 8)) seedSong(entry, [], 30);
+    api.searchHits = [{ videoId: "hit1", title: "One (Karaoke)" }];
+  });
+
+  it("buys the day's remainder rather than the nightly cap", async () => {
+    await recordSpend(Date.now(), { searches: 4 });
+
+    // 10 target less the 4 the day has spent, where a normal slot would take 2.
+    expect((await mop()).resolve).toMatchObject({ searched: 6 });
+    expect(ledger()).toMatchObject({ searches: 10, cronSearches: 6 });
+  });
+
+  it("counts the rooms' searches against the remainder, not just its own", async () => {
+    // The nightly cap reads cronSearches so a busy evening can't cancel the run;
+    // the mop-up reads the whole day, because a day rooms have spent has no
+    // remainder to mop up.
+    await recordSpend(Date.now(), { searches: 10 });
+
+    expect((await mop()).resolve).toMatchObject({ skipped: "searches spent today" });
+  });
+
+  it("still gives way to a room that is singing", async () => {
+    collection("rooms").seed({
+      _id: "LIVE1",
+      id: "LIVE1",
+      lastActivity: new Date(),
+    });
+
+    expect((await mop()).resolve).toMatchObject({ skipped: "rooms live" });
+  });
+
+  it("runs resolve alone, so the other steps can't eat its clock", async () => {
+    const steps = await mop();
+
+    // They each had two slots already; here they would only spend the budget
+    // that the last chance at the day's search quota needs.
+    expect(Object.keys(steps)).toEqual(["resolve"]);
   });
 });
 

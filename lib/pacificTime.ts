@@ -23,6 +23,12 @@ export function quotaResetsAt(now: Date = new Date()): string {
   return new Date(t).toISOString();
 }
 
+/** The same instant as quotaResetsAt in epoch ms, for callers holding a clock
+ *  rather than rendering a time. */
+export function quotaResetsAtMs(now: Date = new Date()): number {
+  return new Date(quotaResetsAt(now)).getTime();
+}
+
 // The quota day is Pacific regardless of the singer's timezone; this key
 // names it, e.g. "2026-08-07". en-CA locale gives ISO YYYY-MM-DD directly.
 export function pacificDayKey(now: Date = new Date()): string {

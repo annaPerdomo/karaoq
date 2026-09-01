@@ -7,6 +7,10 @@
     {
       "path": "/api/cron/suggestions?slot=2",
       "schedule": "15 5 * * *"
+    },
+    {
+      "path": "/api/cron/suggestions?slot=3&mopUp=1",
+      "schedule": "15 6 * * *"
     }
   ]
 }

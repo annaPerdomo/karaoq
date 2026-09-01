@@ -5,6 +5,7 @@ import {
   recordSpend,
   releaseRun,
   remaining,
+  SEARCH_DAY_TARGET,
   SEARCH_PER_DAY,
   spentToday,
   type DailySpend,
@@ -26,6 +27,7 @@ import {
 } from "../../../lib/corpusSweep";
 import { CORPUS_BUSY_WINDOW_MS } from "../../../lib/liveWindows";
 import { liveRoomCount } from "../../../lib/liveRooms";
+import { quotaResetsAtMs } from "../../../lib/pacificTime";
 import { searchQuotaResetsAt } from "../../../lib/searchQuotaStatus";
 import { recordDemand } from "../../../lib/songCorpus";
 import { suggestionCatalog } from "../../../lib/suggestionCatalog";
@@ -33,16 +35,17 @@ import { mergeDemand, suggestionDemand } from "../../../lib/suggestionDemand";
 import { searchDemandScores } from "../../../lib/searchDemandRead";
 import { CLAIM_SCAN_LIMIT, claimBankedVideos } from "../../../lib/corpusClaim";
 
-// vercel.json invokes this twice because a full harvest outlasts the 300s
-// function — the later slot buys clock, not quota (lib/corpusBudget). The run's
+// vercel.json invokes this three times because a full harvest outlasts the 300s
+// function — a later slot buys clock, not quota (lib/corpusBudget). The run's
 // deadline is held under the ceiling: being killed spends units and writes nothing.
 //
-// Both slots sit late in the Pacific evening (04:15/05:15 UTC ≈ 21:15/22:15 PT)
-// rather than just after the midnight reset, so the corpus spends what the day's
-// rooms left instead of taking its cut before anyone has woken up. Whatever is
-// still unspent by then expires at midnight anyway, which is what makes this the
-// cheap hour to buy in. Two slots because either may find rooms live and defer;
-// the odds both do are low, and a skipped night costs one night of resolving.
+// The slots sit late in the Pacific evening (04:15/05:15/06:15 UTC ≈
+// 21:15/22:15/23:15 PT) rather than just after the midnight reset, so the corpus
+// spends what the day's rooms left instead of taking its cut before anyone has
+// woken up. Whatever is still unspent by then expires at midnight anyway, which
+// is what makes this the cheap hour to buy in. More than one slot because any of
+// them may find rooms live and defer; the last carries ?mopUp=1, which trades
+// the nightly cap for the day's remainder (see the flag below).
 export const config = { maxDuration: 300 };
 const RUN_BUDGET_MS = 240_000;
 
@@ -86,8 +89,20 @@ export default async function handler(
   // Nothing branches on it: it makes the second cron entry a distinct path.
   const slot = typeof req.query.slot === "string" ? req.query.slot : "1";
 
+  // The day's last slot. Everything unspent at the Pacific midnight reset is
+  // wasted, so this one aims at the day's remainder rather than the nightly cap,
+  // and runs resolve alone — the other steps had two slots already and would
+  // only eat its clock. Rooms still outrank it: the liveRooms gate is unchanged,
+  // and what this could starve is the minutes before the reset, not the evening.
+  const mopUp = req.query.mopUp === "1";
+
   const started = Date.now();
-  const deadline = started + RUN_BUDGET_MS;
+  // Vercel only promises a cron within its hour, so this one can start at 23:59.
+  // Past the boundary the units come out of tomorrow's allowance while the
+  // ledger, keyed on the start, still bills them to today.
+  const deadline = mopUp
+    ? Math.min(started + RUN_BUDGET_MS, quotaResetsAtMs(new Date(started)))
+    : started + RUN_BUDGET_MS;
 
   const lease = await acquireRun(started);
   if (!lease) {
@@ -97,10 +112,15 @@ export default async function handler(
   }
 
   const spent = await spentToday(started);
-  const searchBudget = remaining(
-    envCount("SUGGESTION_RESOLVE_PER_DAY", SEARCH_PER_DAY),
-    spent.cronSearches
-  );
+  // Against the whole day rather than the cron's own share: what is left to
+  // waste is what everyone has spent, and a quiet day is what makes the mop-up
+  // worth running at all.
+  const searchBudget = mopUp
+    ? remaining(envCount("SUGGESTION_DAY_TARGET", SEARCH_DAY_TARGET), spent.searches)
+    : remaining(
+        envCount("SUGGESTION_RESOLVE_PER_DAY", SEARCH_PER_DAY),
+        spent.cronSearches
+      );
   const pageBudget = remaining(
     envCount("SUGGESTION_CHANNEL_PAGES", CHANNEL_PAGES_PER_DAY),
     spent.pages
@@ -231,7 +251,8 @@ export default async function handler(
     },
     {
       name: "resolve",
-      budgetMs: 60_000,
+      // The whole run when it is the only step left standing.
+      budgetMs: mopUp ? RUN_BUDGET_MS : 60_000,
       floorMs: 45_000,
       run: async (by, bill) => {
         if (!useSearch) return { done: false, report: { skipped: "search=0" } };
@@ -253,9 +274,10 @@ export default async function handler(
   ];
 
   const ran: Record<string, unknown> = {};
-  let reserved = steps.reduce((total, step) => total + step.floorMs, 0);
+  const running = mopUp ? steps.filter((step) => step.name === "resolve") : steps;
+  let reserved = running.reduce((total, step) => total + step.floorMs, 0);
   try {
-    for (const step of steps) {
+    for (const step of running) {
       reserved -= step.floorMs;
       const by = Math.min(Date.now() + step.budgetMs, deadline - reserved);
       // A search the cron runs is both a call against the day and the cron's
