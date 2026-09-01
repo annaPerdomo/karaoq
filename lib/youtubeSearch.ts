@@ -43,8 +43,8 @@ export async function searchYoutubeApi(
 }
 
 // 1 unit per 50 ids however many parts, so the badges and the embeddable check
-// cost ~1% extra. search.list's videoEmbeddable filter leaks; a blocked video is
-// dropped here or it reaches a player. Any failure returns the bare results.
+// cost ~1% extra. A video this call doesn't vouch for is dropped here or it
+// reaches a player. Any failure of the call itself returns the bare results.
 export async function enrichWithVideoDetails(
   results: SearchResult[],
   key: string
@@ -69,7 +69,9 @@ export async function enrichWithVideoDetails(
     return results
       .map((r) => {
         const item = byId.get(r.videoId);
-        if (!item) return r;
+        // search.list's index lags deletions: an id it named and videos.list did
+        // not is gone or private, the 100 a player would report from the room.
+        if (!item) return null;
         if (item.status?.embeddable === false) return null;
         return { ...r, ...videoDetailFields(item) };
       })

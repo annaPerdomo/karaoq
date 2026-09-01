@@ -74,12 +74,12 @@ describe("enrichWithVideoDetails", () => {
     expect(out).toEqual([enriched("a")]);
   });
 
-  it("keeps a result videos.list never answered for, un-enriched", async () => {
+  it("drops a result videos.list never answered for", async () => {
     fetchMock.mockResolvedValue(jsonResponse({ items: [videoRow("a")] }));
 
     const out = await enrichWithVideoDetails([bare("a"), bare("b")], "test-key");
 
-    expect(out).toEqual([enriched("a"), bare("b")]);
+    expect(out).toEqual([enriched("a")]);
   });
 
   it("returns the bare results when the call is non-OK", async () => {

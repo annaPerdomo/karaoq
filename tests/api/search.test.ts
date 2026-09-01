@@ -121,6 +121,12 @@ function searchItems(ids: string[]) {
   };
 }
 
+/** No badges, but the call vouches for the ids — without a row, enrichment
+ *  drops the result as gone. */
+function videoItems(ids: string[]) {
+  return { items: ids.map((id) => ({ id })) };
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   rateLimitMock.mockReturnValue(true);
@@ -209,7 +215,7 @@ describe("GET /api/search", () => {
     });
     fetchMock.mockImplementation(async (url: string) => {
       if (url.includes("/youtube/v3/search")) return jsonResponse(searchItems(["new"]));
-      if (url.includes("/youtube/v3/videos")) return jsonResponse({ items: [] });
+      if (url.includes("/youtube/v3/videos")) return jsonResponse(videoItems(["new"]));
       throw new Error("unexpected fetch " + url);
     });
 
@@ -318,8 +324,7 @@ describe("GET /api/search", () => {
         durationSeconds: 225,
         viewCount: 1200000,
       },
-      // "b" had no videos.list row — passes through un-enriched.
-      { title: "Song b", thumbnailUrl: "https://i.ytimg.com/vi/b/mq.jpg", videoId: "b" },
+      // "b" had no videos.list row — gone or private, so it is not served.
     ]);
     // writeCache is fire-and-forget; give its promise chain a tick to land.
     await vi.waitFor(() => expect(mockCollection.updateOne).toHaveBeenCalled());
@@ -921,7 +926,7 @@ describe("riding out a burst ceiling", () => {
     let searches = 0;
     fetchMock.mockImplementation(async (url: string) => {
       if (!String(url).includes("/youtube/v3/search")) {
-        return jsonResponse({ items: [] });
+        return jsonResponse(videoItems(["v1"]));
       }
       searches += 1;
       return searches === 1
