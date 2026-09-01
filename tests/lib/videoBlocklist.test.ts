@@ -49,7 +49,7 @@ describe("blockVideos", () => {
 
     const written = await blockVideos(["v1"], "unembeddable");
 
-    expect(written).toBe(0);
+    expect(written).toBe(1);
     expect(blocked().all()).toHaveLength(1);
     expect(blocked().get("v1").blockedAt.getTime()).toBeGreaterThan(
       LONG_AGO.getTime()

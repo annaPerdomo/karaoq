@@ -1,6 +1,8 @@
 import { getBlockedVideosCollection } from "./mongodb";
 
-/** blockedAt is re-stamped, so the TTL's re-test dates from the last failure. */
+/** blockedAt is re-stamped, so the TTL's re-test dates from the last failure.
+ *  Counted: callers report this as "tombstoned this run", and a second purge
+ *  pass reporting 0 reads as a bug rather than as work already done. */
 export async function blockVideos(ids: string[], reason: string): Promise<number> {
   if (ids.length === 0) return 0;
   const blocked = await getBlockedVideosCollection();
@@ -16,12 +18,14 @@ export async function blockVideos(ids: string[], reason: string): Promise<number
       })),
       { ordered: false }
     );
-    return written.upsertedCount;
+    return written.upsertedCount + written.modifiedCount;
   } catch (e: any) {
     // Tonight's tombstone is one the next sweep writes again; losing the rest of
-    // the run over it costs more.
+    // the run over it costs more. Unordered, so the ops before the failing one
+    // landed and the driver hangs their counts off the error.
     console.warn("Video blocklist write partly failed:", e?.message);
-    return 0;
+    const partial = e?.result;
+    return (partial?.upsertedCount ?? 0) + (partial?.modifiedCount ?? 0);
   }
 }
 
