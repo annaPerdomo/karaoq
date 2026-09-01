@@ -260,7 +260,12 @@ export default async function handler(
       const by = Math.min(Date.now() + step.budgetMs, deadline - reserved);
       // A search the cron runs is both a call against the day and the cron's
       // own share of it, so it is billed to both counters (lib/corpusBudget).
-      const billed: DailySpend = { searches: 0, cronSearches: 0, pages: 0 };
+      const billed: DailySpend = {
+        searches: 0,
+        cronSearches: 0,
+        pages: 0,
+        lookups: 0,
+      };
       try {
         const { done, report } = await step.run(by, (units) => {
           billed.searches += units.searches ?? 0;

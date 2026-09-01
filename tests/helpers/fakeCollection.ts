@@ -146,7 +146,11 @@ function matchesValue(value: unknown, condition: any): boolean {
   if (condition instanceof Date || Array.isArray(condition) || condition === null) {
     return JSON.stringify(value ?? null) === JSON.stringify(condition);
   }
-  if (typeof condition !== "object") return value === condition;
+  if (typeof condition !== "object") {
+    // Mongo compares a scalar against an array field element-wise — how a dotted
+    // path into an array of subdocuments picks a room out by one of its rows.
+    return Array.isArray(value) ? value.indexOf(condition) >= 0 : value === condition;
+  }
 
   // Fields rather than operators — { videoId: { $in: [...] } } — is a predicate
   // on the element as a document, which is how $pull selects array rows.

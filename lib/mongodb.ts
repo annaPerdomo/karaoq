@@ -612,6 +612,7 @@ export interface CronStateDoc {
   searches?: number;
   cronSearches?: number;
   pages?: number;
+  lookups?: number;
   updatedAt: Date;
 }
 

@@ -34,14 +34,18 @@ process.env.MONGODB_DB = "test-db";
 process.env.YOUTUBE_API_KEY = "test-key";
 
 import handler from "../../pages/api/queue/unplayable";
+import { ledgerDay } from "../../lib/corpusBudget";
 
 const ID = "dQw4w9WgXcQ";
 const SONG_KEY = "abba dancing queen karaoke";
+const ROOM = "ABCD";
 
 const videos = () => collection("karaoke_videos");
 const songs = () => collection("karaoke_songs");
 const blocked = () => collection("blocked_videos");
 const cache = () => collection("search_cache");
+const rooms = () => collection("rooms");
+const state = () => collection("cron_state");
 
 function createRes() {
   let statusCode = 200;
@@ -59,8 +63,8 @@ function createRes() {
   };
 }
 
-function report(body: unknown) {
-  return createMockReq({ method: "POST", body: body as any });
+function report(body: Record<string, unknown>) {
+  return createMockReq({ method: "POST", body: { roomId: ROOM, ...body } as any });
 }
 
 function jsonResponse(data: unknown, ok = true, status = 200) {
@@ -95,6 +99,11 @@ beforeEach(() => {
   vi.stubGlobal("fetch", fetchMock);
   vi.spyOn(console, "warn").mockImplementation(() => {});
 
+  rooms().seed({
+    _id: "room-1",
+    id: ROOM,
+    queue: [{ id: "entry-1", videoId: ID, songTitle: "Dancing Queen", userName: "Ana" }],
+  });
   videos().seed({ _id: ID, title: "Dancing Queen (Karaoke)", songKeys: [SONG_KEY] });
   songs().seed({ _id: SONG_KEY, cuts: [ID, "otherVideoX"], topVideoId: ID });
   cache().seed({
@@ -177,6 +186,41 @@ describe("POST /api/queue/unplayable", () => {
     expect(res.getStatus()).toBe(200);
     expect(res.getBody()).toMatchObject({ tombstoned: true });
     expect(fetchMock).not.toHaveBeenCalled();
+    // Tombstoned is not unfiled: a cut filed before the block outlives it.
+    expect(videos().get(ID)).toBeNull();
+    expect(songs().get(SONG_KEY)).toMatchObject({ cuts: ["otherVideoX"] });
+  });
+
+  it("turns away a video the named room never had queued", async () => {
+    const res = createRes();
+    await handler(report({ roomId: ROOM, videoId: "0123456789a", code: 150 }), res);
+
+    expect(res.getStatus()).toBe(404);
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(blocked().all()).toEqual([]);
+  });
+
+  it("turns away a report that names no room at all", async () => {
+    const res = createRes();
+    await handler(
+      createMockReq({ method: "POST", body: { videoId: ID, code: 150 } as any }),
+      res
+    );
+
+    expect(res.getStatus()).toBe(400);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("bills the verification to the day's ledger", async () => {
+    fetchMock.mockImplementation(async () =>
+      jsonResponse(videoItem({ status: { embeddable: false } }))
+    );
+
+    await handler(report({ videoId: ID, code: 150 }), createRes());
+
+    expect(state().get(`budget:${ledgerDay(Date.now())}`)).toMatchObject({
+      lookups: 1,
+    });
   });
 
   it("rejects a code that says nothing about the video", async () => {

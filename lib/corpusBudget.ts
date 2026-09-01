@@ -27,6 +27,9 @@ export interface DailySpend {
    *  doesn't read as the cron having already taken its nightly bite. */
   cronSearches: number;
   pages: number;
+  /** videos.list units bought outside the cron — today only the report endpoint.
+   *  The sweep and the harvest spend units too and do not bill them here. */
+  lookups: number;
 }
 
 /** The Pacific day: that is the one YouTube resets the allowance on. Both cron
@@ -51,6 +54,7 @@ export async function spentToday(at: number): Promise<DailySpend> {
     searches: doc?.searches ?? 0,
     cronSearches: doc?.cronSearches ?? 0,
     pages: doc?.pages ?? 0,
+    lookups: doc?.lookups ?? 0,
   };
 }
 
@@ -60,7 +64,9 @@ export async function recordSpend(
   at: number,
   spent: Partial<DailySpend>
 ): Promise<void> {
-  if (!spent.searches && !spent.cronSearches && !spent.pages) return;
+  if (!spent.searches && !spent.cronSearches && !spent.pages && !spent.lookups) {
+    return;
+  }
   const state = await getCronStateCollection();
   await state.updateOne(
     { _id: ledgerId(at) },
@@ -69,6 +75,7 @@ export async function recordSpend(
         searches: spent.searches ?? 0,
         cronSearches: spent.cronSearches ?? 0,
         pages: spent.pages ?? 0,
+        lookups: spent.lookups ?? 0,
       },
       // cursorAt, not updatedAt, is cron_state's TTL clock (lib/mongodb), and a
       // day's ledger should indeed be collected a week after its last write —
