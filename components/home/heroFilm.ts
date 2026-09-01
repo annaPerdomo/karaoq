@@ -67,6 +67,24 @@ export function decodedWithAlpha(video: HTMLVideoElement) {
   }
 }
 
+/**
+ * `?film=webm|mp4|poster` — a diagnostic for TV browsers, which have no devtools
+ * and no console. `null` forces the poster; `undefined` means no override.
+ */
+export function forcedSource(): string | null | undefined {
+  if (typeof window === 'undefined') return undefined;
+  switch (new URLSearchParams(window.location.search).get('film')) {
+    case 'webm':
+      return WEBM;
+    case 'mp4':
+      return HEVC;
+    case 'poster':
+      return null;
+    default:
+      return undefined;
+  }
+}
+
 export function prefersReducedData() {
   if (typeof navigator === 'undefined') return false;
   const conn = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;

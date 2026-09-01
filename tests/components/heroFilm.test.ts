@@ -2,6 +2,7 @@ import { describe, it, expect, afterEach, vi } from "vitest";
 import {
   alphaSource,
   decodedWithAlpha,
+  forcedSource,
   prefersReducedData,
   HEVC,
   WEBM,
@@ -16,9 +17,13 @@ function asBrowser(vendor: string, platform: string, hevc: boolean) {
   );
 }
 
+function setSearch(search: string) {
+  window.history.replaceState({}, "", `/${search}`);
+}
 
 afterEach(() => {
   vi.restoreAllMocks();
+  setSearch("");
 });
 
 describe("alphaSource", () => {
@@ -48,6 +53,26 @@ describe("alphaSource", () => {
   });
 });
 
+describe("forcedSource", () => {
+  it("distinguishes no override from a forced poster", () => {
+    setSearch("");
+    expect(forcedSource()).toBeUndefined();
+    setSearch("?film=poster");
+    expect(forcedSource()).toBeNull();
+  });
+
+  it("pins an encode", () => {
+    setSearch("?film=webm");
+    expect(forcedSource()).toBe(WEBM);
+    setSearch("?film=mp4");
+    expect(forcedSource()).toBe(HEVC);
+  });
+
+  it("ignores an unrecognised value", () => {
+    setSearch("?film=vp8&other=1");
+    expect(forcedSource()).toBeUndefined();
+  });
+});
 
 describe("decodedWithAlpha", () => {
   // jsdom has no canvas, so `getContext` returns null — the fail-open path.

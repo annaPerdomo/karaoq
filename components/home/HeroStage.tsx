@@ -1,6 +1,13 @@
 import * as React from 'react';
 import styles from '../../styles/Home.module.css';
-import { alphaSource, decodedWithAlpha, prefersReducedData, POSTER, WEBM } from './heroFilm';
+import {
+  alphaSource,
+  decodedWithAlpha,
+  forcedSource,
+  prefersReducedData,
+  POSTER,
+  WEBM,
+} from './heroFilm';
 
 /**
  * When the film becomes visible — must match `.stageFilm`'s animation-delay.
@@ -40,8 +47,13 @@ export default function HeroStage() {
   React.useEffect(() => {
     const mq = window.matchMedia?.('(prefers-reduced-motion: reduce)');
     if (!mq) return;
-    const apply = () =>
-      setSrc(mq.matches || prefersReducedData() || !alphaOkRef.current ? null : alphaSource());
+    const apply = () => {
+      // `?film=` picks the encode; reduced-motion and Save-Data still veto the
+      // film, since a diagnostic URL can be shared or bookmarked.
+      const forced = forcedSource();
+      if (mq.matches || prefersReducedData() || forced === null) return setSrc(null);
+      setSrc(forced ?? (alphaOkRef.current ? alphaSource() : null));
+    };
     apply();
     mq.addEventListener('change', apply);
     return () => mq.removeEventListener('change', apply);
@@ -67,9 +79,10 @@ export default function HeroStage() {
             poster={POSTER}
             onLoadedData={() => {
               const video = videoRef.current;
-              // WebM only: HEVC is Apple-only, where alpha works and the
-              // readback is unverified.
-              if (!video || src !== WEBM) return;
+              // WebM only, and never under `?film=`, which exists to show what a
+              // decoder does rather than rescue it. HEVC is Apple-only, where
+              // alpha works and the readback is unverified.
+              if (!video || src !== WEBM || forcedSource() !== undefined) return;
               if (decodedWithAlpha(video)) return;
               // No retry with the other encode: decoders that fail this drop
               // alpha from both.

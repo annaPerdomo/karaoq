@@ -132,6 +132,13 @@ now only reached on genuine Apple hardware, where alpha works — so a false
 positive there would trade a working film for a still on every iPhone. Widening
 the probe to HEVC is a one-line change at the call site, but check Safari first.
 
+`?film=webm|mp4|poster` pins which encode plays and turns the probe off, which is
+how you find out what a given TV does — those browsers have no devtools and no
+console, so the only readout is what lands on the screen. It selects the encode
+only: reduced-motion and Save-Data still veto the film, because a diagnostic URL
+can be shared or bookmarked and must not override someone's accessibility
+setting.
+
 There is also **no page-side mask any more**. With real alpha the objects'
 shadows and glows fade out on their own, and the feathered ellipse that used to
 hide the rectangle was dimming the right edge of the guest phone. What replaced
