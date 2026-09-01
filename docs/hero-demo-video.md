@@ -78,11 +78,59 @@ Two earlier approaches are worth not repeating:
 
 There is no single transparent-video format: Chromium and Firefox decode alpha
 in VP9/WebM, WebKit only in HEVC/MP4 and ignores it in WebM. Both are shipped,
-and `HeroStage.tsx` picks per engine — a capability probe rather than a UA
-sniff, since `navigator.userAgentData` exists only in Chromium, which is the one
-engine that might otherwise claim `hvc1` support and then drop the alpha. Plain
-`<source>` ordering can't express this, and picking wrong fails silently: the
-film simply comes back opaque.
+and `components/home/heroFilm.ts` picks between them. Plain `<source>` ordering
+can't express this, and picking wrong fails silently: the film simply comes back
+opaque.
+
+**Neither the format pick nor any engine check is trusted on its own**, because
+a decoder that supports the container can still throw the alpha away. That is
+what TV browsers do: VP9 carries alpha in WebM block additions and HEVC in an
+auxiliary layer, and a TV's hardware decoder ignores both, so the film lands on
+the hero as a black rectangle whichever encode it is handed.
+
+Two ways the pick has been wrong about that, both worth not repeating:
+
+- **Reading the absence of `navigator.userAgentData` as "this is WebKit, HEVC
+  alpha is safe".** The property landed in Chromium 90, and TV browsers are much
+  older forks (webOS 5/6 ≈ 68/79, Tizen ≈ 47–85) that all claim `hvc1` — hardware
+  HEVC being a TV's whole job — so they took the WebKit branch and came back a
+  black slab.
+- **Reading `navigator.vendor === 'Apple Computer, Inc.'` as "this is Apple
+  hardware".** WebKit hardcodes that vendor in *every* port: the PS4/PS5 browser,
+  WPE and WebKitGTK set-tops, webOS ≤ 3, Tizen 2. Those are the same
+  hardware-decode devices, so the fix left the black slab in place on exactly the
+  class of browser it was written for. HEVC is now gated on the vendor **and** an
+  Apple `navigator.platform`; everything else falls through to WebM, which costs
+  those devices nothing and puts them behind the probe.
+
+So the decode is verified rather than predicted. On the first decoded frame
+`decodedWithAlpha` blits five points into a 5×1 canvas and reads them back: the
+four corners, plus one witness pixel at the centre of the big screen.
+
+- **The corners are the measurement.** The canvas feathers its outermost
+  1.2%/1.5% and every device is kept clear of that, so all four read alpha 0
+  across all 600 frames, while a dropped alpha plane returns exactly 255. Any one
+  clear corner passes.
+- **The witness separates two failures that look identical.** Some embedded GPUs
+  keep video in an overlay and hand `drawImage` an all-black surface; in the
+  corners that is byte-identical to a dropped plane, the film's colour there
+  being `0,0,0` as well. The big screen never moves and never paints black
+  (darkest frame `#0a0118` over `#0a0a1a`), so a black witness means the readback
+  is dead, not the alpha.
+
+A frame that fails falls straight to the poster — the decoders that fail this
+drop alpha from both encodes, so retrying the other only buys a second download.
+The probe fails *open* on every unreadable case, since trading a working film
+for a still is the worse regression.
+
+It runs on the **WebM path only**, which is deliberate. After the Apple-platform
+gate, every device that might drop the plane lands on WebM, and that readback is
+verified in both engines that get it — Chromium and Firefox each report alpha 0
+on all four corners at eight timestamps across the loop. WebKit's readback of
+HEVC alpha is unverified (no local WebKit build decodes HEVC at all), and HEVC is
+now only reached on genuine Apple hardware, where alpha works — so a false
+positive there would trade a working film for a still on every iPhone. Widening
+the probe to HEVC is a one-line change at the call site, but check Safari first.
 
 There is also **no page-side mask any more**. With real alpha the objects'
 shadows and glows fade out on their own, and the feathered ellipse that used to

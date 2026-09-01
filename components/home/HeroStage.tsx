@@ -1,6 +1,6 @@
 import * as React from 'react';
 import styles from '../../styles/Home.module.css';
-import { alphaSource, prefersReducedData, POSTER } from './heroFilm';
+import { alphaSource, decodedWithAlpha, prefersReducedData, POSTER, WEBM } from './heroFilm';
 
 /**
  * When the film becomes visible — must match `.stageFilm`'s animation-delay.
@@ -19,6 +19,9 @@ export default function HeroStage() {
   // frame, the same "most informative state" convention the other demos use.
   const [src, setSrc] = React.useState<string | null>(null);
   const videoRef = React.useRef<HTMLVideoElement>(null);
+  // Sticky: a decoder that dropped the plane must not be handed the film again
+  // when the source pick re-runs (reduced-motion toggled back off).
+  const alphaOkRef = React.useRef(true);
 
   // Start the film on the beat it appears, from frame one.
   React.useEffect(() => {
@@ -37,7 +40,8 @@ export default function HeroStage() {
   React.useEffect(() => {
     const mq = window.matchMedia?.('(prefers-reduced-motion: reduce)');
     if (!mq) return;
-    const apply = () => setSrc(mq.matches || prefersReducedData() ? null : alphaSource());
+    const apply = () =>
+      setSrc(mq.matches || prefersReducedData() || !alphaOkRef.current ? null : alphaSource());
     apply();
     mq.addEventListener('change', apply);
     return () => mq.removeEventListener('change', apply);
@@ -61,6 +65,18 @@ export default function HeroStage() {
             playsInline
             preload="metadata"
             poster={POSTER}
+            onLoadedData={() => {
+              const video = videoRef.current;
+              // WebM only: HEVC is Apple-only, where alpha works and the
+              // readback is unverified.
+              if (!video || src !== WEBM) return;
+              if (decodedWithAlpha(video)) return;
+              // No retry with the other encode: decoders that fail this drop
+              // alpha from both.
+              console.warn('[HeroStage] decoder dropped the alpha channel, using poster', src);
+              alphaOkRef.current = false;
+              setSrc(null);
+            }}
             onError={() => {
               console.warn('[HeroStage] alpha video failed to load, falling back to poster', src);
               setSrc(null);
