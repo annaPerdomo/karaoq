@@ -96,7 +96,9 @@ export default function DisplayStage({
         </div>
       )}
 
-      {needsTap && isPlaying && currentSong && (
+      {/* !playbackFailed: a dead video never confirms playback either, so the
+          watchdog fires too and its opaque overlay would bury the notice. */}
+      {needsTap && isPlaying && currentSong && !playbackFailed && (
         <button className={styles.tapOverlay} onClick={onUnlock}>
           <span className={styles.tapPlayIcon}>
             <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
