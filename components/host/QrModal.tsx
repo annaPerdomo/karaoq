@@ -7,11 +7,13 @@ export function QrModal({
   joinUrl,
   displayUrl,
   joinCode,
+  onPrintQr,
   onClose,
 }: {
   joinUrl: string;
   displayUrl: string;
   joinCode: string | undefined;
+  onPrintQr: () => void;
   onClose: () => void;
 }) {
   const { t } = useT();
@@ -43,6 +45,9 @@ export function QrModal({
             return <React.Fragment key={i}>{part}</React.Fragment>;
           })}
         </p>
+        <button className={styles.qrModalPrint} onClick={onPrintQr}>
+          {t('host.qr.printCode')}
+        </button>
       </div>
     </div>
   );

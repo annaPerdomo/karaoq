@@ -1244,10 +1244,7 @@ const Host = ({
             onIframeLoad={handleIframeLoad}
             onOpenTvDisplay={openTvDisplay}
             onStartSong={startSong}
-            joinUrl={joinUrl}
-            displayUrl={displayUrl}
             joinCode={joinCode}
-            onPrintQr={printQr}
             onAddFirst={() => setSearchOpen(true)}
           />
 
@@ -1417,6 +1414,7 @@ const Host = ({
           joinUrl={joinUrl}
           displayUrl={displayUrl}
           joinCode={joinCode}
+          onPrintQr={printQr}
           onClose={() => setQrModalOpen(false)}
         />
       )}

@@ -2,8 +2,7 @@ import * as React from "react";
 import styles from "../../styles/Host.module.css";
 import { QueueEntry } from "../../pages/api/types";
 import { useT } from "../../lib/i18n/I18nProvider";
-import { Icons } from "./icons";
-import { InviteBlock } from "./InviteBlock";
+import { EmptyStage } from "./EmptyStage";
 import { embedSrc } from "../player/embed";
 import { PlaybackErrorNotice } from "../player/PlaybackErrorNotice";
 import { usePlaybackError } from "../player/usePlaybackError";
@@ -28,10 +27,7 @@ export function SongStage({
   onIframeLoad,
   onOpenTvDisplay,
   onStartSong,
-  joinUrl,
-  displayUrl,
   joinCode,
-  onPrintQr,
   onAddFirst,
 }: {
   loading: boolean;
@@ -53,13 +49,12 @@ export function SongStage({
   onIframeLoad: () => void;
   onOpenTvDisplay: () => void;
   onStartSong: () => void;
-  joinUrl: string;
-  displayUrl: string;
+  /** Only for the playback-error report; the join code itself is the
+   * sidebar's job. */
   joinCode: string | undefined;
-  onPrintQr: () => void;
   onAddFirst: () => void;
 }) {
-  const { t, tn } = useT();
+  const { t } = useT();
   const playbackFailed = usePlaybackError({
     videoRef,
     roomId: joinCode,
@@ -197,68 +192,11 @@ export function SongStage({
         </p>
       </div>
     )
-  ) : songsSung > 0 ? (
-    <div className={`${styles.emptyState} ${styles.emptyStateFinished}`}>
-      <div className={styles.emptyStage}>
-        <h2 className={styles.emptyTitle}>{t('host.finished.title')}</h2>
-        <p className={styles.emptyStageLede}>
-          {tn('host.finished.sung', songsSung)}
-        </p>
-        {remote ? (
-          <p className={styles.cohostNote}>{t('host.finished.cohostAdd')}</p>
-        ) : (
-          <button
-            className={styles.emptyAddBtn}
-            onClick={onAddFirst}
-          >
-            {Icons.plus} {t('host.finished.addAnother')}
-          </button>
-        )}
-      </div>
-
-      {!remote && (
-        <InviteBlock
-          joinUrl={joinUrl}
-          displayUrl={displayUrl}
-          joinCode={joinCode}
-          onPrintQr={onPrintQr}
-        />
-      )}
-    </div>
-  ) : remote ? (
-    /* Co-host, empty queue. */
-    <div className={styles.emptyState}>
-      <h2 className={`${styles.emptyTitle} ${styles.emptyTitleBrand}`}>
-        KaraoQ
-      </h2>
-      <p>
-        {t('host.cohost.emptyQueue')}
-      </p>
-    </div>
   ) : (
-    /* Host, empty queue: make the room playable right now. Adding the
-       first song is the primary action; inviting guests to pile on is
-       offered as a secondary step. */
-    <div className={styles.emptyState}>
-      <div className={styles.emptyStage}>
-        <h2 className={styles.emptyTitle}>{t('host.empty.title')}</h2>
-        <p className={styles.emptyStageLede}>
-          {t('host.empty.lede')}
-        </p>
-        <button
-          className={styles.emptyAddBtn}
-          onClick={onAddFirst}
-        >
-          {Icons.plus} {t('host.empty.addFirst')}
-        </button>
-      </div>
-
-      <InviteBlock
-        joinUrl={joinUrl}
-        displayUrl={displayUrl}
-        joinCode={joinCode}
-        onPrintQr={onPrintQr}
-      />
-    </div>
+    <EmptyStage
+      variant={songsSung > 0 ? "more" : "first"}
+      remote={remote}
+      onAddSong={onAddFirst}
+    />
   );
 }
