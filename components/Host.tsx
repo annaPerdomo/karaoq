@@ -1217,6 +1217,10 @@ const Host = ({
           setSettingsOpen(false);
           setCohostOpen(true);
         }}
+        onPrintQr={() => {
+          setSettingsOpen(false);
+          printQr();
+        }}
         onSendFeedback={() => {
           setSettingsOpen(false);
           setFeedbackOpen(true);

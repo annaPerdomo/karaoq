@@ -27,6 +27,7 @@ export function HostHeader({
   hostName,
   onChangeName,
   onInviteCohost,
+  onPrintQr,
   onSendFeedback,
   onBrandClick,
 }: {
@@ -52,6 +53,7 @@ export function HostHeader({
   hostName: string;
   onChangeName: () => void;
   onInviteCohost: () => void;
+  onPrintQr: () => void;
   onSendFeedback: () => void;
   onBrandClick: () => void;
 }) {
@@ -155,6 +157,7 @@ export function HostHeader({
         hostName={hostName}
         onChangeName={onChangeName}
         onInviteCohost={onInviteCohost}
+        onPrintQr={onPrintQr}
         onSendFeedback={onSendFeedback}
       />
     </header>

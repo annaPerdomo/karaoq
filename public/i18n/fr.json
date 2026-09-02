@@ -369,6 +369,7 @@
   "customize.qr": "QR pour rejoindre",
   "customize.qrDesc": "Le bloc du code à scanner pour rejoindre",
   "host.settings.cohosts": "Co-animateurs",
+  "host.settings.invite": "Inviter",
   "host.settings.changeName": "Modifier le prénom",
   "host.cohost.title": "Ajoute un co-animateur",
   "host.cohost.short": "Affiche un QR code ou copie un lien pour qu'un ami puisse gérer la file.",

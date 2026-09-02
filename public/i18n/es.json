@@ -369,6 +369,7 @@
   "customize.qr": "QR para unirse",
   "customize.qrDesc": "El estante con el código para escanear y unirse",
   "host.settings.cohosts": "Co-organizadores",
+  "host.settings.invite": "Invitar",
   "host.settings.changeName": "Cambiar tu nombre",
   "host.cohost.title": "Suma un co-organizador",
   "host.cohost.short": "Muestra un código QR o copia un enlace para que un amigo maneje la fila.",

@@ -369,6 +369,7 @@
   "customize.qr": "참여 QR",
   "customize.qrDesc": "스캔해서 참여하는 코드 선반",
   "host.settings.cohosts": "공동 호스트",
+  "host.settings.invite": "초대",
   "host.settings.changeName": "이름 변경",
   "host.cohost.title": "공동 호스트 데려오기",
   "host.cohost.short": "QR 코드를 보여 주거나 링크를 복사해서 친구가 대기열을 관리하게 하세요.",

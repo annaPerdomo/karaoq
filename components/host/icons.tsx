@@ -256,6 +256,22 @@ export const Icons = {
       <path d="M6 12.5V15a1.5 1.5 0 003 0v-1.8" />
     </svg>
   ),
+  printer: (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 18 18"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M5 7V2h8v5" />
+      <path d="M5 13H3.5A1.5 1.5 0 012 11.5v-3A1.5 1.5 0 013.5 7h11A1.5 1.5 0 0116 8.5v3a1.5 1.5 0 01-1.5 1.5H13" />
+      <path d="M5 11h8v5H5z" />
+    </svg>
+  ),
   caret: (
     <svg width="10" height="6" viewBox="0 0 10 6" fill="currentColor">
       <path d="M0 0l5 6 5-6z" />

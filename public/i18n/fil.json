@@ -369,6 +369,7 @@
   "customize.qr": "Join QR",
   "customize.qrDesc": "Ang shelf ng code para sumali sa pag-scan",
   "host.settings.cohosts": "Mga Co-host",
+  "host.settings.invite": "Imbitahan",
   "host.settings.changeName": "Palitan ang pangalan mo",
   "host.cohost.title": "Magdala ng co-host",
   "host.cohost.short": "Magpakita ng QR code o mag-copy ng link para may kaibigang makapagmanage ng queue.",

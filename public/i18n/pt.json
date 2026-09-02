@@ -369,6 +369,7 @@
   "customize.qr": "QR para entrar",
   "customize.qrDesc": "A prateleira do código de escanear para entrar",
   "host.settings.cohosts": "Coanfitriões",
+  "host.settings.invite": "Convite",
   "host.settings.changeName": "Mudar seu nome",
   "host.cohost.title": "Chame um coanfitrião",
   "host.cohost.short": "Mostre um código QR ou copie um link para um amigo gerenciar a fila.",

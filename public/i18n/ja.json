@@ -369,6 +369,7 @@
   "customize.qr": "参加用QR",
   "customize.qrDesc": "スキャンして参加するコードの棚",
   "host.settings.cohosts": "共同ホスト",
+  "host.settings.invite": "招待",
   "host.settings.changeName": "名前を変更",
   "host.cohost.title": "共同ホストを呼ぼう",
   "host.cohost.short": "QR コードを見せるかリンクをコピーして、友達にキューを管理してもらおう。",

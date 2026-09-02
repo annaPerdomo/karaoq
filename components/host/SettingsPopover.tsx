@@ -17,6 +17,7 @@ export function SettingsPopover({
   hostName,
   onChangeName,
   onInviteCohost,
+  onPrintQr,
   onSendFeedback,
 }: {
   isOpen: boolean;
@@ -31,6 +32,7 @@ export function SettingsPopover({
   hostName: string;
   onChangeName: () => void;
   onInviteCohost: () => void;
+  onPrintQr: () => void;
   onSendFeedback: () => void;
 }) {
   const { t } = useT();
@@ -115,6 +117,19 @@ export function SettingsPopover({
                 <div className={styles.spBtnDesc}>
                   {t('host.cohost.short')}
                 </div>
+              </div>
+            </button>
+          </div>
+          <div className={styles.spSep} />
+          {/* Duplicated from the QR modal on purpose: that modal only opens
+              from the Scan to join shelf, which Customize can switch off. */}
+          <div className={styles.spGroup}>
+            <div className={styles.spLabel}>{t('host.settings.invite')}</div>
+            <button className={styles.spBtn} onClick={onPrintQr}>
+              {Icons.printer}
+              <div>
+                <div className={styles.spBtnTitle}>{t('host.qr.printCode')}</div>
+                <div className={styles.spBtnDesc}>{t('host.qr.printDesc')}</div>
               </div>
             </button>
           </div>

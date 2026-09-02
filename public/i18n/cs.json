@@ -369,6 +369,7 @@
   "customize.qr": "QR kód pro připojení",
   "customize.qrDesc": "Poličko s kódem pro připojení naskenováním",
   "host.settings.cohosts": "Spoluhostitelé",
+  "host.settings.invite": "Pozvánka",
   "host.settings.changeName": "Změnit svoje jméno",
   "host.cohost.title": "Přiber spoluhostitele",
   "host.cohost.short": "Ukaž QR kód nebo zkopíruj odkaz, ať může kamarád spravovat frontu.",

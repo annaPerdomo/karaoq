@@ -369,6 +369,7 @@
   "customize.qr": "Beitritts-QR",
   "customize.qrDesc": "Das Regal mit dem Scan-zum-Beitreten-Code",
   "host.settings.cohosts": "Co-Hosts",
+  "host.settings.invite": "Einladen",
   "host.settings.changeName": "Ändere deinen Namen",
   "host.cohost.title": "Hol einen Co-Host dazu",
   "host.cohost.short": "Zeig einen QR-Code oder kopier einen Link, damit ein:e Freund:in die Warteschlange verwalten kann.",

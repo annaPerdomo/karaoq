@@ -336,6 +336,7 @@
   "host.settings.fairOn": "Singers take turns — new songs slot in fairly",
   "host.settings.fairOff": "Songs play in the order they were added",
   "host.settings.cohosts": "Co-hosts",
+  "host.settings.invite": "Invite",
   "host.settings.changeName": "Change your name",
   "customize.nowPlaying": "Now-playing bar",
   "customize.boardsEmpty": "Guests' requests & sing-together posts show here",
