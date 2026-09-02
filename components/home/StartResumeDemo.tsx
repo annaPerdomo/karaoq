@@ -5,7 +5,8 @@ import styles from '../../styles/Home.module.css';
 // Runs on a laptop frame — the recommended host setup (see the Setup guide),
 // and it keeps the step devices honest: laptop (host) → phones (guests) →
 // big screen. Beat 1 mirrors the landing host panel (a name and one button);
-// beat 2 the host's "Your stage is ready" screen (Host.tsx empty state);
+// beat 2 the host's empty stage — its copy is a hardcoded echo of host.empty.*
+// and nothing fails when they drift apart;
 // beat 3 the resume banner a returning host sees — the room isn't lost.
 export default function StartResumeDemo() {
   return (
@@ -29,10 +30,10 @@ export default function StartResumeDemo() {
           </div>
           <div className={styles.srCols}>
             <div className={styles.srStage}>
-              <div className={styles.srStageTitle}>Your stage is ready</div>
+              <div className={styles.srStageTitle}>Your stage awaits</div>
               <div className={styles.srStageLede}>
-                Add the first song and start singing &mdash; guests can pile
-                on anytime.
+                Add a song, grab the mic, and start the night &mdash; anyone
+                who joins can add to the queue too.
               </div>
               <div className={styles.srAddBtn}>+ Add the first song</div>
             </div>
