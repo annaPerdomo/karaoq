@@ -14,6 +14,13 @@ import {
   type LinkLookupRow,
 } from "../../../lib/analyticsStats";
 import { catalogEntry } from "../../../lib/suggestionCatalog";
+import {
+  deviceTypeFromUA,
+  platformFromUA,
+  TV_PATTERN,
+  tvPlatformFromUA,
+  type DeviceType,
+} from "../../../lib/deviceType";
 
 const FUNNEL_WINDOW_DAYS = 30;
 
@@ -68,6 +75,7 @@ export default async function handler(
       uniqueUsers,
       roomsByDay,
       songsByDay,
+      roomsByDeviceMonth,
       countryCounts,
       cityCounts,
       dayOfWeekSongs,
@@ -75,7 +83,8 @@ export default async function handler(
       topUsers,
       sessionData,
       songsPerRoom,
-      userAgentData,
+      sessionAgents,
+      tvRoomCount,
       totalQrPrints,
       suggestionTotal,
       suggestionBySource,
@@ -137,6 +146,32 @@ export default async function handler(
         .aggregate([
           { $match: { type: "song_added", timestamp: { $gte: thirtyDaysAgo } } },
           { $group: { _id: { $dateToString: dayKey }, count: { $sum: 1 } } },
+          { $sort: { _id: 1 } },
+        ])
+        .toArray(),
+
+      // Whole history: room_created has always carried a User-Agent. Monthly
+      // rather than daily — at ~1.5% of rooms a daily line is all zeroes.
+      events
+        .aggregate([
+          { $match: { type: "room_created" } },
+          {
+            $group: {
+              _id: {
+                $dateToString: { format: "%Y-%m", date: "$timestamp", timezone: tz },
+              },
+              rooms: { $sum: 1 },
+              tvRooms: {
+                $sum: {
+                  $cond: [
+                    { $regexMatch: { input: { $ifNull: ["$userAgent", ""] }, regex: TV_PATTERN } },
+                    1,
+                    0,
+                  ],
+                },
+              },
+            },
+          },
           { $sort: { _id: 1 } },
         ])
         .toArray(),
@@ -259,26 +294,23 @@ export default async function handler(
         ])
         .toArray(),
 
+      // Grouped, not classified: the reading happens in JS below off
+      // lib/deviceType, since restating those regexes as Mongo branches is how
+      // the two drift.
       sessions
         .aggregate([
           { $match: { userAgent: { $exists: true, $ne: null } } },
-          {
-            $project: {
-              device: {
-                $cond: {
-                  if: {
-                    $regexMatch: {
-                      input: "$userAgent",
-                      regex: /Mobile|Android|iPhone|iPad/i,
-                    },
-                  },
-                  then: "Mobile",
-                  else: "Desktop",
-                },
-              },
-            },
-          },
-          { $group: { _id: "$device", count: { $sum: 1 } } },
+          { $group: { _id: { userAgent: "$userAgent", role: "$role" }, count: { $sum: 1 } } },
+        ])
+        .toArray(),
+
+      // The one TV figure the grouping above can't give us, and so the only
+      // one worth a second pass. Counted in Mongo, not fetched per session.
+      sessions
+        .aggregate([
+          { $match: { userAgent: { $regex: TV_PATTERN }, roomId: { $exists: true, $ne: null } } },
+          { $group: { _id: "$roomId" } },
+          { $count: "rooms" },
         ])
         .toArray(),
 
@@ -785,6 +817,70 @@ export default async function handler(
       };
     };
 
+    // Split by role, because the blended number hides the answer: a singer is
+    // almost always on a phone, a host very often isn't.
+    const ROLES = ["host", "singer", "display"] as const;
+    const DEVICE_LABEL: Record<DeviceType, string> = {
+      tv: "TV",
+      mobile: "Mobile",
+      desktop: "Desktop",
+    };
+
+    const deviceTally = new Map<string, number>();
+    const platformTally = new Map<string, number>();
+    // role -> device -> count, and role -> platform -> count.
+    const roleDevice = new Map<string, Map<string, number>>();
+    const rolePlatform = new Map<string, Map<string, number>>();
+    const bump = (m: Map<string, number>, k: string, n: number) =>
+      m.set(k, (m.get(k) ?? 0) + n);
+    const bump2 = (outer: Map<string, Map<string, number>>, a: string, b: string, n: number) => {
+      let inner = outer.get(a);
+      if (!inner) outer.set(a, (inner = new Map()));
+      bump(inner, b, n);
+    };
+
+    // The TV figures fall out of the same pass: they are the rows whose UA
+    // classified as one.
+    let tvSessionCount = 0;
+    const tvPlatformTally = new Map<string, number>();
+    const tvRoleTally = new Map<string, number>();
+
+    for (const row of sessionAgents as {
+      _id: { userAgent?: string; role?: string };
+      count: number;
+    }[]) {
+      const type = deviceTypeFromUA(row._id.userAgent);
+      if (!type) continue;
+      const device = DEVICE_LABEL[type];
+      const platform = platformFromUA(row._id.userAgent) ?? "Other";
+      // Sessions predating the role field are counted in the totals but can't
+      // be attributed to a row of the matrix.
+      const role = row._id.role ?? "unknown";
+      bump(deviceTally, device, row.count);
+      bump(platformTally, platform, row.count);
+      bump2(roleDevice, role, device, row.count);
+      bump2(rolePlatform, role, platform, row.count);
+      if (type === "tv") {
+        tvSessionCount += row.count;
+        bump(tvPlatformTally, tvPlatformFromUA(row._id.userAgent) ?? "Other TV", row.count);
+        bump(tvRoleTally, role, row.count);
+      }
+    }
+
+    const byCount = (a: { count: number }, b: { count: number }) => b.count - a.count;
+    const toRows = (m: Map<string, number> | undefined) =>
+      m ? Array.from(m, ([_id, count]) => ({ _id, count })).sort(byCount) : [];
+
+    const deviceDetail = {
+      byRole: ROLES.map((role) => ({
+        role,
+        total: Array.from(roleDevice.get(role)?.values() ?? []).reduce((a, b) => a + b, 0),
+        devices: toRows(roleDevice.get(role)),
+        platforms: toRows(rolePlatform.get(role)).slice(0, 8),
+      })).filter((r) => r.total > 0),
+      byPlatform: toRows(platformTally),
+    };
+
     res.status(200).json({
       overview: {
         totalRooms,
@@ -823,7 +919,15 @@ export default async function handler(
         topSongs,
         topUsers,
       },
-      devices: userAgentData,
+      devices: toRows(deviceTally),
+      deviceDetail,
+      tv: {
+        byMonth: roomsByDeviceMonth,
+        sessions: tvSessionCount,
+        rooms: (tvRoomCount[0] as { rooms?: number } | undefined)?.rooms ?? 0,
+        byPlatform: toRows(tvPlatformTally),
+        byRole: toRows(tvRoleTally),
+      },
       suggestions: {
         total: suggestionTotal,
         bySource: suggestionBySource,

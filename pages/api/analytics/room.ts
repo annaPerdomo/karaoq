@@ -6,6 +6,11 @@ import {
   getYoutubeSongDataCollection,
 } from "../../../lib/mongodb";
 import type { AnalyticsEvent } from "../../../lib/analytics";
+import {
+  deviceTypeFromUA,
+  platformFromUA,
+  tvPlatformFromUA,
+} from "../../../lib/deviceType";
 import { CHOSEN_LOCALE_SOURCES } from "../../../lib/i18n/activeLocale";
 import {
   normalizeDisplayConfig,
@@ -122,6 +127,9 @@ async function handleGet(
     city: s.city ?? null,
     locale: s.locale ?? null,
     localeSource: s.localeSource ?? null,
+    device: deviceTypeFromUA(s.userAgent),
+    tvPlatform: tvPlatformFromUA(s.userAgent),
+    platform: platformFromUA(s.userAgent),
   }));
 
   const localeTally = new Map<string, { people: number; chosen: number }>();

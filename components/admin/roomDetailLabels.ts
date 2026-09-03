@@ -15,6 +15,12 @@ export interface Person {
   city: string | null;
   locale: string | null;
   localeSource: string | null;
+  /** "tv" | "mobile" | "desktop"; null on sessions with no stored UA. */
+  device: string | null;
+  /** TV make ("LG", "Samsung", …); null on everything that isn't a TV. */
+  tvPlatform: string | null;
+  /** Display name for the device: "iPhone", "Windows", "LG TV". */
+  platform: string | null;
 }
 
 export interface SongRow {
@@ -216,6 +222,13 @@ export function languageLabel(p: Person): string {
   return CHOSEN_LOCALE_SOURCES.includes(p.localeSource as LocaleSource)
     ? `${localeName(p.locale)} (picked)`
     : localeName(p.locale);
+}
+
+/** TVs keep the marker as well as the make, since "LG" alone doesn't explain a
+ *  slow room. Blank only when the session stored no User-Agent. */
+export function deviceLabel(p: Person): string {
+  if (p.device === 'tv') return `📺 ${p.platform ?? 'Smart TV'}`;
+  return p.platform ?? '';
 }
 
 /**

@@ -3,6 +3,7 @@ import styles from '../../../styles/Admin.module.css';
 import type { DossierSongRow, RoomErrorRow, RoomSearchFailRow } from '../types';
 import { ERROR_SOURCE_LABELS, searchFailLabel } from '../format';
 import {
+  deviceLabel,
   formatTime,
   languageLabel,
   locationLabel,
@@ -89,7 +90,12 @@ export function PeopleSection({
               title={p.userName || 'Anonymous'}
               badge={p.role ?? undefined}
               badgeClass={p.role === 'host' ? styles.dsBadgeHost : undefined}
-              meta={[locationLabel(p), languageLabel(p), formatTime(p.firstSeen)]}
+              meta={[
+                locationLabel(p),
+                deviceLabel(p),
+                languageLabel(p),
+                formatTime(p.firstSeen),
+              ]}
             />
           ))}
         </div>

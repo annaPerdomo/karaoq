@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { platformFromUA } from '../../lib/deviceType';
 
 import styles from '../../styles/Analytics.module.css';
 import type { FeedbackKind } from '../../pages/api/types';
@@ -51,15 +52,6 @@ function formatWhen(iso: string): string {
     hour: 'numeric',
     minute: '2-digit',
   });
-}
-
-function shortDevice(ua: string | undefined): string | null {
-  if (!ua) return null;
-  if (/iPhone|iPad/.test(ua)) return /iPad/.test(ua) ? 'iPad' : 'iPhone';
-  if (/Android/.test(ua)) return 'Android';
-  if (/Macintosh/.test(ua)) return 'Mac';
-  if (/Windows/.test(ua)) return 'Windows';
-  return 'Other';
 }
 
 export function FeedbackPanel({
@@ -178,7 +170,7 @@ export function FeedbackPanel({
 
       <div className={styles.fbList}>
         {items.map((row) => {
-          const device = shortDevice(row.userAgent);
+          const device = platformFromUA(row.userAgent);
           return (
             <article
               key={row._id}

@@ -62,6 +62,25 @@ export interface AnalyticsData {
     topUsers: { _id: string; count: number }[];
   };
   devices: { _id: string; count: number }[];
+  /** Optional so an older deploy degrades to the plain device split. */
+  deviceDetail?: {
+    byRole: {
+      role: string;
+      total: number;
+      devices: { _id: string; count: number }[];
+      platforms: { _id: string; count: number }[];
+    }[];
+    byPlatform: { _id: string; count: number }[];
+  };
+  /** Optional so a dashboard on an older deploy just hides the TV card. */
+  tv?: {
+    /** Whole history, not the 30-day window: room_created has always carried a UA. */
+    byMonth?: { _id: string; rooms: number; tvRooms: number }[];
+    sessions: number;
+    rooms: number;
+    byPlatform: { _id: string; count: number }[];
+    byRole: { _id: string; count: number }[];
+  };
   suggestions: {
     total: number;
     bySource: { _id: string | null; count: number }[];

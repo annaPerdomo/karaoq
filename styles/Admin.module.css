@@ -1378,3 +1378,79 @@
   color: #86efac;
   background: rgba(34, 197, 94, 0.14);
 }
+
+/* ─── Device breakdown (Pulse → Audience) ─── */
+.deviceRoles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.4rem;
+}
+
+/* Each role is its own panel, so the three columns read as three answers to
+   the same question rather than one wrapping list. */
+.deviceRole {
+  padding: 0.9rem 1rem 0.6rem;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.deviceRoleTitle {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.deviceRoleCount {
+  font-size: 0.72rem;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.deviceRoleNote {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin: 0.15rem 0 0.6rem;
+}
+
+/* One proportional bar per role, so the three read as comparable shapes. */
+.deviceBar {
+  display: flex;
+  width: 100%;
+  height: 10px;
+  border-radius: 5px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.deviceBarSeg {
+  display: block;
+  height: 100%;
+}
+
+.deviceLegend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.1rem 0.7rem;
+  margin: 0.45rem 0 0.7rem;
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+}
+
+.deviceLegendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+/* Colour never carries the meaning alone — every dot sits beside its label. */
+.deviceDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
