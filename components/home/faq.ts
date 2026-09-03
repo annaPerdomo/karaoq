@@ -27,6 +27,7 @@ export const FAQ_ITEMS: {
     question: 'What equipment do I need to host karaoke night?',
     answer:
       'A device with a browser and something that makes sound — a laptop or iPad on its own is enough. For a bigger night, put the video on a TV by casting or plugging in with HDMI. No karaoke machine or microphones required.',
+    guideSlug: 'home-karaoke-setup',
   },
   {
     id: 'mics',
@@ -40,6 +41,7 @@ export const FAQ_ITEMS: {
     question: 'How do I get the karaoke video on my TV?',
     answer:
       'Cast your screen with AirPlay or Google Cast, or connect your laptop to the TV with an HDMI cable. KaraoQ can also pop the video out into its own window, so the TV shows the song and lyrics while the controls stay on your screen.',
+    guideSlug: 'karaoke-on-your-tv',
   },
   {
     id: 'account',

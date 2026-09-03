@@ -19,6 +19,7 @@ const GUIDE_SLUGS = [
   'how-to-host-karaoke-at-home',
   'karaoke-on-your-tv',
   'free-youtube-karaoke',
+  'home-karaoke-setup',
   'karaoke-for-bars-and-venues',
   'cheap-home-karaoke-setup',
   'best-youtube-karaoke-channels',
