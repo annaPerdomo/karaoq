@@ -8,9 +8,11 @@ import {
 } from '../lib/lastRoom';
 import styles from '../styles/Home.module.css';
 import { useT } from '../lib/i18n/I18nProvider';
-import LanguageSwitcher from './LanguageSwitcher';
 import HeroBeams from './home/HeroBeams';
 import HeroStage from './home/HeroStage';
+import HeroBrandMark from './home/HeroBrandMark';
+import HomeNav from './home/HomeNav';
+import useOnScreen from './home/hooks/useOnScreen';
 import HeroCtaCard from './home/HeroCtaCard';
 import ResumeBanner from './home/ResumeBanner';
 import HowItWorksSection from './home/HowItWorksSection';
@@ -37,9 +39,9 @@ function generateCode(): string {
 
 const CUSTOM_CODE_PATTERN = /^[A-Z0-9]{3,12}$/;
 
-// Past this, the hero cascade has landed (host card beat, 1.7s) — a banner
-// arriving later skips its 1.35s cascade delay instead of holding a blank box.
-const LATE_RESUME_CHECK_MS = 1700;
+// The host card's cascade beat in Home.module.css. A banner resolving after
+// it skips the 1.55s delay rather than holding a blank box.
+const LATE_RESUME_CHECK_MS = 1900;
 
 export interface HomeProps {
   /** Social-proof figures baked in by the page's ISR pass. */
@@ -57,6 +59,7 @@ const Home = ({ stats = EMPTY_STATS }: HomeProps): React.ReactElement => {
   const [hostError, setHostError] = React.useState('');
   const [hostName, setHostName] = React.useState('');
   const nameInputRef = React.useRef<HTMLInputElement>(null);
+  const [brandRef, brandOnScreen] = useOnScreen<HTMLDivElement>(true, false);
   const [resumeRoom, setResumeRoom] = React.useState<{
     code: string;
     songCount: number;
@@ -178,21 +181,12 @@ const Home = ({ stats = EMPTY_STATS }: HomeProps): React.ReactElement => {
 
   return (
     <>
-      <nav className={styles.nav}>
-        <span className={styles.navLogo}>KaraoQ</span>
-        <div className={styles.navLinks}>
-          <a href="#how-it-works" className={styles.navLink}>{t('home.nav.how')}</a>
-          <a href="#setup" className={styles.navLink}>{t('home.nav.setup')}</a>
-          <a href="#features" className={styles.navLink}>{t('home.nav.features')}</a>
-          <button className={styles.navCtaOutline} onClick={handleJoinCta}>
-            {t('home.nav.join')}
-          </button>
-          <button className={styles.navCta} onClick={handleHostCta} disabled={creating}>
-            {creating ? t('home.creating') : t('home.nav.host')}
-          </button>
-          <LanguageSwitcher />
-        </div>
-      </nav>
+      <HomeNav
+        brandHidden={brandOnScreen}
+        creating={creating}
+        onJoin={handleJoinCta}
+        onHost={handleHostCta}
+      />
 
       <main>
         <section className={styles.hero}>
@@ -201,6 +195,7 @@ const Home = ({ stats = EMPTY_STATS }: HomeProps): React.ReactElement => {
               off rather than by any frame of its own. */}
           <HeroBeams />
           <div className={styles.heroInner}>
+            <HeroBrandMark ref={brandRef} />
             <div className={styles.heroContent}>
               {/* Two lines, one key each — the break is authored, not wrapped,
                   so every language controls where its own headline turns. */}

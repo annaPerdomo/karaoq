@@ -17,8 +17,8 @@ import {
  * Stacked below 1280px, the stage sits between pitch and form; the desktop
  * delay would leave the poster frozen there, so the reveal moves up.
  */
-const REVEAL_MS_DESKTOP = 6400;
-const REVEAL_MS_MOBILE = 2400;
+const REVEAL_MS_DESKTOP = 6600;
+const REVEAL_MS_MOBILE = 2600;
 const STACKED_QUERY = '(max-width: 1280px)';
 
 export default function HeroStage() {
