@@ -8,6 +8,7 @@ import { DEFAULT_LOCALE, isLocale, type Locale } from '../lib/i18n/config';
 import { GUIDES, indices, guideById, type Guide } from '../lib/guides';
 import GuideFaq from './guide/GuideFaq';
 import GuideItemList from './guide/GuideItemList';
+import GuideSections from './guide/GuideSections';
 import LanguageSwitcher from './LanguageSwitcher';
 
 interface GuideArticleProps {
@@ -24,7 +25,7 @@ interface GuideArticleProps {
  * site rather than bouncing off a leaf page.
  */
 const GuideArticle = ({ guideId }: GuideArticleProps): React.ReactElement => {
-  const { t } = useT();
+  const { t, locale: uiLocale } = useT();
   const router = useRouter();
   const locale: Locale = isLocale(router.locale) ? router.locale : DEFAULT_LOCALE;
   const guide: Guide | undefined = guideById(guideId);
@@ -49,6 +50,21 @@ const GuideArticle = ({ guideId }: GuideArticleProps): React.ReactElement => {
         <p className={styles.eyebrow}>{t('guide.eyebrow')}</p>
         <h1 className={styles.h1}>{g('h1')}</h1>
         <p className={styles.intro}>{g('intro')}</p>
+        {guide && (
+          <p className={styles.updated}>
+            {t('guide.updated', {
+              date: new Intl.DateTimeFormat(uiLocale, {
+                year: 'numeric',
+                month: 'long',
+                timeZone: 'UTC',
+              }).format(
+                new Date(`${guide.updated}T00:00:00Z`)
+              ),
+            })}
+          </p>
+        )}
+
+        {guide && <GuideSections guide={guide} />}
 
         {guide && guide.stepCount > 0 && (
           <>

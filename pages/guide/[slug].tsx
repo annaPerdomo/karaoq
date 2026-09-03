@@ -86,6 +86,22 @@ const GuidePage: NextPage<GuidePageProps> = ({ guideId, slug, pageLocale }) => {
         }
       : null;
 
+  const article = guide
+    ? {
+        '@context': 'https://schema.org',
+        '@type': 'Article',
+        headline: g('h1'),
+        description,
+        inLanguage: loc,
+        mainEntityOfPage: url,
+        datePublished: guide.published,
+        dateModified: guide.updated,
+        image: OG_IMAGE,
+        author: { '@type': 'Organization', name: 'KaraoQ', url: `${SITE_URL}/` },
+        publisher: { '@type': 'Organization', name: 'KaraoQ', url: `${SITE_URL}/` },
+      }
+    : null;
+
   const breadcrumb = {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
@@ -136,6 +152,12 @@ const GuidePage: NextPage<GuidePageProps> = ({ guideId, slug, pageLocale }) => {
         {/* JSON-LD: HowTo / FAQPage / ItemList (whichever sections the guide
             has) + Breadcrumb, all mirroring the visible, translated copy so
             structured data matches the page. */}
+        {article && (
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{ __html: JSON.stringify(article) }}
+          />
+        )}
         {howTo && (
           <script
             type="application/ld+json"

@@ -39,23 +39,41 @@ export interface Guide {
   slug: string;
   /** Ids of sibling guides to cross-link at the foot of the article. */
   related: string[];
+  /** Number of `guide.<id>.secN.*` prose sections; a body splits into paragraphs on a blank line. */
+  sectionCount: number;
   /** Number of `guide.<id>.stepN.*` how-to steps (0 = no steps, no HowTo schema). */
   stepCount: number;
   /** Number of `guide.<id>.faqN.*` Q&A pairs (0 = no FAQ, no FAQPage schema). */
   faqCount: number;
   /** External resource list; entry N's copy lives at `guide.<id>.itemN.*`. */
   items?: GuideItem[];
+  /** First published (ISO date) — Article schema datePublished. */
+  published: string;
+  /** Last substantive revision (ISO date) — shown on the page and in Article schema. */
+  updated: string;
 }
 
 // Amazon links point at searches rather than specific ASINs so they never go
 // stale or 404; the copy recommends a category, not a brand.
 const GEAR_ITEMS: GuideItem[] = [
-  { href: 'https://www.amazon.com/s?k=wireless+karaoke+microphone+2+pack', sponsored: true },
-  { href: 'https://www.amazon.com/s?k=bluetooth+party+speaker', sponsored: true },
+  { href: 'https://www.amazon.com/s?k=bluetooth+party+speaker+with+microphone+input', sponsored: true },
+  { href: 'https://www.amazon.com/s?k=dynamic+vocal+microphone+xlr+handheld', sponsored: true },
+  { href: 'https://www.amazon.com/s?k=3.5mm+to+1%2F4+inch+aux+cable', sponsored: true },
   { href: 'https://www.amazon.com/s?k=hdmi+cable+10+ft', sponsored: true },
-  { href: 'https://www.amazon.com/s?k=streaming+stick+with+casting', sponsored: true },
-  { href: 'https://www.amazon.com/s?k=adjustable+tablet+stand', sponsored: true },
+  { href: 'https://www.amazon.com/s?k=wireless+karaoke+microphone+2+pack', sponsored: true },
   { href: 'https://www.amazon.com/s?k=karaoke+machine+with+bluetooth+speaker', sponsored: true },
+];
+
+// Order must match `guide.setups.itemN.*`: one link per category, Level 1 → 4.
+const SETUP_ITEMS: GuideItem[] = [
+  { href: 'https://www.amazon.com/s?k=bluetooth+karaoke+microphone+with+speaker', sponsored: true },
+  { href: 'https://www.amazon.com/s?k=bluetooth+party+speaker+with+microphone+input', sponsored: true },
+  { href: 'https://www.amazon.com/s?k=dynamic+vocal+microphone+xlr+handheld', sponsored: true },
+  { href: 'https://www.amazon.com/s?k=analog+audio+mixer+with+effects+8+channel', sponsored: true },
+  { href: 'https://www.amazon.com/s?k=powered+pa+speaker+12+inch', sponsored: true },
+  { href: 'https://www.amazon.com/s?k=uhf+dual+wireless+microphone+system', sponsored: true },
+  { href: 'https://www.amazon.com/s?k=3.5mm+to+dual+1%2F4+inch+cable', sponsored: true },
+  { href: 'https://www.amazon.com/s?k=xlr+microphone+cable+25+ft+and+mic+stand', sponsored: true },
 ];
 
 // Channel links verified 2026-08 (Stingray Karaoke is the former
@@ -73,46 +91,75 @@ export const GUIDES: Guide[] = [
   {
     id: 'athome',
     slug: 'how-to-host-karaoke-at-home',
-    related: ['gear', 'tv', 'youtube'],
+    related: ['setups', 'tv', 'gear'],
+    sectionCount: 3,
     stepCount: 4,
-    faqCount: 0,
+    faqCount: 4,
+    published: '2026-07-04',
+    updated: '2026-09-03',
   },
   {
     id: 'tv',
     slug: 'karaoke-on-your-tv',
-    related: ['athome', 'gear', 'youtube'],
+    related: ['setups', 'gear', 'athome'],
+    sectionCount: 7,
     stepCount: 4,
-    faqCount: 0,
+    faqCount: 5,
+    published: '2026-07-04',
+    updated: '2026-09-03',
   },
   {
     id: 'youtube',
     slug: 'free-youtube-karaoke',
-    related: ['channels', 'athome', 'tv'],
+    related: ['channels', 'tv', 'athome'],
+    sectionCount: 3,
     stepCount: 4,
-    faqCount: 0,
+    faqCount: 5,
+    published: '2026-07-04',
+    updated: '2026-09-03',
+  },
+  {
+    id: 'setups',
+    slug: 'home-karaoke-setup',
+    related: ['gear', 'tv', 'athome'],
+    sectionCount: 7,
+    stepCount: 4,
+    faqCount: 6,
+    items: SETUP_ITEMS,
+    published: '2026-09-03',
+    updated: '2026-09-03',
   },
   {
     id: 'venue',
     slug: 'karaoke-for-bars-and-venues',
-    related: ['gear', 'athome', 'youtube'],
+    related: ['setups', 'athome', 'youtube'],
+    sectionCount: 0,
     stepCount: 4,
     faqCount: 0,
+    published: '2026-07-04',
+    updated: '2026-07-04',
   },
   {
     id: 'gear',
     slug: 'cheap-home-karaoke-setup',
-    related: ['athome', 'tv', 'channels'],
+    related: ['setups', 'tv', 'athome'],
+    sectionCount: 3,
     stepCount: 4,
-    faqCount: 4,
+    faqCount: 7,
     items: GEAR_ITEMS,
+    published: '2026-07-04',
+    updated: '2026-09-03',
   },
   {
     id: 'channels',
     slug: 'best-youtube-karaoke-channels',
-    related: ['youtube', 'gear', 'athome'],
+    related: ['youtube', 'setups', 'athome'],
+    sectionCount: 0,
     stepCount: 0,
     faqCount: 4,
     items: CHANNEL_ITEMS,
+    published: '2026-07-04',
+    updated: '2026-08-01',
   },
 ];
 
