@@ -8,6 +8,8 @@
 @media (prefers-reduced-motion: reduce) {
   .reveal { transition: none !important; }
   .eqBar { animation: none !important; height: 12px !important; }
+  /* Rests at its normal size — the heart is a credit, not a status light. */
+  .footerHeart { animation: none !important; }
 
   /* Hero: the film swaps to its poster (HeroStage renders an <img> under
      reduced motion), and the lights simply arrive already on. The spot pool
@@ -78,6 +80,93 @@
   .dpNumA, .dpCount4 { animation: none !important; opacity: 0 !important; }
   .dpNumB, .dpCount3 { animation: none !important; opacity: 1 !important; }
 }
+
+/* ─── Calm on a smart TV ───
+   Twin of the prefers-reduced-motion block above. Smart TVs never report that
+   preference, so those rules never reach the devices that need them most: a
+   TV's GPU is the one that actually drops frames on an infinite animation.
+   `data-tv` is set on <html> before the first paint (pages/_document.js).
+
+   Generated from the block above, and tests/lib/calmCss.test.ts fails if the
+   two ever drift — edit the reduced-motion block, then re-run that test. */
+/* @calm-twin-start */
+html[data-tv] .reveal { transition: none !important; }
+html[data-tv] .eqBar { animation: none !important; height: 12px !important; }
+/* Rests at its normal size — the heart is a credit, not a status light. */
+html[data-tv] .footerHeart { animation: none !important; }
+
+/* Hero: the film swaps to its poster (HeroStage renders an <img> under
+   reduced motion), and the lights simply arrive already on. The spot pool
+   and the stage need opacity forced — their `both` fill would otherwise hold
+   the 0% frame once the animation is cancelled, leaving them dark. */
+html[data-tv] .beam,
+html[data-tv] .brandWord,
+html[data-tv] .brandPhonetic,
+html[data-tv] .heroTitle,
+html[data-tv] .titleLine,
+html[data-tv] .heroSub,
+html[data-tv] .resumeCard,
+html[data-tv] .hostCard,
+html[data-tv] .heroNote,
+html[data-tv] .spotPool,
+html[data-tv] .stageGlow,
+html[data-tv] .stageFilm,
+html[data-tv] .stageFloor { animation: none !important; }
+html[data-tv] .brandWord,
+html[data-tv] .brandPhonetic,
+html[data-tv] .heroTitle,
+html[data-tv] .spotPool,
+html[data-tv] .stageGlow,
+html[data-tv] .stageFilm,
+html[data-tv] .stageFloor { opacity: 1 !important; }
+
+/* Step 1: hold the "stage is ready" beat. */
+html[data-tv] .srFrame1, html[data-tv] .srFrame3 { display: none !important; }
+html[data-tv] .srFrame2 { animation: none !important; opacity: 1 !important; }
+html[data-tv] .srStartPress, html[data-tv] .srResumePress, html[data-tv] .srResumeDot { animation: none !important; }
+
+/* Step 2: hold the just-searched state — results up, queue built. */
+html[data-tv] .demoTyping {
+  width: 6.5ch !important;
+  animation: none !important;
+  border-right-color: transparent !important;
+}
+html[data-tv] .qbSearchPress, html[data-tv] .qbAddTap { animation: none !important; }
+html[data-tv] .qbDiscovery { animation: none !important; opacity: 0 !important; }
+html[data-tv] .qbResults { animation: none !important; opacity: 1 !important; transform: none !important; }
+html[data-tv] .qbToast { animation: none !important; opacity: 0 !important; }
+html[data-tv] .qbRowYours, html[data-tv] .qbRowFriend {
+  animation: none !important;
+  opacity: 1 !important;
+  transform: none !important;
+  background: rgba(255, 255, 255, 0.03) !important;
+}
+html[data-tv] .qbCount1, html[data-tv] .qbCount2 { animation: none !important; opacity: 0 !important; }
+html[data-tv] .qbCount3 { animation: none !important; opacity: 1 !important; }
+
+/* Step 3: hold mid-song — lyrics part-lit, queue already advanced. */
+html[data-tv] .dpReady { animation: none !important; opacity: 0 !important; }
+html[data-tv] .dpPlaying { animation: none !important; opacity: 1 !important; }
+html[data-tv] .dpLyricLine { animation: none !important; }
+html[data-tv] .dpSweep1 { background-position: 0% 0 !important; }
+html[data-tv] .dpSweep2 { background-position: 50% 0 !important; }
+html[data-tv] .dpSweep3 { background-position: 100% 0 !important; }
+html[data-tv] .dpReaction { animation: none !important; display: none !important; }
+html[data-tv] .dpProgressFill, html[data-tv] .dpNowDot { animation: none !important; }
+html[data-tv] .dpRowLeaving {
+  animation: none !important;
+  opacity: 0 !important;
+  max-height: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  margin-bottom: 0 !important;
+}
+html[data-tv] .dpNumA, html[data-tv] .dpCount4 { animation: none !important; opacity: 0 !important; }
+html[data-tv] .dpNumB, html[data-tv] .dpCount3 { animation: none !important; opacity: 1 !important; }
+/* @calm-twin-end */
+
+
+
 
 /* ─── Scroll Reveal ─── */
 .reveal {
@@ -2018,6 +2107,8 @@
 
 .setupCard {
   --accent: #06b6d4;
+  /* Same colour as rgb components, for the pre-Chrome-111 fallbacks below. */
+  --accent-rgb: 6, 182, 212;
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -2031,6 +2122,7 @@
 
 .setupCard:hover {
   transform: translateY(-6px);
+  box-shadow: 0 12px 40px rgba(var(--accent-rgb), 0.15);
   box-shadow: 0 12px 40px color-mix(in srgb, var(--accent) 15%, transparent);
 }
 
@@ -2042,6 +2134,7 @@
   letter-spacing: 1px;
   text-transform: uppercase;
   color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.12);
   background: color-mix(in srgb, var(--accent) 12%, transparent);
   border-radius: 50px;
   margin-bottom: 1rem;
@@ -2135,6 +2228,7 @@
 
 .featureCard {
   --accent: #a855f7;
+  --accent-rgb: 168, 85, 247;
   background: linear-gradient(160deg, rgba(80, 20, 140, 0.2), rgba(20, 10, 40, 0.3));
   border: 1px solid rgba(255, 255, 255, 0.06);
   border-top: 2px solid var(--accent);
@@ -2152,12 +2246,14 @@
   left: 0;
   right: 0;
   height: 80px;
+  background: linear-gradient(to bottom, rgba(var(--accent-rgb), 0.08), transparent);
   background: linear-gradient(to bottom, color-mix(in srgb, var(--accent) 8%, transparent), transparent);
   pointer-events: none;
 }
 
 .featureCard:hover {
   transform: translateY(-6px);
+  box-shadow: 0 12px 40px rgba(var(--accent-rgb), 0.2);
   box-shadow: 0 12px 40px color-mix(in srgb, var(--accent) 20%, transparent);
   border-top-color: var(--accent);
 }
@@ -2166,6 +2262,7 @@
   width: 48px;
   height: 48px;
   border-radius: 12px;
+  background: rgba(var(--accent-rgb), 0.15);
   background: color-mix(in srgb, var(--accent) 15%, transparent);
   display: flex;
   align-items: center;
@@ -2208,6 +2305,7 @@
 
 .useCaseCard {
   --accent: #a855f7;
+  --accent-rgb: 168, 85, 247;
   padding: 1.5rem;
   border-radius: 16px;
   background: linear-gradient(160deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01));
@@ -2219,6 +2317,7 @@
 
 .useCaseCard:hover {
   transform: translateY(-6px);
+  box-shadow: 0 12px 40px rgba(var(--accent-rgb), 0.15);
   box-shadow: 0 12px 40px color-mix(in srgb, var(--accent) 15%, transparent);
 }
 
@@ -2871,4 +2970,27 @@
      just goes away rather than resting in its flared state. */
   .reachPlaying .reachSparkle { animation: none; opacity: 0; }
 }
+
+/* ─── Calm on a smart TV ───
+   Twin of the prefers-reduced-motion block above. Smart TVs never report that
+   preference, so those rules never reach the devices that need them most: a
+   TV's GPU is the one that actually drops frames on an infinite animation.
+   `data-tv` is set on <html> before the first paint (pages/_document.js).
+
+   Generated from the block above, and tests/lib/calmCss.test.ts fails if the
+   two ever drift — edit the reduced-motion block, then re-run that test. */
+/* @calm-twin-start */
+html[data-tv] .reachInner { transition: none; opacity: 1; transform: none; }
+/* Matched on .reachPlaying so these outrank the rules that start the sweep —
+   the map still appears when it scrolls in, it just appears all at once. */
+html[data-tv] .reachPlaying .reachLand,
+html[data-tv] .reachPlaying .reachLit,
+html[data-tv] .reachPlaying .reachGlowBand { animation: none; opacity: 1; }
+/* The sparkle is pure decoration layered over a dot that's already lit, so it
+   just goes away rather than resting in its flared state. */
+html[data-tv] .reachPlaying .reachSparkle { animation: none; opacity: 0; }
+/* @calm-twin-end */
+
+
+
 

@@ -1,4 +1,16 @@
 import { Html, Head, Main, NextScript } from 'next/document';
+import { TV_PATTERN } from '../lib/deviceType';
+
+/**
+ * Flags smart TVs on <html> before the first paint. Inline and blocking rather
+ * than an effect: the landing page is static and CDN-served, so there is no
+ * per-request render in which to read the User-Agent. The pattern is
+ * serialized out of lib/deviceType so the browser and the analytics roll-up
+ * classify TVs by one definition.
+ */
+const TV_FLAG_SCRIPT =
+  `try{if(${TV_PATTERN}.test(navigator.userAgent))` +
+  `document.documentElement.setAttribute('data-tv','1')}catch(e){}`;
 
 // `lang` is driven by the active i18n locale (not hardcoded) so localized
 // landing routes like /ja render `<html lang="ja">` for crawlers and a11y.
@@ -6,6 +18,7 @@ export default function Document({ locale }) {
   return (
     <Html lang={locale || 'en'}>
       <Head>
+        <script dangerouslySetInnerHTML={{ __html: TV_FLAG_SCRIPT }} />
         <link rel="icon" href="/favicon.ico" sizes="any" />
         <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
         <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />

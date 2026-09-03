@@ -2,6 +2,7 @@ import * as React from 'react';
 import styles from '../../styles/Home.module.css';
 import { useT } from '../../lib/i18n/I18nProvider';
 import Reveal from './Reveal';
+import { accent } from './accents';
 
 // Setup Guide — answers the question How It Works leaves open: "OK, but what do I
 // physically need?" Three honest recipes — every one is just a
@@ -19,7 +20,7 @@ export default function SetupSection() {
 
       <div className={styles.setupGrid}>
         <Reveal delay={0}>
-          <div className={styles.setupCard} style={{ '--accent': '#06b6d4' } as React.CSSProperties}>
+          <div className={styles.setupCard} style={accent('#06b6d4')}>
             <span className={styles.setupTag}>{t('home.setup.card1.tag')}</span>
             <h3 className={styles.setupTitle}>{t('home.setup.card1.title')}</h3>
             <p className={styles.setupDesc}>
@@ -35,7 +36,7 @@ export default function SetupSection() {
         </Reveal>
 
         <Reveal delay={100}>
-          <div className={styles.setupCard} style={{ '--accent': '#a855f7' } as React.CSSProperties}>
+          <div className={styles.setupCard} style={accent('#a855f7')}>
             <span className={styles.setupTag}>{t('home.setup.card2.tag')}</span>
             <h3 className={styles.setupTitle}>{t('home.setup.card2.title')}</h3>
             <p className={styles.setupDesc}>
@@ -53,7 +54,7 @@ export default function SetupSection() {
         </Reveal>
 
         <Reveal delay={200}>
-          <div className={styles.setupCard} style={{ '--accent': '#ec4899' } as React.CSSProperties}>
+          <div className={styles.setupCard} style={accent('#ec4899')}>
             <span className={styles.setupTag}>{t('home.setup.card3.tag')}</span>
             <h3 className={styles.setupTitle}>{t('home.setup.card3.title')}</h3>
             <p className={styles.setupDesc}>

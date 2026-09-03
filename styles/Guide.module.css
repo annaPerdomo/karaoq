@@ -388,3 +388,21 @@
 @media (prefers-reduced-motion: reduce) {
   .back, .btnPrimary, .btnOutline, .relatedLink, .itemName { transition: none; }
 }
+
+/* ─── Calm on a smart TV ───
+   Twin of the prefers-reduced-motion block above. Smart TVs never report that
+   preference, so those rules never reach the devices that need them most: a
+   TV's GPU is the one that actually drops frames on an infinite animation.
+   `data-tv` is set on <html> before the first paint (pages/_document.js).
+
+   Generated from the block above, and tests/lib/calmCss.test.ts fails if the
+   two ever drift — edit the reduced-motion block, then re-run that test. */
+/* @calm-twin-start */
+html[data-tv] .back,
+html[data-tv] .btnPrimary,
+html[data-tv] .btnOutline,
+html[data-tv] .relatedLink,
+html[data-tv] .itemName {
+  transition: none;
+}
+/* @calm-twin-end */

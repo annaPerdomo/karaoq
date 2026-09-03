@@ -4,6 +4,7 @@ import {
   alphaSource,
   decodedWithAlpha,
   forcedSource,
+  isTvBrowser,
   prefersReducedData,
   POSTER,
   WEBM,
@@ -52,6 +53,10 @@ export default function HeroStage() {
       // film, since a diagnostic URL can be shared or bookmarked.
       const forced = forcedSource();
       if (mq.matches || prefersReducedData() || forced === null) return setSrc(null);
+      // A TV vetoes the film too, but only when `?film=` hasn't named it:
+      // that override is the one way to inspect the film on a set with no
+      // devtools, so it must survive the check it exists to investigate.
+      if (forced === undefined && isTvBrowser()) return setSrc(null);
       setSrc(forced ?? (alphaOkRef.current ? alphaSource() : null));
     };
     apply();

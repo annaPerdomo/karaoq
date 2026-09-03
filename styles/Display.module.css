@@ -1,6 +1,7 @@
 .main {
   --acc-a: #ff2d78;
   --acc-b: #00f0ff;
+  --acc-b-rgb: 0, 240, 255;
   /* RGB triplet (no alpha) — themes retint all the chrome by overriding just this. */
   --disp-surface-rgb: 10, 10, 25;
   height: 100dvh;
@@ -20,6 +21,7 @@
 .themeMinimal {
   --acc-a: #aab0c0;
   --acc-b: #d7dae2;
+  --acc-b-rgb: 215, 218, 226;
   --bg-primary: #0a0a0c;
   --bg-secondary: #151517;
   --disp-surface-rgb: 10, 10, 12;
@@ -842,3 +844,17 @@
     font-size: 2rem;
   }
 }
+
+/* ─── Calm on a smart TV ───
+   Twin of the prefers-reduced-motion block above. Smart TVs never report that
+   preference, so those rules never reach the devices that need them most: a
+   TV's GPU is the one that actually drops frames on an infinite animation.
+   `data-tv` is set on <html> before the first paint (pages/_document.js).
+
+   Generated from the block above, and tests/lib/calmCss.test.ts fails if the
+   two ever drift — edit the reduced-motion block, then re-run that test. */
+/* @calm-twin-start */
+html[data-tv] .themeNeon .nowGlow {
+  animation: none;
+}
+/* @calm-twin-end */

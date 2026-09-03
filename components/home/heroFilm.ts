@@ -1,5 +1,6 @@
 // Sources for the landing hero's alpha film, rendered from /demo/hero-video by
 // video/hero-demo/capture.mjs + build.sh. Rationale: docs/hero-demo-video.md.
+import { TV_PATTERN } from '../../lib/deviceType';
 export const POSTER = '/demo/hero-demo-poster.webp';
 export const WEBM = '/demo/hero-demo.webm';
 export const HEVC = '/demo/hero-demo.mp4';
@@ -83,6 +84,16 @@ export function forcedSource(): string | null | undefined {
     default:
       return undefined;
   }
+}
+
+/**
+ * Tizen 6.5 (Chrome 108) decodes the VP9 but discards its alpha plane, so the
+ * hero paints an opaque black box. `decodedWithAlpha` can't catch it: those
+ * decoders return an all-black readback, on which the probe fails open.
+ */
+export function isTvBrowser() {
+  if (typeof navigator === 'undefined') return false;
+  return TV_PATTERN.test(navigator.userAgent);
 }
 
 export function prefersReducedData() {

@@ -1,6 +1,7 @@
 .main {
   --acc-a: #ff2d78;
   --acc-b: #00f0ff;
+  --acc-b-rgb: 0, 240, 255;
   height: 100dvh;
   height: 100vh; /* fallback for older browsers */
   display: flex;
@@ -17,6 +18,7 @@
 .themeMinimal {
   --acc-a: #aab0c0;
   --acc-b: #d7dae2;
+  --acc-b-rgb: 215, 218, 226;
   --bg-primary: #0a0a0c;
   --bg-secondary: #151517;
 }
