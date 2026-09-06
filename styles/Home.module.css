@@ -332,7 +332,8 @@ html[data-tv] .dpNumB, html[data-tv] .dpCount3 { animation: none !important; opa
   50% { transform: rotate(-12deg); }
 }
 
-/* DOM order is sign → pitch → stage → form (see the stacked breakpoint below). The
+/* DOM order is sign → pitch → stage → form; stacked, `order` moves the form
+   ahead of the stage (see the stacked breakpoint below). The
    copy column is fixed at 40rem — enough for the English headline's two
    authored lines (~620px) — so every px above that lands on the stage. */
 .heroInner {
@@ -2607,8 +2608,10 @@ html[data-tv] .dpNumB, html[data-tv] .dpCount3 { animation: none !important; opa
    Responsive
    ═══════════════════════════════════════════ */
 /* Side by side is only worth it while the stage keeps ~520px — below that the
-   film stops being readable as a demo. Stacking follows DOM order, so the
-   stage lands between the pitch and the form: read it, see it, start a room. */
+   film stops being readable as a demo. Stacked, the form comes before the
+   stage: on a tablet the film is tall enough that DOM order would push "start
+   a room" under the fold, and the primary action has to stay on the first
+   screen. Read it, start a room, then see it running. */
 @media (max-width: 1280px) {
   .heroInner {
     /* minmax(0, …): a plain 1fr's auto minimum would let the film widen the
@@ -2626,6 +2629,12 @@ html[data-tv] .dpNumB, html[data-tv] .dpCount3 { animation: none !important; opa
     grid-row: auto;
     align-self: auto;
   }
+  /* Visual order only — the DOM keeps pitch → stage → form, which is the
+     reading order side by side and stays a sane tab order here. */
+  .brandMark { order: 1; }
+  .heroContent { order: 2; }
+  .heroCta { order: 3; }
+  .heroStage { order: 4; }
   .heroContent {
     text-align: center;
     align-items: center;
@@ -2633,14 +2642,14 @@ html[data-tv] .dpNumB, html[data-tv] .dpCount3 { animation: none !important; opa
   .brandMark { margin-bottom: 0; }
   .heroCta { align-items: center; }
   .heroSub { margin-left: auto; margin-right: auto; }
-  /* The stage sits right below and the row gap provides the rhythm; the pitch
+  /* The form sits right below and the row gap provides the rhythm; the pitch
      shouldn't add its own trailing space (sub or resume banner, whichever
      comes last). */
   .heroContent > :last-child { margin-bottom: 0; }
   /* Stacked, a full-width 4:3 would tower over the fold — keep the stage to
      the same measure as the copy above it. */
   .heroStage { width: 100%; max-width: 40rem; }
-  /* Stacked, the stage sits between pitch and form: the desktop 6.6s delay
+  /* Stacked, the stage sits below the form: the desktop 6.6s delay
      would leave a blank gap here, 0s would skip the arrival beat. Keep
      .stageFilm in sync with REVEAL_MS_MOBILE, which starts playback. */
   .stageGlow { animation-delay: 2.4s; }
