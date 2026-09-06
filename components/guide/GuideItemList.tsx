@@ -2,50 +2,35 @@ import * as React from 'react';
 
 import styles from '../../styles/Guide.module.css';
 import { useT } from '../../lib/i18n/I18nProvider';
-import { hasSponsoredItems, withAffiliateTag, type Guide } from '../../lib/guides';
+import { firstSponsoredPlacement, unplacedItemIndices, type Guide } from '../../lib/guides';
+import GuideItemCard from './GuideItemCard';
 
 interface GuideItemListProps {
   guide: Guide;
 }
 
 /**
- * External-resource list section (gear picks, YouTube channels). Copy comes
- * from `guide.<id>.itemN.name/.body`; the URLs live in lib/guides.ts. Affiliate
- * entries get rel="sponsored nofollow" and pull the shared disclosure line in
- * above the list — both are required for search engines and the FTC.
+ * Foot-of-article list of the items placed nowhere inline. The disclosure
+ * renders once per page, so it shows here only when no inline group carried it.
  */
 const GuideItemList = ({ guide }: GuideItemListProps): React.ReactElement | null => {
   const { t } = useT();
-  const items = guide.items ?? [];
+  const items = unplacedItemIndices(guide);
   if (items.length === 0) return null;
 
   const g = (suffix: string) => t(`guide.${guide.id}.${suffix}`);
+  const sponsored = items.some((i) => guide.items?.[i - 1]?.sponsored);
+  const showDisclosure = sponsored && firstSponsoredPlacement(guide) === null;
 
   return (
     <section className={styles.items}>
       <h2 className={styles.itemsHeading}>{g('itemsHeading')}</h2>
       <p className={styles.itemsIntro}>{g('itemsIntro')}</p>
-      {hasSponsoredItems(guide) && (
-        <p className={styles.disclosure}>{t('guide.affiliateDisclosure')}</p>
-      )}
+      {showDisclosure && <p className={styles.disclosure}>{t('guide.affiliateDisclosure')}</p>}
       <ol className={styles.itemList}>
-        {items.map((item, i) => {
-          const n = i + 1;
-          return (
-            <li key={n} className={styles.item}>
-              <a
-                href={withAffiliateTag(item.href)}
-                target="_blank"
-                rel={item.sponsored ? 'sponsored nofollow noopener' : 'noopener'}
-                className={styles.itemName}
-              >
-                {g(`item${n}.name`)}
-                <span className={styles.itemArrow} aria-hidden="true">↗</span>
-              </a>
-              <p className={styles.itemBody}>{g(`item${n}.body`)}</p>
-            </li>
-          );
-        })}
+        {items.map((i) => (
+          <GuideItemCard key={i} guide={guide} n={i} />
+        ))}
       </ol>
     </section>
   );

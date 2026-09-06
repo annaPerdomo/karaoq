@@ -13,7 +13,7 @@ import {
   isLocale,
   type Locale,
 } from '../../lib/i18n/config';
-import { GUIDE_SLUGS, indices, guideBySlug, guideUrl } from '../../lib/guides';
+import { GUIDE_SLUGS, hasInlinePlacements, indices, guideBySlug, guideUrl } from '../../lib/guides';
 import type { Catalog } from '../../lib/i18n/messages';
 
 interface GuidePageProps {
@@ -76,7 +76,9 @@ const GuidePage: NextPage<GuidePageProps> = ({ guideId, slug, pageLocale }) => {
       ? {
           '@context': 'https://schema.org',
           '@type': 'ItemList',
-          name: g('itemsHeading'),
+          // Schema names must appear on the page: with everything placed inline
+          // the foot list's heading never renders, so use the inline one.
+          name: hasInlinePlacements(guide) ? t('guide.buyHeading') : g('itemsHeading'),
           itemListElement: (guide.items ?? []).map((item, i) => ({
             '@type': 'ListItem',
             position: i + 1,

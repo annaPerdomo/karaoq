@@ -5,10 +5,11 @@ import * as React from 'react';
 import styles from '../styles/Guide.module.css';
 import { useT } from '../lib/i18n/I18nProvider';
 import { DEFAULT_LOCALE, isLocale, type Locale } from '../lib/i18n/config';
-import { GUIDES, indices, guideById, type Guide } from '../lib/guides';
+import { GUIDES, guideById, type Guide } from '../lib/guides';
 import GuideFaq from './guide/GuideFaq';
 import GuideItemList from './guide/GuideItemList';
 import GuideSections from './guide/GuideSections';
+import GuideSteps from './guide/GuideSteps';
 import LanguageSwitcher from './LanguageSwitcher';
 
 interface GuideArticleProps {
@@ -66,22 +67,7 @@ const GuideArticle = ({ guideId }: GuideArticleProps): React.ReactElement => {
 
         {guide && <GuideSections guide={guide} />}
 
-        {guide && guide.stepCount > 0 && (
-          <>
-            <h2 className={styles.stepsHeading}>{t('guide.stepsHeading')}</h2>
-            <ol className={styles.steps}>
-              {indices(guide.stepCount).map((n) => (
-                <li key={n} className={styles.step}>
-                  <span className={styles.stepNum} aria-hidden="true">{n}</span>
-                  <div className={styles.stepBody}>
-                    <h3 className={styles.stepTitle}>{g(`step${n}.title`)}</h3>
-                    <p className={styles.stepText}>{g(`step${n}.body`)}</p>
-                  </div>
-                </li>
-              ))}
-            </ol>
-          </>
-        )}
+        {guide && <GuideSteps guide={guide} />}
 
         {guide && <GuideItemList guide={guide} />}
         {guide && <GuideFaq guide={guide} />}

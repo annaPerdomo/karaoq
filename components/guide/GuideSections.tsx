@@ -3,6 +3,7 @@ import * as React from 'react';
 import styles from '../../styles/Guide.module.css';
 import { useT } from '../../lib/i18n/I18nProvider';
 import { indices, type Guide } from '../../lib/guides';
+import GuideInlineItems from './GuideInlineItems';
 
 interface GuideSectionsProps {
   guide: Guide;
@@ -24,6 +25,7 @@ const GuideSections = ({ guide }: GuideSectionsProps): React.ReactElement | null
             .map((para, i) => (
               <p key={i} className={styles.sectionText}>{para}</p>
             ))}
+          <GuideInlineItems guide={guide} where="section" n={n} />
         </section>
       ))}
     </div>

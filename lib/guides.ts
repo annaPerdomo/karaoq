@@ -47,6 +47,14 @@ export interface Guide {
   faqCount: number;
   /** External resource list; entry N's copy lives at `guide.<id>.itemN.*`. */
   items?: GuideItem[];
+  /**
+   * 1-based `items` indices keyed by the section or step that recommends them.
+   * Anything placed nowhere falls through to the list at the foot of the article.
+   */
+  sectionItems?: Record<number, number[]>;
+  stepItems?: Record<number, number[]>;
+  /** 1-based step index the demo film plays inside; unset shows no film. */
+  demoStep?: number;
   /** First published (ISO date) — Article schema datePublished. */
   published: string;
   /** Last substantive revision (ISO date) — shown on the page and in Article schema. */
@@ -94,6 +102,7 @@ export const GUIDES: Guide[] = [
     related: ['setups', 'tv', 'gear'],
     sectionCount: 3,
     stepCount: 4,
+    demoStep: 1,
     faqCount: 4,
     published: '2026-07-04',
     updated: '2026-09-03',
@@ -104,6 +113,7 @@ export const GUIDES: Guide[] = [
     related: ['setups', 'gear', 'athome'],
     sectionCount: 7,
     stepCount: 4,
+    demoStep: 1,
     faqCount: 5,
     published: '2026-07-04',
     updated: '2026-09-03',
@@ -126,6 +136,7 @@ export const GUIDES: Guide[] = [
     stepCount: 4,
     faqCount: 6,
     items: SETUP_ITEMS,
+    sectionItems: { 2: [1], 3: [2, 3, 7], 4: [4, 5, 8], 5: [6] },
     published: '2026-09-03',
     updated: '2026-09-03',
   },
@@ -135,6 +146,7 @@ export const GUIDES: Guide[] = [
     related: ['setups', 'athome', 'youtube'],
     sectionCount: 0,
     stepCount: 4,
+    demoStep: 1,
     faqCount: 0,
     published: '2026-07-04',
     updated: '2026-07-04',
@@ -145,8 +157,10 @@ export const GUIDES: Guide[] = [
     related: ['setups', 'tv', 'athome'],
     sectionCount: 3,
     stepCount: 4,
+    demoStep: 1,
     faqCount: 7,
     items: GEAR_ITEMS,
+    stepItems: { 2: [1, 3, 6], 3: [2, 5], 4: [4] },
     published: '2026-07-04',
     updated: '2026-09-03',
   },
@@ -183,7 +197,50 @@ export function indices(count: number): number[] {
   return Array.from({ length: count }, (_, i) => i + 1);
 }
 
-/** True if any item on the guide is an affiliate link (drives the disclosure). */
-export function hasSponsoredItems(guide: Guide): boolean {
-  return (guide.items ?? []).some((i) => i.sponsored);
+/** 1-based item indices placed under a given section or step (empty if none). */
+export function placedItemIndices(
+  guide: Guide,
+  where: 'section' | 'step',
+  n: number
+): number[] {
+  const map = where === 'section' ? guide.sectionItems : guide.stepItems;
+  return map?.[n] ?? [];
+}
+
+/**
+ * Non-empty inline groups in document order. Bounded by `sectionCount`/`stepCount`
+ * on purpose: a key past those renders nowhere, so it must not count as placed.
+ */
+function placementEntries(guide: Guide): { where: 'section' | 'step'; n: number; items: number[] }[] {
+  const entries: { where: 'section' | 'step'; n: number; items: number[] }[] = [];
+  for (const where of ['section', 'step'] as const) {
+    const count = where === 'section' ? guide.sectionCount : guide.stepCount;
+    for (const n of indices(count)) {
+      const items = placedItemIndices(guide, where, n);
+      if (items.length > 0) entries.push({ where, n, items });
+    }
+  }
+  return entries;
+}
+
+/** 1-based indices of items shown nowhere inline — these make up the foot list. */
+export function unplacedItemIndices(guide: Guide): number[] {
+  const placed = new Set(placementEntries(guide).flatMap((e) => e.items));
+  return indices((guide.items ?? []).length).filter((n) => !placed.has(n));
+}
+
+/**
+ * The first inline group carrying an affiliate link — the first *sponsored*
+ * group, not the first group, or a guide opening with unpaid links discloses
+ * nowhere. Null leaves the disclosure to the foot list.
+ */
+export function firstSponsoredPlacement(guide: Guide): { where: 'section' | 'step'; n: number } | null {
+  const entry = placementEntries(guide).find((e) =>
+    e.items.some((i) => guide.items?.[i - 1]?.sponsored)
+  );
+  return entry ? { where: entry.where, n: entry.n } : null;
+}
+
+export function hasInlinePlacements(guide: Guide): boolean {
+  return placementEntries(guide).length > 0;
 }
