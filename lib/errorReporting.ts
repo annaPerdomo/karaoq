@@ -34,6 +34,34 @@ function isOpaqueThirdPartyError(text: string, stack?: unknown): boolean {
   return !stack && /^script error\.?$/i.test(text.trim());
 }
 
+const EXTENSION_URL = /\b(?:chrome|moz|safari|safari-web)-extension:\/\//;
+const HTTP_URL = /https?:\/\/[^\s)]+/;
+// V8 frames start with "at "; Firefox/Safari frames are "fn@url:line:col".
+const FRAME_LINE = /^\s*at\s|@\S+:\d+/;
+// Off-origin but ours: usePlaybackError injects YouTube's iframe_api, so a
+// www-widgetapi.js frame is a mount-order or teardown bug we own.
+const OWNED_THIRD_PARTY = /^https:\/\/(?:www\.)?youtube\.com\//;
+// An injected script has a position but no URL. Bare "<anonymous>" is a V8
+// native frame (Array.map, new Promise) and appears in first-party stacks.
+const INJECTED_FRAME = /<anonymous>:\d+/;
+
+/**
+ * Drops extension, injected-script and other-origin noise that would otherwise
+ * outrank every real bug in the Errors view. A frame we can't place counts as
+ * ours, so only an entirely foreign stack is dropped — bias is toward reporting.
+ */
+export function isForeignStack(stack: unknown, origin: string): boolean {
+  if (typeof stack !== "string") return false;
+  const frames = stack.split("\n").filter((line) => FRAME_LINE.test(line));
+  if (frames.length === 0) return false;
+  return frames.every((line) => {
+    if (EXTENSION_URL.test(line)) return true;
+    const url = line.match(HTTP_URL)?.[0];
+    if (url) return !url.startsWith(origin) && !OWNED_THIRD_PARTY.test(url);
+    return INJECTED_FRAME.test(line);
+  });
+}
+
 export function reportClientError(
   source: "window" | "promise",
   message: unknown,
@@ -43,6 +71,7 @@ export function reportClientError(
   const text = typeof message === "string" ? message : String(message ?? "");
   if (!text) return;
   if (isOpaqueThirdPartyError(text, stack)) return;
+  if (isForeignStack(stack, window.location.origin)) return;
 
   if (reportsSent >= MAX_REPORTS_PER_LOAD) return;
   const key = `${source}:${text}`;
