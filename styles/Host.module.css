@@ -334,6 +334,9 @@
   padding: 2rem;
 }
 
+/* Nothing here may set `position` on the staged children: a `> *` rule ties with
+   .scene's own class (Countdown.module.css) and wins in a production build only,
+   collapsing the crowd. Held by tests/lib/stagedStackingCss.test.ts. */
 .songControlStaged {
   position: relative;
   align-self: stretch;
@@ -341,11 +344,6 @@
   isolation: isolate;
   padding: 0;
   gap: 0;
-}
-
-.songControlStaged > * {
-  position: relative;
-  z-index: 1;
 }
 
 .readyLabel {
@@ -405,6 +403,10 @@
 }
 
 .switchModeLink {
+  /* Own stacking, not a `> *` rule: beside the count-in's opaque crowd scene, a
+     static element paints below a positioned z-index:0 one. */
+  position: relative;
+  z-index: 1;
   margin-top: 1.5rem;
   background: none;
   border: none;
@@ -2036,6 +2038,9 @@
 }
 
 .cohostNote {
+  /* See .switchModeLink: it shares the staged container with the crowd scene. */
+  position: relative;
+  z-index: 1;
   margin-top: 1.5rem;
   font-size: 0.85rem;
   color: rgba(255, 255, 255, 0.45);
