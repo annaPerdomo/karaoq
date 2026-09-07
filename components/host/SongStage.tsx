@@ -3,6 +3,7 @@ import styles from "../../styles/Host.module.css";
 import { QueueEntry } from "../../pages/api/types";
 import { useT } from "../../lib/i18n/I18nProvider";
 import { EmptyStage } from "./EmptyStage";
+import { StageLoading } from "./StageLoading";
 import { embedSrc } from "../player/embed";
 import { PlaybackErrorNotice } from "../player/PlaybackErrorNotice";
 import { usePlaybackError } from "../player/usePlaybackError";
@@ -10,7 +11,7 @@ import { formatSongTitle } from "./utils";
 import { AutoStartPanel } from "./AutoStartPanel";
 import WrapUpPill from "../player/WrapUpPill";
 
-// The main stage: loading spinner, the current song's player/status panel (which
+// The main stage: the loading state, the current song's player/status panel (which
 // varies by co-host / TV / here / other-device), and the empty-room states.
 // Playback transport lives below in its own bar so there's one set of controls.
 export function SongStage({
@@ -96,10 +97,7 @@ export function SongStage({
     ) : null;
   const stageClass = `${styles.songControl} ${countdown ? styles.songControlStaged : ""}`;
   return loading ? (
-    <div className={styles.emptyState}>
-      <div className={styles.spinner} />
-      <p>{t('host.loadingRoom')}</p>
-    </div>
+    <StageLoading />
   ) : currentSong ? (
     remote ? (
       /* Co-host mode: status only, no player or audio. */
