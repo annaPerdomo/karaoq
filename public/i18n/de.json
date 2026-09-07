@@ -768,5 +768,16 @@
   "host.settings.songLimitNone": "Jeder Song läuft bis zum Ende",
   "host.toast.songLimitOn": "Songs auf {n} Min begrenzt",
   "host.toast.songLimitOff": "Zeitlimit pro Song aus",
-  "host.autoStart.turnOff": "Auto-Weiter ausschalten"
+  "host.autoStart.turnOff": "Auto-Weiter ausschalten",
+  "sing.postpone.lead": "Noch nicht bereit?",
+  "sing.postpone.end": "Ans Ende schieben",
+  "sing.postpone.open": "Andere vorlassen",
+  "sing.postpone.count.one": "{count} Song vor mir",
+  "sing.postpone.count.other": "{count} Songs vor mir",
+  "sing.postpone.fewer": "Weniger",
+  "sing.postpone.more": "Mehr",
+  "sing.postpone.eta": "Du wärst in ~{time} dran",
+  "sing.postpone.etaLast": "Du wärst als Letzte:r dran, in ~{time}",
+  "sing.postpone.confirm": "Song verschieben",
+  "sing.postpone.cancel": "Platz behalten"
 }

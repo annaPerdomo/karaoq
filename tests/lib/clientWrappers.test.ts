@@ -241,6 +241,7 @@ describe("Client API wrappers", () => {
       ["setAutoAdvance", (m) => (m.default as (r: string, p: { enabled: boolean }) => Promise<boolean>)("R", { enabled: true })],
       ["cancelAutoStart", (m) => (m.default as (r: string) => Promise<boolean>)("R")],
       ["setSongLimit", (m) => (m.default as (r: string, s: number | null) => Promise<boolean>)("R", 240)],
+      ["postponeEntry", (m) => (m.default as (r: string, e: string, a: number | "end") => Promise<boolean>)("R", "e", 2)],
     ];
 
     it.each(wrappers)("%s resolves false", async (name, call) => {

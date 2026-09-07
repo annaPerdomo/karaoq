@@ -41,6 +41,7 @@ const MobileQueueDrawer = ({
     onReaction,
     reactionCooldown,
     lastSentEmoji,
+    onPostpone,
   } = view;
 
   const [dragHeight, setDragHeight] = React.useState<number | null>(null);
@@ -176,6 +177,7 @@ const MobileQueueDrawer = ({
             estimate={estimate}
             sessionEndsAt={sessionEndsAt}
             isPlaying={isPlaying}
+            onPostpone={onPostpone}
           />
         )}
 

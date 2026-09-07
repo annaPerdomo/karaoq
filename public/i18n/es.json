@@ -768,5 +768,16 @@
   "host.settings.songLimitNone": "Cada canción suena entera",
   "host.toast.songLimitOn": "Canciones limitadas a {n} min",
   "host.toast.songLimitOff": "Límite por canción desactivado",
-  "host.autoStart.turnOff": "Desactivar avance automático"
+  "host.autoStart.turnOff": "Desactivar avance automático",
+  "sing.postpone.lead": "¿Aún no?",
+  "sing.postpone.end": "Ponerme al final",
+  "sing.postpone.open": "Dejar pasar a otros",
+  "sing.postpone.count.one": "{count} canción antes que yo",
+  "sing.postpone.count.other": "{count} canciones antes que yo",
+  "sing.postpone.fewer": "Menos",
+  "sing.postpone.more": "Más",
+  "sing.postpone.eta": "Te tocaría en ~{time}",
+  "sing.postpone.etaLast": "Cantarías al final, en ~{time}",
+  "sing.postpone.confirm": "Mover mi canción",
+  "sing.postpone.cancel": "Mantener mi turno"
 }

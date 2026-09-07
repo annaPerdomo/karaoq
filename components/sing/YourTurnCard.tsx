@@ -14,6 +14,7 @@ import {
   songsThatFit,
 } from '../../lib/queueTime';
 import { useT } from '../../lib/i18n/I18nProvider';
+import PostponeControl from './PostponeControl';
 
 export interface MyTurn {
   entry: QueueEntry;
@@ -66,6 +67,7 @@ const YourTurnCard = ({
   estimate,
   sessionEndsAt,
   isPlaying,
+  onPostpone,
 }: {
   /** queue.slice(activeVideoIndex) — the song on stage first. */
   upcoming: QueueEntry[];
@@ -73,6 +75,8 @@ const YourTurnCard = ({
   estimate: QueueEstimate;
   sessionEndsAt: number | null;
   isPlaying: boolean;
+  /** Absent where the card is read-only. */
+  onPostpone?: (entryId: string, after: number | "end") => Promise<boolean>;
 }): React.ReactElement | null => {
   const { t, tn, locale } = useT();
   const mine = myTurnState(upcoming, userName, estimate, isPlaying, sessionEndsAt);
@@ -129,8 +133,24 @@ const YourTurnCard = ({
           })}
         </span>
       )}
+      {onPostpone && !mine.onStage && behind(upcoming, mine.entry.id) > 0 && (
+        <PostponeControl
+          // Remount per entry so a fresh song starts the picker closed.
+          key={mine.entry.id}
+          entryId={mine.entry.id}
+          behind={behind(upcoming, mine.entry.id)}
+          estimate={estimate}
+          onPostpone={onPostpone}
+        />
+      )}
     </div>
   );
 };
+
+/** Songs queued behind theirs — what a postpone can move past. */
+function behind(upcoming: QueueEntry[], entryId: string): number {
+  const at = upcoming.findIndex((e) => e.id === entryId);
+  return at === -1 ? 0 : upcoming.length - 1 - at;
+}
 
 export default YourTurnCard;

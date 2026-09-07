@@ -768,5 +768,16 @@
   "host.settings.songLimitNone": "Každá píseň se přehraje celá",
   "host.toast.songLimitOn": "Písně omezeny na {n} min",
   "host.toast.songLimitOff": "Časový limit písně vypnutý",
-  "host.autoStart.turnOff": "Vypnout automatické pokračování"
+  "host.autoStart.turnOff": "Vypnout automatické pokračování",
+  "sing.postpone.lead": "Ještě ne?",
+  "sing.postpone.end": "Přesunout mě na konec",
+  "sing.postpone.open": "Pustit ostatní přede mě",
+  "sing.postpone.count.one": "{count} píseň přede mnou",
+  "sing.postpone.count.other": "Písniček přede mnou: {count}",
+  "sing.postpone.fewer": "Méně",
+  "sing.postpone.more": "Více",
+  "sing.postpone.eta": "Byli byste na řadě za ~{time}",
+  "sing.postpone.etaLast": "Zpívali byste poslední, za ~{time}",
+  "sing.postpone.confirm": "Přesunout mou píseň",
+  "sing.postpone.cancel": "Nechat místo"
 }

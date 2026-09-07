@@ -9,6 +9,7 @@ import {
   estimateQueue,
   formatApproxDuration,
   normalizeSessionEnd,
+  postponedStartSeconds,
   roundEtaSeconds,
   runsPastEnd,
   slotFor,
@@ -314,5 +315,31 @@ describe("formatApproxDuration", () => {
 
   it("never reports a negative wait", () => {
     expect(formatApproxDuration(-500, t)).toBe("<1 min");
+  });
+});
+
+describe("postponedStartSeconds", () => {
+  const estimate = {
+    slots: [
+      { id: "a", startsInSeconds: 0, startsAt: 0, songSeconds: 200 },
+      { id: "b", startsInSeconds: 230, startsAt: 0, songSeconds: 180 },
+      { id: "c", startsInSeconds: 440, startsAt: 0, songSeconds: 240 },
+      { id: "d", startsInSeconds: 710, startsAt: 0, songSeconds: 120 },
+    ],
+    totalSeconds: 0,
+    endsAt: 0,
+    assumedSongSeconds: 180,
+    now: 0,
+  } as unknown as Parameters<typeof postponedStartSeconds>[0];
+
+  it("adds each song let past, with its changeover", () => {
+    expect(postponedStartSeconds(estimate, "b", 0)).toBe(230);
+    expect(postponedStartSeconds(estimate, "b", 1)).toBe(230 + 240 + 30);
+    expect(postponedStartSeconds(estimate, "b", 2)).toBe(230 + 240 + 30 + 120 + 30);
+  });
+
+  it("clamps past the end and is null for a song not queued", () => {
+    expect(postponedStartSeconds(estimate, "b", 10)).toBe(230 + 240 + 30 + 120 + 30);
+    expect(postponedStartSeconds(estimate, "zzz", 1)).toBeNull();
   });
 });

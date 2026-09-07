@@ -768,5 +768,16 @@
   "host.settings.songLimitNone": "Buo ang bawat kanta",
   "host.toast.songLimitOn": "Limitado sa {n} min ang mga kanta",
   "host.toast.songLimitOff": "Naka-off ang limitasyon ng kanta",
-  "host.autoStart.turnOff": "I-off ang auto-advance"
+  "host.autoStart.turnOff": "I-off ang auto-advance",
+  "sing.postpone.lead": "Hindi pa handa?",
+  "sing.postpone.end": "Ilipat ako sa dulo",
+  "sing.postpone.open": "Pauna muna ang iba",
+  "sing.postpone.count.one": "{count} kanta ang mauuna",
+  "sing.postpone.count.other": "{count} kanta ang mauuna",
+  "sing.postpone.fewer": "Bawasan",
+  "sing.postpone.more": "Dagdagan",
+  "sing.postpone.eta": "Ikaw na sa ~{time}",
+  "sing.postpone.etaLast": "Ikaw ang huli, sa ~{time}",
+  "sing.postpone.confirm": "Ilipat ang kanta ko",
+  "sing.postpone.cancel": "Panatilihin ang pwesto ko"
 }

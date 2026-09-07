@@ -768,5 +768,16 @@
   "host.settings.songLimitNone": "Cada música toca até o fim",
   "host.toast.songLimitOn": "Músicas limitadas a {n} min",
   "host.toast.songLimitOff": "Limite por música desligado",
-  "host.autoStart.turnOff": "Desligar avanço automático"
+  "host.autoStart.turnOff": "Desligar avanço automático",
+  "sing.postpone.lead": "Ainda não?",
+  "sing.postpone.end": "Me colocar no fim",
+  "sing.postpone.open": "Deixar outros passarem",
+  "sing.postpone.count.one": "{count} música antes de mim",
+  "sing.postpone.count.other": "{count} músicas antes de mim",
+  "sing.postpone.fewer": "Menos",
+  "sing.postpone.more": "Mais",
+  "sing.postpone.eta": "Você cantaria em ~{time}",
+  "sing.postpone.etaLast": "Você cantaria por último, em ~{time}",
+  "sing.postpone.confirm": "Mover minha música",
+  "sing.postpone.cancel": "Manter meu lugar"
 }

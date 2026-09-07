@@ -768,5 +768,16 @@
   "host.settings.songLimitNone": "모든 곡을 끝까지 재생해요",
   "host.toast.songLimitOn": "곡당 {n}분으로 제한",
   "host.toast.songLimitOff": "곡당 시간 제한 끔",
-  "host.autoStart.turnOff": "자동 다음 곡 끄기"
+  "host.autoStart.turnOff": "자동 다음 곡 끄기",
+  "sing.postpone.lead": "아직 준비 안 됐나요?",
+  "sing.postpone.end": "맨 뒤로 보내기",
+  "sing.postpone.open": "다른 사람 먼저",
+  "sing.postpone.count.one": "{count}곡 먼저",
+  "sing.postpone.count.other": "{count}곡 먼저",
+  "sing.postpone.fewer": "줄이기",
+  "sing.postpone.more": "늘리기",
+  "sing.postpone.eta": "약 {time} 후 내 차례",
+  "sing.postpone.etaLast": "맨 마지막, 약 {time} 후",
+  "sing.postpone.confirm": "내 곡 옮기기",
+  "sing.postpone.cancel": "자리 유지"
 }

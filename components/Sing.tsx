@@ -14,13 +14,14 @@ import { startSessionTracking } from '../app/queue/trackSession';
 import { startVisiblePolling } from '../app/queue/pollWhileVisible';
 import { useSearchBackNotice } from '../app/queue/useSearchBackNotice';
 import SearchBackToast from './search/SearchBackToast';
-import { DisplayTheme, QueueEntry, Reaction, normalizeDisplayConfig } from '../pages/api/types';
+import { DisplayTheme, QueueEntry, Reaction, Room, normalizeDisplayConfig } from '../pages/api/types';
 import { useT } from '../lib/i18n/I18nProvider';
 import { getStoredName, setStoredName } from '../lib/username';
 import LanguageSwitcher from './LanguageSwitcher';
 import SingSidebar from './sing/SingSidebar';
 import MobileQueueDrawer from './sing/MobileQueueDrawer';
 import { myTurnState } from './sing/YourTurnCard';
+import postponeEntry from '../app/queue/postponeEntry';
 import { useRoomTiming } from './hooks/useRoomTiming';
 
 
@@ -161,6 +162,19 @@ const Sing = (): React.ReactElement => {
   const { estimate, sessionEndsAt } = timing;
   const applyTiming = timing.adoptRoom;
 
+  // animateReactions=false on the first load only seeds the seen-set.
+  function adoptRoom(room: Room, animateReactions = true) {
+    setQueue(room.queue);
+    applyBoards(room);
+    setActiveIndex(room.activeVideoIndex);
+    setIsPlaying(room.isPlaying ?? false);
+    applyTiming(room);
+    setReactionsOn(room.reactionsEnabled ?? true);
+    setTheme(normalizeDisplayConfig(room.displayConfig).theme);
+    applySearchBack(room);
+    processReactions(room.reactions, animateReactions);
+  }
+
   React.useEffect(() => {
     if (!joinCode) return;
 
@@ -173,15 +187,7 @@ const Sing = (): React.ReactElement => {
       } else if (room === "error") {
         setLoadError(true);
       } else {
-        setQueue(room.queue);
-        applyBoards(room);
-        setActiveIndex(room.activeVideoIndex);
-        setIsPlaying(room.isPlaying ?? false);
-        applyTiming(room);
-        setReactionsOn(room.reactionsEnabled ?? true);
-        setTheme(normalizeDisplayConfig(room.displayConfig).theme);
-        applySearchBack(room);
-        processReactions(room.reactions, false);
+        adoptRoom(room, false);
         setLoadError(false);
       }
       setLoading(false);
@@ -202,15 +208,7 @@ const Sing = (): React.ReactElement => {
         return;
       }
       notFoundPollsRef.current = 0;
-      setQueue(room.queue);
-      applyBoards(room);
-      setActiveIndex(room.activeVideoIndex);
-      setIsPlaying(room.isPlaying ?? false);
-      applyTiming(room);
-      setReactionsOn(room.reactionsEnabled ?? true);
-      setTheme(normalizeDisplayConfig(room.displayConfig).theme);
-      applySearchBack(room);
-      processReactions(room.reactions);
+      adoptRoom(room);
       setLoadError(false);
       setLoading(false);
     }, POLL_INTERVAL);
@@ -236,6 +234,16 @@ const Sing = (): React.ReactElement => {
     spawnReactionPops([{ id, emoji, userName: username.trim(), timestamp: Date.now() }]);
     const ok = await postReaction(joinCode, id, emoji, username.trim());
     if (!ok) setLastSentEmoji(null);
+  }
+
+  // The server decides the slot, and the next poll is up to 5s away — too long
+  // to leave the card saying "up next".
+  async function postpone(entryId: string, after: number | 'end'): Promise<boolean> {
+    if (!joinCode) return false;
+    const ok = await postponeEntry(joinCode, entryId, after);
+    const room = await getRoom(joinCode);
+    if (typeof room !== 'string') adoptRoom(room);
+    return ok;
   }
 
   const upcomingSongs = queue.slice(activeIndex);
@@ -309,6 +317,7 @@ const Sing = (): React.ReactElement => {
     onReaction: sendReaction,
     reactionCooldown,
     lastSentEmoji,
+    onPostpone: postpone,
   };
 
   return (

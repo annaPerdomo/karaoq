@@ -25,6 +25,7 @@ export type EventType =
   | "session_end_set"
   | "auto_advance_set"
   | "song_limit_set"
+  | "song_postponed"
   | "search_failed"
   | "link_lookup";
 
@@ -66,6 +67,8 @@ export interface AnalyticsEvent {
   autoAdvance?: AutoAdvance;
   // song_limit_set: the limit set, or null when cleared.
   songLimitSeconds?: number | null;
+  // song_postponed: how far back the singer sent their own song.
+  postponedBy?: number | "end";
   // session_end_set: how far out the host set the end, or null when they cleared
   // it. A duration, not a wall-clock time — no timezone rides along.
   minutesFromNow?: number | null;

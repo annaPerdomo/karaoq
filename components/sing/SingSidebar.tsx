@@ -24,6 +24,7 @@ export interface SingQueueViewProps {
   onReaction: (emoji: string) => void;
   reactionCooldown: boolean;
   lastSentEmoji: string | null;
+  onPostpone: (entryId: string, after: number | "end") => Promise<boolean>;
 }
 
 const SingSidebar = (props: SingQueueViewProps): React.ReactElement => {
@@ -41,6 +42,7 @@ const SingSidebar = (props: SingQueueViewProps): React.ReactElement => {
     onReaction,
     reactionCooldown,
     lastSentEmoji,
+    onPostpone,
   } = props;
 
   return (
@@ -52,6 +54,7 @@ const SingSidebar = (props: SingQueueViewProps): React.ReactElement => {
           estimate={estimate}
           sessionEndsAt={sessionEndsAt}
           isPlaying={isPlaying}
+          onPostpone={onPostpone}
         />
       )}
 

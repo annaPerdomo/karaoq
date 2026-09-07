@@ -1310,3 +1310,145 @@
 .tipsBannerClose:hover {
   background: rgba(255, 255, 255, 0.14);
 }
+
+/* "Not ready?" — the singer pushing their own song back. */
+.postponeRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.35rem;
+}
+
+.postponeLead {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-right: 0.15rem;
+}
+
+.postponeBtn {
+  font-size: 0.7rem;
+  font-weight: 600;
+  font-family: inherit;
+  padding: 0.28rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 240, 255, 0.35);
+  background: rgba(0, 240, 255, 0.08);
+  color: var(--acc-b, #00f0ff);
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+}
+
+.postponeBtn:hover:not(:disabled) {
+  background: rgba(0, 240, 255, 0.16);
+  border-color: rgba(0, 240, 255, 0.6);
+}
+
+.postponeBtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.postponePicker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin-top: 0.45rem;
+  padding: 0.6rem 0.7rem;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(0, 240, 255, 0.18);
+}
+
+.postponeStepper {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.postponeStep {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-primary);
+  font-size: 1.1rem;
+  font-family: inherit;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.postponeStep:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.postponeCount {
+  min-width: 7.5rem;
+  text-align: center;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.postponeEnd {
+  margin-left: auto;
+  font-size: 0.68rem;
+  font-weight: 600;
+  font-family: inherit;
+  padding: 0.28rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.postponeEndOn {
+  border-color: rgba(0, 240, 255, 0.5);
+  background: rgba(0, 240, 255, 0.12);
+  color: var(--acc-b, #00f0ff);
+}
+
+.postponeEta {
+  font-size: 0.78rem;
+  color: var(--acc-b, #00f0ff);
+  font-weight: 600;
+  min-height: 1.1em;
+}
+
+.postponeActions {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.postponeConfirm,
+.postponeCancel {
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-family: inherit;
+  padding: 0.4rem 0.8rem;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.postponeConfirm {
+  border: none;
+  background: linear-gradient(135deg, var(--acc-b, #00f0ff), #3a7bff);
+  color: #071018;
+}
+
+.postponeCancel {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: none;
+  color: var(--text-muted);
+}
+
+.postponeConfirm:disabled,
+.postponeCancel:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

@@ -768,5 +768,16 @@
   "host.settings.songLimitNone": "Tiap lagu diputar sampai habis",
   "host.toast.songLimitOn": "Lagu dibatasi {n} mnt",
   "host.toast.songLimitOff": "Batas waktu lagu mati",
-  "host.autoStart.turnOff": "Matikan lanjut otomatis"
+  "host.autoStart.turnOff": "Matikan lanjut otomatis",
+  "sing.postpone.lead": "Belum siap?",
+  "sing.postpone.end": "Pindahkan aku ke akhir",
+  "sing.postpone.open": "Biarkan yang lain duluan",
+  "sing.postpone.count.one": "{count} lagu duluan",
+  "sing.postpone.count.other": "{count} lagu duluan",
+  "sing.postpone.fewer": "Kurangi",
+  "sing.postpone.more": "Tambah",
+  "sing.postpone.eta": "Giliranmu dalam ~{time}",
+  "sing.postpone.etaLast": "Kamu terakhir, dalam ~{time}",
+  "sing.postpone.confirm": "Pindahkan laguku",
+  "sing.postpone.cancel": "Tetap di sini"
 }

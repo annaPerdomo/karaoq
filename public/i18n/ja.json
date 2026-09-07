@@ -768,5 +768,16 @@
   "host.settings.songLimitNone": "どの曲も最後まで流れます",
   "host.toast.songLimitOn": "1曲{n}分までに制限",
   "host.toast.songLimitOff": "1曲の時間制限：オフ",
-  "host.autoStart.turnOff": "自動で次へをオフ"
+  "host.autoStart.turnOff": "自動で次へをオフ",
+  "sing.postpone.lead": "まだ準備できてない？",
+  "sing.postpone.end": "最後に回す",
+  "sing.postpone.open": "順番を譲る",
+  "sing.postpone.count.one": "{count}曲先に",
+  "sing.postpone.count.other": "{count}曲先に",
+  "sing.postpone.fewer": "減らす",
+  "sing.postpone.more": "増やす",
+  "sing.postpone.eta": "約{time}後にあなたの番",
+  "sing.postpone.etaLast": "最後の番、約{time}後",
+  "sing.postpone.confirm": "順番を変える",
+  "sing.postpone.cancel": "このままにする"
 }

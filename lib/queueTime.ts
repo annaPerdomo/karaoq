@@ -279,3 +279,19 @@ export function formatClockTime(epochMs: number, locale: string): string {
     return `${d.getHours()}:${String(d.getMinutes()).padStart(2, "0")}`;
   }
 }
+
+/** Seconds until `entryId` would start with the next `after` songs ahead of it:
+ * its current start plus each of those songs and its changeover. */
+export function postponedStartSeconds(
+  estimate: QueueEstimate,
+  entryId: string,
+  after: number
+): number | null {
+  const at = estimate.slots.findIndex((s) => s.id === entryId);
+  if (at === -1) return null;
+  let start = estimate.slots[at].startsInSeconds;
+  for (const slot of estimate.slots.slice(at + 1, at + 1 + after)) {
+    start += slot.songSeconds + CHANGEOVER_SECONDS;
+  }
+  return start;
+}
