@@ -62,7 +62,7 @@ export default async function handler(
           isPlaying: { $ne: true },
           autoStartAt: { $lt: new Date(now - AUTO_START_STALE_MS) },
           $and: [
-            { $expr: { $gt: ["$activeVideoIndex", 0] } },
+            { $expr: { $gte: ["$activeVideoIndex", 0] } },
             { $expr: { $lt: ["$activeVideoIndex", { $size: "$queue" }] } },
           ],
         },
@@ -106,11 +106,11 @@ export default async function handler(
     // A gap change moves a running countdown: re-measure from when the breather
     // began. A stamp landing in the past fires on the surface's next tick.
     const running = room.autoStartAt ? new Date(room.autoStartAt).getTime() : null;
-    // Index 0 waits for the host's first Play, as video-ended never stamps a
-    // first song; a host's own move (position route) counts in index 0 too.
+    // Index 0 counts in like any other: the videos route stamps a first song
+    // that lands with auto-advance already on, so switch-on must match it.
     const betweenSongs =
       !room.isPlaying &&
-      room.activeVideoIndex > 0 &&
+      room.activeVideoIndex >= 0 &&
       room.activeVideoIndex < room.queue.length;
     const restamped =
       config.enabled && running !== null && config.gapSeconds !== prev.gapSeconds

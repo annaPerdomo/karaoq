@@ -65,7 +65,7 @@ describe("POST /api/queue/[id]/auto-advance - the room's auto-advance setting", 
     await handler(req, res);
 
     expect(res.getStatus()).toBe(200);
-    const expected = { enabled: true, gapSeconds: 10 };
+    const expected = { enabled: true, gapSeconds: 60 };
     expect(mockCollection.updateOne).toHaveBeenCalledWith(
       { id: "ROOM1" },
       { $set: { autoAdvance: expected, lastActivity: expect.any(Date) } }
@@ -137,7 +137,7 @@ describe("POST /api/queue/[id]/auto-advance - the room's auto-advance setting", 
       { id: "ROOM1" },
       {
         $set: {
-          autoAdvance: { enabled: true, gapSeconds: 10 },
+          autoAdvance: { enabled: true, gapSeconds: 60 },
           lastActivity: expect.any(Date),
         },
       }
@@ -315,7 +315,6 @@ describe("POST /api/queue/[id]/auto-advance - the room's auto-advance setting", 
 
   it.each([
     ["the room is still playing", { activeVideoIndex: 1, isPlaying: true }],
-    ["no song has been sung yet", { activeVideoIndex: 0, isPlaying: false }],
     ["the queue has run out", { activeVideoIndex: 2, isPlaying: false }],
   ])("does not arm a countdown on switch-on when %s", async (_label, state) => {
     mockCollection.findOne.mockResolvedValue({
@@ -336,6 +335,29 @@ describe("POST /api/queue/[id]/auto-advance - the room's auto-advance setting", 
 
     const [, update] = mockCollection.updateOne.mock.calls[0];
     expect(update.$set.autoStartAt).toBeUndefined();
+  });
+
+  it("arms a countdown on switch-on over a waiting first song", async () => {
+    // The videos route stamps a first song that lands with it already on.
+    const before = Date.now();
+    mockCollection.findOne.mockResolvedValue({
+      ...ROOM,
+      queue: [{ id: "a", userName: "A", songTitle: "One", videoId: "v1" }],
+      activeVideoIndex: 0,
+      isPlaying: false,
+      autoAdvance: { enabled: false, gapSeconds: 10 },
+    });
+    const req = createMockReq({
+      method: "POST",
+      query: { id: "ROOM1" },
+      body: { enabled: true },
+    });
+    await handler(req, createRes());
+
+    const [, update] = mockCollection.updateOne.mock.calls[0];
+    const at = update.$set.autoStartAt.getTime();
+    expect(at).toBeGreaterThanOrEqual(before + 10_000);
+    expect(at).toBeLessThanOrEqual(Date.now() + 10_000);
   });
 
   it("leaves a running countdown alone when only unrelated fields change", async () => {

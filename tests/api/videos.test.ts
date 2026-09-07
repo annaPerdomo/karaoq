@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextApiResponse } from "next";
 import { Room } from "../../pages/api/types";
+import { AUTO_START_STALE_MS } from "../../lib/autoAdvance";
 import { MAX_QUEUE_LENGTH, __resetRateLimits } from "../../lib/limits";
 import { createMockReq } from "../helpers/mockRequest";
 
@@ -626,5 +627,109 @@ describe("POST /api/queue/[id]/videos - Add song to queue", () => {
 
       expect(recordAddMock).not.toHaveBeenCalled();
     });
+  });
+});
+
+describe("POST /api/queue/[id]/videos - the first song's count-in", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    __resetRateLimits();
+    mockCollection.updateOne.mockResolvedValue({ matchedCount: 1, modifiedCount: 1 });
+  });
+
+  function addTo(room: Partial<Room>) {
+    mockCollection.findOne.mockResolvedValue({
+      id: "ROOM1",
+      queue: [],
+      activeVideoIndex: 0,
+      isPlaying: false,
+      ...room,
+    });
+    return handler(
+      createMockReq({
+        method: "POST",
+        query: { id: "ROOM1" },
+        body: {
+          entryId: "entry-1",
+          userName: "Anna",
+          videoId: "dQw4w9WgXcQ",
+          songTitle: "Song",
+        },
+      }),
+      createRes()
+    );
+  }
+
+  const armCall = () =>
+    mockCollection.updateOne.mock.calls.find(
+      ([, update]) => (update as { $set?: Record<string, unknown> }).$set?.autoStartAt
+    );
+
+  it("starts the countdown as soon as the first song lands", async () => {
+    await addTo({ autoAdvance: { enabled: true, gapSeconds: 60 } });
+
+    const call = armCall();
+    expect(call).toBeDefined();
+    const [filter, update] = call as [Record<string, unknown>, { $set: { autoStartAt: Date } }];
+    // A re-add after a Stop or Cancel must not re-arm a room told to hold.
+    const { $or, ...rest } = filter as { $or: Array<Record<string, { $lt?: Date }>> };
+    expect(rest).toEqual({
+      id: "ROOM1",
+      "autoAdvance.enabled": true,
+      isPlaying: { $ne: true },
+      $expr: { $eq: ["$activeVideoIndex", { $subtract: [{ $size: "$queue" }, 1] }] },
+    });
+    expect($or[0]).toEqual({ autoStartAt: { $exists: false } });
+    expect($or[1].autoStartAt.$lt!.getTime()).toBeLessThanOrEqual(
+      Date.now() - AUTO_START_STALE_MS
+    );
+    const gapMs = update.$set.autoStartAt.getTime() - Date.now();
+    expect(gapMs).toBeGreaterThan(55_000);
+    expect(gapMs).toBeLessThanOrEqual(60_000);
+  });
+
+  it("leaves the room alone when auto-advance is off", async () => {
+    await addTo({ autoAdvance: { enabled: false, gapSeconds: 60 } });
+    expect(armCall()).toBeUndefined();
+  });
+
+  it("leaves a room that predates the setting alone", async () => {
+    await addTo({});
+    expect(armCall()).toBeUndefined();
+  });
+
+  it("starts the countdown again when a song refills a drained queue", async () => {
+    await addTo({
+      autoAdvance: { enabled: true, gapSeconds: 60 },
+      queue: [
+        { id: "a", userName: "Bo", videoId: "vid", songTitle: "One", addedAt: 1 },
+      ],
+      activeVideoIndex: 1,
+    });
+    expect(armCall()).toBeDefined();
+  });
+
+  it("leaves a room holding mid-queue alone", async () => {
+    await addTo({
+      autoAdvance: { enabled: true, gapSeconds: 60 },
+      queue: [
+        { id: "a", userName: "Bo", videoId: "vid", songTitle: "One", addedAt: 1 },
+        { id: "b", userName: "Cy", videoId: "vid2", songTitle: "Two", addedAt: 2 },
+      ],
+      activeVideoIndex: 1,
+    });
+    expect(armCall()).toBeUndefined();
+  });
+
+  it("leaves a playing room alone", async () => {
+    await addTo({
+      autoAdvance: { enabled: true, gapSeconds: 60 },
+      queue: [
+        { id: "a", userName: "Bo", videoId: "vid", songTitle: "One", addedAt: 1 },
+      ],
+      activeVideoIndex: 0,
+      isPlaying: true,
+    });
+    expect(armCall()).toBeUndefined();
   });
 });

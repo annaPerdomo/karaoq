@@ -37,7 +37,7 @@ export function useAutoArm({
 
   React.useEffect(() => {
     if (!roomId || !enabled || isPlaying || autoStartAt !== null) return;
-    if (activeIndex === 0 || !hasCurrent) return;
+    if (!hasCurrent) return;
     if (settledIndexRef.current === activeIndex) return;
     if (document.visibilityState !== "visible") return;
     settledIndexRef.current = activeIndex;

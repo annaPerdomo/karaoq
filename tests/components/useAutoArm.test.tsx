@@ -86,10 +86,16 @@ describe("useAutoArm", () => {
     expect(armAutoStart).not.toHaveBeenCalled();
   });
 
-  it("waits for a room still on its first song, a playing one, or a hidden tab", async () => {
-    const { rerender } = render({ activeIndex: 0 });
+  it("re-times a first song whose count-in lapsed with nobody watching", async () => {
+    // Nothing clears the stamp the videos route left, so index 0 must re-arm.
     await flush();
-    rerender({ isPlaying: true });
+    render({ activeIndex: 0 });
+    await flush();
+    expect(armAutoStart).toHaveBeenCalledTimes(1);
+  });
+
+  it("waits for a playing room or a hidden tab", async () => {
+    const { rerender } = render({ isPlaying: true });
     await flush();
     expect(armAutoStart).not.toHaveBeenCalled();
 

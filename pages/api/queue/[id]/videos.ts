@@ -4,6 +4,7 @@ import {
   isAnalyticsExempt,
   trackEvent,
 } from "../../../../lib/analytics";
+import { AUTO_START_STALE_MS } from "../../../../lib/autoAdvance";
 import { fairPushSpec, singerKeys } from "../../../../lib/fairQueue";
 import {
   isValidQueueEntry,
@@ -15,6 +16,7 @@ import {
 import { getRoomsCollection } from "../../../../lib/mongodb";
 import { normalizeRoomId } from "../../../../lib/roomCode";
 import { recordAdd } from "../../../../lib/songCorpus";
+import { normalizeAutoAdvance } from "../../types";
 import { catalogEntry } from "../../../../lib/suggestionCatalog";
 
 export default async function handler(
@@ -165,6 +167,30 @@ export default async function handler(
           }
         }
       }
+      // A song landing in a waiting room counts itself in, so nobody has to
+      // reach the host device. The $expr holds it to that case — the added song
+      // being the active one; a Stop or Cancel left an earlier song active.
+      const auto = normalizeAutoAdvance(room.autoAdvance);
+      if (auto.enabled && !room.isPlaying && room.activeVideoIndex >= room.queue.length) {
+        await collection.updateOne(
+          {
+            id: roomId,
+            "autoAdvance.enabled": true,
+            isPlaying: { $ne: true },
+            // A lapsed stamp counts as none: nothing else clears one, so every
+            // later add would be a no-op and the room would never count in.
+            $or: [
+              { autoStartAt: { $exists: false } },
+              { autoStartAt: { $lt: new Date(Date.now() - AUTO_START_STALE_MS) } },
+            ],
+            $expr: {
+              $eq: ["$activeVideoIndex", { $subtract: [{ $size: "$queue" }, 1] }],
+            },
+          },
+          { $set: { autoStartAt: new Date(Date.now() + auto.gapSeconds * 1000) } }
+        );
+      }
+
       // singerKeys is what fair rotation splits by, so the duet count matches the turns charged.
       trackEvent(req, "song_added", {
         roomId: roomId as string,
