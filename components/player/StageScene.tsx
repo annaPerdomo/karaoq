@@ -8,13 +8,7 @@ import {
   spawnBurst,
   stepPieces,
 } from "../../lib/confetti";
-
-/** Smart TVs never report the preference, so the document flag stands in. */
-function calmMotion(): boolean {
-  if (typeof window === "undefined") return true;
-  if (document.documentElement.hasAttribute("data-tv")) return true;
-  return window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ?? false;
-}
+import { calmMotion } from "../../lib/calmMotion";
 
 /** One canvas rather than hundreds of animated elements: a single compositor
  * layer. The calm blocks in the stylesheet hide it; the effect skips the work too. */
