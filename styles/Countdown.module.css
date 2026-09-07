@@ -377,7 +377,9 @@ html[data-tv] .confetti {
   align-items: center;
   gap: 0.5rem;
   text-align: center;
-  animation: countInEnter 0.5s ease-out calc(var(--reveal) + 0.4s) both;
+  /* No delay: AutoStartPanel mounts this only after the cheer hands over, and
+     on a TV the calm blocks cancel the animation, showing both at once. */
+  animation: countInEnter 0.5s ease-out both;
 }
 
 .upNextLabel {

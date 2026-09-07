@@ -4,7 +4,8 @@ import { useT } from "../../lib/i18n/I18nProvider";
 import { formatGap } from "../../lib/duration";
 import { CountdownRing } from "../player/CountdownRing";
 import { StageScene } from "../player/StageScene";
-import { cheerRevealSeconds } from "./stageTiming";
+import { CHEER_FADE_SECONDS, cheerRevealSeconds } from "./stageTiming";
+import { calmMotion } from "../../lib/calmMotion";
 
 /** Keyed by the song count, not random, so every host screen shows the same cheer. */
 const CHEER_COUNT = 24;
@@ -36,6 +37,25 @@ export function AutoStartPanel({
 }): React.ReactElement {
   const { t } = useT();
   const cheer = CHEER_KEYS[Math.max(0, songsSung - 1) % CHEER_KEYS.length];
+  const reveal = showCheer ? cheerRevealSeconds(gapSeconds, secondsLeft !== null) : 0.2;
+  // A timer, not only the CSS fade: a TV runs no animations, so a cheer left to
+  // fade itself out would sit on Up Next until the song started.
+  const [handedOver, setHandedOver] = React.useState(!showCheer);
+  // A ref, never a dependency: the gap is live behind this panel's own pill, and
+  // as a dep a mid-countdown change would replay a cheer that already finished.
+  const revealRef = React.useRef(reveal);
+  revealRef.current = reveal;
+  React.useEffect(() => {
+    if (!showCheer) {
+      setHandedOver(true);
+      return;
+    }
+    setHandedOver(false);
+    const holdMs = (revealRef.current + (calmMotion() ? 0 : CHEER_FADE_SECONDS)) * 1000;
+    const timer = setTimeout(() => setHandedOver(true), holdMs);
+    return () => clearTimeout(timer);
+  }, [showCheer, cheer]);
+  const cheering = showCheer && !handedOver;
   // The pill sits with the clock, not Up Next: it must be reachable while the
   // cheer still holds the spot, or nobody could stop the chain.
   const showPill = !!onOpenSettings && autoEnabled;
@@ -48,9 +68,7 @@ export function AutoStartPanel({
           className={`${styles.stageMain} ${showCount ? styles.stageMainCounting : ""}`}
           style={
             {
-              "--reveal": showCheer
-                ? `${cheerRevealSeconds(gapSeconds, secondsLeft !== null)}s`
-                : "0.2s",
+              "--reveal": `${reveal}s`,
             } as React.CSSProperties
           }
         >
@@ -58,20 +76,22 @@ export function AutoStartPanel({
             className={`${styles.spot} ${showCheer ? "" : styles.spotStill}`}
             aria-hidden="true"
           />
-          {showCheer && (
+          {cheering && (
             <h2 key={cheer} className={styles.cheer}>
               {t(cheer, { name: lastSinger })}
             </h2>
           )}
-          <div className={styles.stack}>
-            <div className={styles.upNext}>
-              <span className={styles.upNextLabel}>
-                {t("host.status.upNext")}
-              </span>
-              <span className={styles.upNextSinger}>{singerName}</span>
-              <span className={styles.upNextSong}>{songTitle}</span>
+          {!cheering && (
+            <div className={styles.stack}>
+              <div className={styles.upNext}>
+                <span className={styles.upNextLabel}>
+                  {t("host.status.upNext")}
+                </span>
+                <span className={styles.upNextSinger}>{singerName}</span>
+                <span className={styles.upNextSong}>{songTitle}</span>
+              </div>
             </div>
-          </div>
+          )}
           {showCount && (
             <div className={styles.stageCount}>
               {secondsLeft !== null && (
