@@ -53,6 +53,26 @@ describe("useAutoStart", () => {
     expect(onStart).toHaveBeenCalledTimes(1);
   });
 
+  it("keeps the stamp live while onStart declines, and fires once it accepts", () => {
+    let visible = false;
+    const onStart = vi.fn(() => (visible ? undefined : false));
+    const autoStartAt = stampIn(1000);
+    renderHook(() =>
+      useAutoStart({ autoStartAt, isPlaying: false, canStart: true, onStart })
+    );
+
+    act(() => { vi.advanceTimersByTime(1500); });
+    expect(onStart).toHaveBeenCalled();
+    const declined = onStart.mock.calls.length;
+
+    visible = true;
+    act(() => { vi.advanceTimersByTime(250); });
+    expect(onStart).toHaveBeenCalledTimes(declined + 1);
+
+    act(() => { vi.advanceTimersByTime(2000); });
+    expect(onStart).toHaveBeenCalledTimes(declined + 1);
+  });
+
   it("refuses a stamp that lapsed before the surface mounted", () => {
     // A display closed through the breather and reopened: nobody was around to
     // run this countdown, so starting it now would blast a song with no

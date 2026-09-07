@@ -4,10 +4,10 @@ import { trackEvent } from "../../../../lib/analytics";
 import { rateLimit } from "../../../../lib/limits";
 import { getRoomsCollection } from "../../../../lib/mongodb";
 import { normalizeRoomId } from "../../../../lib/roomCode";
+import { AUTO_START_STALE_MS } from "../../../../lib/autoAdvance";
 
-// Two jobs: POST ?cancel=1 drops a pending countdown; POST {enabled?, gapSeconds?}
-// patches the setting (the song limit is its own route). Switching off also drops
-// any countdown — a display mid-countdown must not start under the old setting.
+// Switching off also drops any countdown: a display mid-countdown must not
+// start under the old setting.
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -44,6 +44,38 @@ export default async function handler(
       return;
     }
 
+    if (req.query.arm === "1") {
+      const room = await collection.findOne({ id: roomId });
+      if (!room) {
+        res.status(404).json({ code: 404, message: "Room not found." });
+        return;
+      }
+      const gapMs = normalizeAutoAdvance(room.autoAdvance).gapSeconds * 1000;
+      const now = Date.now();
+      const autoStartAt = new Date(now + gapMs);
+      // Only a lapsed stamp is re-timed: none at all means a Stop, Cancel or
+      // manual-mode end told the room to hold, and re-arming would restart the halted song.
+      const result = await collection.updateOne(
+        {
+          id: roomId,
+          "autoAdvance.enabled": true,
+          isPlaying: { $ne: true },
+          autoStartAt: { $lt: new Date(now - AUTO_START_STALE_MS) },
+          $and: [
+            { $expr: { $gt: ["$activeVideoIndex", 0] } },
+            { $expr: { $lt: ["$activeVideoIndex", { $size: "$queue" }] } },
+          ],
+        },
+        { $set: { autoStartAt, lastActivity: new Date() } }
+      );
+      res.status(200).json({
+        code: 200,
+        message: result.matchedCount > 0 ? "Auto-start armed." : "Nothing to arm.",
+        autoStartAt: result.matchedCount > 0 ? autoStartAt.toISOString() : null,
+      });
+      return;
+    }
+
     let body: unknown;
     try {
       body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
@@ -74,10 +106,18 @@ export default async function handler(
     // A gap change moves a running countdown: re-measure from when the breather
     // began. A stamp landing in the past fires on the surface's next tick.
     const running = room.autoStartAt ? new Date(room.autoStartAt).getTime() : null;
+    // Index 0 waits for the host's first Play, as video-ended never stamps a
+    // first song; a host's own move (position route) counts in index 0 too.
+    const betweenSongs =
+      !room.isPlaying &&
+      room.activeVideoIndex > 0 &&
+      room.activeVideoIndex < room.queue.length;
     const restamped =
       config.enabled && running !== null && config.gapSeconds !== prev.gapSeconds
         ? new Date(running - prev.gapSeconds * 1000 + config.gapSeconds * 1000)
-        : null;
+        : config.enabled && !prev.enabled && running === null && betweenSongs
+          ? new Date(Date.now() + config.gapSeconds * 1000)
+          : null;
 
     await collection.updateOne(
       { id: roomId },

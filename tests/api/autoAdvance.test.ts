@@ -123,7 +123,7 @@ describe("POST /api/queue/[id]/auto-advance - the room's auto-advance setting", 
     );
   });
 
-  it("snaps a gap outside the offered values back to the default", async () => {
+  it("snaps a gap outside the accepted range back to the default", async () => {
     // A hand-crafted request must not park a room on a 0s gap.
     mockCollection.findOne.mockResolvedValue(ROOM);
     const req = createMockReq({
@@ -188,6 +188,50 @@ describe("POST /api/queue/[id]/auto-advance - the room's auto-advance setting", 
     expect(trackEvent).not.toHaveBeenCalled();
   });
 
+  it("re-times a lapsed countdown for a surface that landed between songs", async () => {
+    mockCollection.findOne.mockResolvedValue({
+      ...ROOM,
+      autoAdvance: { enabled: true, gapSeconds: 20 },
+    });
+    const before = Date.now();
+    const req = createMockReq({
+      method: "POST",
+      query: { id: "ROOM1", arm: "1" },
+    });
+    const res = createRes();
+    await handler(req, res);
+
+    expect(res.getStatus()).toBe(200);
+    const [filter, update] = mockCollection.updateOne.mock.calls[0];
+    expect(filter["autoAdvance.enabled"]).toBe(true);
+    expect(filter.isPlaying).toEqual({ $ne: true });
+    const lapsedBefore: Date = filter.autoStartAt.$lt;
+    expect(lapsedBefore.getTime()).toBeGreaterThanOrEqual(before - 30_000);
+    expect(lapsedBefore.getTime()).toBeLessThanOrEqual(Date.now() - 30_000);
+    expect(filter.$and).toHaveLength(2);
+    const at = update.$set.autoStartAt.getTime();
+    expect(at).toBeGreaterThanOrEqual(before + 20_000);
+    expect(at).toBeLessThanOrEqual(Date.now() + 20_000);
+    expect((res.getBody() as { autoStartAt: string }).autoStartAt).toBe(
+      update.$set.autoStartAt.toISOString()
+    );
+    expect(trackEvent).not.toHaveBeenCalled();
+  });
+
+  it("reports nothing armed when the room did not match", async () => {
+    mockCollection.findOne.mockResolvedValue(ROOM);
+    mockCollection.updateOne.mockResolvedValue({ matchedCount: 0 });
+    const req = createMockReq({
+      method: "POST",
+      query: { id: "ROOM1", arm: "1" },
+    });
+    const res = createRes();
+    await handler(req, res);
+
+    expect(res.getStatus()).toBe(200);
+    expect((res.getBody() as { autoStartAt: unknown }).autoStartAt).toBeNull();
+  });
+
   it("rejects a non-object body", async () => {
     const req = createMockReq({
       method: "POST",
@@ -241,6 +285,57 @@ describe("POST /api/queue/[id]/auto-advance - the room's auto-advance setting", 
     const [, update] = mockCollection.updateOne.mock.calls[0];
     expect(update.$set.autoAdvance).toEqual({ enabled: true, gapSeconds: 30 });
     expect(update.$set.autoStartAt.getTime()).toBe(began + 30_000);
+  });
+
+  it("arms a countdown when switched on between songs", async () => {
+    const before = Date.now();
+    mockCollection.findOne.mockResolvedValue({
+      ...ROOM,
+      queue: [
+        { id: "a", userName: "A", songTitle: "Sung", videoId: "v1" },
+        { id: "b", userName: "B", songTitle: "Waiting", videoId: "v2" },
+      ],
+      activeVideoIndex: 1,
+      isPlaying: false,
+      autoAdvance: { enabled: false, gapSeconds: 10 },
+    });
+    const req = createMockReq({
+      method: "POST",
+      query: { id: "ROOM1" },
+      body: { enabled: true },
+    });
+    await handler(req, createRes());
+
+    const [, update] = mockCollection.updateOne.mock.calls[0];
+    expect(update.$set.autoAdvance).toEqual({ enabled: true, gapSeconds: 10 });
+    const at = update.$set.autoStartAt.getTime();
+    expect(at).toBeGreaterThanOrEqual(before + 10_000);
+    expect(at).toBeLessThanOrEqual(Date.now() + 10_000);
+  });
+
+  it.each([
+    ["the room is still playing", { activeVideoIndex: 1, isPlaying: true }],
+    ["no song has been sung yet", { activeVideoIndex: 0, isPlaying: false }],
+    ["the queue has run out", { activeVideoIndex: 2, isPlaying: false }],
+  ])("does not arm a countdown on switch-on when %s", async (_label, state) => {
+    mockCollection.findOne.mockResolvedValue({
+      ...ROOM,
+      queue: [
+        { id: "a", userName: "A", songTitle: "One", videoId: "v1" },
+        { id: "b", userName: "B", songTitle: "Two", videoId: "v2" },
+      ],
+      ...state,
+      autoAdvance: { enabled: false, gapSeconds: 10 },
+    });
+    const req = createMockReq({
+      method: "POST",
+      query: { id: "ROOM1" },
+      body: { enabled: true },
+    });
+    await handler(req, createRes());
+
+    const [, update] = mockCollection.updateOne.mock.calls[0];
+    expect(update.$set.autoStartAt).toBeUndefined();
   });
 
   it("leaves a running countdown alone when only unrelated fields change", async () => {

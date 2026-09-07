@@ -9,13 +9,21 @@ describe("normalizeAutoAdvance", () => {
     expect(normalizeAutoAdvance("yes")).toEqual(AUTO_ADVANCE_OFF);
   });
 
-  it("keeps offered values and snaps everything else", () => {
+  it("keeps any whole second in range and snaps everything else", () => {
     expect(normalizeAutoAdvance({ enabled: true, gapSeconds: 30 })).toEqual({
       enabled: true,
       gapSeconds: 30,
     });
+    expect(normalizeAutoAdvance({ enabled: true, gapSeconds: 180 }).gapSeconds).toBe(180);
+    expect(normalizeAutoAdvance({ enabled: true, gapSeconds: 3 }).gapSeconds).toBe(3);
+    expect(normalizeAutoAdvance({ enabled: true, gapSeconds: 600 }).gapSeconds).toBe(600);
+    expect(normalizeAutoAdvance({ enabled: true, gapSeconds: 0 }).gapSeconds).toBe(10);
+    expect(normalizeAutoAdvance({ enabled: true, gapSeconds: 2 }).gapSeconds).toBe(10);
+    expect(normalizeAutoAdvance({ enabled: true, gapSeconds: 601 }).gapSeconds).toBe(10);
+    expect(normalizeAutoAdvance({ enabled: true, gapSeconds: 7.5 }).gapSeconds).toBe(10);
+    expect(normalizeAutoAdvance({ enabled: true, gapSeconds: "20" }).gapSeconds).toBe(10);
     // Only an explicit true switches it on.
-    expect(normalizeAutoAdvance({ enabled: "yes", gapSeconds: 7 })).toEqual({
+    expect(normalizeAutoAdvance({ enabled: "yes", gapSeconds: 1 })).toEqual({
       enabled: false,
       gapSeconds: 10,
     });

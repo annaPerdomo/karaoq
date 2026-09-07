@@ -55,7 +55,7 @@ describe("POST /api/queue/[id]/play - Set play state", () => {
       { id: "ROOM1", isPlaying: { $ne: true } },
       {
         $set: { isPlaying: true, playStartedAt: expect.any(Date), lastActivity: expect.any(Date) },
-        $unset: { displayPaused: "", playPausedAt: "", autoStartAt: "" },
+        $unset: { displayPaused: "", playPausedAt: "", autoStartAt: "", endedEntryId: "" },
       }
     );
   });
@@ -208,6 +208,7 @@ describe("POST /api/queue/[id]/play - Set play state", () => {
           playStartedAt: "",
           playPausedAt: "",
           autoStartAt: "",
+          endedEntryId: "",
         },
       }
     );
@@ -230,7 +231,7 @@ describe("POST /api/queue/[id]/play - Set play state", () => {
       { id: "ROOM1" },
       {
         $set: { isPlaying: true, playToken: "tok-abc", playStartedAt: expect.any(Date), lastActivity: expect.any(Date) },
-        $unset: { displayPaused: "", playPausedAt: "", autoStartAt: "" },
+        $unset: { displayPaused: "", playPausedAt: "", autoStartAt: "", endedEntryId: "" },
       }
     );
   });

@@ -70,9 +70,61 @@ describe("POST /api/queue/[id]/position - Advance song position", () => {
           playStartedAt: "",
           playPausedAt: "",
           autoStartAt: "",
+          endedEntryId: "",
         },
       }
     );
+  });
+
+  it("counts the landed-on song in when auto-advance is on", async () => {
+    const room: Room = {
+      id: "ROOM1",
+      queue: makeQueue(3),
+      activeVideoIndex: 0,
+      isPlaying: true,
+      autoAdvance: { enabled: true, gapSeconds: 20 },
+    };
+    mockCollection.findOne.mockResolvedValue(room);
+    mockCollection.updateOne.mockResolvedValue({ modifiedCount: 1 });
+    const before = Date.now();
+
+    const req = createMockReq({
+      method: "POST",
+      query: { id: "ROOM1", activeVideoIndex: "1" },
+    });
+    const res = createRes();
+    await handler(req, res);
+
+    expect(res.getStatus()).toBe(200);
+    const [, update] = mockCollection.updateOne.mock.calls[0];
+    const at = update.$set.autoStartAt.getTime();
+    expect(at).toBeGreaterThanOrEqual(before + 20_000);
+    expect(at).toBeLessThanOrEqual(Date.now() + 20_000);
+    expect(update.$unset).not.toHaveProperty("autoStartAt");
+    expect(update.$unset.endedEntryId).toBe("");
+  });
+
+  it("stamps nothing when a skip drains the queue", async () => {
+    const room: Room = {
+      id: "ROOM1",
+      queue: makeQueue(2),
+      activeVideoIndex: 1,
+      isPlaying: true,
+      autoAdvance: { enabled: true, gapSeconds: 20 },
+    };
+    mockCollection.findOne.mockResolvedValue(room);
+    mockCollection.updateOne.mockResolvedValue({ modifiedCount: 1 });
+
+    const req = createMockReq({
+      method: "POST",
+      query: { id: "ROOM1", activeVideoIndex: "2" },
+    });
+    const res = createRes();
+    await handler(req, res);
+
+    const [, update] = mockCollection.updateOne.mock.calls[0];
+    expect(update.$set).not.toHaveProperty("autoStartAt");
+    expect(update.$unset.autoStartAt).toBe("");
   });
 
   it("treats a same-index write as already applied without touching play state", async () => {

@@ -59,6 +59,8 @@ export default async function handler(
             },
             isPlaying: false,
             lastActivity: new Date(),
+            // The only route that means "sung to the end"; the host cheer keys on it.
+            endedEntryId: { $arrayElemAt: ["$queue.id", endedIndex] },
             autoStartAt: {
               $cond: [
                 {

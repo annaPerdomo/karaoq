@@ -5,7 +5,8 @@ const TICK_MS = 250;
 
 /** Every surface runs this and shows the same seconds, because all measure one
  * server-stamped instant against the server's clock (lib/clockSkew). Only a
- * surface passing `canStart` fires the start, once per stamp. */
+ * surface passing `canStart` fires the start, once per stamp. `onStart` may
+ * return false to decline; the stamp stays live and a later visible tick fires it. */
 export function useAutoStart({
   autoStartAt,
   isPlaying,
@@ -16,7 +17,7 @@ export function useAutoStart({
   autoStartAt: number | null;
   isPlaying: boolean;
   canStart: boolean;
-  onStart: () => void;
+  onStart: () => void | boolean;
 }): { secondsLeft: number | null } {
   const [secondsLeft, setSecondsLeft] = React.useState<number | null>(null);
   const firedForRef = React.useRef<number | null>(null);
@@ -46,8 +47,8 @@ export function useAutoStart({
         return;
       }
       if (!canStartRef.current) return;
+      if (onStartRef.current() === false) return;
       firedForRef.current = autoStartAt;
-      onStartRef.current();
     };
     tick();
     // A hidden tab throttles this to ~1/s, still within a second of the stamp.

@@ -19,6 +19,10 @@ export function songSecondsLeft(
   return Math.max(0, Math.ceil(maxSongSeconds - currentTime));
 }
 
+/** Past this a lapsed stamp reads as absent (nobody was around to fire it);
+ * inside it the stamp is still sent and useAutoStart refuses one older than its mount. */
+export const AUTO_START_STALE_MS = 30_000;
+
 /** Room.autoStartAt as the clients read it — ISO over JSON, a Date in-process. */
 export function autoStartEpoch(value: unknown): number | null {
   if (value instanceof Date) return value.getTime();

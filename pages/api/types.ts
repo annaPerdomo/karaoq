@@ -246,10 +246,21 @@ export interface AutoAdvance {
   gapSeconds: number;
 }
 
-/** The only offered values; the API snaps anything else back to a default, so a
- * hand-crafted request can't park a room on a 0s gap or a 1s limit. */
-export const AUTO_ADVANCE_GAPS = [5, 10, 20, 30] as const;
+/** Quick picks; any whole second in [MIN, MAX] is accepted, anything else
+ * snaps to the default so a hand-crafted request can't park a room on 0s. */
+export const AUTO_ADVANCE_GAPS = [10, 30, 60] as const;
+export const AUTO_ADVANCE_GAP_MIN = 3;
+export const AUTO_ADVANCE_GAP_MAX = 600;
 export const SONG_LIMIT_OPTIONS = [180, 240, 300, 360] as const;
+
+export function isValidGap(value: unknown): value is number {
+  return (
+    typeof value === "number" &&
+    Number.isInteger(value) &&
+    value >= AUTO_ADVANCE_GAP_MIN &&
+    value <= AUTO_ADVANCE_GAP_MAX
+  );
+}
 
 /** What a new room is created with. Written at create time rather than inferred
  * from absence — see AUTO_ADVANCE_OFF. */
@@ -278,13 +289,9 @@ export function normalizeSongLimit(value: unknown): number | null {
 export function normalizeAutoAdvance(stored: unknown): AutoAdvance {
   const e =
     stored && typeof stored === "object" ? (stored as Record<string, unknown>) : {};
-  const gaps: readonly number[] = AUTO_ADVANCE_GAPS;
   return {
     enabled: e.enabled === true,
-    gapSeconds:
-      typeof e.gapSeconds === "number" && gaps.includes(e.gapSeconds)
-        ? e.gapSeconds
-        : DEFAULT_AUTO_ADVANCE.gapSeconds,
+    gapSeconds: isValidGap(e.gapSeconds) ? e.gapSeconds : DEFAULT_AUTO_ADVANCE.gapSeconds,
   };
 }
 
@@ -331,8 +338,12 @@ export interface Room {
   /** Cut every song here and move on. Absent = play to the end. */
   songLimitSeconds?: number;
   /** The instant the playback surface should start the waiting song. Cleared by
-   * every play, stop and skip, so a host's own move wins over the countdown. */
+   * every play and stop, so a host's own move wins over the countdown; a skip
+   * under auto-advance replaces it with one for the song it lands on. */
   autoStartAt?: Date;
+  /** The entry whose natural end last advanced the room; the cheer is for it.
+   * Cleared by every play, stop and skip. */
+  endedEntryId?: string;
   createdAt?: Date;
   /** Bumped on every write; drives the TTL index. */
   lastActivity?: Date;

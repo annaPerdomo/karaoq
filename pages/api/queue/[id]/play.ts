@@ -45,16 +45,16 @@ export default async function handler(
         isPlaying && playToken
           ? {
               $set: { isPlaying, playToken, playStartedAt: new Date(), lastActivity: new Date() },
-              $unset: { displayPaused: "", playPausedAt: "", autoStartAt: "" },
+              $unset: { displayPaused: "", playPausedAt: "", autoStartAt: "", endedEntryId: "" },
             }
           : isPlaying
             ? {
                 $set: { isPlaying, playStartedAt: new Date(), lastActivity: new Date() },
-                $unset: { displayPaused: "", playPausedAt: "", autoStartAt: "" },
+                $unset: { displayPaused: "", playPausedAt: "", autoStartAt: "", endedEntryId: "" },
               }
             : {
                 $set: { isPlaying, lastActivity: new Date() },
-                $unset: { playToken: "", displayPaused: "", playStartedAt: "", playPausedAt: "", autoStartAt: "" },
+                $unset: { playToken: "", displayPaused: "", playStartedAt: "", playPausedAt: "", autoStartAt: "", endedEntryId: "" },
               };
       // Three shapes of start, and only the host's own is unconditional:
       //

@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { getRoomsCollection } from "../../../../lib/mongodb";
 import { normalizeRoomId } from "../../../../lib/roomCode";
+import { normalizeAutoAdvance } from "../../types";
 
 export default async function handler(
   req: NextApiRequest,
@@ -42,10 +43,21 @@ export default async function handler(
         res.status(200).json({ code: 200, message: "Position unchanged." });
         return;
       }
+      // Under auto a skip counts the landed-on song in, same as a natural end.
+      const config = normalizeAutoAdvance(room.autoAdvance);
+      const autoStartAt =
+        config.enabled && nextIndex < room.queue.length
+          ? new Date(Date.now() + config.gapSeconds * 1000)
+          : null;
       await collection.updateOne(
         { id: roomId },
         {
-          $set: { activeVideoIndex: nextIndex, isPlaying: false, lastActivity: new Date() },
+          $set: {
+            activeVideoIndex: nextIndex,
+            isPlaying: false,
+            lastActivity: new Date(),
+            ...(autoStartAt ? { autoStartAt } : {}),
+          },
           // playPausedAt goes with playStartedAt — a stamp that outlives its
           // song freezes the next one's clock at a pause that already ended.
           $unset: {
@@ -53,7 +65,8 @@ export default async function handler(
             displayPaused: "",
             playStartedAt: "",
             playPausedAt: "",
-            autoStartAt: "",
+            ...(autoStartAt ? {} : { autoStartAt: "" }),
+            endedEntryId: "",
           },
         }
       );

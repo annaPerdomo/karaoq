@@ -4,6 +4,7 @@ import { trackEvent } from "../../../../lib/analytics";
 import { rateLimit } from "../../../../lib/limits";
 import { getRoomsCollection } from "../../../../lib/mongodb";
 import { normalizeRoomId } from "../../../../lib/roomCode";
+import { AUTO_START_STALE_MS } from "../../../../lib/autoAdvance";
 import { pruneRoomYoutubeData, roomPruneUpdate } from "../../../../lib/youtubeRetention";
 import { searchQuotaResetsAt } from "../../../../lib/searchQuotaStatus";
 
@@ -20,10 +21,6 @@ const DISPLAY_LIVE_MS = 75_000;
 // to claim the surface — before playback counts as orphaned. A host mid-drag re-arms its polling
 // hold, so a co-host's Play during a long reorder can expire this and appear to do nothing.
 const PLAY_GRACE_MS = 15_000;
-// Past this, nothing was around to fire the countdown (the display closed
-// mid-gap) and readers see it as absent. Inside the window a lapsed stamp is
-// still sent; useAutoStart refuses one that lapsed before it mounted.
-const AUTO_START_STALE_MS = 30_000;
 
 export default async function handler(
   req: NextApiRequest,
