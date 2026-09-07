@@ -37,3 +37,14 @@ export function formatHoursMinutes(totalMinutes: number, t: Translate): string {
 export function formatCountdown(seconds: number, t: Translate): string {
   return formatHoursMinutes(Math.max(1, Math.ceil(seconds / 60)), t);
 }
+
+export function formatGap(seconds: number, t: Translate): string {
+  if (seconds < 60) return t("host.settings.seconds", { n: seconds });
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return s === 0 ? t("host.settings.minutes", { n: m }) : t("host.settings.minutesSeconds", { m, s });
+}
+
+export function formatSecondsLeft(seconds: number): string {
+  return seconds < 60 ? String(seconds) : formatDuration(seconds);
+}

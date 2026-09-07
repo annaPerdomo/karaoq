@@ -1,6 +1,7 @@
 import * as React from "react";
 import styles from "../../styles/Countdown.module.css";
 import { useT } from "../../lib/i18n/I18nProvider";
+import { formatSecondsLeft } from "../../lib/duration";
 
 const LEAD_IN_BEATS = 4;
 
@@ -54,7 +55,7 @@ export function CountIn({
       </span>
       <span className={styles.seconds} aria-live="off">
         <span key={counting ? secondsLeft : "steady"} className={counting ? styles.beat : undefined}>
-          {secondsLeft}
+          {formatSecondsLeft(secondsLeft)}
         </span>
       </span>
       <span className={styles.hint}>{t("display.autoStart.now")}</span>

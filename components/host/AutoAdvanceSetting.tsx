@@ -6,8 +6,9 @@ import {
   AutoAdvance,
   SONG_LIMIT_OPTIONS,
 } from "../../pages/api/types";
+import { formatGap } from "../../lib/duration";
+import { CustomGapFields } from "./CustomGapFields";
 
-/** Gear-menu "Playback" group. Both rows are shared with the whole room. */
 export function AutoAdvanceSetting({
   autoAdvance,
   onChange,
@@ -16,11 +17,15 @@ export function AutoAdvanceSetting({
 }: {
   autoAdvance: AutoAdvance;
   onChange: (patch: Partial<AutoAdvance>) => void;
-  songLimit: number | null;
-  onChangeSongLimit: (seconds: number | null) => void;
+  songLimit?: number | null;
+  onChangeSongLimit?: (seconds: number | null) => void;
 }): React.ReactElement {
   const { t } = useT();
   const { enabled, gapSeconds } = autoAdvance;
+  const presets: readonly number[] = AUTO_ADVANCE_GAPS;
+  // "Custom" stays open once chosen, even if the typed value lands on a preset.
+  const [customOpen, setCustomOpen] = React.useState(!presets.includes(gapSeconds));
+  const isCustom = customOpen || !presets.includes(gapSeconds);
 
   return (
     <div className={styles.spGroup}>
@@ -51,45 +56,63 @@ export function AutoAdvanceSetting({
               {AUTO_ADVANCE_GAPS.map((gap) => (
                 <button
                   key={gap}
-                  className={`${styles.spChip} ${gap === gapSeconds ? styles.spChipOn : ""}`}
-                  onClick={() => onChange({ gapSeconds: gap })}
-                  aria-pressed={gap === gapSeconds}
+                  className={`${styles.spChip} ${!isCustom && gap === gapSeconds ? styles.spChipOn : ""}`}
+                  onClick={() => {
+                    setCustomOpen(false);
+                    onChange({ gapSeconds: gap });
+                  }}
+                  aria-pressed={!isCustom && gap === gapSeconds}
                 >
-                  {t("host.settings.seconds", { n: gap })}
+                  {formatGap(gap, t)}
                 </button>
               ))}
+              <button
+                className={`${styles.spChip} ${isCustom ? styles.spChipOn : ""}`}
+                onClick={() => setCustomOpen(true)}
+                aria-pressed={isCustom}
+              >
+                {t("host.settings.customGap")}
+              </button>
             </div>
+            {isCustom && (
+              <CustomGapFields
+                gapSeconds={gapSeconds}
+                onCommit={(gap) => onChange({ gapSeconds: gap })}
+              />
+            )}
           </div>
         </div>
       )}
 
-      <div className={styles.spSub}>
-        <div className={styles.spBtnTitle}>{t("host.settings.songLimit")}</div>
-        <div className={styles.spBtnDesc}>
-          {songLimit === null
-            ? t("host.settings.songLimitNone")
-            : t("host.settings.songLimitHint", { n: songLimit / 60 })}
-        </div>
-        <div className={styles.spChips} role="group" aria-label={t("host.settings.songLimit")}>
-          <button
-            className={`${styles.spChip} ${songLimit === null ? styles.spChipOn : ""}`}
-            onClick={() => onChangeSongLimit(null)}
-            aria-pressed={songLimit === null}
-          >
-            {t("host.settings.songLimitOff")}
-          </button>
-          {SONG_LIMIT_OPTIONS.map((limit) => (
+      {onChangeSongLimit && songLimit !== undefined && (
+        <div className={styles.spSub}>
+          <div className={styles.spBtnTitle}>{t("host.settings.songLimit")}</div>
+          <div className={styles.spBtnDesc}>
+            {songLimit === null
+              ? t("host.settings.songLimitNone")
+              : t("host.settings.songLimitHint", { n: songLimit / 60 })}
+          </div>
+          <div className={styles.spChips} role="group" aria-label={t("host.settings.songLimit")}>
             <button
-              key={limit}
-              className={`${styles.spChip} ${limit === songLimit ? styles.spChipOn : ""}`}
-              onClick={() => onChangeSongLimit(limit)}
-              aria-pressed={limit === songLimit}
+              className={`${styles.spChip} ${songLimit === null ? styles.spChipOn : ""}`}
+              onClick={() => onChangeSongLimit(null)}
+              aria-pressed={songLimit === null}
             >
-              {t("host.settings.minutes", { n: limit / 60 })}
+              {t("host.settings.songLimitOff")}
             </button>
-          ))}
+            {SONG_LIMIT_OPTIONS.map((limit) => (
+              <button
+                key={limit}
+                className={`${styles.spChip} ${limit === songLimit ? styles.spChipOn : ""}`}
+                onClick={() => onChangeSongLimit(limit)}
+                aria-pressed={limit === songLimit}
+              >
+                {t("host.settings.minutes", { n: limit / 60 })}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

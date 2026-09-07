@@ -1,11 +1,14 @@
+import * as React from "react";
 import styles from "../../styles/Host.module.css";
-import { QueueEntry } from "../../pages/api/types";
+import { AutoAdvance, QueueEntry } from "../../pages/api/types";
 import { useT } from "../../lib/i18n/I18nProvider";
 import { renderWithHeart } from "../../lib/i18n/renderWithHeart";
 import FullscreenToggle from "../FullscreenToggle";
 import FeedbackTrigger from "../feedback/FeedbackTrigger";
 import { Icons } from "./icons";
 import { formatSongTitle } from "./utils";
+import { formatGap, formatSecondsLeft } from "../../lib/duration";
+import { PlaybackModeSheet } from "./PlaybackModeSheet";
 
 // Transport bar. For hosts the control cluster branches by where the video
 // plays: TV display (pause/stop), here (pause-toggle/stop), or idle/takeover
@@ -28,8 +31,10 @@ export function TransportBar({
   remote = false,
   cohostControlsLive = false,
   cohostCanPlay = false,
-  autoAdvanceOn = false,
-  onToggleAutoAdvance,
+  autoAdvance,
+  onChangeAutoAdvance,
+  modeOpen = false,
+  onModeOpenChange,
   autoStartIn = null,
   onCancelAutoStart,
   onPrevious,
@@ -56,8 +61,10 @@ export function TransportBar({
   cohostControlsLive?: boolean;
   /** Host.tsx's gate for the co-host's Play, which here-mode also satisfies. */
   cohostCanPlay?: boolean;
-  autoAdvanceOn?: boolean;
-  onToggleAutoAdvance?: () => void;
+  autoAdvance?: AutoAdvance;
+  onChangeAutoAdvance?: (patch: Partial<AutoAdvance>) => void;
+  modeOpen?: boolean;
+  onModeOpenChange?: (open: boolean) => void;
   /** Seconds until the waiting song starts on its own; null = no countdown. */
   autoStartIn?: number | null;
   onCancelAutoStart?: () => void;
@@ -69,6 +76,31 @@ export function TransportBar({
   onNext: () => void;
 }) {
   const { t } = useT();
+  const closeMode = React.useCallback(() => onModeOpenChange?.(false), [onModeOpenChange]);
+  const autoOn = autoAdvance?.enabled ?? false;
+  const showMode = !remote && autoAdvance && onChangeAutoAdvance;
+  const modePill = showMode && autoStartIn === null && (
+    <button
+      className={`${styles.tModePill} ${autoOn ? styles.tModePillOn : ""}`}
+      onClick={() => onModeOpenChange?.(true)}
+      aria-haspopup="dialog"
+      aria-expanded={modeOpen}
+      title={autoOn ? t('host.settings.autoAdvanceOn') : t('host.settings.autoAdvanceOff')}
+    >
+      {autoOn ? (
+        <>
+          {t('host.transport.modeAutoShort')}
+          <span className={styles.tModeGap}>
+            {t('host.transport.modeAutoGap', { gap: formatGap(autoAdvance.gapSeconds, t) })}
+          </span>
+        </>
+      ) : (
+        t('host.transport.modeManual')
+      )}
+      <span className={styles.tModeCaret} aria-hidden="true">▾</span>
+    </button>
+  );
+  const playClass = `${styles.tBtn} ${styles.tPlay} ${autoOn ? styles.tPlayAuto : ""}`;
   return (
     <div
       className={`${styles.transport} ${roomEmpty ? styles.transportEmptyMobile : ""}`}
@@ -86,7 +118,7 @@ export function TransportBar({
                 ) : autoStartIn !== null ? (
                   <>
                     <span className={styles.tAutoCount}>
-                      {t('host.status.autoIn', { n: autoStartIn })}
+                      {t('host.status.autoIn', { n: formatSecondsLeft(autoStartIn) })}
                     </span>
                     {onCancelAutoStart && (
                       <button className={styles.tAutoCancel} onClick={onCancelAutoStart}>
@@ -201,7 +233,7 @@ export function TransportBar({
             // Nothing playing here: either idle, or the song is live on
             // another host device and this is the takeover control.
             <button
-              className={`${styles.tBtn} ${styles.tPlay}`}
+              className={playClass}
               onClick={onStart}
               disabled={!currentSong}
               title={
@@ -223,20 +255,7 @@ export function TransportBar({
           >
             {Icons.next}
           </button>
-          {!remote && onToggleAutoAdvance && (
-            <button
-              className={`${styles.tBtn} ${styles.tAuto} ${autoAdvanceOn ? styles.tAutoOn : ""}`}
-              onClick={onToggleAutoAdvance}
-              aria-pressed={autoAdvanceOn}
-              title={
-                autoAdvanceOn
-                  ? t('host.settings.autoAdvanceOn')
-                  : t('host.settings.autoAdvanceOff')
-              }
-            >
-              {Icons.autoAdvance}
-            </button>
-          )}
+          {modePill}
           {!remote && (
             <FullscreenToggle
               className={`${styles.tBtn} ${styles.tFullscreen}`}
@@ -244,6 +263,14 @@ export function TransportBar({
           )}
         </div>
       </div>
+      {showMode && (
+        <PlaybackModeSheet
+          isOpen={modeOpen}
+          onClose={closeMode}
+          autoAdvance={autoAdvance}
+          onChangeAutoAdvance={onChangeAutoAdvance}
+        />
+      )}
       <div className={styles.transportFooter}>
         <span className={styles.transportLogo}>KaraoQ</span>
         <a

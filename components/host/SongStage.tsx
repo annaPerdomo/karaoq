@@ -17,6 +17,8 @@ export function SongStage({
   loading,
   currentSong,
   songsSung,
+  showCheer,
+  lastSinger,
   remote,
   cohostCanPlay,
   cohostControlsLive,
@@ -33,8 +35,8 @@ export function SongStage({
   onAddFirst,
   autoStartIn,
   autoGapSeconds,
-  onChangeAutoGap,
-  onTurnOffAutoAdvance,
+  autoEnabled,
+  onOpenPlaybackSettings,
   wrapUpIn,
 }: {
   loading: boolean;
@@ -42,6 +44,8 @@ export function SongStage({
   /** Entries behind the active index. With no current song, any history means
    * the queue drained mid-night rather than the room being brand new. */
   songsSung: number;
+  showCheer: boolean;
+  lastSinger: string | undefined;
   remote: boolean;
   /** Host.tsx's gates for the co-host's Play and Pause — shared with the
    * transport bar so the note and the buttons can't disagree. */
@@ -63,8 +67,8 @@ export function SongStage({
   /** Seconds until auto-advance starts the waiting song; null = no countdown. */
   autoStartIn: number | null;
   autoGapSeconds: number;
-  onChangeAutoGap: (gapSeconds: number) => void;
-  onTurnOffAutoAdvance: () => void;
+  autoEnabled: boolean;
+  onOpenPlaybackSettings?: () => void;
   /** Seconds until the song limit cuts the song; null outside the warning window. */
   wrapUpIn: number | null;
 }) {
@@ -77,15 +81,20 @@ export function SongStage({
     active: !loading && !!currentSong && !remote && !tvMode && playsVideoHere,
   });
   const countdown =
-    autoStartIn !== null && !isPlaying ? (
+    currentSong && !isPlaying ? (
       <AutoStartPanel
         secondsLeft={autoStartIn}
         gapSeconds={autoGapSeconds}
-        onStartNow={onStartSong}
-        onChangeGap={onChangeAutoGap}
-        onTurnOff={onTurnOffAutoAdvance}
+        autoEnabled={autoEnabled}
+        showCheer={showCheer}
+        songsSung={songsSung}
+        lastSinger={lastSinger ?? ""}
+        singerName={currentSong.userName}
+        songTitle={formatSongTitle(currentSong.songTitle)}
+        onOpenSettings={onOpenPlaybackSettings}
       />
     ) : null;
+  const stageClass = `${styles.songControl} ${countdown ? styles.songControlStaged : ""}`;
   return loading ? (
     <div className={styles.emptyState}>
       <div className={styles.spinner} />
@@ -94,7 +103,7 @@ export function SongStage({
   ) : currentSong ? (
     remote ? (
       /* Co-host mode: status only, no player or audio. */
-      <div className={styles.songControl}>
+      <div className={stageClass}>
         {isPlaying && displayPaused ? (
           <div className={styles.readyLabel}>{t('host.status.pausedDisplay')}</div>
         ) : isPlaying ? (
@@ -102,14 +111,19 @@ export function SongStage({
             <span className={styles.liveDot} />
             <span>{t('host.status.nowPlaying')}</span>
           </div>
+        ) : countdown ? (
+          countdown
         ) : (
           <div className={styles.readyLabel}>{t('host.status.upNext')}</div>
         )}
-        <h1 className={styles.controlSinger}>{currentSong.userName}</h1>
-        <p className={styles.controlSong}>
-          {formatSongTitle(currentSong.songTitle)}
-        </p>
-        {countdown}
+        {!countdown && (
+          <>
+            <h1 className={styles.controlSinger}>{currentSong.userName}</h1>
+            <p className={styles.controlSong}>
+              {formatSongTitle(currentSong.songTitle)}
+            </p>
+          </>
+        )}
         {/* Shown whenever the bar has no playback button, which is what the note
             explains. A here-mode co-host has Play while stopped (so the note
             would contradict it) but not Pause once a song runs, and an empty
@@ -123,7 +137,7 @@ export function SongStage({
     ) : tvMode ? (
       /* TV Display mode: status panel; playback runs from the
          transport bar so there's one set of controls. */
-      <div className={styles.songControl}>
+      <div className={stageClass}>
         {isPlaying && displayPaused ? (
           <>
             <div className={styles.readyLabel}>{t('host.status.pausedDisplay')}</div>
@@ -150,6 +164,8 @@ export function SongStage({
               {formatSongTitle(currentSong.songTitle)}
             </h2>
           </>
+        ) : countdown ? (
+          countdown
         ) : (
           <>
             <div className={styles.readyLabel}>{t('host.status.upNext')}</div>
@@ -159,7 +175,6 @@ export function SongStage({
             <p className={styles.controlSong}>
               {formatSongTitle(currentSong.songTitle)}
             </p>
-            {countdown}
           </>
         )}
         {!displayConnected && (
@@ -211,13 +226,16 @@ export function SongStage({
         </button>
       </div>
     ) : (
-      <div className={styles.songControl}>
-        <div className={styles.readyLabel}>{t('host.status.upNext')}</div>
-        <h1 className={styles.controlSinger}>{currentSong.userName}</h1>
-        <p className={styles.controlSong}>
-          {formatSongTitle(currentSong.songTitle)}
-        </p>
-        {countdown}
+      <div className={stageClass}>
+        {countdown ?? (
+          <>
+            <div className={styles.readyLabel}>{t('host.status.upNext')}</div>
+            <h1 className={styles.controlSinger}>{currentSong.userName}</h1>
+            <p className={styles.controlSong}>
+              {formatSongTitle(currentSong.songTitle)}
+            </p>
+          </>
+        )}
       </div>
     )
   ) : (

@@ -27,6 +27,7 @@ import setSongLimit from "../app/queue/setSongLimit";
 import cancelAutoStart from "../app/queue/cancelAutoStart";
 import postVideoEnded from "../app/queue/postVideoEnded";
 import { useAutoStart } from "./hooks/useAutoStart";
+import { useAutoArm } from "./hooks/useAutoArm";
 import {
   autoStartEpoch,
   playerCurrentTime,
@@ -128,6 +129,14 @@ const Host = ({
   const [fairMode, setFairModeState] = React.useState(false);
   const [autoAdvance, setAutoAdvanceState] = React.useState<AutoAdvance>(AUTO_ADVANCE_OFF);
   const [autoStartAt, setAutoStartAt] = React.useState<number | null>(null);
+  const [endedEntryId, setEndedEntryId] = React.useState<string | null>(null);
+  // The marker as it stood at page load is never cheered: a reload or a co-host
+  // joining mid-wait must not replay it. Forgotten once the room moves off it.
+  const preEndedRef = React.useRef<string | null | undefined>(undefined);
+  React.useEffect(() => {
+    if (endedEntryId !== preEndedRef.current) preEndedRef.current = null;
+  }, [endedEntryId]);
+  const [playbackSheetOpen, setPlaybackSheetOpen] = React.useState(false);
   const [songLimit, setSongLimitState] = React.useState<number | null>(null);
   const songLimitRef = React.useRef<number | null>(null);
   songLimitRef.current = songLimit;
@@ -179,15 +188,13 @@ const Host = ({
   const playsVideoHere =
     isPlaying && !!serverPlayToken && serverPlayToken === ownedPlayToken;
 
-  // Not the same question as `ownedPlayToken !== null`: that token is sticky per
-  // tab and survives another device taking the surface over, so gating auto-start
-  // on it would let a forgotten tab win the start — what shouldClaimPlayback
-  // guards against. Only a *different* device's token revokes this.
-  const wasSurfaceRef = React.useRef(false);
+  // Another device's token revokes this page's right to fire the countdown until
+  // it plays again. Not `ownedPlayToken !== null`: that token survives a takeover.
+  const surfaceRevokedRef = React.useRef(false);
   React.useEffect(() => {
-    if (playsVideoHere) wasSurfaceRef.current = true;
+    if (playsVideoHere) surfaceRevokedRef.current = false;
     else if (serverPlayToken && serverPlayToken !== ownedPlayToken) {
-      wasSurfaceRef.current = false;
+      surfaceRevokedRef.current = true;
     }
   }, [playsVideoHere, serverPlayToken, ownedPlayToken]);
 
@@ -422,6 +429,9 @@ const Host = ({
     setAutoAdvanceState(normalizeAutoAdvance(room.autoAdvance));
     setSongLimitState(normalizeSongLimit(room.songLimitSeconds));
     setAutoStartAt(autoStartEpoch(room.autoStartAt));
+    const ended = room.endedEntryId ?? null;
+    if (preEndedRef.current === undefined) preEndedRef.current = ended;
+    setEndedEntryId(ended);
     timing.adoptRoom(room);
     setDisplayConfigState(normalizeDisplayConfig(room.displayConfig));
     setHostConfigState(normalizeHostConfig(room.hostConfig));
@@ -624,10 +634,12 @@ const Host = ({
     const nextIdx = activeIndex + 1;
     // The video-ended route rather than a plain position write: it is the one
     // that arms auto-advance, and its guard makes a straggler end a no-op.
+    const ended = queue[activeIndex]?.id ?? null;
     const ok = await postVideoEnded(joinCode, activeIndex);
     if (ok) {
       setActiveIndex(nextIdx);
       setIsPlaying(false);
+      setEndedEntryId(ended);
       broadcast(queue, nextIdx, false);
       const room = await getRoom(joinCode);
       if (typeof room !== "string" && !isPausedRef.current) applyRoomState(room);
@@ -858,9 +870,7 @@ const Host = ({
     if (patch.enabled !== undefined) {
       showToast(patch.enabled ? t('host.toast.autoOn') : t('host.toast.autoOff'));
     }
-    // The route re-times a running countdown; adopt the new stamp now so the
-    // ring follows the tap rather than a poll later.
-    if (patch.gapSeconds !== undefined && autoStartAt !== null) {
+    if (patch.enabled === true || (patch.gapSeconds !== undefined && autoStartAt !== null)) {
       const room = await getRoom(joinCode);
       if (typeof room !== "string" && !isPausedRef.current) applyRoomState(room);
     }
@@ -885,6 +895,7 @@ const Host = ({
     if (!joinCode) return;
     // Hold polling so an in-flight poll carrying the stamp can't re-arm the ring.
     pausePolling();
+    holdAutoArm();
     setAutoStartAt(null);
     const ok = await cancelAutoStart(joinCode);
     if (!ok) await resyncAfterFailedWrite();
@@ -940,8 +951,10 @@ const Host = ({
     if (ok) {
       setActiveIndex(nextIndex);
       setIsPlaying(false);
+      setEndedEntryId(null);
       timing.markStopped();
       broadcast(queue, nextIndex, false);
+      await adoptSkipCountdown();
     }
   }
 
@@ -954,9 +967,18 @@ const Host = ({
     if (ok) {
       setActiveIndex(prevIndex);
       setIsPlaying(false);
+      setEndedEntryId(null);
       timing.markStopped();
       broadcast(queue, prevIndex, false);
+      await adoptSkipCountdown();
     }
+  }
+
+  // Only the stamp: the ring should follow the tap, not the poll after the hold.
+  async function adoptSkipCountdown() {
+    if (!joinCode || !autoAdvance.enabled) return;
+    const room = await getRoom(joinCode);
+    if (typeof room !== "string") setAutoStartAt(autoStartEpoch(room.autoStartAt));
   }
 
   async function startSong(auto = false) {
@@ -974,6 +996,7 @@ const Host = ({
       setServerPlayToken(token);
       storePlayToken(joinCode, token);
       setIsPlaying(true);
+      setEndedEntryId(null);
       broadcast(queue, activeIndex, true, timing.markStarted());
     }
   }
@@ -987,6 +1010,7 @@ const Host = ({
     const ok = await setPlaying(joinCode, true);
     if (ok) {
       setIsPlaying(true);
+      setEndedEntryId(null);
       broadcast(queue, activeIndex, true, timing.markStarted());
     }
   }
@@ -997,6 +1021,9 @@ const Host = ({
     if (ok) {
       setServerPlayToken(null);
       setIsPlaying(false);
+      holdAutoArm();
+      setAutoStartAt(null);
+      setEndedEntryId(null);
       timing.markStopped();
       broadcast(queue, activeIndex, false);
     }
@@ -1180,15 +1207,31 @@ const Host = ({
   const cohostCanPlay = remote && (tvMode ? displayConnected : true);
   const cohostControlsLive = remote && tvMode && displayConnected;
 
+  const { hold: holdAutoArm } = useAutoArm({
+    roomId: joinCode,
+    enabled: !loading && !remote && !tvMode && !adminPeek && autoAdvance.enabled,
+    isPlaying,
+    autoStartAt,
+    activeIndex,
+    hasCurrent: !!currentSong,
+    claimNonce,
+    isPausedRef,
+    setAutoStartAt,
+  });
+
   const { secondsLeft: autoStartIn } = useAutoStart({
     autoStartAt,
     isPlaying,
     canStart:
-      !remote && !tvMode && !adminPeek && wasSurfaceRef.current && !!currentSong,
+      !remote &&
+      !tvMode &&
+      !adminPeek &&
+      !surfaceRevokedRef.current &&
+      !!currentSong,
     onStart: () => {
       // Read at fire time, not render time: a tab hidden since the last render
       // must not grab the surface (shouldClaimPlayback's rule).
-      if (document.visibilityState !== "visible") return;
+      if (document.visibilityState !== "visible") return false;
       startSong(true);
     },
   });
@@ -1215,10 +1258,10 @@ const Host = ({
       onToggleHereVideo={toggleHereVideo}
       onStart={remote ? startSongRemotely : () => startSong()}
       onNext={playNext}
-      autoAdvanceOn={autoAdvance.enabled}
-      onToggleAutoAdvance={
-        remote ? undefined : () => updateAutoAdvance({ enabled: !autoAdvance.enabled })
-      }
+      autoAdvance={autoAdvance}
+      onChangeAutoAdvance={remote ? undefined : updateAutoAdvance}
+      modeOpen={playbackSheetOpen}
+      onModeOpenChange={setPlaybackSheetOpen}
       autoStartIn={autoStartIn}
       onCancelAutoStart={remote ? undefined : cancelPendingAutoStart}
     />
@@ -1356,6 +1399,12 @@ const Host = ({
             loading={loading}
             currentSong={currentSong}
             songsSung={historyItems.length}
+            showCheer={
+              endedEntryId !== null &&
+              endedEntryId !== preEndedRef.current &&
+              historyItems[historyItems.length - 1]?.id === endedEntryId
+            }
+            lastSinger={historyItems[historyItems.length - 1]?.userName}
             remote={remote}
             cohostCanPlay={cohostCanPlay}
             cohostControlsLive={cohostControlsLive}
@@ -1372,8 +1421,8 @@ const Host = ({
             onAddFirst={() => setSearchOpen(true)}
             autoStartIn={autoStartIn}
             autoGapSeconds={autoAdvance.gapSeconds}
-            onChangeAutoGap={(gapSeconds) => updateAutoAdvance({ gapSeconds })}
-            onTurnOffAutoAdvance={() => updateAutoAdvance({ enabled: false })}
+            autoEnabled={autoAdvance.enabled}
+            onOpenPlaybackSettings={remote ? undefined : () => setPlaybackSheetOpen(true)}
             wrapUpIn={playsVideoHere ? wrapUpIn : null}
           />
 

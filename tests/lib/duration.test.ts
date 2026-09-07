@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseIso8601Duration, formatDuration, formatCountdown } from "../../lib/duration";
+import { parseIso8601Duration, formatDuration, formatCountdown, formatGap, formatSecondsLeft } from "../../lib/duration";
 
 describe("parseIso8601Duration", () => {
   it("parses minutes and seconds", () => {
@@ -73,5 +73,28 @@ describe("formatCountdown", () => {
   it("never reports zero, even for a reset that's already due", () => {
     expect(formatCountdown(0, t)).toBe("1 min");
     expect(formatCountdown(-10, t)).toBe("1 min");
+  });
+});
+
+describe("formatGap", () => {
+  const t = (key: string, vars?: Record<string, string | number>) =>
+    key === "host.settings.seconds"
+      ? `${vars?.n}s`
+      : key === "host.settings.minutes"
+        ? `${vars?.n} min`
+        : `${vars?.m}m ${vars?.s}s`;
+  it("labels short gaps in seconds, whole minutes as minutes, and mixes the rest", () => {
+    expect(formatGap(20, t)).toBe("20s");
+    expect(formatGap(180, t)).toBe("3 min");
+    expect(formatGap(90, t)).toBe("1m 30s");
+  });
+});
+
+describe("formatSecondsLeft", () => {
+  it("counts bare seconds under a minute and m:ss above it", () => {
+    expect(formatSecondsLeft(3)).toBe("3");
+    expect(formatSecondsLeft(59)).toBe("59");
+    expect(formatSecondsLeft(60)).toBe("1:00");
+    expect(formatSecondsLeft(179)).toBe("2:59");
   });
 });
