@@ -1,0 +1,164 @@
+/* Auto-advance breather ring, shared by the display and the host stage. */
+.ring {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.7rem;
+  margin-top: 1rem;
+  padding: 0.5rem 1rem;
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  animation: ringIn 0.4s ease-out;
+}
+
+@keyframes ringIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+.dial {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--ring-size, 140px);
+  height: var(--ring-size, 140px);
+}
+
+.dial svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.track {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.1);
+  stroke-width: 6;
+}
+
+.fill {
+  fill: none;
+  stroke: var(--ring-color, #ff2d78);
+  stroke-width: 6;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 6px rgba(255, 45, 120, 0.6));
+  /* One linear second per tick keeps the drain continuous between whole-second updates. */
+  transition: stroke-dashoffset 1s linear;
+}
+
+.seconds {
+  font-family: var(--font-mono);
+  font-size: calc(var(--ring-size, 140px) * 0.34);
+  font-weight: 700;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.caption {
+  font-size: 0.85rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.hint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+
+/* Host stage only: the ring with its breather chips and the off switch. */
+.panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.4rem 0.6rem;
+  animation: ringIn 0.4s ease-out;
+}
+
+.chips {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.chip,
+.off {
+  font-size: 0.7rem;
+  font-weight: 600;
+  font-family: inherit;
+  padding: 0.3rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+
+.chip:hover,
+.off:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+}
+
+.chipOn {
+  border-color: rgba(0, 240, 255, 0.5);
+  background: rgba(0, 240, 255, 0.12);
+  color: #00f0ff;
+}
+
+.off {
+  margin-left: 0.2rem;
+}
+
+/* Song limit: the last seconds before the cut. Positioned against whichever
+   surface's player wraps it — the display stage or the host's video frame. */
+.wrapUpPill {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  z-index: 15;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.85rem;
+  border-radius: 999px;
+  /* The display sets the surface colour; the host stage has no such variable. */
+  background: rgba(var(--disp-surface-rgb, 12, 12, 22), 0.85);
+  border: 1px solid rgba(255, 215, 0, 0.4);
+  color: #ffd700;
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  animation: wrapUpIn 0.3s ease-out;
+}
+
+@keyframes wrapUpIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: none; }
+}
+
+.wrapUpDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ffd700;
+  box-shadow: 0 0 8px rgba(255, 215, 0, 0.8);
+}

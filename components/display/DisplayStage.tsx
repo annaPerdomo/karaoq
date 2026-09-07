@@ -6,6 +6,8 @@ import formatSongTitle from '../../lib/songTitle';
 import { embedSrc } from '../player/embed';
 import { PlaybackErrorNotice } from '../player/PlaybackErrorNotice';
 import { usePlaybackError } from '../player/usePlaybackError';
+import AutoStartCountdown from './AutoStartCountdown';
+import WrapUpPill from '../player/WrapUpPill';
 
 export default function DisplayStage({
   loading,
@@ -18,6 +20,11 @@ export default function DisplayStage({
   onIframeLoad,
   needsTap,
   onUnlock,
+  autoStartIn,
+  autoGapSeconds,
+  onStartNow,
+  wrapUpIn,
+  onPlaybackFailed,
 }: {
   loading: boolean;
   joinCode: string | undefined;
@@ -29,6 +36,13 @@ export default function DisplayStage({
   onIframeLoad: () => void;
   needsTap: boolean;
   onUnlock: () => void;
+  /** Seconds until auto-advance starts the waiting song; null = no countdown. */
+  autoStartIn: number | null;
+  autoGapSeconds: number;
+  onStartNow: () => void;
+  /** Seconds until the song limit cuts the video; null outside the warning window. */
+  wrapUpIn: number | null;
+  onPlaybackFailed: () => void;
 }) {
   const { t } = useT();
   const playbackFailed = usePlaybackError({
@@ -38,6 +52,12 @@ export default function DisplayStage({
     videoId: currentSong?.videoId,
     active: !loading && !!currentSong && isPlaying && playsVideoHere,
   });
+
+  const onPlaybackFailedRef = React.useRef(onPlaybackFailed);
+  onPlaybackFailedRef.current = onPlaybackFailed;
+  React.useEffect(() => {
+    if (playbackFailed) onPlaybackFailedRef.current();
+  }, [playbackFailed]);
 
   return (
     <>
@@ -67,6 +87,13 @@ export default function DisplayStage({
           <p className={styles.readySong}>
             {formatSongTitle(currentSong.songTitle)}
           </p>
+          {autoStartIn !== null && !isPlaying && (
+            <AutoStartCountdown
+              secondsLeft={autoStartIn}
+              totalSeconds={autoGapSeconds}
+              onStartNow={onStartNow}
+            />
+          )}
         </div>
       ) : (
         <div className={styles.centerState}>
@@ -110,6 +137,10 @@ export default function DisplayStage({
             {t('display.tapHint')}
           </span>
         </button>
+      )}
+
+      {wrapUpIn !== null && isPlaying && currentSong && !playbackFailed && (
+        <WrapUpPill secondsLeft={wrapUpIn} />
       )}
 
       {playbackFailed && <PlaybackErrorNotice className={styles.videoNotice} />}

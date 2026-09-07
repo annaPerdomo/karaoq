@@ -130,6 +130,24 @@ export const Icons = {
       <polyline points="7,4 12,9 7,14" />
     </svg>
   ),
+  autoAdvance: (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 20 20"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M3.5 10a6.5 6.5 0 0 1 11.1-4.6" />
+      <polyline points="14.8,2.4 14.8,5.6 11.6,5.6" />
+      <path d="M16.5 10a6.5 6.5 0 0 1-11.1 4.6" />
+      <polyline points="5.2,17.6 5.2,14.4 8.4,14.4" />
+      <polygon points="8.5,7.5 12.5,10 8.5,12.5" fill="currentColor" stroke="none" />
+    </svg>
+  ),
   brush: (
     <svg
       width="20"

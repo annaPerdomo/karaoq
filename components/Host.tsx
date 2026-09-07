@@ -22,6 +22,17 @@ import {
 } from "../app/queue/roomChannel";
 import setReactionsEnabled from "../app/queue/setReactionsEnabled";
 import setFairMode from "../app/queue/setFairMode";
+import setAutoAdvance from "../app/queue/setAutoAdvance";
+import setSongLimit from "../app/queue/setSongLimit";
+import cancelAutoStart from "../app/queue/cancelAutoStart";
+import postVideoEnded from "../app/queue/postVideoEnded";
+import { useAutoStart } from "./hooks/useAutoStart";
+import {
+  autoStartEpoch,
+  playerCurrentTime,
+  songSecondsLeft,
+  WRAP_UP_WARN_SECONDS,
+} from "../lib/autoAdvance";
 import setSessionEnd from "../app/queue/setSessionEnd";
 import { formatClockTime } from "../lib/queueTime";
 import { useRoomTiming } from "./hooks/useRoomTiming";
@@ -33,11 +44,15 @@ import { startVisiblePolling } from "../app/queue/pollWhileVisible";
 import { useSearchBackNotice } from "../app/queue/useSearchBackNotice";
 import SearchBackToast from "./search/SearchBackToast";
 import {
+  AutoAdvance,
+  AUTO_ADVANCE_OFF,
   DEFAULT_DISPLAY_CONFIG,
   DEFAULT_HOST_CONFIG,
   DisplayConfig,
   DisplayTheme,
   HostConfig,
+  normalizeAutoAdvance,
+  normalizeSongLimit,
   normalizeDisplayConfig,
   normalizeHostConfig,
   PlayMode,
@@ -111,6 +126,11 @@ const Host = ({
   const [reactionsOn, setReactionsOn] = React.useState(true);
   const [boardsOnDisplay, setBoardsOnDisplayState] = React.useState(true);
   const [fairMode, setFairModeState] = React.useState(false);
+  const [autoAdvance, setAutoAdvanceState] = React.useState<AutoAdvance>(AUTO_ADVANCE_OFF);
+  const [autoStartAt, setAutoStartAt] = React.useState<number | null>(null);
+  const [songLimit, setSongLimitState] = React.useState<number | null>(null);
+  const songLimitRef = React.useRef<number | null>(null);
+  songLimitRef.current = songLimit;
   const timing = useRoomTiming({
     queue,
     activeVideoIndex: activeIndex,
@@ -140,6 +160,7 @@ const Host = ({
 
   // Here-mode: the video renders iff the room's playToken is one we minted;
   // other host devices show a status panel instead of double-playing.
+  const [wrapUpIn, setWrapUpIn] = React.useState<number | null>(null);
   const [ownedPlayToken, setOwnedPlayToken] = React.useState<string | null>(null);
   const [serverPlayToken, setServerPlayToken] = React.useState<string | null>(null);
   const [displayPaused, setDisplayPaused] = React.useState(false);
@@ -157,6 +178,18 @@ const Host = ({
   }, [isPlaying]);
   const playsVideoHere =
     isPlaying && !!serverPlayToken && serverPlayToken === ownedPlayToken;
+
+  // Not the same question as `ownedPlayToken !== null`: that token is sticky per
+  // tab and survives another device taking the surface over, so gating auto-start
+  // on it would let a forgotten tab win the start — what shouldClaimPlayback
+  // guards against. Only a *different* device's token revokes this.
+  const wasSurfaceRef = React.useRef(false);
+  React.useEffect(() => {
+    if (playsVideoHere) wasSurfaceRef.current = true;
+    else if (serverPlayToken && serverPlayToken !== ownedPlayToken) {
+      wasSurfaceRef.current = false;
+    }
+  }, [playsVideoHere, serverPlayToken, ownedPlayToken]);
 
   // Here-mode: starts optimistically true; the autoplay watchdog flips it false
   // if blocked. herePlayingRef mirrors it for the watchdog + postMessage listener.
@@ -386,6 +419,9 @@ const Host = ({
     setReactionsOn(room.reactionsEnabled ?? true);
     setBoardsOnDisplayState(room.boardsOnDisplay ?? true);
     setFairModeState(room.fairMode ?? false);
+    setAutoAdvanceState(normalizeAutoAdvance(room.autoAdvance));
+    setSongLimitState(normalizeSongLimit(room.songLimitSeconds));
+    setAutoStartAt(autoStartEpoch(room.autoStartAt));
     timing.adoptRoom(room);
     setDisplayConfigState(normalizeDisplayConfig(room.displayConfig));
     setHostConfigState(normalizeHostConfig(room.hostConfig));
@@ -575,6 +611,7 @@ const Host = ({
   const currentQueueSongId = queue[activeIndex]?.id;
   React.useEffect(() => {
     endedHandledRef.current = false;
+    setWrapUpIn(null);
   }, [currentQueueSongId, isPlaying]);
 
   // Ref so the postMessage handler always has current state.
@@ -585,11 +622,15 @@ const Host = ({
     // Past the last song too — bounding this parks on the finished entry, which
     // then replays ahead of anything added afterwards.
     const nextIdx = activeIndex + 1;
-    const ok = await updatePosition(joinCode, nextIdx);
+    // The video-ended route rather than a plain position write: it is the one
+    // that arms auto-advance, and its guard makes a straggler end a no-op.
+    const ok = await postVideoEnded(joinCode, activeIndex);
     if (ok) {
       setActiveIndex(nextIdx);
       setIsPlaying(false);
       broadcast(queue, nextIdx, false);
+      const room = await getRoom(joinCode);
+      if (typeof room !== "string" && !isPausedRef.current) applyRoomState(room);
     } else {
       // Advance didn't land — allow the next end event to retry.
       endedHandledRef.current = false;
@@ -611,6 +652,14 @@ const Host = ({
             : data.event === "infoDelivery"
               ? data.info?.playerState
               : undefined;
+        const limitLeft = songSecondsLeft(playerCurrentTime(data), songLimitRef.current);
+        if (limitLeft !== null) {
+          setWrapUpIn(limitLeft <= WRAP_UP_WARN_SECONDS ? limitLeft : null);
+          if (limitLeft <= 0) {
+            onVideoEndedRef.current();
+            return;
+          }
+        }
         if (state === 0) {
           onVideoEndedRef.current();
         } else if (state === 1 || state === 3) {
@@ -797,6 +846,50 @@ const Host = ({
     }
   }
 
+  async function updateAutoAdvance(patch: Partial<AutoAdvance>) {
+    if (!joinCode) return;
+    const next = { ...autoAdvance, ...patch };
+    setAutoAdvanceState(next);
+    const ok = await setAutoAdvance(joinCode, patch);
+    if (!ok) {
+      await resyncAfterFailedWrite();
+      return;
+    }
+    if (patch.enabled !== undefined) {
+      showToast(patch.enabled ? t('host.toast.autoOn') : t('host.toast.autoOff'));
+    }
+    // The route re-times a running countdown; adopt the new stamp now so the
+    // ring follows the tap rather than a poll later.
+    if (patch.gapSeconds !== undefined && autoStartAt !== null) {
+      const room = await getRoom(joinCode);
+      if (typeof room !== "string" && !isPausedRef.current) applyRoomState(room);
+    }
+  }
+
+  async function updateSongLimit(seconds: number | null) {
+    if (!joinCode) return;
+    setSongLimitState(seconds);
+    const ok = await setSongLimit(joinCode, seconds);
+    if (!ok) {
+      await resyncAfterFailedWrite();
+      return;
+    }
+    showToast(
+      seconds === null
+        ? t('host.toast.songLimitOff')
+        : t('host.toast.songLimitOn', { n: seconds / 60 })
+    );
+  }
+
+  async function cancelPendingAutoStart() {
+    if (!joinCode) return;
+    // Hold polling so an in-flight poll carrying the stamp can't re-arm the ring.
+    pausePolling();
+    setAutoStartAt(null);
+    const ok = await cancelAutoStart(joinCode);
+    if (!ok) await resyncAfterFailedWrite();
+  }
+
   async function updateSessionEnd(endsAt: number | null) {
     if (!joinCode) return;
     // Hold polling so an in-flight poll carrying the old value can't flip it back.
@@ -866,12 +959,16 @@ const Host = ({
     }
   }
 
-  async function startSong() {
+  async function startSong(auto = false) {
     if (!joinCode) return;
     // Mint a fresh playback token: another host device sees the foreign token
     // on its next poll and yields — starting here doubles as a clean takeover.
     const token = uuidv4();
-    const ok = await setPlaying(joinCode, true, token);
+    const ok = await setPlaying(joinCode, true, token, false, auto);
+    if (!ok && auto) {
+      setAutoStartAt(null);
+      return;
+    }
     if (ok) {
       setOwnedPlayToken(token);
       setServerPlayToken(token);
@@ -1083,6 +1180,19 @@ const Host = ({
   const cohostCanPlay = remote && (tvMode ? displayConnected : true);
   const cohostControlsLive = remote && tvMode && displayConnected;
 
+  const { secondsLeft: autoStartIn } = useAutoStart({
+    autoStartAt,
+    isPlaying,
+    canStart:
+      !remote && !tvMode && !adminPeek && wasSurfaceRef.current && !!currentSong,
+    onStart: () => {
+      // Read at fire time, not render time: a tab hidden since the last render
+      // must not grab the surface (shouldClaimPlayback's rule).
+      if (document.visibilityState !== "visible") return;
+      startSong(true);
+    },
+  });
+
   const transportBar = (
     <TransportBar
       roomId={joinCode}
@@ -1103,8 +1213,14 @@ const Host = ({
       onToggleDisplayPause={toggleDisplayPause}
       onStop={stopSong}
       onToggleHereVideo={toggleHereVideo}
-      onStart={remote ? startSongRemotely : startSong}
+      onStart={remote ? startSongRemotely : () => startSong()}
       onNext={playNext}
+      autoAdvanceOn={autoAdvance.enabled}
+      onToggleAutoAdvance={
+        remote ? undefined : () => updateAutoAdvance({ enabled: !autoAdvance.enabled })
+      }
+      autoStartIn={autoStartIn}
+      onCancelAutoStart={remote ? undefined : cancelPendingAutoStart}
     />
   );
 
@@ -1205,6 +1321,10 @@ const Host = ({
         onToggleReactions={toggleReactions}
         fairMode={fairMode}
         onToggleFairMode={toggleFairMode}
+        autoAdvance={autoAdvance}
+        onChangeAutoAdvance={updateAutoAdvance}
+        songLimit={songLimit}
+        onChangeSongLimit={updateSongLimit}
         sessionEndsAt={sessionEndsAt}
         onChangeSessionEnd={updateSessionEnd}
         hostName={hostName}
@@ -1247,9 +1367,14 @@ const Host = ({
             videoRef={videoRef}
             onIframeLoad={handleIframeLoad}
             onOpenTvDisplay={openTvDisplay}
-            onStartSong={startSong}
+            onStartSong={() => startSong()}
             joinCode={joinCode}
             onAddFirst={() => setSearchOpen(true)}
+            autoStartIn={autoStartIn}
+            autoGapSeconds={autoAdvance.gapSeconds}
+            onChangeAutoGap={(gapSeconds) => updateAutoAdvance({ gapSeconds })}
+            onTurnOffAutoAdvance={() => updateAutoAdvance({ enabled: false })}
+            wrapUpIn={playsVideoHere ? wrapUpIn : null}
           />
 
           {!remote && reactionsOn && visibleReactions.length > 0 && (

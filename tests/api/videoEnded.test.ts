@@ -50,6 +50,23 @@ function roomWithSongs(count: number, activeVideoIndex: number): Room {
   };
 }
 
+// The auto-advance stamp rides in the same pipeline stage: set only when the
+// setting is on AND a song waits past the ended one, removed otherwise.
+function autoStartStamp(nextIndex: number) {
+  return {
+    $cond: [
+      {
+        $and: [
+          { $eq: ["$autoAdvance.enabled", true] },
+          { $lt: [nextIndex, { $size: "$queue" }] },
+        ],
+      },
+      expect.any(Date),
+      "$$REMOVE",
+    ],
+  };
+}
+
 describe("POST /api/queue/[id]/video-ended - Display reports a finished song", () => {
   beforeEach(() => vi.clearAllMocks());
 
@@ -74,6 +91,7 @@ describe("POST /api/queue/[id]/video-ended - Display reports a finished song", (
             activeVideoIndex: { $min: [1, { $size: "$queue" }] },
             isPlaying: false,
             lastActivity: expect.any(Date),
+            autoStartAt: autoStartStamp(1),
           },
         },
         {
@@ -126,6 +144,7 @@ describe("POST /api/queue/[id]/video-ended - Display reports a finished song", (
             activeVideoIndex: { $min: [3, { $size: "$queue" }] },
             isPlaying: false,
             lastActivity: expect.any(Date),
+            autoStartAt: autoStartStamp(3),
           },
         },
         {
@@ -190,5 +209,37 @@ describe("POST /api/queue/[id]/video-ended - Display reports a finished song", (
     await handler(req, res);
 
     expect(res.getStatus()).toBe(405);
+  });
+
+  it("stamps the auto-start a gap after now when auto-advance is on", async () => {
+    mockCollection.findOne.mockResolvedValue({
+      ...roomWithSongs(3, 0),
+      autoAdvance: { enabled: true, gapSeconds: 20 },
+    });
+    mockCollection.updateOne.mockResolvedValue({ modifiedCount: 1 });
+    const before = Date.now();
+
+    const req = createMockReq({ method: "POST", query: { id: "ROOM1", index: "0" } });
+    await handler(req, createRes());
+
+    const [, pipeline] = mockCollection.updateOne.mock.calls[0];
+    const stamp: Date = pipeline[0].$set.autoStartAt.$cond[1];
+    expect(stamp.getTime() - before).toBeGreaterThanOrEqual(20_000);
+    expect(stamp.getTime() - before).toBeLessThan(21_000);
+  });
+
+  it("leaves a room without the setting unstamped — it predates auto-advance", async () => {
+    mockCollection.findOne.mockResolvedValue(roomWithSongs(3, 0));
+    mockCollection.updateOne.mockResolvedValue({ modifiedCount: 1 });
+
+    const req = createMockReq({ method: "POST", query: { id: "ROOM1", index: "0" } });
+    await handler(req, createRes());
+
+    // The guard is evaluated server-side, so assert the condition the write
+    // carries: an absent `autoAdvance.enabled` can't equal true.
+    const [, pipeline] = mockCollection.updateOne.mock.calls[0];
+    expect(pipeline[0].$set.autoStartAt.$cond[0].$and[0]).toEqual({
+      $eq: ["$autoAdvance.enabled", true],
+    });
   });
 });

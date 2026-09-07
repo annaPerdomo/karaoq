@@ -28,6 +28,10 @@ export function TransportBar({
   remote = false,
   cohostControlsLive = false,
   cohostCanPlay = false,
+  autoAdvanceOn = false,
+  onToggleAutoAdvance,
+  autoStartIn = null,
+  onCancelAutoStart,
   onPrevious,
   onToggleDisplayPause,
   onStop,
@@ -52,6 +56,11 @@ export function TransportBar({
   cohostControlsLive?: boolean;
   /** Host.tsx's gate for the co-host's Play, which here-mode also satisfies. */
   cohostCanPlay?: boolean;
+  autoAdvanceOn?: boolean;
+  onToggleAutoAdvance?: () => void;
+  /** Seconds until the waiting song starts on its own; null = no countdown. */
+  autoStartIn?: number | null;
+  onCancelAutoStart?: () => void;
   onPrevious: () => void;
   onToggleDisplayPause: () => void;
   onStop: () => void;
@@ -71,8 +80,23 @@ export function TransportBar({
               <div
                 className={`${styles.tLabel} ${isPlaying ? styles.tLabelPlaying : styles.tLabelReady}`}
               >
-                {isPlaying && <span className={styles.tDot} />}
-                {isPlaying ? t('host.status.onStage') : t('host.status.upNext')}
+                {(isPlaying || autoStartIn !== null) && <span className={styles.tDot} />}
+                {isPlaying ? (
+                  t('host.status.onStage')
+                ) : autoStartIn !== null ? (
+                  <>
+                    <span className={styles.tAutoCount}>
+                      {t('host.status.autoIn', { n: autoStartIn })}
+                    </span>
+                    {onCancelAutoStart && (
+                      <button className={styles.tAutoCancel} onClick={onCancelAutoStart}>
+                        {t('host.transport.cancelAuto')}
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  t('host.status.upNext')
+                )}
               </div>
               <div className={styles.tSinger}>
                 {currentSong.userName}
@@ -199,6 +223,20 @@ export function TransportBar({
           >
             {Icons.next}
           </button>
+          {!remote && onToggleAutoAdvance && (
+            <button
+              className={`${styles.tBtn} ${styles.tAuto} ${autoAdvanceOn ? styles.tAutoOn : ""}`}
+              onClick={onToggleAutoAdvance}
+              aria-pressed={autoAdvanceOn}
+              title={
+                autoAdvanceOn
+                  ? t('host.settings.autoAdvanceOn')
+                  : t('host.settings.autoAdvanceOff')
+              }
+            >
+              {Icons.autoAdvance}
+            </button>
+          )}
           {!remote && (
             <FullscreenToggle
               className={`${styles.tBtn} ${styles.tFullscreen}`}

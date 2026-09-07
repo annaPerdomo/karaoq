@@ -238,6 +238,9 @@ describe("Client API wrappers", () => {
       ["removeSuggestion", (m) => (m.default as (r: string, s: string) => Promise<boolean>)("R", "s")],
       ["setDisplayConfig", (m) => (m.default as (r: string, c: typeof DEFAULT_DISPLAY_CONFIG) => Promise<boolean>)("R", DEFAULT_DISPLAY_CONFIG)],
       ["setFairMode", (m) => (m.default as (r: string, e: boolean) => Promise<boolean>)("R", true)],
+      ["setAutoAdvance", (m) => (m.default as (r: string, p: { enabled: boolean }) => Promise<boolean>)("R", { enabled: true })],
+      ["cancelAutoStart", (m) => (m.default as (r: string) => Promise<boolean>)("R")],
+      ["setSongLimit", (m) => (m.default as (r: string, s: number | null) => Promise<boolean>)("R", 240)],
     ];
 
     it.each(wrappers)("%s resolves false", async (name, call) => {
@@ -245,6 +248,40 @@ describe("Client API wrappers", () => {
       const mod = await import(`../../app/queue/${name}`);
 
       await expect(call(mod)).resolves.toBe(false);
+    });
+  });
+
+  describe("postVideoEnded", () => {
+    it("reports success only when the server actually advanced", async () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ code: 200, advanced: true }),
+      });
+      const { default: postVideoEnded } = await import("../../app/queue/postVideoEnded");
+
+      await expect(postVideoEnded("ROOM1", 2)).resolves.toBe(true);
+      expect(mockFetch).toHaveBeenCalledWith("/api/queue/ROOM1/video-ended?index=2", {
+        method: "POST",
+      });
+    });
+
+    it("treats a 200 no-op as a failure so the caller doesn't render an advance", async () => {
+      // The route answers 200/advanced:false when its guard matched nothing —
+      // the room was stopped or had already moved on.
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ code: 200, advanced: false }),
+      });
+      const { default: postVideoEnded } = await import("../../app/queue/postVideoEnded");
+
+      await expect(postVideoEnded("ROOM1", 2)).resolves.toBe(false);
+    });
+
+    it("returns false instead of throwing when the network is down", async () => {
+      mockFetch.mockRejectedValue(new TypeError("Failed to fetch"));
+      const { default: postVideoEnded } = await import("../../app/queue/postVideoEnded");
+
+      await expect(postVideoEnded("ROOM1", 0)).resolves.toBe(false);
     });
   });
 

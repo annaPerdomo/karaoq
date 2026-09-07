@@ -69,6 +69,7 @@ describe("POST /api/queue/[id]/position - Advance song position", () => {
           displayPaused: "",
           playStartedAt: "",
           playPausedAt: "",
+          autoStartAt: "",
         },
       }
     );

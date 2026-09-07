@@ -55,7 +55,7 @@ describe("POST /api/queue/[id]/play - Set play state", () => {
       { id: "ROOM1", isPlaying: { $ne: true } },
       {
         $set: { isPlaying: true, playStartedAt: expect.any(Date), lastActivity: expect.any(Date) },
-        $unset: { displayPaused: "", playPausedAt: "" },
+        $unset: { displayPaused: "", playPausedAt: "", autoStartAt: "" },
       }
     );
   });
@@ -207,6 +207,7 @@ describe("POST /api/queue/[id]/play - Set play state", () => {
           displayPaused: "",
           playStartedAt: "",
           playPausedAt: "",
+          autoStartAt: "",
         },
       }
     );
@@ -229,7 +230,7 @@ describe("POST /api/queue/[id]/play - Set play state", () => {
       { id: "ROOM1" },
       {
         $set: { isPlaying: true, playToken: "tok-abc", playStartedAt: expect.any(Date), lastActivity: expect.any(Date) },
-        $unset: { displayPaused: "", playPausedAt: "" },
+        $unset: { displayPaused: "", playPausedAt: "", autoStartAt: "" },
       }
     );
   });
@@ -245,5 +246,47 @@ describe("POST /api/queue/[id]/play - Set play state", () => {
     await handler(req, res);
 
     expect(res.getStatus()).toBe(404);
+  });
+
+  it("lands an auto-advance start only while the countdown still stands", async () => {
+    // The display's timer fires a moment after the host pressed Cancel: the
+    // start must be refused, not raced.
+    const room: Room = { id: "ROOM1", queue: [], activeVideoIndex: 0, isPlaying: false, playMode: "tv" };
+    mockCollection.findOne.mockResolvedValue(room);
+    mockCollection.updateOne.mockResolvedValue({ matchedCount: 0 });
+
+    const req = createMockReq({
+      method: "POST",
+      query: { id: "ROOM1", isPlaying: "true", auto: "1" },
+    });
+    const res = createRes();
+    await handler(req, res);
+
+    expect(res.getStatus()).toBe(409);
+    expect(mockCollection.updateOne).toHaveBeenCalledWith(
+      { id: "ROOM1", isPlaying: { $ne: true }, autoStartAt: { $exists: true } },
+      expect.anything()
+    );
+  });
+
+  it("guards a here-mode auto start on the countdown too", async () => {
+    const room: Room = { id: "ROOM1", queue: [], activeVideoIndex: 0, isPlaying: false, playMode: "here" };
+    mockCollection.findOne.mockResolvedValue(room);
+    mockCollection.updateOne.mockResolvedValue({ matchedCount: 1 });
+
+    const req = createMockReq({
+      method: "POST",
+      query: { id: "ROOM1", isPlaying: "true", playToken: "mine", auto: "1" },
+    });
+    const res = createRes();
+    await handler(req, res);
+
+    expect(res.getStatus()).toBe(200);
+    expect(mockCollection.updateOne).toHaveBeenCalledWith(
+      { id: "ROOM1", autoStartAt: { $exists: true } },
+      expect.objectContaining({
+        $set: expect.objectContaining({ playToken: "mine" }),
+      })
+    );
   });
 });

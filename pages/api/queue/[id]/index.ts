@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from "next";
-import { ApiError, DEFAULT_DISPLAY_CONFIG, Room } from "../../types";
+import { ApiError, DEFAULT_AUTO_ADVANCE, DEFAULT_DISPLAY_CONFIG, Room } from "../../types";
 import { trackEvent } from "../../../../lib/analytics";
 import { rateLimit } from "../../../../lib/limits";
 import { getRoomsCollection } from "../../../../lib/mongodb";
@@ -20,6 +20,10 @@ const DISPLAY_LIVE_MS = 75_000;
 // to claim the surface — before playback counts as orphaned. A host mid-drag re-arms its polling
 // hold, so a co-host's Play during a long reorder can expire this and appear to do nothing.
 const PLAY_GRACE_MS = 15_000;
+// Past this, nothing was around to fire the countdown (the display closed
+// mid-gap) and readers see it as absent. Inside the window a lapsed stamp is
+// still sent; useAutoStart refuses one that lapsed before it mounted.
+const AUTO_START_STALE_MS = 30_000;
 
 export default async function handler(
   req: NextApiRequest,
@@ -85,6 +89,8 @@ export default async function handler(
           reactionsEnabled: true,
           // Rooms created before the flag are left alone — see the GET's `?? false` backfill.
           fairMode: true,
+          // Stored, not left absent: absence reads as off (AUTO_ADVANCE_OFF).
+          autoAdvance: DEFAULT_AUTO_ADVANCE,
           playMode: "here",
           displayConfig: DEFAULT_DISPLAY_CONFIG,
           createdAt: now,
@@ -187,8 +193,15 @@ export default async function handler(
         // room hear "search is back" within seconds of the midnight reset.
         const searchResetsAt = await searchQuotaResetsAt();
 
+        const autoStartAt =
+          room.autoStartAt &&
+          now - new Date(room.autoStartAt).getTime() < AUTO_START_STALE_MS
+            ? room.autoStartAt
+            : undefined;
+
         res.status(200).json({
           ...room,
+          autoStartAt,
           ...(pruned
             ? {
                 queue: pruned.queue,

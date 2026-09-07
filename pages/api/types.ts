@@ -240,6 +240,54 @@ export function hostConfigChangedFields(
   );
 }
 
+/** Stored on the room so the TV, every host device and every phone agree. */
+export interface AutoAdvance {
+  enabled: boolean;
+  gapSeconds: number;
+}
+
+/** The only offered values; the API snaps anything else back to a default, so a
+ * hand-crafted request can't park a room on a 0s gap or a 1s limit. */
+export const AUTO_ADVANCE_GAPS = [5, 10, 20, 30] as const;
+export const SONG_LIMIT_OPTIONS = [180, 240, 300, 360] as const;
+
+/** What a new room is created with. Written at create time rather than inferred
+ * from absence — see AUTO_ADVANCE_OFF. */
+export const DEFAULT_AUTO_ADVANCE: AutoAdvance = {
+  enabled: true,
+  gapSeconds: 10,
+};
+
+/** What a room with no stored setting reads as. Rooms predating the feature have
+ * no field and must not start chaining mid-night, so absence is off — the same
+ * call fairMode makes. */
+export const AUTO_ADVANCE_OFF: AutoAdvance = {
+  enabled: false,
+  gapSeconds: DEFAULT_AUTO_ADVANCE.gapSeconds,
+};
+
+/** One of the offered limits, or null for "plays to the end". Independent of
+ * auto-advance: a limit alone cuts the song and waits for Play. */
+export function normalizeSongLimit(value: unknown): number | null {
+  const limits: readonly number[] = SONG_LIMIT_OPTIONS;
+  return typeof value === "number" && limits.includes(value) ? value : null;
+}
+
+/** Unknown keys dropped, bad values defaulted, as normalizeHostConfig does.
+ * Only an explicit `true` enables; a missing field reads as off. */
+export function normalizeAutoAdvance(stored: unknown): AutoAdvance {
+  const e =
+    stored && typeof stored === "object" ? (stored as Record<string, unknown>) : {};
+  const gaps: readonly number[] = AUTO_ADVANCE_GAPS;
+  return {
+    enabled: e.enabled === true,
+    gapSeconds:
+      typeof e.gapSeconds === "number" && gaps.includes(e.gapSeconds)
+        ? e.gapSeconds
+        : DEFAULT_AUTO_ADVANCE.gapSeconds,
+  };
+}
+
 export interface Room {
   id: string;
   queue: QueueEntry[];
@@ -278,6 +326,13 @@ export interface Room {
   hostConfig?: HostConfig;
   /** Wall-clock end of the booked slot / the night. Absent = open-ended. */
   sessionEndsAt?: Date;
+  /** Absent = the room predates the setting and stays off; see AUTO_ADVANCE_OFF. */
+  autoAdvance?: AutoAdvance;
+  /** Cut every song here and move on. Absent = play to the end. */
+  songLimitSeconds?: number;
+  /** The instant the playback surface should start the waiting song. Cleared by
+   * every play, stop and skip, so a host's own move wins over the countdown. */
+  autoStartAt?: Date;
   createdAt?: Date;
   /** Bumped on every write; drives the TTL index. */
   lastActivity?: Date;

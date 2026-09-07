@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextApiResponse } from "next";
-import { DEFAULT_DISPLAY_CONFIG, Room } from "../../pages/api/types";
+import { DEFAULT_AUTO_ADVANCE, DEFAULT_DISPLAY_CONFIG, Room } from "../../pages/api/types";
 import { createMockReq } from "../helpers/mockRequest";
 
 const mockCollection = {
@@ -75,6 +75,7 @@ describe("POST /api/queue/[id] - Room creation", () => {
       isPlaying: false,
       reactionsEnabled: true,
       fairMode: true,
+      autoAdvance: DEFAULT_AUTO_ADVANCE,
       playMode: "here",
       displayConfig: DEFAULT_DISPLAY_CONFIG,
       createdAt: expect.any(Date),
@@ -87,6 +88,7 @@ describe("POST /api/queue/[id] - Room creation", () => {
       isPlaying: false,
       reactionsEnabled: true,
       fairMode: true,
+      autoAdvance: DEFAULT_AUTO_ADVANCE,
       playMode: "here",
       displayConfig: DEFAULT_DISPLAY_CONFIG,
       createdAt: expect.any(Date),
@@ -491,6 +493,34 @@ describe("GET /api/queue/[id] - Room retrieval", () => {
     await handler(req, res);
 
     expect((res.getBody() as Room).displayConfig).toEqual(custom);
+  });
+
+  it("passes a live auto-start countdown through", async () => {
+    const autoStartAt = new Date(Date.now() + 8000);
+    mockCollection.findOne.mockResolvedValue({
+      id: "XYZ99", queue: [], activeVideoIndex: 0, isPlaying: false, autoStartAt,
+    });
+
+    const req = createMockReq({ method: "GET", query: { id: "XYZ99" } });
+    const res = createRes();
+    await handler(req, res);
+
+    expect((res.getBody() as { autoStartAt?: Date }).autoStartAt).toEqual(autoStartAt);
+  });
+
+  it("hides a countdown nobody fired once it is well past", async () => {
+    // The display closed mid-gap: a lapsed stamp must not read as a live one.
+    mockCollection.findOne.mockResolvedValue({
+      id: "XYZ99", queue: [], activeVideoIndex: 0, isPlaying: false,
+      autoStartAt: new Date(Date.now() - 60_000),
+    });
+
+    const req = createMockReq({ method: "GET", query: { id: "XYZ99" } });
+    const res = createRes();
+    await handler(req, res);
+
+    expect((res.getBody() as { autoStartAt?: Date }).autoStartAt).toBeUndefined();
+    expect(mockCollection.updateOne).not.toHaveBeenCalled();
   });
 
   it("returns 404 for non-existent room", async () => {

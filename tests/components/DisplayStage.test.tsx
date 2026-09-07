@@ -34,6 +34,11 @@ function Stage({ needsTap }: { needsTap: boolean }) {
       onIframeLoad={() => {}}
       needsTap={needsTap}
       onUnlock={() => {}}
+      autoStartIn={null}
+      autoGapSeconds={10}
+      onStartNow={() => {}}
+      wrapUpIn={null}
+      onPlaybackFailed={() => {}}
     />
   );
 }

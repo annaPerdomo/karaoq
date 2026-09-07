@@ -1,5 +1,5 @@
 import type { NextApiRequest } from "next";
-import type { DisplayConfig, HostConfig } from "../pages/api/types";
+import type { AutoAdvance, DisplayConfig, HostConfig } from "../pages/api/types";
 import { MAX_STORED_UA_LENGTH } from "./limits";
 import { getAnalyticsDb, getYoutubeSongDataCollection } from "./mongodb";
 import { splitYoutubeSongData } from "./youtubeRetention";
@@ -23,6 +23,8 @@ export type EventType =
   | "host_config_saved"
   | "fair_mode_toggled"
   | "session_end_set"
+  | "auto_advance_set"
+  | "song_limit_set"
   | "search_failed"
   | "link_lookup";
 
@@ -60,6 +62,10 @@ export interface AnalyticsEvent {
   hostConfig?: HostConfig;
   // State switched TO on fair_mode_toggled; starting value on room_created. Absent pre-flag.
   fairMode?: boolean;
+  // auto_advance_set: the whole setting as it stands after the change.
+  autoAdvance?: AutoAdvance;
+  // song_limit_set: the limit set, or null when cleared.
+  songLimitSeconds?: number | null;
   // session_end_set: how far out the host set the end, or null when they cleared
   // it. A duration, not a wall-clock time — no timezone rides along.
   minutesFromNow?: number | null;

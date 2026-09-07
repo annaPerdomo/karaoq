@@ -7,11 +7,15 @@ export default async function setPlaying(
   // Adopting a surface-less start rather than starting one. The server turns
   // this into a compare-and-set on the token still being free, so a false
   // return means another screen claimed it first — not that the write failed.
-  claim = false
+  claim = false,
+  // The countdown firing, not a person. The server refuses it once the countdown
+  // is gone, so a false return here is a yield rather than a failure.
+  auto = false
 ): Promise<boolean> {
   const params = new URLSearchParams({ isPlaying: String(isPlaying) });
   if (isPlaying && playToken) params.set("playToken", playToken);
   if (claim) params.set("claim", "1");
+  if (auto) params.set("auto", "1");
   try {
     const resp = await fetch(`/api/queue/${roomId}/play?${params}`, {
       method: "POST",

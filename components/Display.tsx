@@ -13,7 +13,9 @@ import { useRoomTiming } from './hooks/useRoomTiming';
 import { startSessionTracking } from '../app/queue/trackSession';
 import { startVisiblePolling } from '../app/queue/pollWhileVisible';
 import { isTextReaction } from '../app/queue/cheerConstants';
-import { DEFAULT_DISPLAY_CONFIG, DisplayConfig, DisplayTheme, normalizeDisplayConfig, PlayMode, QueueEntry, Reaction, Room, SingWithMePost, SuggestedSong } from '../pages/api/types';
+import { AutoAdvance, AUTO_ADVANCE_OFF, DEFAULT_DISPLAY_CONFIG, DisplayConfig, DisplayTheme, normalizeAutoAdvance, normalizeDisplayConfig, normalizeSongLimit, PlayMode, QueueEntry, Reaction, Room, SingWithMePost, SuggestedSong } from '../pages/api/types';
+import { useAutoStart } from './hooks/useAutoStart';
+import { autoStartEpoch, playerCurrentTime, songSecondsLeft, WRAP_UP_WARN_SECONDS } from '../lib/autoAdvance';
 import { useT } from '../lib/i18n/I18nProvider';
 import { renderWithHeart } from '../lib/i18n/renderWithHeart';
 import LanguageSwitcher from './LanguageSwitcher';
@@ -31,6 +33,8 @@ import { SAMPLE_QUEUE } from './display/edit/sampleContent';
 import { Icons } from './host/icons';
 
 const POLL_INTERVAL = 1500;
+// How long a refused embed's notice shows before the queue moves on.
+const FAILED_VIDEO_SKIP_MS = 6000;
 // Server treats a display as gone after ~75s without a heartbeat.
 const HEARTBEAT_INTERVAL = 10_000;
 
@@ -67,9 +71,18 @@ const Display = (): React.ReactElement => {
   const [origin, setOrigin] = React.useState('');
   const [reactionsOn, setReactionsOn] = React.useState(true);
   const [displayConfig, setDisplayConfig] = React.useState<DisplayConfig>(DEFAULT_DISPLAY_CONFIG);
+  const [autoAdvance, setAutoAdvance] = React.useState<AutoAdvance>(AUTO_ADVANCE_OFF);
+  const [autoStartAt, setAutoStartAt] = React.useState<number | null>(null);
+  const [wrapUpIn, setWrapUpIn] = React.useState<number | null>(null);
+  const [songLimit, setSongLimit] = React.useState<number | null>(null);
+  const songLimitRef = React.useRef<number | null>(null);
+  songLimitRef.current = songLimit;
   const [visibleReactions, setVisibleReactions] = React.useState<(Reaction & { key: string; left: number; sway: number })[]>([]);
   const seenReactionIds = React.useRef(new Set<string>());
   const reactionTimers = React.useRef<ReturnType<typeof setTimeout>[]>([]);
+  // Its own ref, not the cheer bag: an early drain of that array to stop it
+  // growing over an all-night session would silently cancel this skip.
+  const failedSkipRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const videoRef = React.useRef<HTMLIFrameElement>(null);
 
   const [needsTap, setNeedsTap] = React.useState(false);
@@ -129,6 +142,7 @@ const Display = (): React.ReactElement => {
     const timers = reactionTimers.current;
     return () => {
       timers.forEach(clearTimeout);
+      if (failedSkipRef.current) clearTimeout(failedSkipRef.current);
     };
   }, []);
 
@@ -175,6 +189,9 @@ const Display = (): React.ReactElement => {
     setPlayMode(room.playMode ?? null);
     setReactionsOn(room.reactionsEnabled ?? true);
     setDisplayConfig(normalizeDisplayConfig(room.displayConfig));
+    setAutoAdvance(normalizeAutoAdvance(room.autoAdvance));
+    setSongLimit(normalizeSongLimit(room.songLimitSeconds));
+    setAutoStartAt(autoStartEpoch(room.autoStartAt));
     processReactions(room.reactions, animateReactions);
   }
 
@@ -262,25 +279,34 @@ const Display = (): React.ReactElement => {
   }, [joinCode, error]);
 
   const currentSongId = queue[activeIndex]?.id;
+  const currentSongIdRef = React.useRef(currentSongId);
+  currentSongIdRef.current = currentSongId;
 
   // A replay of the same song (isPlaying toggle) needs its end reported again.
   React.useEffect(() => {
     endedHandledRef.current = false;
     pausedReportedRef.current = false;
+    setWrapUpIn(null);
   }, [currentSongId, isPlaying]);
+
+  const reportVideoEndedRef = React.useRef<() => Promise<void>>(async () => {});
+  reportVideoEndedRef.current = async () => {
+    if (!joinCode || !isPlaying || !playsVideoHere) return;
+    if (endedHandledRef.current) return;
+    endedHandledRef.current = true;
+    const roomId = joinCode;
+    await postVideoEnded(roomId, activeIndex);
+    const room = await getRoom(roomId, { display: true });
+    if (typeof room !== "string") applyRoom(room);
+    broadcastVideoEnded(roomId);
+  };
 
   React.useEffect(() => {
     if (!isPlaying || !joinCode || !playsVideoHere) return;
     const roomId = joinCode;
-    const endedIndex = activeIndex;
 
-    async function reportVideoEnded() {
-      if (endedHandledRef.current) return;
-      endedHandledRef.current = true;
-      await postVideoEnded(roomId, endedIndex);
-      const room = await getRoom(roomId, { display: true });
-      if (typeof room !== "string") applyRoom(room);
-      broadcastVideoEnded(roomId);
+    function reportVideoEnded() {
+      reportVideoEndedRef.current();
     }
 
     function onMessage(e: MessageEvent) {
@@ -293,6 +319,14 @@ const Display = (): React.ReactElement => {
             : data.event === 'infoDelivery'
               ? data.info?.playerState
               : undefined;
+        const limitLeft = songSecondsLeft(playerCurrentTime(data), songLimitRef.current);
+        if (limitLeft !== null) {
+          setWrapUpIn(limitLeft <= WRAP_UP_WARN_SECONDS ? limitLeft : null);
+          if (limitLeft <= 0) {
+            reportVideoEnded();
+            return;
+          }
+        }
         if (state === 0) {
           reportVideoEnded();
         } else if (state === 1 || state === 3) {
@@ -354,6 +388,36 @@ const Display = (): React.ReactElement => {
       );
     }
   }, [displayPaused, isPlaying, playsVideoHere]);
+
+  const currentSongForStart = queue[activeIndex];
+  const { secondsLeft: autoStartIn } = useAutoStart({
+    autoStartAt,
+    isPlaying,
+    canStart: playsVideoHere && !!currentSongForStart && !edit.editing && !loading,
+    onStart: () => {
+      if (!joinCode) return;
+      startWaitingSong(joinCode);
+    },
+  });
+
+  async function startWaitingSong(roomId: string) {
+    const ok = await setPlaying(roomId, true, undefined, false, true);
+    // Refused = cancelled or already started elsewhere; the poll shows which.
+    if (!ok) setAutoStartAt(null);
+    const room = await getRoom(roomId, { display: true });
+    if (typeof room !== "string") applyRoom(room);
+  }
+
+  // A refused embed never ends on its own; report it ended so the night moves on.
+  function handlePlaybackFailed() {
+    if (!autoAdvance.enabled) return;
+    const failedId = currentSongIdRef.current;
+    if (failedSkipRef.current) clearTimeout(failedSkipRef.current);
+    failedSkipRef.current = setTimeout(() => {
+      // A host who skipped meanwhile must not have the next song reported ended.
+      if (currentSongIdRef.current === failedId) reportVideoEndedRef.current();
+    }, FAILED_VIDEO_SKIP_MS);
+  }
 
   // The tap grants sticky user activation — this song and all later ones can
   // now autoplay with sound.
@@ -464,6 +528,11 @@ const Display = (): React.ReactElement => {
           onIframeLoad={handleIframeLoad}
           needsTap={needsTap}
           onUnlock={unlockPlayback}
+          autoStartIn={autoStartIn}
+          autoGapSeconds={autoAdvance.gapSeconds}
+          onStartNow={() => joinCode && startWaitingSong(joinCode)}
+          wrapUpIn={wrapUpIn}
+          onPlaybackFailed={handlePlaybackFailed}
         />
 
         {reactionsOn && visibleReactions.length > 0 && (

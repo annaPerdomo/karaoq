@@ -22,6 +22,9 @@ export default async function handler(
   // A here-mode host page adopting someone else's surface-less start, rather
   // than a host deliberately starting a song here.
   const claim = req.query.claim === "1";
+  // A playback surface firing the countdown. Guarded on the countdown still
+  // standing, so a host's Cancel landing first wins rather than races.
+  const auto = req.query.auto === "1";
 
   if (typeof roomId !== "string") {
     res.status(400).json({ code: 400, message: "Invalid request." });
@@ -42,16 +45,16 @@ export default async function handler(
         isPlaying && playToken
           ? {
               $set: { isPlaying, playToken, playStartedAt: new Date(), lastActivity: new Date() },
-              $unset: { displayPaused: "", playPausedAt: "" },
+              $unset: { displayPaused: "", playPausedAt: "", autoStartAt: "" },
             }
           : isPlaying
             ? {
                 $set: { isPlaying, playStartedAt: new Date(), lastActivity: new Date() },
-                $unset: { displayPaused: "", playPausedAt: "" },
+                $unset: { displayPaused: "", playPausedAt: "", autoStartAt: "" },
               }
             : {
                 $set: { isPlaying, lastActivity: new Date() },
-                $unset: { playToken: "", displayPaused: "", playStartedAt: "", playPausedAt: "" },
+                $unset: { playToken: "", displayPaused: "", playStartedAt: "", playPausedAt: "", autoStartAt: "" },
               };
       // Three shapes of start, and only the host's own is unconditional:
       //
@@ -74,13 +77,18 @@ export default async function handler(
         : isPlaying && !playToken
           ? { id: roomId, isPlaying: { $ne: true } }
           : { id: roomId };
-      const result = await collection.updateOne(filter, update);
+      const result = await collection.updateOne(
+        auto && isPlaying ? { ...filter, autoStartAt: { $exists: true } } : filter,
+        update
+      );
       if (result.matchedCount === 0) {
         res.status(409).json({
           code: 409,
           message: claim
             ? "Another screen already claimed playback."
-            : "Room is already playing.",
+            : auto
+              ? "Auto-start was cancelled."
+              : "Room is already playing.",
         });
         return;
       }

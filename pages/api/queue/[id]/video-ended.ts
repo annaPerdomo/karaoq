@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { getRoomsCollection } from "../../../../lib/mongodb";
 import { normalizeRoomId } from "../../../../lib/roomCode";
+import { normalizeAutoAdvance } from "../../types";
 
 /**
  * Reported by the display screen when the current video finishes, so the queue
@@ -43,6 +44,11 @@ export default async function handler(
     // A pipeline so the bound is `$size` at write time: removing the song that
     // just ended leaves both guarded fields untouched (remove.ts shifts the
     // index only when it is `$gt` the removal), so a length read above is stale.
+    //
+    // Auto-advance rides in the same write, $$REMOVE otherwise so a stale
+    // countdown never survives an end. The gap is read off the room above: a
+    // setting change racing this write is a few seconds nobody can notice.
+    const gapMs = normalizeAutoAdvance(room.autoAdvance).gapSeconds * 1000;
     const result = await collection.updateOne(
       { id: roomId, activeVideoIndex: endedIndex, isPlaying: true },
       [
@@ -53,6 +59,20 @@ export default async function handler(
             },
             isPlaying: false,
             lastActivity: new Date(),
+            autoStartAt: {
+              $cond: [
+                {
+                  $and: [
+                    // Explicit true only, as normalizeAutoAdvance reads it: a
+                    // room with no setting predates the feature.
+                    { $eq: ["$autoAdvance.enabled", true] },
+                    { $lt: [endedIndex + 1, { $size: "$queue" }] },
+                  ],
+                },
+                new Date(Date.now() + gapMs),
+                "$$REMOVE",
+              ],
+            },
           },
         },
         // playPausedAt goes with playStartedAt — a stamp that outlives its

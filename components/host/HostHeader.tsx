@@ -3,6 +3,7 @@ import { useT } from "../../lib/i18n/I18nProvider";
 import LanguageSwitcher from "../LanguageSwitcher";
 import { Icons } from "./icons";
 import { SettingsPopover } from "./SettingsPopover";
+import { AutoAdvance } from "../../pages/api/types";
 
 export function HostHeader({
   remote,
@@ -22,6 +23,10 @@ export function HostHeader({
   onToggleReactions,
   fairMode,
   onToggleFairMode,
+  autoAdvance,
+  onChangeAutoAdvance,
+  songLimit,
+  onChangeSongLimit,
   sessionEndsAt,
   onChangeSessionEnd,
   hostName,
@@ -48,6 +53,10 @@ export function HostHeader({
   onToggleReactions: () => void;
   fairMode: boolean;
   onToggleFairMode: () => void;
+  autoAdvance: AutoAdvance;
+  onChangeAutoAdvance: (patch: Partial<AutoAdvance>) => void;
+  songLimit: number | null;
+  onChangeSongLimit: (seconds: number | null) => void;
   sessionEndsAt: number | null;
   onChangeSessionEnd: (endsAt: number | null) => void;
   hostName: string;
@@ -152,6 +161,10 @@ export function HostHeader({
         onToggleReactions={onToggleReactions}
         fairMode={fairMode}
         onToggleFairMode={onToggleFairMode}
+        autoAdvance={autoAdvance}
+        onChangeAutoAdvance={onChangeAutoAdvance}
+        songLimit={songLimit}
+        onChangeSongLimit={onChangeSongLimit}
         sessionEndsAt={sessionEndsAt}
         onChangeSessionEnd={onChangeSessionEnd}
         hostName={hostName}

@@ -7,6 +7,8 @@ import { embedSrc } from "../player/embed";
 import { PlaybackErrorNotice } from "../player/PlaybackErrorNotice";
 import { usePlaybackError } from "../player/usePlaybackError";
 import { formatSongTitle } from "./utils";
+import { AutoStartPanel } from "./AutoStartPanel";
+import WrapUpPill from "../player/WrapUpPill";
 
 // The main stage: loading spinner, the current song's player/status panel (which
 // varies by co-host / TV / here / other-device), and the empty-room states.
@@ -29,6 +31,11 @@ export function SongStage({
   onStartSong,
   joinCode,
   onAddFirst,
+  autoStartIn,
+  autoGapSeconds,
+  onChangeAutoGap,
+  onTurnOffAutoAdvance,
+  wrapUpIn,
 }: {
   loading: boolean;
   currentSong: QueueEntry | undefined;
@@ -53,6 +60,13 @@ export function SongStage({
    * sidebar's job. */
   joinCode: string | undefined;
   onAddFirst: () => void;
+  /** Seconds until auto-advance starts the waiting song; null = no countdown. */
+  autoStartIn: number | null;
+  autoGapSeconds: number;
+  onChangeAutoGap: (gapSeconds: number) => void;
+  onTurnOffAutoAdvance: () => void;
+  /** Seconds until the song limit cuts the song; null outside the warning window. */
+  wrapUpIn: number | null;
 }) {
   const { t } = useT();
   const playbackFailed = usePlaybackError({
@@ -62,6 +76,16 @@ export function SongStage({
     videoId: currentSong?.videoId,
     active: !loading && !!currentSong && !remote && !tvMode && playsVideoHere,
   });
+  const countdown =
+    autoStartIn !== null && !isPlaying ? (
+      <AutoStartPanel
+        secondsLeft={autoStartIn}
+        gapSeconds={autoGapSeconds}
+        onStartNow={onStartSong}
+        onChangeGap={onChangeAutoGap}
+        onTurnOff={onTurnOffAutoAdvance}
+      />
+    ) : null;
   return loading ? (
     <div className={styles.emptyState}>
       <div className={styles.spinner} />
@@ -85,6 +109,7 @@ export function SongStage({
         <p className={styles.controlSong}>
           {formatSongTitle(currentSong.songTitle)}
         </p>
+        {countdown}
         {/* Shown whenever the bar has no playback button, which is what the note
             explains. A here-mode co-host has Play while stopped (so the note
             would contradict it) but not Pause once a song runs, and an empty
@@ -134,6 +159,7 @@ export function SongStage({
             <p className={styles.controlSong}>
               {formatSongTitle(currentSong.songTitle)}
             </p>
+            {countdown}
           </>
         )}
         {!displayConnected && (
@@ -164,6 +190,7 @@ export function SongStage({
           allowFullScreen
           onLoad={onIframeLoad}
         />
+        {wrapUpIn !== null && !playbackFailed && <WrapUpPill secondsLeft={wrapUpIn} />}
         {playbackFailed && <PlaybackErrorNotice />}
       </>
     ) : isPlaying ? (
@@ -190,6 +217,7 @@ export function SongStage({
         <p className={styles.controlSong}>
           {formatSongTitle(currentSong.songTitle)}
         </p>
+        {countdown}
       </div>
     )
   ) : (

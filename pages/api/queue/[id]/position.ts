@@ -53,6 +53,7 @@ export default async function handler(
             displayPaused: "",
             playStartedAt: "",
             playPausedAt: "",
+            autoStartAt: "",
           },
         }
       );

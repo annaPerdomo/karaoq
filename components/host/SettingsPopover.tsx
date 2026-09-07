@@ -3,6 +3,8 @@ import styles from "../../styles/Host.module.css";
 import { useT } from "../../lib/i18n/I18nProvider";
 import { Icons } from "./icons";
 import { SessionEndSetting } from "./SessionEndSetting";
+import { AutoAdvanceSetting } from "./AutoAdvanceSetting";
+import { AutoAdvance } from "../../pages/api/types";
 
 export function SettingsPopover({
   isOpen,
@@ -12,6 +14,10 @@ export function SettingsPopover({
   onToggleReactions,
   fairMode,
   onToggleFairMode,
+  autoAdvance,
+  onChangeAutoAdvance,
+  songLimit,
+  onChangeSongLimit,
   sessionEndsAt,
   onChangeSessionEnd,
   hostName,
@@ -27,6 +33,10 @@ export function SettingsPopover({
   onToggleReactions: () => void;
   fairMode: boolean;
   onToggleFairMode: () => void;
+  autoAdvance: AutoAdvance;
+  onChangeAutoAdvance: (patch: Partial<AutoAdvance>) => void;
+  songLimit: number | null;
+  onChangeSongLimit: (seconds: number | null) => void;
   sessionEndsAt: number | null;
   onChangeSessionEnd: (endsAt: number | null) => void;
   hostName: string;
@@ -102,6 +112,13 @@ export function SettingsPopover({
               </div>
             </button>
           </div>
+          <div className={styles.spSep} />
+          <AutoAdvanceSetting
+            autoAdvance={autoAdvance}
+            onChange={onChangeAutoAdvance}
+            songLimit={songLimit}
+            onChangeSongLimit={onChangeSongLimit}
+          />
           <div className={styles.spSep} />
           <SessionEndSetting
             sessionEndsAt={sessionEndsAt}
