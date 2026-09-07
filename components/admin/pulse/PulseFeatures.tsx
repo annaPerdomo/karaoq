@@ -4,6 +4,19 @@ import type { AnalyticsData, SurfaceCustomization } from '../types';
 import { VIA_LABELS, pct } from '../format';
 import BarList from '../charts/BarList';
 import { SERIES } from '../charts/palette';
+import { AUTO_ADVANCE_GAPS } from '../../../pages/api/types';
+
+const PRESET_GAPS: readonly number[] = AUTO_ADVANCE_GAPS;
+
+function gapLabel(seconds: number): string {
+  const base =
+    seconds < 60
+      ? `${seconds}s`
+      : seconds % 60 === 0
+        ? `${seconds / 60} min`
+        : `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
+  return PRESET_GAPS.includes(seconds) ? base : `${base} (custom)`;
+}
 
 // qrSize mirrors qrPx and is filtered out to avoid double-counting resizes;
 // retired fields still appear on historical events.
@@ -74,7 +87,7 @@ export default function PulseFeatures({
 }: {
   data: AnalyticsData;
 }): React.ReactElement {
-  const { social, rotation, display, hostSurface } = data;
+  const { social, rotation, autoAdvance, display, hostSurface } = data;
 
   return (
     <>
@@ -131,6 +144,32 @@ export default function PulseFeatures({
                 }))}
               />
             )}
+          </section>
+        </div>
+      )}
+
+      {autoAdvance && (
+        <div className={styles.cardPair}>
+          <section className={styles.card}>
+            <h2 className={styles.cardTitle}>Auto-advance</h2>
+            <p className={styles.cardNote}>
+              {autoAdvance.rooms} rooms touched it · {autoAdvance.endedOn} ended on (
+              {pct(autoAdvance.endedOn, autoAdvance.rooms)}%) · {autoAdvance.changes}{' '}
+              changes
+            </p>
+            <p className={styles.cardNote}>
+              Time between songs, one vote per room per value. Quick picks are{' '}
+              {PRESET_GAPS.map(gapLabel).join(', ')} — a popular custom value is a
+              hint to swap one in.
+            </p>
+            <BarList
+              color={SERIES[3]}
+              data={autoAdvance.byGap.map((d) => ({
+                label: gapLabel(d._id),
+                value: d.count,
+              }))}
+              maxRows={10}
+            />
           </section>
         </div>
       )}

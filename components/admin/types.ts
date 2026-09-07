@@ -119,6 +119,13 @@ export interface AnalyticsData {
     fairEndedOn: number;
     fairToggled: number;
   };
+  /** auto_advance_set per room: where the night ended, and gaps picked (one vote per room per gap). */
+  autoAdvance?: {
+    rooms: number;
+    endedOn: number;
+    changes: number;
+    byGap: { _id: number; count: number }[];
+  };
   searchHealth?: SearchHealthData;
   linkLookups?: LinkLookupData;
   meta?: { timezone: string; generatedAt: string };

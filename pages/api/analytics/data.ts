@@ -113,6 +113,8 @@ export default async function handler(
       singerTrackedAdds,
       singerSizeCounts,
       fairRoomStats,
+      autoAdvanceRoomRows,
+      autoAdvanceGapRows,
       sessionsByLocale,
       localeByCountry,
       uniqueLocaleRooms,
@@ -609,6 +611,46 @@ export default async function handler(
         ])
         .toArray(),
 
+      // auto_advance_set carries the whole setting; last per room is where the night ended.
+      events
+        .aggregate([
+          { $match: { type: "auto_advance_set", "autoAdvance.enabled": { $type: "bool" } } },
+          { $sort: { timestamp: 1 } },
+          {
+            $group: {
+              _id: "$roomId",
+              enabled: { $last: "$autoAdvance.enabled" },
+              gap: { $last: "$autoAdvance.gapSeconds" },
+              changes: { $sum: 1 },
+            },
+          },
+          {
+            $group: {
+              _id: null,
+              rooms: { $sum: 1 },
+              endedOn: { $sum: { $cond: ["$enabled", 1, 0] } },
+              changes: { $sum: "$changes" },
+            },
+          },
+        ])
+        .toArray(),
+
+      // The vote for the quick picks, once per room so a host retyping can't stuff it.
+      events
+        .aggregate([
+          {
+            $match: {
+              type: "auto_advance_set",
+              "autoAdvance.enabled": true,
+              "autoAdvance.gapSeconds": { $type: "number" },
+            },
+          },
+          { $group: { _id: { room: "$roomId", gap: "$autoAdvance.gapSeconds" } } },
+          { $group: { _id: "$_id.gap", count: { $sum: 1 } } },
+          { $sort: { count: -1, _id: 1 } },
+        ])
+        .toArray(),
+
       // Ranked by unique rooms so one long night can't outweigh ten rooms.
       sessions
         .aggregate([
@@ -782,6 +824,7 @@ export default async function handler(
     const retention = hostRetention[0] || { hosts: 0, repeatHosts: 0 };
 
     const fairStats = fairRoomStats[0] || { rooms: 0, endedOn: 0, toggled: 0 };
+    const autoAdvanceStats = autoAdvanceRoomRows[0] || { rooms: 0, endedOn: 0, changes: 0 };
 
     // en-CA formats as YYYY-MM-DD, matching the $dateToString keys above.
     const todayKey = new Intl.DateTimeFormat("en-CA", { timeZone: tz }).format(now);
@@ -999,6 +1042,12 @@ export default async function handler(
         fairRooms: fairStats.rooms,
         fairEndedOn: fairStats.endedOn,
         fairToggled: fairStats.toggled,
+      },
+      autoAdvance: {
+        rooms: autoAdvanceStats.rooms,
+        endedOn: autoAdvanceStats.endedOn,
+        changes: autoAdvanceStats.changes,
+        byGap: autoAdvanceGapRows,
       },
       searchHealth: {
         byDay: searchFailuresByDay,
