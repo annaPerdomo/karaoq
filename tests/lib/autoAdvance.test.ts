@@ -17,17 +17,17 @@ describe("normalizeAutoAdvance", () => {
     expect(normalizeAutoAdvance({ enabled: true, gapSeconds: 180 }).gapSeconds).toBe(180);
     expect(normalizeAutoAdvance({ enabled: true, gapSeconds: 3 }).gapSeconds).toBe(3);
     expect(normalizeAutoAdvance({ enabled: true, gapSeconds: 600 }).gapSeconds).toBe(600);
-    expect(normalizeAutoAdvance({ enabled: true, gapSeconds: 0 }).gapSeconds).toBe(10);
-    expect(normalizeAutoAdvance({ enabled: true, gapSeconds: 2 }).gapSeconds).toBe(10);
-    expect(normalizeAutoAdvance({ enabled: true, gapSeconds: 601 }).gapSeconds).toBe(10);
-    expect(normalizeAutoAdvance({ enabled: true, gapSeconds: 7.5 }).gapSeconds).toBe(10);
-    expect(normalizeAutoAdvance({ enabled: true, gapSeconds: "20" }).gapSeconds).toBe(10);
+    expect(normalizeAutoAdvance({ enabled: true, gapSeconds: 0 }).gapSeconds).toBe(60);
+    expect(normalizeAutoAdvance({ enabled: true, gapSeconds: 2 }).gapSeconds).toBe(60);
+    expect(normalizeAutoAdvance({ enabled: true, gapSeconds: 601 }).gapSeconds).toBe(60);
+    expect(normalizeAutoAdvance({ enabled: true, gapSeconds: 7.5 }).gapSeconds).toBe(60);
+    expect(normalizeAutoAdvance({ enabled: true, gapSeconds: "20" }).gapSeconds).toBe(60);
     // Only an explicit true switches it on.
     expect(normalizeAutoAdvance({ enabled: "yes", gapSeconds: 1 })).toEqual({
       enabled: false,
-      gapSeconds: 10,
+      gapSeconds: 60,
     });
-    expect(normalizeAutoAdvance({ enabled: false })).toEqual({ enabled: false, gapSeconds: 10 });
+    expect(normalizeAutoAdvance({ enabled: false })).toEqual({ enabled: false, gapSeconds: 60 });
   });
 
   it("drops unknown keys, including the limit that used to live here", () => {

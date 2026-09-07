@@ -266,7 +266,7 @@ export function isValidGap(value: unknown): value is number {
  * from absence — see AUTO_ADVANCE_OFF. */
 export const DEFAULT_AUTO_ADVANCE: AutoAdvance = {
   enabled: true,
-  gapSeconds: 10,
+  gapSeconds: 60,
 };
 
 /** What a room with no stored setting reads as. Rooms predating the feature have
