@@ -1,81 +1,140 @@
-/* Auto-advance breather ring, shared by the display and the host stage. */
-.ring {
+.countIn {
+  --cd-size: 20px;
+  --cd-a: var(--acc-a, #ff2d78);
+  --cd-b: var(--acc-b, #00f0ff);
+  font-size: var(--cd-size);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.7rem;
-  margin-top: 1rem;
-  padding: 0.5rem 1rem;
+  gap: 0.55em;
+  margin-top: 1em;
+  padding: 0.5em 1em;
   background: none;
   border: none;
   color: inherit;
-  font: inherit;
   cursor: pointer;
-  animation: ringIn 0.4s ease-out;
+  animation: countInEnter 0.4s ease-out;
 }
 
-@keyframes ringIn {
+@keyframes countInEnter {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: none; }
 }
 
-.dial {
-  position: relative;
+.dots {
   display: flex;
+  gap: 0.55em;
+  height: 0.7em;
   align-items: center;
-  justify-content: center;
-  width: var(--ring-size, 140px);
-  height: var(--ring-size, 140px);
 }
 
-.dial svg {
+.dot {
+  width: 0.55em;
+  height: 0.55em;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  transform: scale(0.6);
+  transition: background 0.25s, box-shadow 0.25s, transform 0.25s;
+}
+
+.dotLit {
+  background: var(--cd-a);
+  box-shadow: 0 0 0.5em var(--cd-a);
+  transform: scale(1);
+  animation: dotBreathe 1.6s ease-in-out infinite;
+}
+
+.dotsCounting .dotLit {
+  animation: none;
+}
+
+@keyframes dotBreathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(0.8); }
+}
+
+.lyric {
+  position: relative;
+  display: inline-block;
+  font-family: var(--font-headline);
+  font-weight: 700;
+  font-size: 1.5em;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  text-align: center;
+  max-width: 24em;
+  white-space: nowrap;
+}
+
+.lyricBase {
+  color: var(--text-muted);
+}
+
+.lyricSung {
   position: absolute;
   inset: 0;
-  width: 100%;
-  height: 100%;
-  transform: rotate(-90deg);
-}
-
-.track {
-  fill: none;
-  stroke: rgba(255, 255, 255, 0.1);
-  stroke-width: 6;
-}
-
-.fill {
-  fill: none;
-  stroke: var(--ring-color, #ff2d78);
-  stroke-width: 6;
-  stroke-linecap: round;
-  filter: drop-shadow(0 0 6px rgba(255, 45, 120, 0.6));
-  /* One linear second per tick keeps the drain continuous between whole-second updates. */
-  transition: stroke-dashoffset 1s linear;
+  background: linear-gradient(90deg, var(--cd-b), var(--cd-a));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  filter: var(--cd-glow, none);
+  /* One linear second per tick keeps the sweep continuous between whole-second updates. */
+  transition: clip-path 1s linear;
 }
 
 .seconds {
   font-family: var(--font-mono);
-  font-size: calc(var(--ring-size, 140px) * 0.34);
+  font-size: 2em;
   font-weight: 700;
   color: #fff;
   font-variant-numeric: tabular-nums;
   line-height: 1;
+  display: inline-block;
 }
 
-.caption {
-  font-size: 0.85rem;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  font-weight: 600;
+.beat {
+  display: inline-block;
+  animation: beatPop 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+
+@keyframes beatPop {
+  from { transform: scale(1.45); color: var(--cd-a); }
+  to { transform: scale(1); color: #fff; }
 }
 
 .hint {
-  font-size: 0.75rem;
+  font-size: 0.75em;
   color: var(--text-muted);
   opacity: 0.7;
 }
 
-/* Host stage only: the ring with its breather chips and the off switch. */
+@media (prefers-reduced-motion: reduce) {
+  .countIn,
+  .controls,
+  .dotLit,
+  .beat {
+    animation: none;
+  }
+}
+
+/* Smart TVs never report the preference; tests/lib/calmCss.test.ts keeps this
+   twin identical to the block above. */
+/* @calm-twin-start */
+html[data-tv] .countIn,
+html[data-tv] .controls,
+html[data-tv] .dotLit,
+html[data-tv] .beat {
+  animation: none;
+}
+/* @calm-twin-end */
+
+@media (max-width: 640px) {
+  .lyric {
+    white-space: normal;
+  }
+}
+
 .panel {
   display: flex;
   flex-direction: column;
@@ -89,7 +148,7 @@
   flex-wrap: wrap;
   justify-content: center;
   gap: 0.4rem 0.6rem;
-  animation: ringIn 0.4s ease-out;
+  animation: countInEnter 0.4s ease-out;
 }
 
 .chips {

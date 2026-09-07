@@ -748,7 +748,7 @@
   "sing.eta.mayNotFit": "지금 추가하는 곡은 시간 안에 못 들어갈 수 있어요",
   "sing.eta.yoursMayNotFit": "{time}을 넘길 수 있어요",
   "sing.eta.badge": "내 차례: 약 {time}",
-  "display.autoStart.caption": "자동으로 시작됩니다",
+  "display.autoStart.lyric": "마이크 잡으세요, 다음은 당신 차례",
   "display.autoStart.now": "지금 시작",
   "display.wrapUp": "곧 마무리 · {time}",
   "host.settings.playback": "재생",

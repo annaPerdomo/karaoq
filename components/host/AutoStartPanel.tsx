@@ -2,10 +2,9 @@ import * as React from "react";
 import styles from "../../styles/Countdown.module.css";
 import { useT } from "../../lib/i18n/I18nProvider";
 import { AUTO_ADVANCE_GAPS } from "../../pages/api/types";
-import { CountdownRing } from "../player/CountdownRing";
+import { CountIn } from "../player/CountIn";
 
-/** The countdown ring plus the two calls a host makes while it runs. A gap
- * change re-times the running countdown server-side, so the ring follows. */
+/** A gap change re-times the running countdown server-side, so the count-in follows. */
 export function AutoStartPanel({
   secondsLeft,
   gapSeconds,
@@ -22,11 +21,11 @@ export function AutoStartPanel({
   const { t } = useT();
   return (
     <div className={styles.panel}>
-      <CountdownRing
+      <CountIn
         secondsLeft={secondsLeft}
         totalSeconds={gapSeconds}
         onStartNow={onStartNow}
-        size={110}
+        size={14}
       />
       <div className={styles.controls}>
         <div className={styles.chips} role="group" aria-label={t("host.settings.autoGap")}>

@@ -748,7 +748,7 @@
   "sing.eta.mayNotFit": "Les nouvelles chansons risquent de ne pas passer",
   "sing.eta.yoursMayNotFit": "La tienne risque de dépasser {time}",
   "sing.eta.badge": "Toi : dans ~{time}",
-  "display.autoStart.caption": "Démarre automatiquement",
+  "display.autoStart.lyric": "Prends le micro, c'est à toi",
   "display.autoStart.now": "Démarrer maintenant",
   "display.wrapUp": "On termine · {time}",
   "host.settings.playback": "Lecture",

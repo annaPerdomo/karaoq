@@ -748,7 +748,7 @@
   "sing.eta.mayNotFit": "Baka hindi na kasya ang bagong kanta",
   "sing.eta.yoursMayNotFit": "Baka lumampas ang sa iyo sa {time}",
   "sing.eta.badge": "Ikaw: ~{time}",
-  "display.autoStart.caption": "Awtomatikong magsisimula",
+  "display.autoStart.lyric": "Kunin mo na ang mic, ikaw na ang susunod",
   "display.autoStart.now": "Simulan na",
   "display.wrapUp": "Malapit nang matapos · {time}",
   "host.settings.playback": "Playback",

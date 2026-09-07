@@ -748,7 +748,7 @@
   "sing.eta.mayNotFit": "Lagu baru mungkin tidak keburu",
   "sing.eta.yoursMayNotFit": "Lagumu bisa lewat dari {time}",
   "sing.eta.badge": "Kamu: ~{time} lagi",
-  "display.autoStart.caption": "Mulai otomatis",
+  "display.autoStart.lyric": "Ambil mikrofonnya, giliranmu",
   "display.autoStart.now": "Mulai sekarang",
   "display.wrapUp": "Hampir selesai · {time}",
   "host.settings.playback": "Pemutaran",

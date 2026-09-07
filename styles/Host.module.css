@@ -2837,6 +2837,8 @@ html[data-tv] .stageMicReflection {
 .themeNeon {
   --bg-primary: #050505;
   --bg-secondary: #0d0d14;
+  /* Picked up by the count-in's sung lyric (styles/Countdown.module.css). */
+  --cd-glow: drop-shadow(0 0 10px rgba(0, 240, 255, 0.55));
 }
 
 @media (min-width: 769px) {

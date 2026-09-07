@@ -748,7 +748,7 @@
   "sing.eta.mayNotFit": "Nové písničky se už nemusí vejít",
   "sing.eta.yoursMayNotFit": "Tvoje může přetáhnout {time}",
   "sing.eta.badge": "Ty: za ~{time}",
-  "display.autoStart.caption": "Spustí se automaticky",
+  "display.autoStart.lyric": "Popadni mikrofon, jsi na řadě",
   "display.autoStart.now": "Spustit hned",
   "display.wrapUp": "Končíme · {time}",
   "host.settings.playback": "Přehrávání",

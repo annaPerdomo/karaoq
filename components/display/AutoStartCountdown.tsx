@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { CountdownRing } from '../player/CountdownRing';
+import { CountIn } from '../player/CountIn';
 
 export default function AutoStartCountdown({
   secondsLeft,
@@ -11,11 +11,11 @@ export default function AutoStartCountdown({
   onStartNow: () => void;
 }): React.ReactElement {
   return (
-    <CountdownRing
+    <CountIn
       secondsLeft={secondsLeft}
       totalSeconds={totalSeconds}
       onStartNow={onStartNow}
-      size={160}
+      size={24}
     />
   );
 }

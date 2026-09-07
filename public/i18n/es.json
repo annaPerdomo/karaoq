@@ -748,7 +748,7 @@
   "sing.eta.mayNotFit": "Puede que las canciones nuevas ya no entren",
   "sing.eta.yoursMayNotFit": "La tuya puede pasar de las {time}",
   "sing.eta.badge": "Tú: ~{time}",
-  "display.autoStart.caption": "Empieza automáticamente",
+  "display.autoStart.lyric": "Agarra el micro, te toca",
   "display.autoStart.now": "Empezar ahora",
   "display.wrapUp": "Terminando · {time}",
   "host.settings.playback": "Reproducción",

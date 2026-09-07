@@ -748,7 +748,7 @@
   "sing.eta.mayNotFit": "New songs may not fit before then",
   "sing.eta.yoursMayNotFit": "Yours may run past {time}",
   "sing.eta.badge": "You: ~{time}",
-  "display.autoStart.caption": "Starting automatically",
+  "display.autoStart.lyric": "Grab the mic, you're up next",
   "display.autoStart.now": "Start now",
   "display.wrapUp": "Wrapping up · {time}",
   "host.settings.playback": "Playback",

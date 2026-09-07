@@ -55,6 +55,8 @@
   --bg-primary: #050505;
   --bg-secondary: #0d0d14;
   --disp-surface-rgb: 5, 5, 10;
+  /* Picked up by the count-in's sung lyric (styles/Countdown.module.css). */
+  --cd-glow: drop-shadow(0 0 10px rgba(0, 240, 255, 0.55));
 }
 
 .themeNeon .brand {

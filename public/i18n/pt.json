@@ -748,7 +748,7 @@
   "sing.eta.mayNotFit": "Músicas novas podem não caber",
   "sing.eta.yoursMayNotFit": "A sua pode passar das {time}",
   "sing.eta.badge": "Você: ~{time}",
-  "display.autoStart.caption": "Começa automaticamente",
+  "display.autoStart.lyric": "Pega o microfone, é a sua vez",
   "display.autoStart.now": "Começar agora",
   "display.wrapUp": "Terminando · {time}",
   "host.settings.playback": "Reprodução",

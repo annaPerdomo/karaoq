@@ -748,7 +748,7 @@
   "sing.eta.mayNotFit": "Neue Songs passen vielleicht nicht mehr rein",
   "sing.eta.yoursMayNotFit": "Deiner geht evtl. über {time} hinaus",
   "sing.eta.badge": "Du: in ~{time}",
-  "display.autoStart.caption": "Startet automatisch",
+  "display.autoStart.lyric": "Schnapp dir das Mikro, du bist dran",
   "display.autoStart.now": "Jetzt starten",
   "display.wrapUp": "Gleich vorbei · {time}",
   "host.settings.playback": "Wiedergabe",

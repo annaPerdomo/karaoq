@@ -748,7 +748,7 @@
   "sing.eta.mayNotFit": "これから追加する曲は間に合わないかもしれません",
   "sing.eta.yoursMayNotFit": "{time}を過ぎる可能性があります",
   "sing.eta.badge": "あなた: 約{time}",
-  "display.autoStart.caption": "自動で始まります",
+  "display.autoStart.lyric": "マイクを持って、次はあなたの番",
   "display.autoStart.now": "今すぐ始める",
   "display.wrapUp": "まもなく終了 · {time}",
   "host.settings.playback": "再生",
