@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from "next";
 import { isAuthorizedAdmin } from "../../../lib/adminAuth";
 import { ADMIN_LIVE_WINDOW_MS } from "../../../lib/liveWindows";
 import { getAnalyticsDb } from "../../../lib/mongodb";
+import { normalizeAutoAdvance } from "../types";
 
 const DEFAULT_LIMIT = 25;
 const MAX_LIMIT = 100;
@@ -130,6 +131,7 @@ export default async function handler(
                       "singwithme_joined",
                       "singwithme_queued",
                       "search_performed",
+                      "auto_advance_set",
                     ],
                   },
                 },
@@ -216,7 +218,7 @@ export default async function handler(
             let: { rid: "$roomId" },
             pipeline: [
               { $match: { $expr: { $eq: ["$id", "$$rid"] } } },
-              { $project: { _id: 0, lastActivity: 1 } },
+              { $project: { _id: 0, lastActivity: 1, autoAdvance: 1 } },
             ],
             as: "roomDoc",
           },
@@ -267,6 +269,12 @@ export default async function handler(
               ],
             },
             fairToggled: { $gt: [{ $size: "$lastFairToggle" }, 0] },
+            // The room doc's own field is the live truth, kept in sync on every
+            // change — no last-event lookup needed the way fairMode needs one.
+            autoAdvance: {
+              $ifNull: [{ $arrayElemAt: ["$roomDoc.autoAdvance", 0] }, null],
+            },
+            autoAdvanceChanged: { $gt: [countOfType("auto_advance_set"), 0] },
             // Rides on room_created itself; null before it was recorded — which is most rooms, so
             // the language a room is *shown* as is the participants' mix below, not this.
             locale: { $ifNull: ["$locale", null] },
@@ -297,7 +305,11 @@ export default async function handler(
     ]);
 
     const hasMore = docs.length > limit;
-    res.status(200).json({ rooms: docs.slice(0, limit), hasMore, liveCount });
+    const rooms = docs.slice(0, limit).map((r) => ({
+      ...r,
+      autoAdvance: normalizeAutoAdvance(r.autoAdvance),
+    }));
+    res.status(200).json({ rooms, hasMore, liveCount });
   } catch (e) {
     console.error("Rooms query error:", e);
     res.status(500).json({ code: 500, message: "Internal server error." });

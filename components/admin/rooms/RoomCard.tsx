@@ -129,19 +129,29 @@ export default function RoomCard({
         >
           {languageMixShort(room.localeMix ?? [])}
         </span>
-        <span
-          className={`${styles.fairChip} ${room.fairMode ? styles.fairChipOn : ''}`}
-          title={
-            room.fairMode === null || room.fairMode === undefined
-              ? 'Created before fair rotation was recorded'
-              : `Fair rotation ${room.fairMode ? 'on' : 'off'}${
-                  room.fairToggled ? ' — host changed it' : ' (default)'
-                }`
-          }
-        >
-          {room.fairMode === null || room.fairMode === undefined
-            ? 'fair —'
-            : `fair ${room.fairMode ? 'on' : 'off'}${room.fairToggled ? '*' : ''}`}
+        <span className={styles.roomBadges}>
+          <span
+            className={`${styles.fairChip} ${room.fairMode ? styles.fairChipOn : ''}`}
+            title={
+              room.fairMode === null || room.fairMode === undefined
+                ? 'Created before fair rotation was recorded'
+                : `Fair rotation ${room.fairMode ? 'on' : 'off'}${
+                    room.fairToggled ? ' — host changed it' : ' (default)'
+                  }`
+            }
+          >
+            {room.fairMode === null || room.fairMode === undefined
+              ? 'fair —'
+              : `fair ${room.fairMode ? 'on' : 'off'}${room.fairToggled ? '*' : ''}`}
+          </span>
+          <span
+            className={`${styles.fairChip} ${room.autoAdvance.enabled ? styles.fairChipOn : ''}`}
+            title={`Auto-advance ${
+              room.autoAdvance.enabled ? `on · ${room.autoAdvance.gapSeconds}s gap` : 'off'
+            }${room.autoAdvanceChanged ? ' — host changed it' : ' (default)'}`}
+          >
+            {`auto ${room.autoAdvance.enabled ? 'on' : 'off'}${room.autoAdvanceChanged ? '*' : ''}`}
+          </span>
         </span>
         <span className={styles.roomChevron} aria-hidden="true">
           {expanded ? '▾' : '▸'}

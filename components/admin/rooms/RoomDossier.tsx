@@ -2,6 +2,8 @@ import * as React from 'react';
 import styles from '../../../styles/Admin.module.css';
 import type { RoomDossierData } from '../types';
 import {
+  autoAdvanceLabel,
+  autoAdvanceTitle,
   fairLabel,
   fairTitle,
   formatTime,
@@ -69,7 +71,10 @@ export default function RoomDossier({
   const hasCheers = (data.cheers?.total ?? 0) > 0;
   const hasBoards = data.requests.length + data.singWithMe.length > 0;
   const customized = Boolean(data.layout?.display || data.layout?.host);
-  const hasSetup = customized || data.fairRotation.toggles.length > 0;
+  const hasSetup =
+    customized ||
+    data.fairRotation.toggles.length > 0 ||
+    data.autoAdvance.toggles.length > 0;
   const hasSuggestions = (data.suggestions?.length ?? 0) > 0;
 
   const quiet = [
@@ -95,6 +100,9 @@ export default function RoomDossier({
         )}
         <span className={styles.dossierChip} title={fairTitle(data.fairRotation)}>
           {fairLabel(data.fairRotation)}
+        </span>
+        <span className={styles.dossierChip} title={autoAdvanceTitle(data.autoAdvance)}>
+          {autoAdvanceLabel(data.autoAdvance)}
         </span>
         <span className={styles.dossierChip} title={roomLanguageTitle(data.languages)}>
           {roomLanguageLabel(data.languages)}
@@ -129,6 +137,7 @@ export default function RoomDossier({
           <SetupPanel
             layout={data.layout}
             fair={data.fairRotation}
+            autoAdvance={data.autoAdvance}
             wide={!hasBoards}
           />
         )}

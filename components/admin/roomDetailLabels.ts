@@ -1,4 +1,8 @@
-import type { DisplayConfig, HostConfig } from '../../pages/api/types';
+import {
+  DEFAULT_AUTO_ADVANCE,
+  type DisplayConfig,
+  type HostConfig,
+} from '../../pages/api/types';
 import { LOCALE_LABELS, isLocale } from '../../lib/i18n/config';
 import { YOUTUBE_DATA_MAX_AGE_MS } from '../../lib/youtubeRetention';
 import {
@@ -48,6 +52,12 @@ export interface SingWithMeRow {
 
 export interface FairToggle {
   enabled: boolean;
+  timestamp: string;
+}
+
+export interface AutoAdvanceToggle {
+  enabled: boolean;
+  gapSeconds: number;
   timestamp: string;
 }
 
@@ -158,6 +168,39 @@ export function fairTitle(f: RoomDetailData['fairRotation']): string {
   const lines = [`Started ${f.started ? 'on' : 'off'}`];
   for (const t of f.toggles) {
     lines.push(`${formatTime(t.timestamp)} — turned ${t.enabled ? 'on' : 'off'}`);
+  }
+  return lines.join('\n');
+}
+
+export function autoAdvanceLabel(a: {
+  enabled: boolean;
+  gapSeconds: number;
+  changes: number;
+}): string {
+  const state = a.enabled ? `on · ${a.gapSeconds}s gap` : 'off';
+  return a.changes === 0
+    ? `Auto-advance ${state} (default)`
+    : `Auto-advance ${state} · changed ${a.changes}${a.changes === 1 ? ' time' : ' times'}`;
+}
+
+export function autoAdvanceTitle(a: {
+  enabled: boolean;
+  gapSeconds: number;
+  toggles: AutoAdvanceToggle[];
+}): string {
+  // No toggle ever fired, so the current value IS the starting value — which for a room
+  // predating the feature is AUTO_ADVANCE_OFF, not the DEFAULT_AUTO_ADVANCE a new room gets.
+  const starts =
+    a.toggles.length === 0
+      ? { enabled: a.enabled, gapSeconds: a.gapSeconds }
+      : DEFAULT_AUTO_ADVANCE;
+  const lines = [
+    `Starts ${starts.enabled ? 'on' : 'off'} · ${starts.gapSeconds}s gap by default`,
+  ];
+  for (const t of a.toggles) {
+    lines.push(
+      `${formatTime(t.timestamp)} — changed to ${t.enabled ? 'on' : 'off'} · ${t.gapSeconds}s gap`
+    );
   }
   return lines.join('\n');
 }

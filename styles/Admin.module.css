@@ -688,6 +688,14 @@
   background: rgba(52, 211, 153, 0.1);
 }
 
+.roomBadges {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.4rem;
+}
+
 .roomChevron {
   color: var(--text-muted);
   font-size: 0.8rem;
@@ -750,7 +758,7 @@
   .roomWhen { grid-area: when; }
   .roomStats { grid-area: stats; }
   .roomLang { grid-area: lang; justify-self: end; }
-  .fairChip { grid-area: fair; justify-self: end; }
+  .roomBadges { grid-area: fair; justify-self: end; }
   .roomChevron { grid-area: chevron; }
 }
 
@@ -766,7 +774,7 @@
     padding-top: 2.4rem;
   }
   .roomLang { justify-self: start; }
-  .fairChip { justify-self: end; }
+  .roomBadges { justify-self: end; }
 }
 
 /* ─── Room dossier ─── */

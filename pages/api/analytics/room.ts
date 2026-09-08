@@ -3,6 +3,7 @@ import { isAuthorizedAdmin } from "../../../lib/adminAuth";
 import {
   getAnalyticsDb,
   getClientErrorsCollection,
+  getRoomsCollection,
   getYoutubeSongDataCollection,
 } from "../../../lib/mongodb";
 import type { AnalyticsEvent } from "../../../lib/analytics";
@@ -13,6 +14,7 @@ import {
 } from "../../../lib/deviceType";
 import { CHOSEN_LOCALE_SOURCES } from "../../../lib/i18n/activeLocale";
 import {
+  normalizeAutoAdvance,
   normalizeDisplayConfig,
   normalizeHostConfig,
   type DisplayConfig,
@@ -61,6 +63,7 @@ async function handleGet(
           // Fair rotation's starting value rides on room_created.
           "room_created",
           "fair_mode_toggled",
+          "auto_advance_set",
           // Each carries the whole saved config, so the last one is the layout the room ended on.
           "display_config_saved",
           "host_config_saved",
@@ -101,13 +104,20 @@ async function handleGet(
     c.countDocuments({ roomId })
   );
 
-  const [sessions, events, songDataDocs, errorRows, errorTotal] =
+  // The room doc's own field is the live truth — same reason the rooms-list
+  // card reads it directly rather than replaying auto_advance_set events.
+  const roomDocPromise = getRoomsCollection().then((c) =>
+    c.findOne({ id: roomId }, { projection: { _id: 0, autoAdvance: 1 } })
+  );
+
+  const [sessions, events, songDataDocs, errorRows, errorTotal, roomDoc] =
     await Promise.all([
       sessionsPromise,
       eventsPromise,
       songDataPromise,
       errorsPromise,
       errorTotalPromise,
+      roomDocPromise,
     ]);
 
   const songDataById = new Map(songDataDocs.map((d) => [d.dataId, d]));
@@ -157,6 +167,7 @@ async function handleGet(
     timestamp: Date;
   }[] = [];
   const fairToggles: { enabled: boolean; timestamp: Date }[] = [];
+  const autoAdvanceToggles: { enabled: boolean; gapSeconds: number; timestamp: Date }[] = [];
   const cheersByEmoji = new Map<string, number>();
   const cheersByUser = new Map<string, number>();
   let reactions = 0;
@@ -251,6 +262,15 @@ async function handleGet(
           fairToggles.push({ enabled: e.fairMode, timestamp: e.timestamp });
         }
         break;
+      case "auto_advance_set":
+        if (e.autoAdvance) {
+          autoAdvanceToggles.push({
+            enabled: e.autoAdvance.enabled,
+            gapSeconds: e.autoAdvance.gapSeconds,
+            timestamp: e.timestamp,
+          });
+        }
+        break;
       case "display_config_saved":
         // The boards-on-TV toggle writes this event with changedFields only, so a config-less
         // event must not blank the layout a real save left.
@@ -305,6 +325,11 @@ async function handleGet(
       started: fairStarted ?? null,
       final: fairFinal ?? null,
       toggles: fairToggles,
+    },
+    autoAdvance: {
+      ...normalizeAutoAdvance(roomDoc?.autoAdvance),
+      changes: autoAdvanceToggles.length,
+      toggles: autoAdvanceToggles,
     },
     layout: {
       display: displayConfig,

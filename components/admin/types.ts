@@ -1,5 +1,6 @@
 import type { DayCount } from './chartData';
 import type {
+  AutoAdvanceToggle,
   FairToggle,
   LocaleCount,
   Person,
@@ -174,6 +175,9 @@ export interface RoomRow {
   /** null where the room predates the flag. */
   fairMode?: boolean | null;
   fairToggled?: boolean;
+  /** Off on rooms predating the feature — same rule normalizeAutoAdvance applies. */
+  autoAdvance: { enabled: boolean; gapSeconds: number };
+  autoAdvanceChanged?: boolean;
   /** The language the room was CREATED in; null where the room predates recording. */
   locale?: string | null;
   localeMix?: LocaleCount[];
@@ -250,6 +254,12 @@ export interface RoomDossierData {
     started: boolean | null;
     final: boolean | null;
     toggles: FairToggle[];
+  };
+  autoAdvance: {
+    enabled: boolean;
+    gapSeconds: number;
+    changes: number;
+    toggles: AutoAdvanceToggle[];
   };
   layout?: {
     display: import('../../pages/api/types').DisplayConfig | null;

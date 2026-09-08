@@ -40,19 +40,27 @@ export function CheersPanel({
 export function SetupPanel({
   layout,
   fair,
+  autoAdvance,
   wide,
 }: {
   layout: RoomDossierData['layout'];
   fair: RoomDossierData['fairRotation'];
+  autoAdvance: RoomDossierData['autoAdvance'];
   wide?: boolean;
 }): React.ReactElement {
   return (
     <Section title="Room setup" wide={wide}>
-      {fair.toggles.length > 0 && (
+      {(fair.toggles.length > 0 || autoAdvance.toggles.length > 0) && (
         <div className={styles.setupToggles}>
           {fair.toggles.map((t, i) => (
-            <span key={i} className={styles.dossierChip}>
+            <span key={`fair-${i}`} className={styles.dossierChip}>
               {formatTime(t.timestamp)} — fair rotation {t.enabled ? 'on' : 'off'}
+            </span>
+          ))}
+          {autoAdvance.toggles.map((t, i) => (
+            <span key={`auto-${i}`} className={styles.dossierChip}>
+              {formatTime(t.timestamp)} — auto-advance {t.enabled ? 'on' : 'off'} ·{' '}
+              {t.gapSeconds}s gap
             </span>
           ))}
         </div>
