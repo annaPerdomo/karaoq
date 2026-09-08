@@ -1,4 +1,5 @@
 import * as React from "react";
+import Link from "next/link";
 import styles from "../../styles/Host.module.css";
 import { AutoAdvance, QueueEntry } from "../../pages/api/types";
 import { useT } from "../../lib/i18n/I18nProvider";
@@ -272,7 +273,16 @@ export function TransportBar({
         />
       )}
       <div className={styles.transportFooter}>
-        <span className={styles.transportLogo}>KaraoQ</span>
+        <div className={styles.transportFooterStart}>
+          <span className={styles.transportLogo}>KaraoQ</span>
+          <Link href="/privacy" className={styles.transportLegalLink}>
+            {t('footer.privacy')}
+          </Link>
+          <span className={styles.transportLegalSep} aria-hidden="true">·</span>
+          <Link href="/terms" className={styles.transportLegalLink}>
+            {t('footer.terms')}
+          </Link>
+        </div>
         <a
           href="https://variationsonastring.com"
           target="_blank"

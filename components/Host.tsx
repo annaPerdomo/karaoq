@@ -1568,7 +1568,12 @@ const Host = ({
         />
       )}
 
-      {!remote && !customizing && <MobileFooter roomId={joinCode} />}
+      {!customizing && (
+        <MobileFooter
+          roomId={joinCode}
+          standalone={!remote && !hostView.showTransport}
+        />
+      )}
 
       {cohostOpen && (
         <CohostInviteModal

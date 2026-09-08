@@ -19,6 +19,7 @@ import { useT } from '../lib/i18n/I18nProvider';
 import { getStoredName, setStoredName } from '../lib/username';
 import LanguageSwitcher from './LanguageSwitcher';
 import SingSidebar from './sing/SingSidebar';
+import SingFooter from './sing/SingFooter';
 import MobileQueueDrawer from './sing/MobileQueueDrawer';
 import { myTurnState } from './sing/YourTurnCard';
 import postponeEntry from '../app/queue/postponeEntry';
@@ -377,6 +378,8 @@ const Sing = (): React.ReactElement => {
               }
             />
           )}
+
+          {joinCode && <SingFooter roomId={joinCode} />}
         </div>
 
         <SingSidebar {...queueView} />
