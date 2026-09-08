@@ -334,6 +334,19 @@ html[data-tv] .lyricSung {
   to { opacity: 0; transform: scale(0.92) translateY(-0.3em); visibility: hidden; }
 }
 
+/* An old TV browser never invalidates the layer drop-shadow promotes the cheer
+   to, so Up Next lands on a ghost. Painted flat it leaves with the node;
+   text-shadow can't carry a clipped gradient, hence the flat fill. */
+html[data-tv] .cheer {
+  background: none;
+  background-clip: border-box;
+  -webkit-background-clip: border-box;
+  -webkit-text-fill-color: currentColor;
+  color: var(--acc-a, #ff2d78);
+  filter: none;
+  text-shadow: 0 0 18px rgba(255, 45, 120, 0.45), 0 2px 10px rgba(0, 0, 0, 0.75);
+}
+
 .caption {
   margin: 0 0 0.5rem;
   font-family: var(--font-body);

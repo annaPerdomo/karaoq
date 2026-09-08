@@ -5,7 +5,7 @@ import { formatGap } from "../../lib/duration";
 import { CountdownRing } from "../player/CountdownRing";
 import { StageScene } from "../player/StageScene";
 import { CHEER_FADE_SECONDS, cheerRevealSeconds } from "./stageTiming";
-import { calmMotion } from "../../lib/calmMotion";
+import { calmMotion, isTvDevice } from "../../lib/calmMotion";
 
 /** Keyed by the song count, not random, so every host screen shows the same cheer. */
 const CHEER_COUNT = 24;
@@ -56,6 +56,26 @@ export function AutoStartPanel({
     return () => clearTimeout(timer);
   }, [showCheer, cheer]);
   const cheering = showCheer && !handedOver;
+  // A TV compositor keeps the cheer's pixels after the node goes; dirtying the
+  // stage layer for a frame forces the repaint. Belt to the CSS braces.
+  const stageRef = React.useRef<HTMLDivElement>(null);
+  const wasCheeringRef = React.useRef(false);
+  React.useEffect(() => {
+    const el = stageRef.current;
+    const wasCheering = wasCheeringRef.current;
+    wasCheeringRef.current = cheering;
+    if (cheering || !wasCheering || !el || !isTvDevice()) return;
+    el.style.opacity = "0.999";
+    const frame = requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        el.style.opacity = "";
+      })
+    );
+    return () => {
+      cancelAnimationFrame(frame);
+      el.style.opacity = "";
+    };
+  }, [cheering]);
   // The pill sits with the clock, not Up Next: it must be reachable while the
   // cheer still holds the spot, or nobody could stop the chain.
   const showPill = !!onOpenSettings && autoEnabled;
@@ -65,6 +85,7 @@ export function AutoStartPanel({
       <StageScene celebrate={showCheer} />
       <div className={styles.panel}>
         <div
+          ref={stageRef}
           className={`${styles.stageMain} ${showCount ? styles.stageMainCounting : ""}`}
           style={
             {

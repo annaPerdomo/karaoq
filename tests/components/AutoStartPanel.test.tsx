@@ -75,3 +75,39 @@ describe("AutoStartPanel hand-off", () => {
     expect(screen.queryByText(cheerText)).toBeNull();
   });
 });
+
+describe("AutoStartPanel TV repaint nudge", () => {
+  function stage(): HTMLElement {
+    return screen.getByText("Bea").closest("[style]") as HTMLElement;
+  }
+
+  it("dirties the stage's opacity for a frame when a TV hands over", () => {
+    document.documentElement.setAttribute("data-tv", "1");
+    render(<Panel />);
+    advance(REVEAL + 0.1);
+    expect(stage().style.opacity).toBe("0.999");
+  });
+
+  it("leaves the stage alone on a TV that opens straight on Up Next", () => {
+    document.documentElement.setAttribute("data-tv", "1");
+    render(
+      <AutoStartPanel
+        secondsLeft={GAP}
+        gapSeconds={GAP}
+        autoEnabled
+        showCheer={false}
+        songsSung={0}
+        lastSinger=""
+        singerName="Bea"
+        songTitle="Dancing Queen"
+      />
+    );
+    expect(stage().style.opacity).toBe("");
+  });
+
+  it("leaves the stage alone off a TV", () => {
+    render(<Panel />);
+    advance(REVEAL + CHEER_FADE_SECONDS + 0.1);
+    expect(stage().style.opacity).toBe("");
+  });
+});
