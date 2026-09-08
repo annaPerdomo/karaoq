@@ -151,6 +151,19 @@ html[data-tv] .confetti {
 }
 /* @calm-twin-end */
 
+/* Repaint cost, not motion: a TV GPU re-blurs the backdrop and re-rasterises the
+   filtered SVG on every frame of the ring's one-second tick, which flickers. */
+html[data-tv] .modePill {
+  backdrop-filter: none;
+}
+
+html[data-tv] .ringFill,
+html[data-tv] .ringCounting .ringFill,
+html[data-tv] .lyricSung {
+  filter: none;
+  transition: none;
+}
+
 @media (max-width: 640px) {
   .lyric {
     white-space: normal;

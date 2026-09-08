@@ -2813,6 +2813,12 @@
     height: 40px;
     opacity: 0.8;
   }
+
+  .liveDot,
+  .tDot,
+  .transportHeart {
+    animation: none;
+  }
 }
 
 /* ─── Calm on a smart TV ───
@@ -2844,6 +2850,12 @@ html[data-tv] .stageEq span {
   animation: none;
   height: 40px;
   opacity: 0.8;
+}
+
+html[data-tv] .liveDot,
+html[data-tv] .tDot,
+html[data-tv] .transportHeart {
+  animation: none;
 }
 /* @calm-twin-end */
 

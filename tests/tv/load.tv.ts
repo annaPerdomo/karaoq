@@ -93,6 +93,45 @@ describe.each(Object.entries(TV_AGENTS))("landing page on %s", (_name, ua) => {
 });
 
 describe("host screen on a TV", () => {
+  // Anything still animating repaints the stage every frame on a TV GPU: flicker.
+  it("runs no animations during the count-in", async () => {
+    const res = await fetch(`${BASE}/api/queue/${room.code}/videos`, {
+      method: "POST",
+      headers: { "x-karaoq-demo": "1", "content-type": "application/json" },
+      body: JSON.stringify({
+        entryId: "tv-count-in",
+        userName: "Test",
+        videoId: "dQw4w9WgXcQ",
+        songTitle: "Count-in check",
+      }),
+    });
+    expect(res.status).toBe(200);
+    const { page, close } = await tvPage(TV_AGENTS.tizen);
+    try {
+      await page.goto(`${BASE}/host/${room.code}`, { waitUntil: "load", timeout: 60_000 });
+      const nameBox = page.getByPlaceholder(/enter your name/i);
+      await nameBox.waitFor({ timeout: 30_000 });
+      await nameBox.fill("Test");
+      await page.getByRole("button", { name: /let's go/i }).click();
+      await page.getByRole("timer").first().waitFor({ timeout: 30_000 });
+      // Past the mount animations and into the second tick.
+      await page.waitForTimeout(2500);
+      const running = await page.evaluate(() =>
+        document
+          .getAnimations()
+          .filter((a) => a.playState === "running")
+          .map((a) => {
+            const target = (a.effect as KeyframeEffect)?.target as Element | null;
+            const what = (a as CSSAnimation).animationName ?? (a as CSSTransition).transitionProperty;
+            return `${what}@${target?.getAttribute("class") ?? "?"}`;
+          })
+      );
+      expect(running).toEqual([]);
+    } finally {
+      await close();
+    }
+  });
+
   it("loads the room without errors", async () => {
     const { page, errors, close } = await tvPage(TV_AGENTS.tizen);
     try {
