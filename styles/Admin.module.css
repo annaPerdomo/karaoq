@@ -416,6 +416,10 @@
   margin-top: 0.9rem;
 }
 
+.cardNoteAfterTiles {
+  margin-top: 0.9rem;
+}
+
 /* Verbatim upstream error text. Monospaced and scrollable rather than wrapped:
    these are long single-line strings and the exact wording is the point. */
 .rawDetails {
@@ -463,6 +467,37 @@
   .cardPair {
     grid-template-columns: 1fr;
   }
+}
+
+.disclosure {
+  margin-top: 0.4rem;
+}
+
+.disclosureSummary {
+  composes: sectionHeading;
+  cursor: pointer;
+  list-style: none;
+}
+
+.disclosureSummary::-webkit-details-marker {
+  display: none;
+}
+
+.disclosureSummary::before {
+  content: '▸';
+  display: inline-block;
+  margin-right: 0.5rem;
+  transition: transform 0.15s ease;
+}
+
+.disclosure[open] > .disclosureSummary::before {
+  transform: rotate(90deg);
+}
+
+.disclosureBody {
+  display: grid;
+  gap: 1rem;
+  margin-top: 0.8rem;
 }
 
 .tileGrid {

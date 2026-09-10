@@ -14,6 +14,8 @@ import {
   type LinkLookupRow,
 } from "../../../lib/analyticsStats";
 import { catalogEntry } from "../../../lib/suggestionCatalog";
+import { estimateUnits, spentRecent } from "../../../lib/corpusBudget";
+import { quotaResetsAt } from "../../../lib/pacificTime";
 import {
   deviceTypeFromUA,
   platformFromUA,
@@ -27,6 +29,8 @@ const FUNNEL_WINDOW_DAYS = 30;
 // What the picks panel draws — anything past these is payload nobody renders.
 const PICKS_WINDOW_DAYS = 30;
 const PICKS_MAX_COUNTRIES = 20;
+
+const QUOTA_WINDOW_DAYS = 7;
 
 // Excluded from the geo roll-ups: these say how the YouTube API behaved, not
 // that a room happened somewhere, and the roomId "" ones would each count as a
@@ -64,12 +68,13 @@ export default async function handler(
     const now = new Date();
     const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
     const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     const dayKey = { format: "%Y-%m-%d", date: "$timestamp", timezone: tz };
 
     const [
       totalRooms,
-      roomsThisWeek,
+      roomsLast7d,
       totalSongs,
       totalReactions,
       uniqueUsers,
@@ -125,6 +130,10 @@ export default async function handler(
       searchFailureDetails,
       linkLookupRows,
       activityGrid,
+      quotaDays,
+      trendRoomsPrevious,
+      trendSongsCurrent,
+      trendSongsPrevious,
     ] = await Promise.all([
       events.countDocuments({ type: "room_created" }),
 
@@ -801,6 +810,18 @@ export default async function handler(
           },
         ])
         .toArray(),
+
+      spentRecent(now.getTime(), QUOTA_WINDOW_DAYS),
+
+      events.countDocuments({
+        type: "room_created",
+        timestamp: { $gte: fourteenDaysAgo, $lt: weekAgo },
+      }),
+      events.countDocuments({ type: "song_added", timestamp: { $gte: weekAgo } }),
+      events.countDocuments({
+        type: "song_added",
+        timestamp: { $gte: fourteenDaysAgo, $lt: weekAgo },
+      }),
     ]);
 
     const sessionStats = sessionData[0] || {
@@ -928,7 +949,7 @@ export default async function handler(
       overview: {
         totalRooms,
         roomsToday,
-        roomsThisWeek,
+        roomsLast7d,
         totalSongs,
         totalReactions,
         uniqueUsers,
@@ -941,6 +962,10 @@ export default async function handler(
         avgSongsPerRoom: Math.round((songStats.avgSongsPerRoom || 0) * 10) / 10,
         maxSongsPerRoom: songStats.maxSongsPerRoom || 0,
         totalQrPrints,
+      },
+      trend7d: {
+        rooms: { current: roomsLast7d, previous: trendRoomsPrevious },
+        songs: { current: trendSongsCurrent, previous: trendSongsPrevious },
       },
       charts: {
         roomsByDay,
@@ -1056,6 +1081,10 @@ export default async function handler(
         details: searchFailureDetails,
       },
       linkLookups: summarizeLinkLookups(linkLookupRows as LinkLookupRow[]),
+      youtubeQuota: {
+        days: quotaDays.map((d) => ({ ...d, units: estimateUnits(d) })),
+        resetsAt: quotaResetsAt(now),
+      },
       meta: {
         timezone: tz,
         generatedAt: now.toISOString(),

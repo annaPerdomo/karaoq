@@ -217,3 +217,23 @@ export function fillWeekdays(
 export function pct(part: number, whole: number): number {
   return whole > 0 ? Math.round((part / whole) * 100) : 0;
 }
+
+export function pctChange(current: number, previous: number): number | null {
+  return previous === 0 ? null : Math.round(((current - previous) / previous) * 100);
+}
+
+export function trendLabel(current: number, previous: number): string {
+  const change = pctChange(current, previous);
+  if (change === null) return 'no prior data';
+  if (change === 0) return 'flat vs prior 7 days';
+  return change > 0
+    ? `▲ ${change}% vs prior 7 days`
+    : `▼ ${Math.abs(change)}% vs prior 7 days`;
+}
+
+export const WINDOW = {
+  today: (tz: string) => `Today (${tz})`,
+  last7: 'Last 7 days',
+  last30: 'Last 30 days',
+  allTime: 'All time',
+} as const;

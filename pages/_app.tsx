@@ -11,6 +11,7 @@ import { I18nProvider, useT } from '../lib/i18n/I18nProvider'
 import { renderWithHeart } from '../lib/i18n/renderWithHeart'
 import { installErrorReporting } from '../lib/errorReporting'
 import FeedbackTrigger from '../components/feedback/FeedbackTrigger'
+import PwaHead from '../components/PwaHead'
 
 function AppFooter() {
   const { t } = useT();
@@ -48,6 +49,7 @@ function MyApp({ Component, pageProps }: AppProps) {
       <Head>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
+      <PwaHead admin={router.pathname.startsWith('/admin')} />
       <Component {...pageProps} />
       {showFooter && <AppFooter />}
       {/* Passing route turns the script's own auto-tracking off, which would
