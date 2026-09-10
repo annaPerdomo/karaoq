@@ -3,6 +3,9 @@ import {
   ADMIN_LIVE_WINDOW_MS,
   isLive,
   lookupOutcomeParts,
+  pctChange,
+  trendLabel,
+  WINDOW,
 } from "../../components/admin/format";
 
 describe("lookupOutcomeParts", () => {
@@ -50,5 +53,36 @@ describe("isLive", () => {
     expect(isLive(undefined)).toBe(false);
     expect(isLive("")).toBe(false);
     expect(isLive("not a date")).toBe(false);
+  });
+});
+
+describe("pctChange", () => {
+  it("computes rounded percent change", () => {
+    expect(pctChange(120, 100)).toBe(20);
+    expect(pctChange(80, 100)).toBe(-20);
+    expect(pctChange(1, 3)).toBe(-67);
+  });
+
+  it("returns null with no prior baseline", () => {
+    expect(pctChange(5, 0)).toBeNull();
+    expect(pctChange(0, 0)).toBeNull();
+  });
+});
+
+describe("trendLabel", () => {
+  it("labels an increase, decrease, and flat change", () => {
+    expect(trendLabel(120, 100)).toBe("▲ 20% vs prior 7 days");
+    expect(trendLabel(80, 100)).toBe("▼ 20% vs prior 7 days");
+    expect(trendLabel(100, 100)).toBe("flat vs prior 7 days");
+  });
+
+  it("labels a missing baseline", () => {
+    expect(trendLabel(3, 0)).toBe("no prior data");
+  });
+});
+
+describe("WINDOW", () => {
+  it("formats the today label with timezone", () => {
+    expect(WINDOW.today("Europe/Prague")).toBe("Today (Europe/Prague)");
   });
 });

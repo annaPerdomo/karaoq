@@ -68,12 +68,13 @@ export default async function handler(
     const now = new Date();
     const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
     const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     const dayKey = { format: "%Y-%m-%d", date: "$timestamp", timezone: tz };
 
     const [
       totalRooms,
-      roomsThisWeek,
+      roomsLast7d,
       totalSongs,
       totalReactions,
       uniqueUsers,
@@ -130,6 +131,9 @@ export default async function handler(
       linkLookupRows,
       activityGrid,
       quotaDays,
+      trendRoomsPrevious,
+      trendSongsCurrent,
+      trendSongsPrevious,
     ] = await Promise.all([
       events.countDocuments({ type: "room_created" }),
 
@@ -808,6 +812,16 @@ export default async function handler(
         .toArray(),
 
       spentRecent(now.getTime(), QUOTA_WINDOW_DAYS),
+
+      events.countDocuments({
+        type: "room_created",
+        timestamp: { $gte: fourteenDaysAgo, $lt: weekAgo },
+      }),
+      events.countDocuments({ type: "song_added", timestamp: { $gte: weekAgo } }),
+      events.countDocuments({
+        type: "song_added",
+        timestamp: { $gte: fourteenDaysAgo, $lt: weekAgo },
+      }),
     ]);
 
     const sessionStats = sessionData[0] || {
@@ -935,7 +949,7 @@ export default async function handler(
       overview: {
         totalRooms,
         roomsToday,
-        roomsThisWeek,
+        roomsLast7d,
         totalSongs,
         totalReactions,
         uniqueUsers,
@@ -948,6 +962,10 @@ export default async function handler(
         avgSongsPerRoom: Math.round((songStats.avgSongsPerRoom || 0) * 10) / 10,
         maxSongsPerRoom: songStats.maxSongsPerRoom || 0,
         totalQrPrints,
+      },
+      trend7d: {
+        rooms: { current: roomsLast7d, previous: trendRoomsPrevious },
+        songs: { current: trendSongsCurrent, previous: trendSongsPrevious },
       },
       charts: {
         roomsByDay,

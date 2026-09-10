@@ -41,7 +41,7 @@ export default function PulseView({
         <StatTile
           label="Rooms"
           value={overview.totalRooms}
-          sub={`${overview.roomsToday} today · ${overview.roomsThisWeek} this week`}
+          sub={`${overview.roomsToday} today · ${overview.roomsLast7d} last 7 days`}
           spark={fillDays(charts.roomsByDay, 30).map((d) => d.value)}
         />
         <StatTile

@@ -18,7 +18,7 @@ export interface AnalyticsData {
   overview: {
     totalRooms: number;
     roomsToday: number;
-    roomsThisWeek: number;
+    roomsLast7d: number;
     totalSongs: number;
     totalReactions: number;
     uniqueUsers: number;
@@ -31,6 +31,10 @@ export interface AnalyticsData {
     avgSongsPerRoom: number;
     maxSongsPerRoom: number;
     totalQrPrints: number;
+  };
+  trend7d?: {
+    rooms: { current: number; previous: number };
+    songs: { current: number; previous: number };
   };
   charts: {
     roomsByDay: DayCount[];
