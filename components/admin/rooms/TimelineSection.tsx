@@ -1,6 +1,6 @@
 import * as React from 'react';
 import styles from '../../../styles/Admin.module.css';
-import { SEARCH_RUNS_CAP } from '../../../lib/analytics';
+import { SEARCH_RUNS_CAP } from '../types';
 import type { DossierSongRow, RoomErrorRow, RoomSearchFailRow, RoomSearchRow } from '../types';
 import { ERROR_SOURCE_LABELS, searchFailLabel } from '../format';
 import { pickTitle, songTitleLabel, VIA_LABELS } from '../roomDetailLabels';

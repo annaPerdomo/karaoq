@@ -9,6 +9,8 @@ import type {
   SingWithMeRow,
 } from './roomDetailLabels';
 
+export const SEARCH_RUNS_CAP = 300;
+
 /** Response contract of GET /api/analytics/data. Nearly every sub-object is
  * optional so a dashboard served by an older deploy degrades to fewer panels
  * rather than a crash. */

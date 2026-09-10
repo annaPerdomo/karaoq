@@ -6,7 +6,8 @@ import {
   getRoomsCollection,
   getYoutubeSongDataCollection,
 } from "../../../lib/mongodb";
-import { SEARCH_RUNS_CAP, type AnalyticsEvent } from "../../../lib/analytics";
+import type { AnalyticsEvent } from "../../../lib/analytics";
+import { SEARCH_RUNS_CAP } from "../../../components/admin/types";
 import {
   deviceTypeFromUA,
   platformFromUA,
