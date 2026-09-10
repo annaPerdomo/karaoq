@@ -10,7 +10,9 @@ import {
   roomLanguageLabel,
   roomLanguageTitle,
 } from '../roomDetailLabels';
-import { BoardsSection, PeopleSection, TimelineSection } from './DossierSections';
+import { TapHint } from '../TapHint';
+import { BoardsSection, PeopleSection } from './DossierSections';
+import { TimelineSection } from './TimelineSection';
 import { CheersPanel, SetupPanel } from './DossierPanels';
 import SuggestionsSection from './SuggestionsSection';
 
@@ -91,22 +93,22 @@ export default function RoomDossier({
       <div className={styles.dossierStrip}>
         {span && <span className={styles.dossierChip}>{span}</span>}
         {data.sessionEnd && data.sessionEnd.minutesFromNow !== null && (
-          <span
+          <TapHint
+            text={`Set ${formatTime(data.sessionEnd.timestamp)}`}
             className={styles.dossierChip}
-            title={`Set ${formatTime(data.sessionEnd.timestamp)}`}
           >
             Wrap-up set: {data.sessionEnd.minutesFromNow}m out
-          </span>
+          </TapHint>
         )}
-        <span className={styles.dossierChip} title={fairTitle(data.fairRotation)}>
+        <TapHint text={fairTitle(data.fairRotation)} className={styles.dossierChip}>
           {fairLabel(data.fairRotation)}
-        </span>
-        <span className={styles.dossierChip} title={autoAdvanceTitle(data.autoAdvance)}>
+        </TapHint>
+        <TapHint text={autoAdvanceTitle(data.autoAdvance)} className={styles.dossierChip}>
           {autoAdvanceLabel(data.autoAdvance)}
-        </span>
-        <span className={styles.dossierChip} title={roomLanguageTitle(data.languages)}>
+        </TapHint>
+        <TapHint text={roomLanguageTitle(data.languages)} className={styles.dossierChip}>
           {roomLanguageLabel(data.languages)}
-        </span>
+        </TapHint>
         <span className={styles.dossierChip}>
           {data.counts.searches} searches
         </span>
@@ -120,6 +122,7 @@ export default function RoomDossier({
       <div className={styles.dossierGrid}>
         <TimelineSection
           songs={data.songs}
+          searchRuns={data.searchRuns ?? []}
           errors={data.errors ?? []}
           errorTotal={data.counts.errors ?? data.errors?.length ?? 0}
           searchFails={data.searchFails ?? []}

@@ -9,6 +9,8 @@ import type {
   SingWithMeRow,
 } from './roomDetailLabels';
 
+export const SEARCH_RUNS_CAP = 300;
+
 /** Response contract of GET /api/analytics/data. Nearly every sub-object is
  * optional so a dashboard served by an older deploy degrades to fewer panels
  * rather than a crash. */
@@ -235,6 +237,15 @@ export interface RoomSearchFailRow {
   timestamp: string;
 }
 
+/** One served /api/search attributed to this room. */
+export interface RoomSearchRow {
+  query: string;
+  cache: 'fresh' | 'coalesced' | 'miss' | 'stale' | 'corpus';
+  songKnown: boolean | null;
+  resultCount: number | null;
+  timestamp: string;
+}
+
 /** Response contract of GET /api/analytics/room. */
 export interface RoomDossierData {
   roomId: string;
@@ -250,6 +261,7 @@ export interface RoomDossierData {
   };
   errors?: RoomErrorRow[];
   searchFails?: RoomSearchFailRow[];
+  searchRuns?: RoomSearchRow[];
   fairRotation: {
     started: boolean | null;
     final: boolean | null;

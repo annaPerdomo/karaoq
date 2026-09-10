@@ -8,8 +8,14 @@ import { bankSearchEvidence, recordSearchResults } from "../../lib/songCorpus";
 import { readSongCuts } from "../../lib/corpusRead";
 import { MAX_ENTRY_ID_LENGTH, markRateLimitNotified, rateLimit } from "../../lib/limits";
 import { normalizeRoomId } from "../../lib/roomCode";
-import { extractGeo, isAnalyticsExempt, trackEvent } from "../../lib/analytics";
 import {
+  extractGeo,
+  isAnalyticsExempt,
+  trackEvent,
+  type AnalyticsEvent,
+} from "../../lib/analytics";
+import {
+  MAX_DEMAND_LABEL_LENGTH,
   recordSearchDemand,
   type SearchDemandOutcome,
 } from "../../lib/searchDemand";
@@ -115,6 +121,19 @@ export default async function handler(
     exempt
       ? Promise.resolve()
       : recordSearchDemand({ query: normalizedQ, roomId, country, outcome });
+  const noteRun = (
+    searchCache: NonNullable<AnalyticsEvent["searchCache"]>,
+    resultCount: number,
+    songKnown?: boolean
+  ): Promise<void> =>
+    trackEvent(req, "search_run", {
+      roomId,
+      query: normalizedQ.slice(0, MAX_DEMAND_LABEL_LENGTH),
+      searchCache,
+      resultCount,
+      expiresAt: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
+      ...(songKnown === undefined ? {} : { songKnown }),
+    });
 
   let cached = await readCache(cacheKey);
 
@@ -138,6 +157,7 @@ export default async function handler(
     res.setHeader("x-karaoq-search-cache", "fresh");
     res.status(200).json(cached.results);
     await noteDemand("served");
+    await noteRun("fresh", cached.results.length);
     return;
   }
 
@@ -154,6 +174,7 @@ export default async function handler(
       res.setHeader("x-karaoq-search-cache", "coalesced");
       res.status(200).json(results);
       await noteDemand("served");
+      await noteRun("coalesced", results.length);
       return;
     } catch {
       // The leader's own error path did the tracking; fall through and run the
@@ -168,6 +189,7 @@ export default async function handler(
       res.setHeader("x-karaoq-search-cache", "stale");
       res.status(200).json(staleFallback);
       await noteDemand("stale");
+      await noteRun("stale", staleFallback.length);
       return;
     }
     // Guarded so holding the limiter down can't fill the free tier with
@@ -202,12 +224,14 @@ export default async function handler(
     await recordSpend(Date.now(), { searches: 1 }).catch(() => {});
     // Awaited after the response, never dropped: a dropped promise dies with the
     // frozen instance partway through two dependent writes (lib/songCorpus).
+    let written: { songKnown: boolean } | null | undefined;
     if (isCatalogFilters(duration, sortBy) && banksIntoCorpus(queryKey, normalizedQ)) {
-      const written = await recordSearchResults(queryKey, results).catch(() => null);
+      written = await recordSearchResults(queryKey, results).catch(() => null);
       if (written && !written.songKnown) {
         await bankSearchEvidence(results, { roomId, country });
       }
     }
+    await noteRun("miss", results.length, written?.songKnown);
     return;
   } catch (e: any) {
     console.warn("YouTube API search failed:", e?.message);

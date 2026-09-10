@@ -745,6 +745,12 @@ function ensureAnalyticsIndexes(db: Db): void {
           partialFilterExpression: { type: "session_heartbeat" },
         }
       ),
+      // Per-doc expiry for search_run (lib/analytics.ts), so its 90-day retention
+      // doesn't widen the heartbeat partial index above.
+      db.collection("analytics_events").createIndex(
+        { expiresAt: 1 },
+        { expireAfterSeconds: 0 }
+      ),
       db.collection("analytics_sessions").createIndex(
         { lastSeen: 1 },
         { expireAfterSeconds: ANALYTICS_TTL_SECONDS }

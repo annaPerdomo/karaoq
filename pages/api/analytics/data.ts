@@ -31,7 +31,7 @@ const PICKS_MAX_COUNTRIES = 20;
 // Excluded from the geo roll-ups: these say how the YouTube API behaved, not
 // that a room happened somewhere, and the roomId "" ones would each count as a
 // room under $addToSet — inflating every country and city that has real ones.
-const NON_ROOM_EVENTS = ["search_failed", "link_lookup"];
+const NON_ROOM_EVENTS = ["search_failed", "search_run", "link_lookup"];
 
 // Cap on a session's counted length: anything above it is the legacy revisit artifact
 // (firstSeen anchored days before lastSeen) on pre-fix docs.
@@ -787,7 +787,7 @@ export default async function handler(
           {
             $match: {
               timestamp: { $gte: thirtyDaysAgo },
-              type: { $nin: ["session_heartbeat", "search_failed"] },
+              type: { $nin: ["session_heartbeat", "search_failed", "search_run"] },
             },
           },
           {

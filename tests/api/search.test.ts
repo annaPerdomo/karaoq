@@ -29,15 +29,22 @@ vi.mock("../../lib/limits", async (importOriginal) => ({
 }));
 
 const trackEventMock = vi.fn(async (..._args: unknown[]) => {});
-vi.mock("../../lib/analytics", () => ({
-  trackEvent: (...args: unknown[]) => trackEventMock(...args),
-  isAnalyticsExempt: () => false,
-  extractGeo: () => ({ country: "PH", region: "Central Visayas", city: "Cebu City" }),
-}));
+vi.mock("../../lib/analytics", () => {
+  // Mirrors the real isAnalyticsExempt: only the demo header trips it here.
+  const mockReqIsExempt = (req: { headers?: Record<string, unknown> } | undefined) =>
+    req?.headers?.["x-karaoq-demo"] === "1";
+  return {
+    trackEvent: (req: any, ...rest: unknown[]) =>
+      mockReqIsExempt(req) ? Promise.resolve() : trackEventMock(req, ...rest),
+    isAnalyticsExempt: (req: any) => mockReqIsExempt(req),
+    extractGeo: () => ({ country: "PH", region: "Central Visayas", city: "Cebu City" }),
+  };
+});
 
 const recordDemandMock = vi.fn(async (..._args: unknown[]) => {});
 vi.mock("../../lib/searchDemand", () => ({
   recordSearchDemand: (...args: unknown[]) => recordDemandMock(...args),
+  MAX_DEMAND_LABEL_LENGTH: 200,
 }));
 
 const recordSearchResultsMock = vi.fn(async (..._args: unknown[]) => ({
@@ -70,6 +77,12 @@ function demandWrite(): Record<string, unknown> | null {
 function failureEvent(): Record<string, unknown> | null {
   const call = trackEventMock.mock.calls.find((args) => args[1] === "search_failed");
   return call ? (call[2] as Record<string, unknown>) : null;
+}
+
+function searchRunCalls(): Record<string, unknown>[] {
+  return trackEventMock.mock.calls
+    .filter((args) => args[1] === "search_run")
+    .map((args) => args[2] as Record<string, unknown>);
 }
 
 process.env.MONGODB_URI = "mongodb://test";
@@ -1119,6 +1132,184 @@ describe("search demand ledger", () => {
     expect(off).not.toBe(on);
     expect(demandKey(off)).toBe(demandKey(on));
     expect(demandKey(on)).toBe(searchCacheKey(buildSearchQuery(bare, true)));
+  });
+});
+
+describe("search_run tracking", () => {
+  it("records exactly one search_run on a fresh cache hit", async () => {
+    const cached = [{ title: "Cached", thumbnailUrl: "t", videoId: "abc" }];
+    mockCollection.findOne.mockResolvedValue({
+      key: "q|any|relevance",
+      results: cached,
+      createdAt: new Date(),
+    });
+
+    const res = createRes();
+    await handler(createMockReq({ query: { q: "q" } }), res);
+
+    expect(res.getStatus()).toBe(200);
+    const runs = searchRunCalls();
+    expect(runs).toHaveLength(1);
+    expect(runs[0]).toMatchObject({ searchCache: "fresh", query: "q", resultCount: 1 });
+    expect(runs[0]).not.toHaveProperty("songKnown");
+  });
+
+  it("sets a fresh hit's search_run to expire roughly 90 days out", async () => {
+    const cached = [{ title: "Cached", thumbnailUrl: "t", videoId: "abc" }];
+    mockCollection.findOne.mockResolvedValue({
+      key: "q|any|relevance",
+      results: cached,
+      createdAt: new Date(),
+    });
+
+    const res = createRes();
+    await handler(createMockReq({ query: { q: "q" } }), res);
+
+    expect(res.getStatus()).toBe(200);
+    const runs = searchRunCalls();
+    const expiresAt = runs[0].expiresAt as Date;
+    const expectedMs = Date.now() + 90 * 24 * 60 * 60 * 1000;
+    expect(Math.abs(expiresAt.getTime() - expectedMs)).toBeLessThan(60_000);
+  });
+
+  it("records a known song on a live miss with catalog filters", async () => {
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url.includes("/youtube/v3/search")) return jsonResponse(searchItems(["a"]));
+      if (url.includes("/youtube/v3/videos")) return jsonResponse({ items: [] });
+      throw new Error("unexpected fetch " + url);
+    });
+    recordSearchResultsMock.mockResolvedValue({
+      videosUpserted: 0,
+      cutsAdded: 0,
+      songKnown: true,
+    });
+
+    const res = createRes();
+    await handler(createMockReq({ query: { q: "test" } }), res);
+
+    expect(res.getStatus()).toBe(200);
+    const runs = searchRunCalls();
+    expect(runs).toHaveLength(1);
+    expect(runs[0]).toMatchObject({ searchCache: "miss", songKnown: true });
+  });
+
+  it("records an unknown song on a live miss with catalog filters", async () => {
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url.includes("/youtube/v3/search")) return jsonResponse(searchItems(["a"]));
+      if (url.includes("/youtube/v3/videos")) return jsonResponse({ items: [] });
+      throw new Error("unexpected fetch " + url);
+    });
+    recordSearchResultsMock.mockResolvedValue({
+      videosUpserted: 0,
+      cutsAdded: 0,
+      songKnown: false,
+    });
+
+    const res = createRes();
+    await handler(createMockReq({ query: { q: "test" } }), res);
+
+    expect(res.getStatus()).toBe(200);
+    const runs = searchRunCalls();
+    expect(runs).toHaveLength(1);
+    expect(runs[0]).toMatchObject({ searchCache: "miss", songKnown: false });
+  });
+
+  it("records no search_run when the search fails", async () => {
+    fetchMock.mockImplementation(async () =>
+      jsonResponse(
+        { error: { message: "Quota exceeded", errors: [{ reason: "quotaExceeded" }] } },
+        false,
+        403
+      )
+    );
+
+    const res = createRes();
+    await handler(createMockReq({ query: { q: "test" } }), res);
+
+    expect(res.getStatus()).toBe(503);
+    expect(searchRunCalls()).toHaveLength(0);
+  });
+
+  it("records one search_run for a coalesced follower", async () => {
+    let releaseSearch!: (r: Response) => void;
+    fetchMock.mockImplementation((url: string) => {
+      if (url.includes("/youtube/v3/search"))
+        return new Promise<Response>((resolve) => { releaseSearch = resolve; });
+      if (url.includes("/youtube/v3/videos"))
+        return Promise.resolve(jsonResponse({ items: [] }));
+      throw new Error("unexpected fetch " + url);
+    });
+
+    const res1 = createRes();
+    const first = handler(createMockReq({ query: { q: "same song" } }), res1);
+    await vi.waitFor(() =>
+      expect(
+        fetchMock.mock.calls.filter(([u]) => String(u).includes("/search"))
+      ).toHaveLength(1)
+    );
+
+    const res2 = createRes();
+    const second = handler(createMockReq({ query: { q: "Same  Song" } }), res2);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    releaseSearch(jsonResponse(searchItems(["a"])));
+    await Promise.all([first, second]);
+
+    const coalesced = searchRunCalls().filter((r) => r.searchCache === "coalesced");
+    expect(coalesced).toHaveLength(1);
+  });
+
+  it("caps a stored query at 200 chars", async () => {
+    const maxQuery = "a".repeat(200);
+    mockCollection.findOne.mockResolvedValue({
+      key: `${searchCacheKey(maxQuery)}|any|relevance`,
+      results: [{ title: "Cached", thumbnailUrl: "t", videoId: "abc" }],
+      createdAt: new Date(),
+    });
+
+    const res = createRes();
+    await handler(createMockReq({ query: { q: maxQuery } }), res);
+
+    expect(res.getStatus()).toBe(200);
+    const runs = searchRunCalls();
+    expect(runs).toHaveLength(1);
+    expect((runs[0].query as string).length).toBe(200);
+  });
+
+  it("records the stale fallback a rate-limited request served, not a failure", async () => {
+    rateLimitMock.mockReturnValue(false);
+    mockCollection.findOne.mockResolvedValue({
+      key: "q|any|relevance",
+      results: [{ title: "Stale", thumbnailUrl: "t", videoId: "old" }],
+      createdAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000),
+    });
+
+    const res = createRes();
+    await handler(createMockReq({ query: { q: "q" } }), res);
+
+    expect(res.getStatus()).toBe(200);
+    const runs = searchRunCalls();
+    expect(runs).toHaveLength(1);
+    expect(runs[0]).toMatchObject({ searchCache: "stale", resultCount: 1 });
+    expect(failureEvent()).toBeNull();
+  });
+
+  it("stays quiet for demo traffic", async () => {
+    mockCollection.findOne.mockResolvedValue({
+      key: "q|any|relevance",
+      results: [{ title: "Cached", thumbnailUrl: "t", videoId: "abc" }],
+      createdAt: new Date(),
+    });
+
+    const res = createRes();
+    await handler(
+      createMockReq({ query: { q: "q" }, headers: { "x-karaoq-demo": "1" } }),
+      res
+    );
+
+    expect(res.getStatus()).toBe(200);
+    expect(searchRunCalls()).toHaveLength(0);
+    expect(recordDemandMock).not.toHaveBeenCalled();
   });
 });
 
