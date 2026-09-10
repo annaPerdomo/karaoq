@@ -10,7 +10,8 @@ import {
   roomLanguageLabel,
   roomLanguageTitle,
 } from '../roomDetailLabels';
-import { BoardsSection, PeopleSection, TimelineSection } from './DossierSections';
+import { BoardsSection, PeopleSection } from './DossierSections';
+import { TimelineSection } from './TimelineSection';
 import { CheersPanel, SetupPanel } from './DossierPanels';
 import SuggestionsSection from './SuggestionsSection';
 
