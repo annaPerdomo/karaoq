@@ -76,6 +76,16 @@ async function handleGet(
     .toArray()
     .then((docs) => docs.reverse());
 
+  // Fetched separately, capped on its own 300, so a chatty room's searches
+  // can't push room_created out of the shared 2000-row window above.
+  const searchRunsPromise = db
+    .collection<AnalyticsEvent>("analytics_events")
+    .find({ roomId, type: "search_run" })
+    .sort({ timestamp: -1 })
+    .limit(300)
+    .toArray()
+    .then((docs) => docs.reverse());
+
   // Titles live in their own collection, expiring at 30 days (lib/mongodb.ts),
   // and are joined back by songDataId. The event rows outlive that expiry, so
   // an old room still shows *that* a song was added, just not which one.
@@ -110,10 +120,11 @@ async function handleGet(
     c.findOne({ id: roomId }, { projection: { _id: 0, autoAdvance: 1 } })
   );
 
-  const [sessions, events, songDataDocs, errorRows, errorTotal, roomDoc] =
+  const [sessions, events, searchRunEvents, songDataDocs, errorRows, errorTotal, roomDoc] =
     await Promise.all([
       sessionsPromise,
       eventsPromise,
+      searchRunsPromise,
       songDataPromise,
       errorsPromise,
       errorTotalPromise,
@@ -166,6 +177,13 @@ async function handleGet(
     searchOutcome: string | null;
     timestamp: Date;
   }[] = [];
+  const searchRuns = searchRunEvents.map((e) => ({
+    query: e.query ?? "",
+    cache: e.searchCache ?? "miss",
+    songKnown: e.songKnown ?? null,
+    resultCount: e.resultCount ?? null,
+    timestamp: e.timestamp,
+  }));
   const fairToggles: { enabled: boolean; timestamp: Date }[] = [];
   const autoAdvanceToggles: { enabled: boolean; gapSeconds: number; timestamp: Date }[] = [];
   const cheersByEmoji = new Map<string, number>();
@@ -321,6 +339,7 @@ async function handleGet(
     },
     errors: errorRows,
     searchFails,
+    searchRuns,
     fairRotation: {
       started: fairStarted ?? null,
       final: fairFinal ?? null,

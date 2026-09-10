@@ -397,8 +397,11 @@ function project(doc: Doc, projection?: Doc): Doc {
   if (!projection) return doc;
   const out: Doc = { _id: doc._id };
   for (const [path, mode] of Object.entries(projection)) {
+    if (path === "_id") {
+      if (!mode) delete out._id;
+      continue;
+    }
     if (!mode) throw new Error("fakeCollection supports only inclusion projections");
-    if (path === "_id") continue;
     const value = readPath(doc, path);
     if (value !== undefined) setPath(out, path, value);
   }
@@ -464,6 +467,7 @@ export function fakeCollection(lookup?: LookupFrom) {
     },
     find: (filter: Doc, options?: { projection?: Doc }) => {
       let found = Array.from(docs.values()).filter((doc) => matches(doc, filter));
+      let projection = options?.projection;
       const cursor = {
         sort: (spec: Doc) => {
           // Key order carries the tie-break, as it does in Mongo: the resolver
@@ -483,8 +487,12 @@ export function fakeCollection(lookup?: LookupFrom) {
           found = found.slice(0, n);
           return cursor;
         },
+        project: (spec: Doc) => {
+          projection = spec;
+          return cursor;
+        },
         toArray: async () =>
-          found.map((doc) => project(copy(doc), options?.projection)),
+          found.map((doc) => project(copy(doc), projection)),
       };
       return cursor;
     },

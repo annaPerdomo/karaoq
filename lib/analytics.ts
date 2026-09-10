@@ -27,6 +27,7 @@ export type EventType =
   | "song_limit_set"
   | "song_postponed"
   | "search_failed"
+  | "search_run"
   | "link_lookup";
 
 export interface AnalyticsEvent {
@@ -83,6 +84,14 @@ export interface AnalyticsEvent {
   // searching, or "" from clients predating the field — and either way the
   // failure is the API's, not the room's, so geo roll-ups must exclude these.
   searchOutcome?: "stale" | "corpus" | "error";
+  // search_run: one row per /api/search that returned results. Like search_failed,
+  // API telemetry rather than audience data, so geo roll-ups exclude it by type.
+  query?: string;
+  searchCache?: "fresh" | "coalesced" | "miss" | "stale" | "corpus";
+  // miss only: true when karaoke_songs already catalogued the song, false when the
+  // results were banked as search evidence. Absent when the corpus wasn't consulted.
+  songKnown?: boolean;
+  resultCount?: number;
   // link_lookup: usage telemetry, not audience data, so like search_failed it's
   // excluded from geo roll-ups and the public stats. Deliberately carries no
   // YouTube metadata, keeping these rows clear of the 30-day retention split.
@@ -93,6 +102,8 @@ export interface AnalyticsEvent {
   // Key of the youtube_song_data doc holding this event's title/video id until
   // it expires at 30 days. Absent on events from before the split.
   songDataId?: string;
+  // search_run only: 90 days, the search_demand retention. TTL index in lib/mongodb.ts.
+  expiresAt?: Date;
 }
 
 // Heartbeat gap beyond which the next beat starts a fresh session; 30 min tolerates throttled background-tab timers.
