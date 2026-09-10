@@ -3,6 +3,7 @@ import styles from '../../../styles/Admin.module.css';
 import type { AnalyticsData } from '../types';
 import { pct } from '../format';
 import BarList from '../charts/BarList';
+import Disclosure from './Disclosure';
 import { SERIES } from '../charts/palette';
 
 /** A present-but-tiny slice must not read as absent: 3 of 709 is "<1%", not
@@ -98,18 +99,20 @@ export default function DeviceBreakdown({
         </div>
       </section>
 
-      <section className={styles.card}>
-        <h2 className={styles.cardTitle}>Every platform seen</h2>
-        <p className={styles.cardNote}>
-          All roles together. TVs are listed by make rather than folded into
-          Android, which is what their User-Agent would otherwise claim.
-        </p>
-        <BarList
-          color={SERIES[1]}
-          data={detail.byPlatform.map((p) => ({ label: p._id, value: p.count }))}
-          maxRows={14}
-        />
-      </section>
+      <Disclosure summary="Every platform seen">
+        <section className={styles.card}>
+          <h2 className={styles.cardTitle}>Every platform seen</h2>
+          <p className={styles.cardNote}>
+            All roles together. TVs are listed by make rather than folded into
+            Android, which is what their User-Agent would otherwise claim.
+          </p>
+          <BarList
+            color={SERIES[1]}
+            data={detail.byPlatform.map((p) => ({ label: p._id, value: p.count }))}
+            maxRows={14}
+          />
+        </section>
+      </Disclosure>
     </>
   );
 }

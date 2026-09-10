@@ -469,6 +469,37 @@
   }
 }
 
+.disclosure {
+  margin-top: 0.4rem;
+}
+
+.disclosureSummary {
+  composes: sectionHeading;
+  cursor: pointer;
+  list-style: none;
+}
+
+.disclosureSummary::-webkit-details-marker {
+  display: none;
+}
+
+.disclosureSummary::before {
+  content: '▸';
+  display: inline-block;
+  margin-right: 0.5rem;
+  transition: transform 0.15s ease;
+}
+
+.disclosure[open] > .disclosureSummary::before {
+  transform: rotate(90deg);
+}
+
+.disclosureBody {
+  display: grid;
+  gap: 1rem;
+  margin-top: 0.8rem;
+}
+
 .tileGrid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));

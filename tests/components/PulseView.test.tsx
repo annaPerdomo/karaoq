@@ -33,6 +33,11 @@ function makeData(overrides: Partial<AnalyticsData> = {}): AnalyticsData {
     geo: { countries: [], cities: [] },
     rankings: { topSongs: [], topUsers: [] },
     devices: [],
+    engagement: {
+      songsPerRoomHistogram: [{ label: '1-5', count: 10 }],
+      hosts: 20,
+      repeatHosts: 5,
+    },
     suggestions: {
       total: 0,
       bySource: [],
@@ -78,6 +83,19 @@ describe("PulseView", () => {
   it("never says 'this week'", () => {
     render(<PulseView data={makeData()} />);
     expect(screen.queryByText(/this week/i)).toBeNull();
+  });
+
+  it("bans 'this month', 'weekly', and 'monthly' too", () => {
+    render(<PulseView data={makeData()} />);
+    expect(screen.queryByText(/this month/i)).toBeNull();
+    expect(screen.queryByText(/weekly/i)).toBeNull();
+    expect(screen.queryByText(/monthly/i)).toBeNull();
+  });
+
+  it("demotes secondary charts under disclosures", () => {
+    render(<PulseView data={makeData()} />);
+    expect(screen.getByText('More charts')).toBeTruthy();
+    expect(screen.getByText('Feature adoption · All time')).toBeTruthy();
   });
 
   it("renders the all-time totals note", () => {

@@ -5,6 +5,7 @@ import PulseHeadline from './PulseHeadline';
 import PulseActivation from './PulseActivation';
 import PulseRhythm from './PulseRhythm';
 import PulseAudience from './PulseAudience';
+import PulseMore from './PulseMore';
 import PulseFeatures from './PulseFeatures';
 
 export default function PulseView({
@@ -30,6 +31,7 @@ export default function PulseView({
       <PulseActivation data={data} />
       <PulseRhythm data={data} />
       <PulseAudience data={data} />
+      <PulseMore data={data} />
       <PulseFeatures data={data} />
     </div>
   );

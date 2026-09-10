@@ -89,7 +89,7 @@ describe("PulseAudience devices", () => {
 
   it("lists every platform with TVs named by make", () => {
     render(<PulseAudience data={makeData()} />);
-    expect(screen.getByText('Every platform seen')).toBeTruthy();
+    expect(screen.getAllByText('Every platform seen').length).toBeGreaterThan(0);
     expect(screen.getAllByText('LG TV').length).toBeGreaterThan(0);
   });
 

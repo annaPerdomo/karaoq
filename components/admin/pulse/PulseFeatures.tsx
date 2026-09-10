@@ -1,8 +1,9 @@
 import * as React from 'react';
 import styles from '../../../styles/Admin.module.css';
 import type { AnalyticsData, SurfaceCustomization } from '../types';
-import { VIA_LABELS, pct } from '../format';
+import { VIA_LABELS, pct, WINDOW } from '../format';
 import BarList from '../charts/BarList';
+import Disclosure from './Disclosure';
 import { SERIES } from '../charts/palette';
 import { AUTO_ADVANCE_GAPS } from '../../../pages/api/types';
 
@@ -90,7 +91,7 @@ export default function PulseFeatures({
   const { social, rotation, autoAdvance, display, hostSurface } = data;
 
   return (
-    <>
+    <Disclosure summary={`Feature adoption · ${WINDOW.allTime}`}>
       {social && (
         <div className={styles.cardPair}>
           <section className={styles.card}>
@@ -194,6 +195,6 @@ export default function PulseFeatures({
           )}
         </div>
       )}
-    </>
+    </Disclosure>
   );
 }
