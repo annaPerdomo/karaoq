@@ -5,6 +5,7 @@ import { ERROR_SOURCE_LABELS, formatTimestamp } from '../format';
 import StatTile from '../charts/StatTile';
 import ErrorGroup from './ErrorGroup';
 import SearchHealthCard from './SearchHealthCard';
+import { TapHint } from '../TapHint';
 
 /** Tones follow volume here: quiet is good. */
 export default function ErrorsView({
@@ -108,9 +109,9 @@ export default function ErrorsView({
                     ) : (
                       <span className={styles.recentErrorNoRoom}>no room</span>
                     )}
-                    <span className={styles.recentErrorMessage} title={r.message}>
+                    <TapHint text={r.message} className={styles.recentErrorMessage}>
                       {r.message}
-                    </span>
+                    </TapHint>
                     <span className={styles.recentErrorMeta}>
                       {[ERROR_SOURCE_LABELS[r.source] ?? r.source, r.page ?? null]
                         .filter(Boolean)

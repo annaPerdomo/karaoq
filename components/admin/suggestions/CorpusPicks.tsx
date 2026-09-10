@@ -8,6 +8,7 @@ import StatTile from '../charts/StatTile';
 import ColumnChart from '../charts/ColumnChart';
 import BarList from '../charts/BarList';
 import { SERIES } from '../charts/palette';
+import { TapHint } from '../TapHint';
 
 const WINDOW_DAYS = 30;
 /** Share of asked-for picks going to search above which it's a coverage gap
@@ -135,19 +136,21 @@ export default function CorpusPicks({
                   <div key={s.key} className={styles.rankRow}>
                     <span className={styles.rankNum}>#{i + 1}</span>
                     <span className={styles.rankMain}>
-                      <span className={styles.rankTitle}>{s.title}</span>
+                      <span className={styles.rankTitle}>
+                      <span className={styles.rankTitleText}>{s.title}</span>
+                    </span>
                       <span className={styles.rankSub}>
                         {[s.artist, shelfLabel(s.packId, s.categoryId)]
                           .filter(Boolean)
                           .join(' — ')}
                       </span>
                     </span>
-                    <span
+                    <TapHint
+                      text={`${s.count} adds across ${s.rooms} rooms`}
                       className={styles.rankCount}
-                      title={`${s.count} adds across ${s.rooms} rooms`}
                     >
                       {s.count}× / {s.rooms} rooms
-                    </span>
+                    </TapHint>
                   </div>
                 ))}
               </div>
@@ -180,24 +183,24 @@ export default function CorpusPicks({
                         .join(' · ')}
                     </span>
                   </span>
-                  <span
-                    className={`${styles.dsBadge} ${styles.pickVerdict} ${
-                      p.fromCorpus === true ? styles.dsBadgeIdea : ''
-                    }`}
-                    title={
+                  <TapHint
+                    text={
                       p.fromCorpus === true
                         ? 'Served from our corpus — no YouTube search spent'
                         : p.fromCorpus === false
                           ? 'The corpus couldn’t answer, so the tap spent a live search'
                           : 'The corpus was never asked — a filtered tap, or an add from before this was recorded'
                     }
+                    className={`${styles.dsBadge} ${styles.pickVerdict} ${
+                      p.fromCorpus === true ? styles.dsBadgeIdea : ''
+                    }`}
                   >
                     {p.fromCorpus === true
                       ? 'corpus'
                       : p.fromCorpus === false
                         ? 'searched'
                         : 'unknown'}
-                  </span>
+                  </TapHint>
                 </div>
               ))}
             </div>

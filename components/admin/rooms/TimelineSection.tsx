@@ -1,9 +1,9 @@
 import * as React from 'react';
 import styles from '../../../styles/Admin.module.css';
-import { SEARCH_RUNS_CAP } from '../types';
-import type { DossierSongRow, RoomErrorRow, RoomSearchFailRow, RoomSearchRow } from '../types';
+import { SEARCH_RUNS_CAP, type DossierSongRow, type RoomErrorRow, type RoomSearchFailRow, type RoomSearchRow } from '../types';
 import { ERROR_SOURCE_LABELS, searchFailLabel } from '../format';
 import { pickTitle, songTitleLabel, VIA_LABELS } from '../roomDetailLabels';
+import { TapHint } from '../TapHint';
 import { Section } from './DossierSections';
 import { entryKind, mergeTimeline, searchRunLabel, timeLabel, type TimelineKind } from './timeline';
 
@@ -83,7 +83,8 @@ export function TimelineSection({
             <span className={styles.dsRowTitle} title={title}>{title}</span>
             <span className={styles.dsRowMeta}>{s.userName || 'Anonymous'}</span>
           </span>
-          <span
+          <TapHint
+            text={pickTitle(s) ?? ''}
             className={`${styles.dsBadge} ${
               s.singers && s.singers >= 2
                 ? styles.dsBadgeDuet
@@ -91,12 +92,11 @@ export function TimelineSection({
                   ? styles.dsBadgeIdea
                   : ''
             }`}
-            title={pickTitle(s)}
           >
             {s.singers && s.singers >= 2
               ? `${VIA_LABELS[s.via] || s.via} · ${s.singers} singers`
               : VIA_LABELS[s.via] || s.via}
-          </span>
+          </TapHint>
         </div>
       );
     } else if (entry.kind === 'search') {
@@ -106,7 +106,9 @@ export function TimelineSection({
         <div key={`search-${i}`} className={`${styles.tlRow} ${styles.tlSearchRow}`}>
           <span className={styles.tlTime}>{timeLabel(entry.at)}</span>
           <span className={styles.tlMain}>
-            <span className={styles.dsRowTitle} title={s.query}>🔍 {s.query || '(empty query)'}</span>
+            <TapHint text={s.query} className={styles.dsRowTitle}>
+              🔍 {s.query || '(empty query)'}
+            </TapHint>
             {meta && <span className={styles.dsRowMeta}>{meta}</span>}
           </span>
           <span className={`${styles.dsBadge} ${live ? styles.dsBadgeSearchLive : styles.dsBadgeSearch}`}>{cache}</span>
@@ -118,9 +120,9 @@ export function TimelineSection({
         <div key={`err-${i}`} className={`${styles.tlRow} ${styles.tlErrorRow}`}>
           <span className={styles.tlTime}>{timeLabel(entry.at)}</span>
           <span className={styles.tlMain}>
-            <span className={styles.tlErrorMessage} title={e.message}>
+            <TapHint text={e.message} className={styles.tlErrorMessage}>
               ⚠ {e.message}
-            </span>
+            </TapHint>
             <span className={styles.dsRowMeta}>
               {[ERROR_SOURCE_LABELS[e.source] ?? e.source, e.page ?? null]
                 .filter(Boolean)
@@ -137,9 +139,9 @@ export function TimelineSection({
         <div key={`sf-${i}`} className={`${styles.tlRow} ${styles.tlWarnRow}`}>
           <span className={styles.tlTime}>{timeLabel(entry.at)}</span>
           <span className={styles.tlMain}>
-            <span className={styles.tlWarnMessage} title={label}>
+            <TapHint text={label} className={styles.tlWarnMessage}>
               ⚠ Search failed — {label.toLowerCase()}
-            </span>
+            </TapHint>
           </span>
         </div>
       );

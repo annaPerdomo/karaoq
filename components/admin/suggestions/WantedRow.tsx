@@ -53,7 +53,9 @@ export default function WantedRow({
       <span className={styles.rankNum}>#{position}</span>
       <span className={styles.rankMain}>
         <span className={styles.rankTitle}>
-          {row.label.replace(TRAILING_MODE_WORD, '')}
+          <span className={styles.rankTitleText}>
+            {row.label.replace(TRAILING_MODE_WORD, '')}
+          </span>
           <span className={`${styles.wantedTag} ${tag.className}`}>{tag.label}</span>
         </span>
         <span className={styles.rankSub}>

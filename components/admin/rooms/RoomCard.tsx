@@ -14,6 +14,7 @@ import {
   languageMixTitle,
 } from '../roomDetailLabels';
 import { BoardIcon, HeartIcon, MicIcon, PeopleIcon } from '../icons';
+import { TapHint } from '../TapHint';
 import RoomDossier from './RoomDossier';
 
 function locationText(room: RoomRow): string {
@@ -31,13 +32,13 @@ function Stat({
   label: string;
 }): React.ReactElement {
   return (
-    <span
+    <TapHint
+      text={`${value} ${label}`}
       className={`${styles.roomStat} ${value === 0 ? styles.roomStatZero : ''}`}
-      title={`${value} ${label}`}
     >
       {icon}
       <span className={styles.roomStatValue}>{value}</span>
-    </span>
+    </TapHint>
   );
 }
 
@@ -78,12 +79,12 @@ export default function RoomCard({
         <span className={styles.roomCode}>
           {room.roomId}
           {live && (
-            <span
+            <TapHint
+              text={`${LIVE_EXPLANATION} Last action ${timeAgo(room.lastActivity)}.`}
               className={styles.liveBadge}
-              title={`${LIVE_EXPLANATION} Last action ${timeAgo(room.lastActivity)}.`}
             >
               ● live
-            </span>
+            </TapHint>
           )}
         </span>
         <span className={styles.roomWhen}>
@@ -102,56 +103,56 @@ export default function RoomCard({
             label="board activity (requests + sing-with-me posts, joins and queues)"
           />
           {(room.ideas ?? 0) > 0 && (
-            <span
+            <TapHint
+              text={`${room.ideas} songs picked from the song ideas shelves`}
               className={styles.ideaChip}
-              title={`${room.ideas} songs picked from the song ideas shelves`}
             >
               ideas ×{room.ideas}
-            </span>
+            </TapHint>
           )}
           {room.duets > 0 && (
-            <span className={styles.duetChip} title={`${room.duets} duet or group adds`}>
+            <TapHint text={`${room.duets} duet or group adds`} className={styles.duetChip}>
               duet ×{room.duets}
-            </span>
+            </TapHint>
           )}
           {room.errors > 0 && (
-            <span
+            <TapHint
+              text={`${room.errors} client errors recorded in this room`}
               className={styles.errorChip}
-              title={`${room.errors} client errors recorded in this room`}
             >
               ⚠ {room.errors}
-            </span>
+            </TapHint>
           )}
         </span>
-        <span
+        <TapHint
+          text={languageMixTitle(room.localeMix ?? [], room.locale ?? null)}
           className={styles.roomLang}
-          title={languageMixTitle(room.localeMix ?? [], room.locale ?? null)}
         >
           {languageMixShort(room.localeMix ?? [])}
-        </span>
+        </TapHint>
         <span className={styles.roomBadges}>
-          <span
-            className={`${styles.fairChip} ${room.fairMode ? styles.fairChipOn : ''}`}
-            title={
+          <TapHint
+            text={
               room.fairMode === null || room.fairMode === undefined
                 ? 'Created before fair rotation was recorded'
                 : `Fair rotation ${room.fairMode ? 'on' : 'off'}${
                     room.fairToggled ? ' — host changed it' : ' (default)'
                   }`
             }
+            className={`${styles.fairChip} ${room.fairMode ? styles.fairChipOn : ''}`}
           >
             {room.fairMode === null || room.fairMode === undefined
               ? 'fair —'
               : `fair ${room.fairMode ? 'on' : 'off'}${room.fairToggled ? '*' : ''}`}
-          </span>
-          <span
-            className={`${styles.fairChip} ${room.autoAdvance.enabled ? styles.fairChipOn : ''}`}
-            title={`Auto-advance ${
+          </TapHint>
+          <TapHint
+            text={`Auto-advance ${
               room.autoAdvance.enabled ? `on · ${room.autoAdvance.gapSeconds}s gap` : 'off'
             }${room.autoAdvanceChanged ? ' — host changed it' : ' (default)'}`}
+            className={`${styles.fairChip} ${room.autoAdvance.enabled ? styles.fairChipOn : ''}`}
           >
             {`auto ${room.autoAdvance.enabled ? 'on' : 'off'}${room.autoAdvanceChanged ? '*' : ''}`}
-          </span>
+          </TapHint>
         </span>
         <span className={styles.roomChevron} aria-hidden="true">
           {expanded ? '▾' : '▸'}
@@ -165,6 +166,7 @@ export default function RoomCard({
           target="_blank"
           rel="noopener noreferrer"
           title="Open the room without being counted as a participant"
+          aria-label="Open the room without being counted as a participant"
         >
           ↗
         </a>
@@ -178,6 +180,13 @@ export default function RoomCard({
                 ? 'Cancel merge'
                 : `Merge into ${room.roomId}`
           }
+          aria-label={
+            !mergeArmed
+              ? 'Merge this room into another'
+              : merging
+                ? 'Cancel merge'
+                : `Merge into ${room.roomId}`
+          }
         >
           ⧉
         </button>
@@ -185,6 +194,7 @@ export default function RoomCard({
           className={`${styles.roomActionBtn} ${styles.roomActionDanger}`}
           onClick={onDelete}
           title="Delete room data"
+          aria-label="Delete room data"
         >
           ×
         </button>

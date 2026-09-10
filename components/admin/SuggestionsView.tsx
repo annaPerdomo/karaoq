@@ -111,7 +111,9 @@ export default function SuggestionsView({
               <div key={i} className={styles.rankRow}>
                 <span className={styles.rankNum}>#{i + 1}</span>
                 <span className={styles.rankMain}>
-                  <span className={styles.rankTitle}>{s._id.title}</span>
+                  <span className={styles.rankTitle}>
+                    <span className={styles.rankTitleText}>{s._id.title}</span>
+                  </span>
                   <span className={styles.rankSub}>{s._id.artist}</span>
                 </span>
                 <span className={styles.rankCount}>{s.count}×</span>

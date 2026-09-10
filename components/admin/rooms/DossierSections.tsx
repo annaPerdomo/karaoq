@@ -11,6 +11,7 @@ import {
   type RequestRow,
   type SingWithMeRow,
 } from '../roomDetailLabels';
+import { TapHint } from '../TapHint';
 
 export function DossierRow({
   title,
@@ -26,7 +27,7 @@ export function DossierRow({
   return (
     <div className={styles.dsRow}>
       <div className={styles.dsRowMain}>
-        <span className={styles.dsRowTitle} title={title}>{title}</span>
+        <TapHint text={title} className={styles.dsRowTitle}>{title}</TapHint>
         {badge && (
           <span className={`${styles.dsBadge} ${badgeClass ?? ''}`}>{badge}</span>
         )}
