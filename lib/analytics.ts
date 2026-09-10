@@ -106,6 +106,8 @@ export interface AnalyticsEvent {
   expiresAt?: Date;
 }
 
+export const SEARCH_RUNS_CAP = 300;
+
 // Heartbeat gap beyond which the next beat starts a fresh session; 30 min tolerates throttled background-tab timers.
 const SESSION_GAP_MS = 30 * 60 * 1000;
 

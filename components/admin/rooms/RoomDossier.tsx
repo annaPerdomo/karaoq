@@ -121,6 +121,7 @@ export default function RoomDossier({
       <div className={styles.dossierGrid}>
         <TimelineSection
           songs={data.songs}
+          searchRuns={data.searchRuns ?? []}
           errors={data.errors ?? []}
           errorTotal={data.counts.errors ?? data.errors?.length ?? 0}
           searchFails={data.searchFails ?? []}

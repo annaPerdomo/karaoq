@@ -1,57 +1,66 @@
 import * as React from 'react';
 import styles from '../../../styles/Admin.module.css';
-import type { DossierSongRow, RoomErrorRow, RoomSearchFailRow } from '../types';
+import { SEARCH_RUNS_CAP } from '../../../lib/analytics';
+import type { DossierSongRow, RoomErrorRow, RoomSearchFailRow, RoomSearchRow } from '../types';
 import { ERROR_SOURCE_LABELS, searchFailLabel } from '../format';
 import { pickTitle, songTitleLabel, VIA_LABELS } from '../roomDetailLabels';
 import { Section } from './DossierSections';
-
-type TimelineEntry =
-  | { kind: 'song'; at: number; song: DossierSongRow }
-  | { kind: 'error'; at: number; error: RoomErrorRow }
-  | { kind: 'searchFail'; at: number; fail: RoomSearchFailRow };
-
-function timeLabel(at: number): string {
-  return new Date(at).toLocaleTimeString('en-US', {
-    hour: 'numeric',
-    minute: '2-digit',
-  });
-}
+import { entryKind, mergeTimeline, searchRunLabel, timeLabel, type TimelineKind } from './timeline';
 
 /** Errors sit inline at their real time: a queue stalling right after one is
  * the pattern this exists to show. */
 export function TimelineSection({
   songs,
+  searchRuns,
   errors,
   errorTotal,
   searchFails,
 }: {
   songs: DossierSongRow[];
+  searchRuns: RoomSearchRow[];
   errors: RoomErrorRow[];
   /** Uncapped count, which can exceed the rows the API returns. */
   errorTotal: number;
   searchFails: RoomSearchFailRow[];
 }): React.ReactElement {
-  const entries: TimelineEntry[] = [
-    ...songs.map((song): TimelineEntry => ({
-      kind: 'song',
-      at: new Date(song.timestamp).getTime(),
-      song,
-    })),
-    ...errors.map((error): TimelineEntry => ({
-      kind: 'error',
-      at: new Date(error.timestamp).getTime(),
-      error,
-    })),
-    ...searchFails.map((fail): TimelineEntry => ({
-      kind: 'searchFail',
-      at: new Date(fail.timestamp).getTime(),
-      fail,
-    })),
-  ].sort((a, b) => a.at - b.at);
+  const [active, setActive] = React.useState<Set<TimelineKind>>(
+    new Set<TimelineKind>(['song', 'search', 'problem'])
+  );
+
+  const entries = mergeTimeline({ songs, searchRuns, errors, searchFails });
+  const visible = entries.filter((entry) => active.has(entryKind(entry)));
+
+  const chips: { kind: TimelineKind; label: string; title?: string }[] = [
+    { kind: 'song', label: `Queued (${songs.length})` },
+    {
+      kind: 'search',
+      label: `Searches (${searchRuns.length})`,
+      title:
+        searchRuns.length >= SEARCH_RUNS_CAP
+          ? `Showing the ${SEARCH_RUNS_CAP} most recent searches`
+          : undefined,
+    },
+    { kind: 'problem', label: `Problems (${errorTotal + searchFails.length})` },
+  ];
+
+  function toggle(kind: TimelineKind) {
+    setActive((prev) => {
+      const next = new Set(prev);
+      if (next.has(kind)) {
+        if (next.size === 1) return prev;
+        next.delete(kind);
+      } else {
+        next.add(kind);
+      }
+      return next;
+    });
+  }
 
   const rows: React.ReactElement[] = [];
   let lastDay = '';
-  entries.forEach((entry, i) => {
+  for (let i = 0; i < entries.length; i++) {
+    const entry = entries[i];
+    if (!active.has(entryKind(entry))) continue;
     const day = new Date(entry.at).toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
@@ -90,6 +99,19 @@ export function TimelineSection({
           </span>
         </div>
       );
+    } else if (entry.kind === 'search') {
+      const s = entry.search;
+      const { cache, live, meta } = searchRunLabel(s);
+      rows.push(
+        <div key={`search-${i}`} className={`${styles.tlRow} ${styles.tlSearchRow}`}>
+          <span className={styles.tlTime}>{timeLabel(entry.at)}</span>
+          <span className={styles.tlMain}>
+            <span className={styles.dsRowTitle} title={s.query}>🔍 {s.query || '(empty query)'}</span>
+            {meta && <span className={styles.dsRowMeta}>{meta}</span>}
+          </span>
+          <span className={`${styles.dsBadge} ${live ? styles.dsBadgeSearchLive : styles.dsBadgeSearch}`}>{cache}</span>
+        </div>
+      );
     } else if (entry.kind === 'error') {
       const e = entry.error;
       rows.push(
@@ -122,12 +144,11 @@ export function TimelineSection({
         </div>
       );
     }
-  });
+  }
 
   return (
     <Section
       title="Timeline"
-      count={songs.length}
       wide
       extra={
         <>
@@ -152,8 +173,25 @@ export function TimelineSection({
         </>
       }
     >
+      <div className={styles.tlFilters}>
+        {chips.map(({ kind, label, title }) => (
+          <button
+            key={kind}
+            type="button"
+            className={`${styles.tlFilter} ${active.has(kind) ? styles.tlFilterOn : ''}`}
+            aria-pressed={active.has(kind)}
+            aria-disabled={active.size === 1 && active.has(kind)}
+            title={title}
+            onClick={() => toggle(kind)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
       {entries.length === 0 ? (
-        <p className={styles.dsEmpty}>No songs were added.</p>
+        <p className={styles.dsEmpty}>No songs were added or searched for.</p>
+      ) : visible.length === 0 ? (
+        <p className={styles.dsEmpty}>Nothing matches these filters.</p>
       ) : (
         <div className={`${styles.dsRows} ${styles.tlRows}`}>{rows}</div>
       )}

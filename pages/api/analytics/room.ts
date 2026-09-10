@@ -6,7 +6,7 @@ import {
   getRoomsCollection,
   getYoutubeSongDataCollection,
 } from "../../../lib/mongodb";
-import type { AnalyticsEvent } from "../../../lib/analytics";
+import { SEARCH_RUNS_CAP, type AnalyticsEvent } from "../../../lib/analytics";
 import {
   deviceTypeFromUA,
   platformFromUA,
@@ -82,7 +82,7 @@ async function handleGet(
     .collection<AnalyticsEvent>("analytics_events")
     .find({ roomId, type: "search_run" })
     .sort({ timestamp: -1 })
-    .limit(300)
+    .limit(SEARCH_RUNS_CAP)
     .toArray()
     .then((docs) => docs.reverse());
 
