@@ -92,6 +92,46 @@ export async function recordSpend(
   );
 }
 
+export interface DaySpend extends DailySpend {
+  day: string;
+}
+
+// Google bills search.list at 100 and videos.list at 1; each search also spends
+// one unit enriching its results (lib/youtubeSearch). The sweep and harvest
+// videos.list calls are never recorded, so this reads under Google's console.
+export const SEARCH_UNITS = 100;
+export function estimateUnits(spent: DailySpend): number {
+  return spent.searches * (SEARCH_UNITS + 1) + spent.pages + spent.lookups;
+}
+
+function dayKeyBefore(day: string, n: number): string {
+  const [y, m, d] = day.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d - n)).toISOString().slice(0, 10);
+}
+
+// Oldest first, zero-filled. Only a week is readable: cron_state's TTL
+// (lib/mongodb) collects older docs.
+export async function spentRecent(at: number, days: number): Promise<DaySpend[]> {
+  const today = ledgerDay(at);
+  const keys: string[] = [];
+  for (let i = days - 1; i >= 0; i--) keys.push(dayKeyBefore(today, i));
+  const state = await getCronStateCollection();
+  const docs = await state
+    .find({ _id: { $in: keys.map((day) => `${LEDGER_ID}:${day}`) } })
+    .toArray();
+  const byId = new Map(docs.map((doc) => [doc._id, doc]));
+  return keys.map((day) => {
+    const doc = byId.get(`${LEDGER_ID}:${day}`);
+    return {
+      day,
+      searches: doc?.searches ?? 0,
+      cronSearches: doc?.cronSearches ?? 0,
+      pages: doc?.pages ?? 0,
+      lookups: doc?.lookups ?? 0,
+    };
+  });
+}
+
 export function remaining(allowance: number, spent: number): number {
   return Math.max(allowance - spent, 0);
 }

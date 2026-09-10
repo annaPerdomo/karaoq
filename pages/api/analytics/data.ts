@@ -14,6 +14,8 @@ import {
   type LinkLookupRow,
 } from "../../../lib/analyticsStats";
 import { catalogEntry } from "../../../lib/suggestionCatalog";
+import { estimateUnits, spentRecent } from "../../../lib/corpusBudget";
+import { quotaResetsAt } from "../../../lib/pacificTime";
 import {
   deviceTypeFromUA,
   platformFromUA,
@@ -27,6 +29,8 @@ const FUNNEL_WINDOW_DAYS = 30;
 // What the picks panel draws — anything past these is payload nobody renders.
 const PICKS_WINDOW_DAYS = 30;
 const PICKS_MAX_COUNTRIES = 20;
+
+const QUOTA_WINDOW_DAYS = 7;
 
 // Excluded from the geo roll-ups: these say how the YouTube API behaved, not
 // that a room happened somewhere, and the roomId "" ones would each count as a
@@ -125,6 +129,7 @@ export default async function handler(
       searchFailureDetails,
       linkLookupRows,
       activityGrid,
+      quotaDays,
     ] = await Promise.all([
       events.countDocuments({ type: "room_created" }),
 
@@ -801,6 +806,8 @@ export default async function handler(
           },
         ])
         .toArray(),
+
+      spentRecent(now.getTime(), QUOTA_WINDOW_DAYS),
     ]);
 
     const sessionStats = sessionData[0] || {
@@ -1056,6 +1063,10 @@ export default async function handler(
         details: searchFailureDetails,
       },
       linkLookups: summarizeLinkLookups(linkLookupRows as LinkLookupRow[]),
+      youtubeQuota: {
+        days: quotaDays.map((d) => ({ ...d, units: estimateUnits(d) })),
+        resetsAt: quotaResetsAt(now),
+      },
       meta: {
         timezone: tz,
         generatedAt: now.toISOString(),

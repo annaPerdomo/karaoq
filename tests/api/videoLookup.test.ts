@@ -39,6 +39,11 @@ vi.mock("../../lib/alerts", () => ({
   sendQuotaAlertOnce: (...args: unknown[]) => sendQuotaAlertMock(...args),
 }));
 
+const recordSpendMock = vi.fn(async (..._args: unknown[]) => {});
+vi.mock("../../lib/corpusBudget", () => ({
+  recordSpend: (...args: unknown[]) => recordSpendMock(...args),
+}));
+
 function eventOfType(type: string): Record<string, unknown> | null {
   const call = trackEventMock.mock.calls.find((args) => args[1] === type);
   return call ? (call[2] as Record<string, unknown>) : null;
@@ -214,6 +219,7 @@ describe("GET /api/video-lookup", () => {
 
     expect(res.getStatus()).toBe(404);
     expect(res.getBody()).toMatchObject({ reason: "not_found" });
+    expect(recordSpendMock).toHaveBeenCalledWith(expect.any(Number), { lookups: 1 });
     // Private videos go public; a cached miss would outlive the fix.
     expect(mockCollection.updateOne).not.toHaveBeenCalled();
     expect(lookupEvent()).toMatchObject({

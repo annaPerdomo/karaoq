@@ -26,9 +26,12 @@ process.env.MONGODB_DB = "test-db";
 
 import {
   acquireRun,
+  estimateUnits,
   ledgerDay,
+  recordSpend,
   releaseRun,
   remaining,
+  spentRecent,
 } from "../../lib/corpusBudget";
 
 const state = () => collection("cron_state");
@@ -100,5 +103,36 @@ describe("the run lease", () => {
     // Released unconditionally, this freed the lock a working run held.
     expect(await acquireRun(at + 9 * MINUTE)).toBeNull();
     expect(state().get("run").leaseToken).toBe(taken);
+  });
+});
+
+describe("spentRecent", () => {
+  it("reads the last week oldest first, zero-filling days nothing billed", async () => {
+    const at = Date.parse("2026-09-10T20:00:00Z");
+    await recordSpend(at, { searches: 3, cronSearches: 1 });
+    await recordSpend(at - 2 * 24 * 60 * MINUTE, { searches: 7, lookups: 2 });
+
+    const days = await spentRecent(at, 3);
+
+    expect(days.map((d) => d.day)).toEqual(["2026-09-08", "2026-09-09", "2026-09-10"]);
+    expect(days[0]).toMatchObject({ searches: 7, cronSearches: 0, lookups: 2 });
+    expect(days[1]).toMatchObject({ searches: 0, cronSearches: 0, pages: 0, lookups: 0 });
+    expect(days[2]).toMatchObject({ searches: 3, cronSearches: 1 });
+  });
+
+  it("walks back over the 23-hour spring-forward day without skipping it", async () => {
+    // 00:30 PDT on Mar 9, 2026; 24 clock hours earlier is still Mar 7.
+    const at = Date.parse("2026-03-09T07:30:00Z");
+
+    const days = await spentRecent(at, 3);
+
+    expect(days.map((d) => d.day)).toEqual(["2026-03-07", "2026-03-08", "2026-03-09"]);
+  });
+});
+
+describe("estimateUnits", () => {
+  it("bills a search at 100 plus its videos.list enrichment, everything else at 1", () => {
+    expect(estimateUnits({ searches: 2, cronSearches: 1, pages: 30, lookups: 4 })).toBe(236);
+    expect(estimateUnits({ searches: 0, cronSearches: 0, pages: 0, lookups: 0 })).toBe(0);
   });
 });

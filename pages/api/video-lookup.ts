@@ -8,6 +8,7 @@ import { parseIso8601Duration } from "../../lib/duration";
 import { trackEvent } from "../../lib/analytics";
 import { sendQuotaAlertOnce } from "../../lib/alerts";
 import { quotaResetsAt } from "../../lib/pacificTime";
+import { recordSpend } from "../../lib/corpusBudget";
 
 // A videos.list call is 1 quota unit against the same daily pool a text search
 // spends 101 on — so this endpoint must never fall back to search.list.
@@ -41,6 +42,8 @@ async function lookupWithYoutubeApi(id: string): Promise<LookedUpVideo | null> {
     "https://www.googleapis.com/youtube/v3/videos?" + params,
     5000
   );
+  // YouTube answered, so the unit is spent whether or not the id resolved.
+  recordSpend(Date.now(), { lookups: 1 }).catch(() => {});
 
   // An id that doesn't exist (or is private) comes back as an empty item list,
   // not an error.

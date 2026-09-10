@@ -131,6 +131,7 @@ export interface AnalyticsData {
   };
   searchHealth?: SearchHealthData;
   linkLookups?: LinkLookupData;
+  youtubeQuota?: YoutubeQuotaData;
   meta?: { timezone: string; generatedAt: string };
 }
 
@@ -148,6 +149,19 @@ export interface SearchHealthData {
   /** Verbatim from YouTube, newest first — `totals` above is our reading of the
    *  same errors. Absent on payloads predating the field. */
   details?: { _id: string; count: number; lastSeen: string }[];
+}
+
+/** One row per Pacific day, oldest first; the last row is today. */
+export interface YoutubeQuotaData {
+  days: {
+    day: string;
+    searches: number;
+    cronSearches: number;
+    pages: number;
+    lookups: number;
+    units: number;
+  }[];
+  resetsAt: string;
 }
 
 /** Pasted-link usage over 30 days. */

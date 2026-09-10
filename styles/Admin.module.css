@@ -416,6 +416,10 @@
   margin-top: 0.9rem;
 }
 
+.cardNoteAfterTiles {
+  margin-top: 0.9rem;
+}
+
 /* Verbatim upstream error text. Monospaced and scrollable rather than wrapped:
    these are long single-line strings and the exact wording is the point. */
 .rawDetails {
