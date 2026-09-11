@@ -38,16 +38,17 @@ export function mergeTimeline(input: {
   ].sort((a, b) => a.at - b.at);
 }
 
-export function entryKind(entry: TimelineEntry): TimelineKind {
-  if (entry.kind === 'song') return 'song';
-  if (entry.kind === 'search') return 'search';
-  return 'problem';
+export function entryKinds(entry: TimelineEntry): TimelineKind[] {
+  if (entry.kind === 'song') return ['song'];
+  if (entry.kind === 'search') return ['search'];
+  if (entry.kind === 'searchFail') return ['search', 'problem'];
+  return ['problem'];
 }
 
 const CACHE_LABELS: Record<RoomSearchRow['cache'], string> = {
   fresh: 'cache hit',
   coalesced: 'cache hit',
-  miss: 'live search',
+  miss: 'youtube call',
   stale: 'stale cache',
   corpus: 'corpus',
 };

@@ -5,10 +5,8 @@ import { ERROR_SOURCE_LABELS, searchFailLabel } from '../format';
 import { pickTitle, songTitleLabel, VIA_LABELS } from '../roomDetailLabels';
 import { TapHint } from '../TapHint';
 import { Section } from './DossierSections';
-import { entryKind, mergeTimeline, searchRunLabel, timeLabel, type TimelineKind } from './timeline';
+import { entryKinds, mergeTimeline, searchRunLabel, timeLabel, type TimelineKind } from './timeline';
 
-/** Errors sit inline at their real time: a queue stalling right after one is
- * the pattern this exists to show. */
 export function TimelineSection({
   songs,
   searchRuns,
@@ -23,18 +21,18 @@ export function TimelineSection({
   errorTotal: number;
   searchFails: RoomSearchFailRow[];
 }): React.ReactElement {
-  const [active, setActive] = React.useState<Set<TimelineKind>>(
-    new Set<TimelineKind>(['song', 'search', 'problem'])
+  const [active, setActive] = React.useState<TimelineKind>(() =>
+    songs.length ? 'song' : searchRuns.length + searchFails.length ? 'search' : 'problem'
   );
 
   const entries = mergeTimeline({ songs, searchRuns, errors, searchFails });
-  const visible = entries.filter((entry) => active.has(entryKind(entry)));
+  const visible = entries.filter((entry) => entryKinds(entry).includes(active));
 
   const chips: { kind: TimelineKind; label: string; title?: string }[] = [
     { kind: 'song', label: `Queued (${songs.length})` },
     {
       kind: 'search',
-      label: `Searches (${searchRuns.length})`,
+      label: `Searches (${searchRuns.length + searchFails.length})`,
       title:
         searchRuns.length >= SEARCH_RUNS_CAP
           ? `Showing the ${SEARCH_RUNS_CAP} most recent searches`
@@ -43,24 +41,11 @@ export function TimelineSection({
     { kind: 'problem', label: `Problems (${errorTotal + searchFails.length})` },
   ];
 
-  function toggle(kind: TimelineKind) {
-    setActive((prev) => {
-      const next = new Set(prev);
-      if (next.has(kind)) {
-        if (next.size === 1) return prev;
-        next.delete(kind);
-      } else {
-        next.add(kind);
-      }
-      return next;
-    });
-  }
-
   const rows: React.ReactElement[] = [];
   let lastDay = '';
   for (let i = 0; i < entries.length; i++) {
     const entry = entries[i];
-    if (!active.has(entryKind(entry))) continue;
+    if (!entryKinds(entry).includes(active)) continue;
     const day = new Date(entry.at).toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
@@ -175,28 +160,42 @@ export function TimelineSection({
         </>
       }
     >
-      <div className={styles.tlFilters}>
+      <div className={styles.tlFilters} role="tablist">
         {chips.map(({ kind, label, title }) => (
           <button
             key={kind}
             type="button"
-            className={`${styles.tlFilter} ${active.has(kind) ? styles.tlFilterOn : ''}`}
-            aria-pressed={active.has(kind)}
-            aria-disabled={active.size === 1 && active.has(kind)}
+            role="tab"
+            id={`tl-tab-${kind}`}
+            aria-controls="tl-panel"
+            tabIndex={active === kind ? 0 : -1}
+            className={`${styles.tlFilter} ${active === kind ? styles.tlFilterOn : ''}`}
+            aria-selected={active === kind}
             title={title}
-            onClick={() => toggle(kind)}
+            onClick={() => setActive(kind)}
+            onKeyDown={(e) => {
+              const dir = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+              if (!dir) return;
+              e.preventDefault();
+              const i = chips.findIndex((c) => c.kind === kind);
+              const next = chips[(i + dir + chips.length) % chips.length].kind;
+              setActive(next);
+              document.getElementById(`tl-tab-${next}`)?.focus();
+            }}
           >
             {label}
           </button>
         ))}
       </div>
-      {entries.length === 0 ? (
-        <p className={styles.dsEmpty}>No songs were added or searched for.</p>
-      ) : visible.length === 0 ? (
-        <p className={styles.dsEmpty}>Nothing matches these filters.</p>
-      ) : (
-        <div className={`${styles.dsRows} ${styles.tlRows}`}>{rows}</div>
-      )}
+      <div id="tl-panel" role="tabpanel" aria-labelledby={`tl-tab-${active}`}>
+        {entries.length === 0 ? (
+          <p className={styles.dsEmpty}>No songs were added or searched for.</p>
+        ) : visible.length === 0 ? (
+          <p className={styles.dsEmpty}>Nothing here.</p>
+        ) : (
+          <div className={`${styles.dsRows} ${styles.tlRows}`}>{rows}</div>
+        )}
+      </div>
     </Section>
   );
 }

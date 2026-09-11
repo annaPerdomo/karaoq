@@ -1101,12 +1101,6 @@
   color: #d8ccff;
 }
 
-.tlFilter[aria-disabled='true'] {
-  opacity: 0.55;
-  cursor: default;
-}
-
-
 @media (max-width: 640px) {
   .tlRow {
     grid-template-columns: 3.4rem 1fr auto;

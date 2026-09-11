@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
-  entryKind,
+  entryKinds,
   mergeTimeline,
   searchRunLabel,
 } from "../../components/admin/rooms/timeline";
@@ -57,15 +57,15 @@ describe("mergeTimeline", () => {
   });
 });
 
-describe("entryKind", () => {
-  it("maps error and searchFail to 'problem'", () => {
-    expect(entryKind({ kind: "error", at: 0, error })).toBe("problem");
-    expect(entryKind({ kind: "searchFail", at: 0, fail })).toBe("problem");
+describe("entryKinds", () => {
+  it("maps error to 'problem' and searchFail to both search and problem", () => {
+    expect(entryKinds({ kind: "error", at: 0, error })).toEqual(["problem"]);
+    expect(entryKinds({ kind: "searchFail", at: 0, fail })).toEqual(["search", "problem"]);
   });
 
   it("maps song to 'song' and search to 'search'", () => {
-    expect(entryKind({ kind: "song", at: 0, song })).toBe("song");
-    expect(entryKind({ kind: "search", at: 0, search })).toBe("search");
+    expect(entryKinds({ kind: "song", at: 0, song })).toEqual(["song"]);
+    expect(entryKinds({ kind: "search", at: 0, search })).toEqual(["search"]);
   });
 });
 
@@ -79,7 +79,7 @@ describe("searchRunLabel", () => {
   it("live search, known song", () => {
     expect(
       searchRunLabel({ ...search, cache: "miss", resultCount: 8, songKnown: true })
-    ).toEqual({ cache: "live search", live: true, meta: "8 results · in corpus" });
+    ).toEqual({ cache: "youtube call", live: true, meta: "8 results · in corpus" });
   });
 
   it("live search, banked", () => {
