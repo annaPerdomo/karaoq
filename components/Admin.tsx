@@ -25,6 +25,10 @@ const Admin = (): React.ReactElement => {
   // RoomsView owns its own paged list, so Refresh has to reach it explicitly.
   const [refreshToken, setRefreshToken] = React.useState(0);
 
+  React.useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [view]);
+
   const fetchErrors = React.useCallback(async (s: string) => {
     setErrorsLoading(true);
     try {
