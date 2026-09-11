@@ -63,7 +63,7 @@ export function TapHint({
   }
 
   if (!text) {
-    return <>{children}</>;
+    return <span className={className}>{children}</span>;
   }
 
   return (

@@ -15,6 +15,12 @@ afterEach(() => {
 });
 
 describe("TapHint", () => {
+  it("keeps className on the child when there is no hint text", () => {
+    render(<TapHint text="" className="badge">Search</TapHint>);
+
+    expect(screen.getByText("Search")).toHaveClass("badge");
+  });
+
   it("renders children and sets title to text", () => {
     render(<TapHint text="12 songs">×</TapHint>);
 
