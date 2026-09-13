@@ -116,6 +116,16 @@ export default async function handler(
       resetsInMs: quotaResetsAtMs(new Date(started)) - started,
     };
     console.log("Corpus cron mop-up skipped:", JSON.stringify(report));
+    await recordMopUp(started, {
+      at: new Date(started),
+      liveRooms: 0,
+      budget: 0,
+      searched: 0,
+      filled: 0,
+      skipped: "outside mop-up window",
+      quotaSpent: false,
+      error: null,
+    }).catch(console.warn);
     res.status(200).json(report);
     return;
   }

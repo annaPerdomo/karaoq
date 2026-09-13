@@ -491,7 +491,20 @@ describe("GET /api/cron/suggestions - the mop-up slot", () => {
 
     expect(body).toMatchObject({ skipped: "outside mop-up window", slot: "3" });
     expect(state().get("run")).toBeNull();
-    expect(ledger()).toBeNull();
+    expect(ledger()).toMatchObject({
+      mopUp: { skipped: "outside mop-up window", searched: 0, filled: 0 },
+    });
+  });
+
+  it("lets a real run inside the window overwrite an earlier outside-window skip", async () => {
+    fakeClock(quotaResetsAtMs(new Date()) - 3 * 60 * 60_000);
+    await request({ slot: "3", mopUp: "1" });
+    expect(ledger()).toMatchObject({ mopUp: { skipped: "outside mop-up window" } });
+
+    fakeClock(quotaResetsAtMs(new Date()) - 10 * 60_000);
+    await mop();
+
+    expect(ledger()).toMatchObject({ mopUp: { skipped: null, searched: 8 } });
   });
 
   it("runs anyway outside the window when forced", async () => {

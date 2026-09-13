@@ -512,6 +512,39 @@
   padding: 1rem 0;
 }
 
+.quotaScroll {
+  overflow-x: auto;
+}
+
+.quotaTable {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.9rem;
+  font-size: 0.85rem;
+}
+
+.quotaTable th {
+  text-align: left;
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  padding: 0.4rem 0.6rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.quotaTable td {
+  padding: 0.5rem 0.6rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary);
+}
+
+.quotaOverTotal {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
 .retryBtn {
   background: none;
   border: 1px solid rgba(255, 255, 255, 0.15);
