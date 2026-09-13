@@ -37,7 +37,8 @@ process.env.YOUTUBE_API_KEY = "test-key";
 import handler from "../../pages/api/cron/suggestions";
 import { ledgerDay, recordSpend } from "../../lib/corpusBudget";
 import { MIGRATION_ID } from "../../lib/corpusMigration";
-import { pacificDayKey } from "../../lib/pacificTime";
+import { pacificDayKey, quotaResetsAtMs } from "../../lib/pacificTime";
+import { resetQuotaAlertMemo } from "../../lib/alerts";
 import { resetSearchQuotaStatusCache } from "../../lib/searchQuotaStatus";
 import { suggestionCatalog, type CatalogEntry } from "../../lib/suggestionCatalog";
 
@@ -71,6 +72,9 @@ const api = {
   onPlaylistItems: () => {},
   searchHits: [] as { videoId: string; title: string }[],
   searchesBeforeQuota: Number.MAX_SAFE_INTEGER,
+  /** DAILY_REASONS vs BURST_REASONS in lib/youtubeApi — which quota wall
+   *  searchesBeforeQuota simulates hitting. */
+  quotaReason: "quotaExceeded",
   searches: 0,
   onVideosList: () => {},
 };
@@ -128,7 +132,7 @@ function fakeYoutube(): void {
         api.searches += 1;
         if (api.searches > api.searchesBeforeQuota) {
           return json(
-            { error: { errors: [{ reason: "quotaExceeded" }], message: "spent" } },
+            { error: { errors: [{ reason: api.quotaReason }], message: "spent" } },
             403
           );
         }
@@ -237,6 +241,7 @@ beforeEach(() => {
   // Memoized per instance for 30s, and module state outlives clearAllMocks —
   // without this a seeded quota-out day leaks into the next test.
   resetSearchQuotaStatusCache();
+  resetQuotaAlertMemo();
   api.urls = [];
   api.missing = new Set();
   api.unembeddable = new Set();
@@ -248,6 +253,7 @@ beforeEach(() => {
   api.onPlaylistItems = () => {};
   api.searchHits = [];
   api.searchesBeforeQuota = Number.MAX_SAFE_INTEGER;
+  api.quotaReason = "quotaExceeded";
   api.searches = 0;
   api.onVideosList = () => {};
   fakeYoutube();
@@ -255,7 +261,7 @@ beforeEach(() => {
   process.env.KARAOKE_CHANNELS = CHANNEL;
   delete process.env.KARAOKE_PLAYLISTS;
   delete process.env.SUGGESTION_RESOLVE_PER_DAY;
-  delete process.env.SUGGESTION_DAY_TARGET;
+  delete process.env.SUGGESTION_DAY_QUOTA;
 });
 
 afterEach(() => {
@@ -439,16 +445,18 @@ describe("GET /api/cron/suggestions - the daily quota ledger", () => {
 });
 
 // Everything unspent at the Pacific reset is wasted, so the day's last slot
-// trades the nightly cap for whatever the day actually left.
+// trades the nightly cap for whatever the day actually left, and ignores live
+// rooms — but only inside the last 15 minutes before the reset.
 describe("GET /api/cron/suggestions - the mop-up slot", () => {
   const mop = () => run({ slot: "3", mopUp: "1" });
 
   beforeEach(() => {
     migrationDone();
     process.env.SUGGESTION_RESOLVE_PER_DAY = "2";
-    process.env.SUGGESTION_DAY_TARGET = "10";
+    process.env.SUGGESTION_DAY_QUOTA = "10";
     for (const entry of catalogEntries.slice(0, 8)) seedSong(entry, [], 30);
     api.searchHits = [{ videoId: "hit1", title: "One (Karaoke)" }];
+    fakeClock(quotaResetsAtMs(new Date()) - 10 * 60_000);
   });
 
   it("buys the day's remainder rather than the nightly cap", async () => {
@@ -468,22 +476,77 @@ describe("GET /api/cron/suggestions - the mop-up slot", () => {
     expect((await mop()).resolve).toMatchObject({ skipped: "searches spent today" });
   });
 
-  it("still gives way to a room that is singing", async () => {
-    collection("rooms").seed({
-      _id: "LIVE1",
-      id: "LIVE1",
-      lastActivity: new Date(),
-    });
-
-    expect((await mop()).resolve).toMatchObject({ skipped: "rooms live" });
-  });
-
   it("runs resolve alone, so the other steps can't eat its clock", async () => {
     const steps = await mop();
 
     // They each had two slots already; here they would only spend the budget
     // that the last chance at the day's search quota needs.
     expect(Object.keys(steps)).toEqual(["resolve"]);
+  });
+
+  it("skips outside its 15-minute window and spends nothing", async () => {
+    fakeClock(quotaResetsAtMs(new Date()) - 3 * 60 * 60_000);
+
+    const body = (await request({ slot: "3", mopUp: "1" })).getBody();
+
+    expect(body).toMatchObject({ skipped: "outside mop-up window", slot: "3" });
+    expect(state().get("run")).toBeNull();
+    expect(ledger()).toBeNull();
+  });
+
+  it("runs anyway outside the window when forced", async () => {
+    fakeClock(quotaResetsAtMs(new Date()) - 3 * 60 * 60_000);
+
+    expect((await run({ slot: "3", mopUp: "1", force: "1" })).resolve).toMatchObject({
+      searched: 8,
+    });
+  });
+
+  it("ignores live rooms inside its window and spends the whole remainder", async () => {
+    collection("rooms").seed({ _id: "LIVE1", id: "LIVE1", lastActivity: new Date(Date.now()) });
+    collection("rooms").seed({ _id: "LIVE2", id: "LIVE2", lastActivity: new Date(Date.now()) });
+    process.env.SUGGESTION_DAY_QUOTA = "20";
+    for (const entry of catalogEntries.slice(8, 20)) seedSong(entry, [], 30);
+
+    const body = (await request({ slot: "3", mopUp: "1" })).getBody();
+
+    expect(body.steps.resolve).toMatchObject({ searched: 20 });
+    expect(body.gates.liveRooms).toBe(2);
+  });
+
+  it("marks the day quota-out when the mop-up itself drains it", async () => {
+    api.searchesBeforeQuota = 3;
+
+    const steps = await mop();
+
+    expect(steps.resolve).toMatchObject({ quotaSpent: true });
+    expect(collection("ops_alerts").get(`quota-out:${pacificDayKey()}`)).toBeDefined();
+    expect(ledger()).toMatchObject({ mopUp: { quotaSpent: true } });
+  });
+
+  it("does not mark the day quota-out on a burst 429, only a daily one", async () => {
+    api.searchesBeforeQuota = 3;
+    api.quotaReason = "rateLimitExceeded";
+
+    const steps = await mop();
+
+    expect(steps.resolve).toMatchObject({ quotaSpent: true, quotaLimit: "burst" });
+    expect(collection("ops_alerts").get(`quota-out:${pacificDayKey()}`)).toBeNull();
+  });
+
+  it("does not mark the day quota-out from a regular slot's quota wall", async () => {
+    process.env.SUGGESTION_RESOLVE_PER_DAY = "10";
+    api.searchesBeforeQuota = 3;
+
+    await run();
+
+    expect(collection("ops_alerts").get(`quota-out:${pacificDayKey()}`)).toBeNull();
+  });
+
+  it("records what it searched on the ledger doc", async () => {
+    await mop();
+
+    expect(ledger()).toMatchObject({ mopUp: { searched: 8, skipped: null } });
   });
 });
 

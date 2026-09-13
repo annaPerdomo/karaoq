@@ -1,7 +1,7 @@
 import { randomUUID } from "crypto";
 
 import { getCronStateCollection } from "./mongodb";
-import { pacificDayKey } from "./pacificTime";
+import { pacificDayKey, quotaResetsAtMs } from "./pacificTime";
 
 // vercel.json invokes this cron more than once a day: a slot buys wall-clock and
 // never units, every invocation drawing from the same day's ledger.
@@ -16,14 +16,21 @@ const LOCK_ID = "run";
  *  pages/api/cron/suggestions. */
 export const SEARCH_PER_DAY = 40;
 
-/** What the last slot of the day assumes the day held, rooms' searches included.
- *  A target, never a gate: the real ceiling is not a number we know, so what
- *  actually stops the mop-up is YouTube saying no (see the daySpent gate). Kept
- *  under the nominal 100 so a room singing before the reset still has room. */
-export const SEARCH_DAY_TARGET = 90;
+/** Google's stated search.list quota; what actually stops the mop-up is
+ *  YouTube saying no (see the daySpent gate), not this number. */
+export const SEARCH_DAY_QUOTA = 100;
 
 /** ~835 units for 800 playlistItems.list pages — ~40,000 uploads a day. */
 export const CHANNEL_PAGES_PER_DAY = 800;
+
+/** A run past midnight bills tomorrow's quota to today; one much earlier
+ *  takes the evening's last hour from rooms. */
+export const MOP_UP_WINDOW_MS = 15 * 60_000;
+
+export function insideMopUpWindow(now: number): boolean {
+  const untilReset = quotaResetsAtMs(new Date(now)) - now;
+  return untilReset > 0 && untilReset <= MOP_UP_WINDOW_MS;
+}
 
 export interface DailySpend {
   /** Every search.list call billed today, the rooms' and the cron's alike —
@@ -94,6 +101,34 @@ export async function recordSpend(
 
 export interface DaySpend extends DailySpend {
   day: string;
+  mopUp?: MopUpOutcome;
+}
+
+export interface MopUpOutcome {
+  at: Date;
+  liveRooms: number;
+  budget: number;
+  searched: number;
+  filled: number;
+  skipped: string | null;
+  quotaSpent: boolean;
+  /** Distinguishes a step that threw from one that ran and found nothing. */
+  error: string | null;
+}
+
+/** GitHub Actions and Vercel can both land inside the window; a skip must not
+ *  clobber the real run's outcome. */
+export async function recordMopUp(at: number, outcome: MopUpOutcome): Promise<void> {
+  const state = await getCronStateCollection();
+  if (outcome.searched === 0 && outcome.skipped) {
+    const existing = await state.findOne({ _id: ledgerId(at) });
+    if (existing?.mopUp) return;
+  }
+  await state.updateOne(
+    { _id: ledgerId(at) },
+    { $set: { mopUp: outcome, cursorAt: new Date(at), updatedAt: new Date(at) } },
+    { upsert: true }
+  );
 }
 
 // Google bills search.list at 100 and videos.list at 1; each search also spends
@@ -128,6 +163,7 @@ export async function spentRecent(at: number, days: number): Promise<DaySpend[]>
       cronSearches: doc?.cronSearches ?? 0,
       pages: doc?.pages ?? 0,
       lookups: doc?.lookups ?? 0,
+      mopUp: doc?.mopUp,
     };
   });
 }

@@ -613,6 +613,8 @@ export interface CronStateDoc {
   cronSearches?: number;
   pages?: number;
   lookups?: number;
+  /** The mop-up's own outcome for that day; see lib/corpusBudget. */
+  mopUp?: import("./corpusBudget").MopUpOutcome;
   updatedAt: Date;
 }
 

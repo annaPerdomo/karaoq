@@ -19,7 +19,7 @@ export function resetQuotaAlertMemo(): void {
 // lib/searchQuotaStatus) so singers can be told when search comes back. Kept
 // separate from the alert mutex below: that doc is deleted to retry a failed
 // ntfy send, and must not blink the status flag off with it.
-async function markQuotaOutDay(day: string): Promise<void> {
+export async function markQuotaOutDay(day: string): Promise<void> {
   if (markedDay === day) return;
   try {
     const alerts = await getOpsAlertsCollection();

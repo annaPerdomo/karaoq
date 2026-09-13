@@ -1,0 +1,20 @@
+name: Corpus mop-up
+on:
+  schedule:
+    - cron: "47 6 * * *"   # 23:47 PDT
+    - cron: "55 6 * * *"   # 23:55 PDT retry, in case GitHub ran the first ping late
+    - cron: "47 7 * * *"   # 23:47 PST
+    - cron: "55 7 * * *"   # 23:55 PST retry, in case GitHub ran the first ping late
+  workflow_dispatch:
+jobs:
+  mop-up:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Spend the day's remaining search quota
+        run: |
+          code=$(curl -sS --max-time 320 -o /tmp/out.json -w '%{http_code}' \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "https://karaoq.live/api/cron/suggestions?slot=gh&mopUp=1")
+          cat /tmp/out.json; echo
+          test "$code" = "200"
+          grep -q 'outside mop-up window' /tmp/out.json && echo '::warning::Mop-up landed outside its window (late run or the off-season DST ping)'; true

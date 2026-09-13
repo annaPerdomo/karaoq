@@ -27,12 +27,15 @@ process.env.MONGODB_DB = "test-db";
 import {
   acquireRun,
   estimateUnits,
+  insideMopUpWindow,
   ledgerDay,
+  recordMopUp,
   recordSpend,
   releaseRun,
   remaining,
   spentRecent,
 } from "../../lib/corpusBudget";
+import { quotaResetsAtMs } from "../../lib/pacificTime";
 
 const state = () => collection("cron_state");
 const MINUTE = 60_000;
@@ -134,5 +137,103 @@ describe("estimateUnits", () => {
   it("bills a search at 100 plus its videos.list enrichment, everything else at 1", () => {
     expect(estimateUnits({ searches: 2, cronSearches: 1, pages: 30, lookups: 4 })).toBe(236);
     expect(estimateUnits({ searches: 0, cronSearches: 0, pages: 0, lookups: 0 })).toBe(0);
+  });
+});
+
+describe("insideMopUpWindow", () => {
+  it("is only true in the last 15 minutes before the Pacific reset", () => {
+    const base = Date.now();
+    const resetsAt = quotaResetsAtMs(new Date(base));
+
+    expect(insideMopUpWindow(resetsAt - 3 * 60 * MINUTE)).toBe(false);
+    expect(insideMopUpWindow(resetsAt - 30 * MINUTE)).toBe(false);
+    expect(insideMopUpWindow(resetsAt - 10 * MINUTE)).toBe(true);
+    expect(insideMopUpWindow(resetsAt + MINUTE)).toBe(false);
+  });
+});
+
+describe("recordMopUp", () => {
+  it("writes the outcome onto the day's ledger doc without disturbing searches", async () => {
+    const at = Date.now();
+    await recordSpend(at, { searches: 5, cronSearches: 5 });
+
+    await recordMopUp(at, {
+      at: new Date(at),
+      liveRooms: 2,
+      budget: 10,
+      searched: 8,
+      filled: 3,
+      skipped: null,
+      quotaSpent: false,
+      error: null,
+    });
+
+    expect(state().get(`budget:${ledgerDay(at)}`)).toMatchObject({
+      searches: 5,
+      cronSearches: 5,
+      mopUp: { liveRooms: 2, budget: 10, searched: 8, filled: 3, skipped: null },
+    });
+
+    const [today] = await spentRecent(at, 1);
+    expect(today.mopUp).toMatchObject({ searched: 8, filled: 3 });
+  });
+
+  it("does not let a later skip overwrite an earlier real outcome", async () => {
+    const at = Date.now();
+    await recordMopUp(at, {
+      at: new Date(at),
+      liveRooms: 0,
+      budget: 10,
+      searched: 8,
+      filled: 3,
+      skipped: null,
+      quotaSpent: false,
+      error: null,
+    });
+
+    // GitHub's retry ping landing after Vercel's real run, finding nothing left.
+    await recordMopUp(at, {
+      at: new Date(at),
+      liveRooms: 0,
+      budget: 0,
+      searched: 0,
+      filled: 0,
+      skipped: "searches spent today",
+      quotaSpent: false,
+      error: null,
+    });
+
+    expect(state().get(`budget:${ledgerDay(at)}`)).toMatchObject({
+      mopUp: { searched: 8, filled: 3, skipped: null },
+    });
+  });
+
+  it("still overwrites when the later run actually searched something", async () => {
+    const at = Date.now();
+    await recordMopUp(at, {
+      at: new Date(at),
+      liveRooms: 0,
+      budget: 10,
+      searched: 3,
+      filled: 1,
+      skipped: null,
+      quotaSpent: false,
+      error: null,
+    });
+
+    await recordMopUp(at, {
+      at: new Date(at),
+      liveRooms: 0,
+      budget: 10,
+      searched: 5,
+      filled: 2,
+      skipped: null,
+      quotaSpent: false,
+      error: null,
+    });
+
+    expect(state().get(`budget:${ledgerDay(at)}`)).toMatchObject({
+      mopUp: { searched: 5, filled: 2 },
+    });
   });
 });
