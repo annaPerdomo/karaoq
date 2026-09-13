@@ -8,6 +8,10 @@ import type {
   RoomLanguages,
   SingWithMeRow,
 } from './roomDetailLabels';
+import type { DaySpend, MopUpOutcome } from '../../lib/corpusBudget';
+
+export type MopUpWire = Omit<MopUpOutcome, 'at'> & { at: string };
+export type DaySpendWire = Omit<DaySpend, 'mopUp'> & { mopUp?: MopUpWire };
 
 export const SEARCH_RUNS_CAP = 300;
 
@@ -385,6 +389,13 @@ export interface ErrorGroupData {
   samplePage?: string | null;
   rooms: string[];
   roomCount: number;
+}
+
+/** Response contract of GET /api/analytics/quota. */
+export interface QuotaLedgerData {
+  quota: number;
+  today: string;
+  days: DaySpendWire[];
 }
 
 export type AdminView = 'rooms' | 'errors' | 'suggestions' | 'pulse' | 'feedback';

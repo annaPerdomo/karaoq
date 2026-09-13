@@ -2,14 +2,17 @@ import { NextApiRequest, NextApiResponse } from "next";
 import {
   acquireRun,
   CHANNEL_PAGES_PER_DAY,
+  insideMopUpWindow,
+  recordMopUp,
   recordSpend,
   releaseRun,
   remaining,
-  SEARCH_DAY_TARGET,
+  SEARCH_DAY_QUOTA,
   SEARCH_PER_DAY,
   spentToday,
   type DailySpend,
 } from "../../../lib/corpusBudget";
+import { markQuotaOutDay } from "../../../lib/alerts";
 import {
   CHANNEL_PAGES_PER_CHANNEL,
   CHANNEL_RESWEEP_MS,
@@ -27,7 +30,7 @@ import {
 } from "../../../lib/corpusSweep";
 import { CORPUS_BUSY_WINDOW_MS } from "../../../lib/liveWindows";
 import { liveRoomCount } from "../../../lib/liveRooms";
-import { quotaResetsAtMs } from "../../../lib/pacificTime";
+import { pacificDayKey, quotaResetsAtMs } from "../../../lib/pacificTime";
 import { searchQuotaResetsAt } from "../../../lib/searchQuotaStatus";
 import { recordDemand } from "../../../lib/songCorpus";
 import { suggestionCatalog } from "../../../lib/suggestionCatalog";
@@ -89,12 +92,14 @@ export default async function handler(
   // Nothing branches on it: it makes the second cron entry a distinct path.
   const slot = typeof req.query.slot === "string" ? req.query.slot : "1";
 
-  // The day's last slot. Everything unspent at the Pacific midnight reset is
-  // wasted, so this one aims at the day's remainder rather than the nightly cap,
-  // and runs resolve alone — the other steps had two slots already and would
-  // only eat its clock. Rooms still outrank it: the liveRooms gate is unchanged,
-  // and what this could starve is the minutes before the reset, not the evening.
+  // The day's last slot. Inside insideMopUpWindow it deliberately ignores live
+  // rooms and spends the day's quota, not the nightly cap — an expiring
+  // remainder outweighs a lost search in the final minutes. Runs resolve
+  // alone; the other steps already had two slots.
   const mopUp = req.query.mopUp === "1";
+
+  // `?force=1` is for running it by hand; it also bypasses the mop-up window.
+  const forced = req.query.force === "1";
 
   const started = Date.now();
   // Vercel only promises a cron within its hour, so this one can start at 23:59.
@@ -103,6 +108,27 @@ export default async function handler(
   const deadline = mopUp
     ? Math.min(started + RUN_BUDGET_MS, quotaResetsAtMs(new Date(started)))
     : started + RUN_BUDGET_MS;
+
+  if (mopUp && !forced && !insideMopUpWindow(started)) {
+    const report = {
+      skipped: "outside mop-up window",
+      slot,
+      resetsInMs: quotaResetsAtMs(new Date(started)) - started,
+    };
+    console.log("Corpus cron mop-up skipped:", JSON.stringify(report));
+    await recordMopUp(started, {
+      at: new Date(started),
+      liveRooms: 0,
+      budget: 0,
+      searched: 0,
+      filled: 0,
+      skipped: "outside mop-up window",
+      quotaSpent: false,
+      error: null,
+    }).catch(console.warn);
+    res.status(200).json(report);
+    return;
+  }
 
   const lease = await acquireRun(started);
   if (!lease) {
@@ -116,7 +142,7 @@ export default async function handler(
   // waste is what everyone has spent, and a quiet day is what makes the mop-up
   // worth running at all.
   const searchBudget = mopUp
-    ? remaining(envCount("SUGGESTION_DAY_TARGET", SEARCH_DAY_TARGET), spent.searches)
+    ? remaining(envCount("SUGGESTION_DAY_QUOTA", SEARCH_DAY_QUOTA), spent.searches)
     : remaining(
         envCount("SUGGESTION_RESOLVE_PER_DAY", SEARCH_PER_DAY),
         spent.cronSearches
@@ -125,10 +151,6 @@ export default async function handler(
     envCount("SUGGESTION_CHANNEL_PAGES", CHANNEL_PAGES_PER_DAY),
     spent.pages
   );
-
-  // The two gates that make this run the day's last claimant on YouTube rather
-  // than its first. `?force=1` is for running it by hand.
-  const forced = req.query.force === "1";
 
   // Anyone mid-session outranks the corpus: a room that is singing now may
   // search in the next minute, and a search it loses to us is an error on
@@ -256,7 +278,7 @@ export default async function handler(
       floorMs: 45_000,
       run: async (by, bill) => {
         if (!useSearch) return { done: false, report: { skipped: "search=0" } };
-        if (liveRooms > 0) {
+        if (!mopUp && liveRooms > 0) {
           return { done: false, report: { skipped: "rooms live", liveRooms } };
         }
         if (daySpent) {
@@ -268,6 +290,9 @@ export default async function handler(
         const { done, report } = await resolveWantedSongs(by, searchBudget, () =>
           bill({ searches: 1 })
         );
+        if (mopUp && report.quotaLimit === "daily") {
+          await markQuotaOutDay(pacificDayKey(new Date(started)));
+        }
         return { done, report: { ...report } };
       },
     },
@@ -311,6 +336,28 @@ export default async function handler(
     // Released rather than left to expire: a one-minute run would lock out the
     // slot behind it.
     await releaseRun(Date.now(), lease).catch(() => {});
+  }
+
+  if (mopUp) {
+    const resolved = (ran.resolve ?? {}) as {
+      searched?: number;
+      filled?: number;
+      quotaSpent?: boolean;
+      skipped?: string;
+      error?: string;
+    };
+    await recordMopUp(started, {
+      at: new Date(started),
+      liveRooms,
+      budget: searchBudget,
+      searched: resolved.searched ?? 0,
+      filled: resolved.filled ?? 0,
+      skipped: resolved.skipped ?? null,
+      quotaSpent: resolved.quotaSpent ?? false,
+      error: resolved.error ?? null,
+    }).catch((e: any) => {
+      console.warn("Corpus cron mop-up not recorded:", e?.message);
+    });
   }
 
   const report = {

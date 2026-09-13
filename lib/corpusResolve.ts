@@ -4,7 +4,7 @@ import { getKaraokeSongsCollection, type KaraokeSongDoc } from "./mongodb";
 import { buildSearchQuery } from "./searchQuery";
 import { markResolveMiss, recordSearchResults, THIN_CUTS } from "./songCorpus";
 import { CATALOG_DURATION, CATALOG_SORT } from "./suggestionCatalog";
-import { YoutubeApiError } from "./youtubeApi";
+import { YoutubeApiError, type YoutubeLimit } from "./youtubeApi";
 import { searchYoutubeApi } from "./youtubeSearch";
 
 export interface ResolveStepReport {
@@ -18,6 +18,8 @@ export interface ResolveStepReport {
   thin: number;
   widened: number;
   quotaSpent: boolean;
+  /** null unless quotaSpent; see YoutubeLimit for daily vs burst. */
+  quotaLimit: YoutubeLimit | null;
 }
 
 /** A song's _id is searchCacheKey() of exactly this query, so rebuilding it is
@@ -44,6 +46,7 @@ interface PassResult {
   filled: number;
   missed: number;
   quotaSpent: boolean;
+  quotaLimit: YoutubeLimit | null;
 }
 
 async function searchInto(
@@ -53,7 +56,13 @@ async function searchInto(
   attempted: Set<string>,
   onSearch?: () => void
 ): Promise<PassResult> {
-  const pass: PassResult = { calls: 0, filled: 0, missed: 0, quotaSpent: false };
+  const pass: PassResult = {
+    calls: 0,
+    filled: 0,
+    missed: 0,
+    quotaSpent: false,
+    quotaLimit: null,
+  };
   for (const song of wanted) {
     if (pass.calls >= budget || Date.now() >= deadline) break;
     attempted.add(song._id);
@@ -84,6 +93,7 @@ async function searchInto(
       if (e instanceof YoutubeApiError && e.quotaExceeded) {
         console.warn("Corpus resolve stopped, quota spent:", e?.message);
         pass.quotaSpent = true;
+        pass.quotaLimit = e.limit;
         break;
       }
       console.warn("Corpus resolve skipped", song._id, e?.message);
@@ -106,6 +116,7 @@ export async function resolveWantedSongs(
     thin: 0,
     widened: 0,
     quotaSpent: false,
+    quotaLimit: null,
   };
   if (budget <= 0 || Date.now() >= deadline) return { done: false, report };
 
@@ -126,6 +137,7 @@ export async function resolveWantedSongs(
   report.filled = first.filled;
   report.missed = first.missed;
   report.quotaSpent = first.quotaSpent;
+  report.quotaLimit = first.quotaLimit;
 
   const remaining = budget - first.calls;
   if (!first.quotaSpent && remaining > 0 && Date.now() < deadline) {
@@ -144,6 +156,7 @@ export async function resolveWantedSongs(
     report.filled += second.filled;
     report.missed += second.missed;
     report.quotaSpent = second.quotaSpent;
+    report.quotaLimit = second.quotaLimit;
   }
 
   const done =

@@ -9,6 +9,7 @@ import BarList from './charts/BarList';
 import { SERIES } from './charts/palette';
 import CorpusPicks from './suggestions/CorpusPicks';
 import WantedSongs from './suggestions/WantedSongs';
+import QuotaLedger from './suggestions/QuotaLedger';
 
 /** Top picks are our own catalog titles, so this list isn't bound by the
  * 30-day YouTube retention window that caps the Pulse song ranking. */
@@ -37,6 +38,8 @@ export default function SuggestionsView({
       </header>
 
       <h2 className={styles.sectionHeading}>Filling the gaps</h2>
+
+      <QuotaLedger secret={secret} />
 
       <WantedSongs secret={secret} />
 
