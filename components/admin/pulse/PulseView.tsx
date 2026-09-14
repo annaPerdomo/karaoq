@@ -2,6 +2,7 @@ import * as React from 'react';
 import styles from '../../../styles/Admin.module.css';
 import type { AnalyticsData } from '../types';
 import PulseHeadline from './PulseHeadline';
+import PulseGrowth from './PulseGrowth';
 import PulseActivation from './PulseActivation';
 import PulseRhythm from './PulseRhythm';
 import PulseAudience from './PulseAudience';
@@ -28,6 +29,7 @@ export default function PulseView({
       </header>
 
       <PulseHeadline data={data} />
+      <PulseGrowth data={data} />
       <PulseActivation data={data} />
       <PulseRhythm data={data} />
       <PulseAudience data={data} />
