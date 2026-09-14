@@ -188,6 +188,105 @@
   white-space: nowrap;
 }
 
+/* ─── Stacked column chart ─── */
+
+.colStack {
+  width: 100%;
+  max-width: 24px;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 1px;
+  border-radius: 4px 4px 0 0;
+  overflow: hidden;
+  transition: opacity 0.15s;
+}
+
+.colSegment {
+  flex-basis: 0;
+  min-height: 1px;
+}
+
+.colCell:hover .colStack,
+.colCell:focus-visible .colStack {
+  opacity: 0.85;
+}
+
+.chartTipRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--text-secondary);
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.legend {
+  list-style: none;
+  margin: 0.6rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.9rem;
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+}
+
+.legendSwatch {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+/* ─── Chart controls (metric / window pickers) ─── */
+
+.chartControls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin-bottom: 0.6rem;
+}
+
+.chartPicker {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.chartPick {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  padding: 0.2rem 0.65rem;
+  font-family: inherit;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.chartPick:hover {
+  color: var(--text-secondary);
+  border-color: rgba(255, 255, 255, 0.24);
+}
+
+.chartPick:focus-visible {
+  outline: 2px solid #a78bfa;
+  outline-offset: 2px;
+}
+
+.chartPickOn {
+  border-color: #a78bfa;
+  color: #d8ccff;
+}
+
 /* ─── Bar list ─── */
 
 .barList {
