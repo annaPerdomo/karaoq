@@ -140,7 +140,17 @@ export interface AnalyticsData {
   searchHealth?: SearchHealthData;
   linkLookups?: LinkLookupData;
   youtubeQuota?: YoutubeQuotaData;
+  /** Absent on an older deploy. */
+  growth?: GrowthData;
   meta?: { timezone: string; generatedAt: string };
+}
+
+export interface GrowthData {
+  windowDays: number;
+  /** withSong: rooms that ever queued a song, not just inside the window. */
+  rooms: { _id: string; rooms: number; withSong: number }[];
+  /** Keyed by via — see VIA_LABELS. */
+  songs: { _id: string; via: Record<string, number> }[];
 }
 
 export interface SurfaceCustomization {

@@ -32,6 +32,9 @@ const PICKS_MAX_COUNTRIES = 20;
 
 const QUOTA_WINDOW_DAYS = 7;
 
+// 26 whole weeks: the Growth chart's longest window.
+const GROWTH_WINDOW_DAYS = 182;
+
 // Excluded from the geo roll-ups: these say how the YouTube API behaved, not
 // that a room happened somewhere, and the roomId "" ones would each count as a
 // room under $addToSet — inflating every country and city that has real ones.
@@ -70,7 +73,18 @@ export default async function handler(
     const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const growthStart = new Date(now.getTime() - GROWTH_WINDOW_DAYS * 24 * 60 * 60 * 1000);
     const dayKey = { format: "%Y-%m-%d", date: "$timestamp", timezone: tz };
+
+    // Pre-via events are search adds. A suggestionKey outranks via: a shelf
+    // pick posts as a search-shaped request.
+    const addVia = {
+      $cond: [
+        { $ifNull: ["$suggestionKey", false] },
+        "ideas",
+        { $ifNull: ["$via", "search"] },
+      ],
+    };
 
     const [
       totalRooms,
@@ -134,6 +148,8 @@ export default async function handler(
       trendRoomsPrevious,
       trendSongsCurrent,
       trendSongsPrevious,
+      growthRooms,
+      growthSongs,
     ] = await Promise.all([
       events.countDocuments({ type: "room_created" }),
 
@@ -447,24 +463,10 @@ export default async function handler(
       events.countDocuments({ type: "song_suggested" }),
       events.countDocuments({ type: "suggestion_claimed" }),
 
-      // Events from before the via field are search adds, hence the $ifNull.
-      // A suggestionKey outranks via: a shelf pick posts as a search-shaped
-      // request, and telling the two apart is what this panel is for.
       events
         .aggregate([
           { $match: { type: "song_added" } },
-          {
-            $group: {
-              _id: {
-                $cond: [
-                  { $ifNull: ["$suggestionKey", false] },
-                  "ideas",
-                  { $ifNull: ["$via", "search"] },
-                ],
-              },
-              count: { $sum: 1 },
-            },
-          },
+          { $group: { _id: addVia, count: { $sum: 1 } } },
           { $sort: { count: -1 } },
         ])
         .toArray(),
@@ -822,6 +824,61 @@ export default async function handler(
         type: "song_added",
         timestamp: { $gte: fourteenDaysAgo, $lt: weekAgo },
       }),
+
+      // Pre-filtering on timestamp is safe: a room's songs all follow its
+      // room_created, so no in-window room loses songs.
+      events
+        .aggregate([
+          {
+            $match: {
+              type: { $in: ["room_created", "song_added"] },
+              timestamp: { $gte: growthStart },
+            },
+          },
+          {
+            $group: {
+              _id: "$roomId",
+              createdAt: {
+                $min: { $cond: [{ $eq: ["$type", "room_created"] }, "$timestamp", null] },
+              },
+              songs: {
+                $sum: { $cond: [{ $eq: ["$type", "song_added"] }, 1, 0] },
+              },
+            },
+          },
+          { $match: { createdAt: { $ne: null } } },
+          {
+            $group: {
+              _id: {
+                $dateToString: { format: "%Y-%m-%d", date: "$createdAt", timezone: tz },
+              },
+              rooms: { $sum: 1 },
+              withSong: { $sum: { $cond: [{ $gt: ["$songs", 0] }, 1, 0] } },
+            },
+          },
+          { $sort: { _id: 1 } },
+        ])
+        .toArray(),
+
+      events
+        .aggregate([
+          { $match: { type: "song_added", timestamp: { $gte: growthStart } } },
+          {
+            $group: {
+              _id: { day: { $dateToString: dayKey }, via: addVia },
+              count: { $sum: 1 },
+            },
+          },
+          {
+            $group: {
+              _id: "$_id.day",
+              via: { $push: { k: "$_id.via", v: "$count" } },
+            },
+          },
+          { $project: { via: { $arrayToObject: "$via" } } },
+          { $sort: { _id: 1 } },
+        ])
+        .toArray(),
     ]);
 
     const sessionStats = sessionData[0] || {
@@ -1084,6 +1141,11 @@ export default async function handler(
       youtubeQuota: {
         days: quotaDays.map((d) => ({ ...d, units: estimateUnits(d) })),
         resetsAt: quotaResetsAt(now),
+      },
+      growth: {
+        windowDays: GROWTH_WINDOW_DAYS,
+        rooms: growthRooms,
+        songs: growthSongs,
       },
       meta: {
         timezone: tz,
