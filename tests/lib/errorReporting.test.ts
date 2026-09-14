@@ -108,6 +108,31 @@ describe("errorReporting", () => {
     expect(isForeignStack(undefined, origin)).toBe(false);
   });
 
+  it("drops a stack Safari pinned to the page URL: an injected content script, not our bundle", async () => {
+    const { isForeignStack } = await freshReporter();
+    const origin = "https://www.karaoq.live";
+
+    // Verbatim field samples (2026-09-14): a Firefox-iOS reader shim and a
+    // wallet shim on a singer's phone, a recursing extension on a host's.
+    expect(
+      isForeignStack("global code@https://www.karaoq.live/sing/U2US2:1:12", origin)
+    ).toBe(true);
+    expect(
+      isForeignStack(
+        "@https://www.karaoq.live/host/U73BA:197:363\nPk@https://www.karaoq.live/:226:382\nNk@https://www.karaoq.live/:226:63",
+        origin
+      )
+    ).toBe(true);
+    // A same-origin bundle frame anywhere in the stack keeps the report.
+    expect(
+      isForeignStack(
+        "@https://www.karaoq.live/host/U73BA:197:363\nt@https://www.karaoq.live/_next/static/chunks/pages/host.js:1:1",
+        origin
+      )
+    ).toBe(false);
+    expect(isForeignStack("x@https://www.karaoq.live/sw.js:1:1", origin)).toBe(false);
+  });
+
   it("drops reports whose stack lives entirely in an extension or injected script", async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true });
     vi.stubGlobal("fetch", fetchMock);

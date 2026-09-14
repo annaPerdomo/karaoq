@@ -41,6 +41,10 @@ function limitFrom(
   message: string
 ): YoutubeLimit | null {
   if (DAILY_REASONS.indexOf(reason) !== -1) return "daily";
+  // Seen 2026-09-13: reason `rateLimitExceeded` on a message naming
+  // 'Search Queries per day'. The message says which window; the reason code
+  // is the same for both, so it only decides when the message names none.
+  if (PER_DAY_LIMIT.test(message)) return "daily";
   if (BURST_REASONS.indexOf(reason) !== -1) return "burst";
   if (status === "RESOURCE_EXHAUSTED" || httpStatus === 429) {
     // Burst when the message names no window: a wrong burst costs one retry,

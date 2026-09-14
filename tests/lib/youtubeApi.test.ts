@@ -102,6 +102,22 @@ describe("telling YouTube's limits apart", () => {
     expect(e.limit).toBe("daily");
   });
 
+  it("reads a spent day when the reason code says burst but the message names the day", async () => {
+    // Verbatim from 2026-09-13: 247 of these landed as `youtube_busy`, so no
+    // room heard search was gone until midnight and the cron gate never tripped.
+    const e = await limitOf(429, {
+      error: {
+        code: 429,
+        status: "RESOURCE_EXHAUSTED",
+        message:
+          "Quota exceeded for quota metric 'Search Queries' and limit 'Search Queries per day' of service 'youtube.googleapis.com'.",
+        errors: [{ reason: "rateLimitExceeded", domain: "global" }],
+      },
+    });
+
+    expect(e.limit).toBe("daily");
+  });
+
   it("leaves a per-minute ceiling in the same shape as burst", async () => {
     const e = await limitOf(429, {
       error: {

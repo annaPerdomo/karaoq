@@ -44,6 +44,11 @@ const OWNED_THIRD_PARTY = /^https:\/\/(?:www\.)?youtube\.com\//;
 // An injected script has a position but no URL. Bare "<anonymous>" is a V8
 // native frame (Array.map, new Promise) and appears in first-party stacks.
 const INJECTED_FRAME = /<anonymous>:\d+/;
+// Safari attributes an extension's content script to the page URL itself
+// ("global code@https://www.karaoq.live/sing/ABCDE:1:12"). Our own code only
+// ever runs from /_next/ bundles or a .js file — the one inline script we ship
+// (_document's TV flag) is wrapped in try/catch and cannot throw.
+const OWN_SCRIPT_PATH = /\/_next\/|\.m?js\b/;
 
 /**
  * Drops extension, injected-script and other-origin noise that would otherwise
@@ -57,7 +62,11 @@ export function isForeignStack(stack: unknown, origin: string): boolean {
   return frames.every((line) => {
     if (EXTENSION_URL.test(line)) return true;
     const url = line.match(HTTP_URL)?.[0];
-    if (url) return !url.startsWith(origin) && !OWNED_THIRD_PARTY.test(url);
+    if (url) {
+      if (OWNED_THIRD_PARTY.test(url)) return false;
+      if (!url.startsWith(origin)) return true;
+      return !OWN_SCRIPT_PATH.test(url.slice(origin.length));
+    }
     return INJECTED_FRAME.test(line);
   });
 }
