@@ -664,8 +664,7 @@ export async function getHarvestCursorsCollection(): Promise<Collection<HarvestC
 const OPS_ALERT_TTL_SECONDS = 7 * 24 * 60 * 60;
 
 export interface OpsAlertDoc {
-  /** e.g. "quota:2026-08-07" (alert mutex — see below) or
-   * "quota-out:2026-08-07" (the day's durable quota-spent marker). */
+  /** e.g. "quota:2026-08-07" (alert mutex — see below). */
   _id: string;
   sentAt: Date;
 }

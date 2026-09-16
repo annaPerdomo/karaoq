@@ -9,16 +9,17 @@ import { pacificDayKey, quotaResetsAtMs } from "./pacificTime";
 const LEDGER_ID = "budget";
 const LOCK_ID = "run";
 
-/** The most searches one night's resolving may buy. Deliberately NOT a share of
- *  some assumed daily total: the real ceiling is not a number we know (150+
- *  calls have landed in a day), so the cron earns its turn by running after the
- *  rooms and stopping the moment YouTube says no — see the gates in
- *  pages/api/cron/suggestions. */
+/** The most searches one night's resolving may buy; not a share of the day. */
 export const SEARCH_PER_DAY = 40;
 
-/** Google's stated search.list quota; what actually stops the mop-up is
- *  YouTube saying no (see the daySpent gate), not this number. */
+/** Google's stated search.list quota; the ledger's ceiling. */
 export const SEARCH_DAY_QUOTA = 100;
+
+/** How far under Google's console the ledger runs by day's end: the sweep's
+ *  videos.list (~40 units/run) and searches that reached YouTube but never
+ *  billed. YouTube's "per day" refusal has landed at 85 of 100, so it is only
+ *  believed inside this margin. */
+export const UNBILLED_SLACK_UNITS = 300;
 
 /** ~835 units for 800 playlistItems.list pages — ~40,000 uploads a day. */
 export const CHANNEL_PAGES_PER_DAY = 800;
@@ -137,6 +138,20 @@ export async function recordMopUp(at: number, outcome: MopUpOutcome): Promise<vo
 export const SEARCH_UNITS = 100;
 export function estimateUnits(spent: DailySpend): number {
   return spent.searches * (SEARCH_UNITS + 1) + spent.pages + spent.lookups;
+}
+
+export function searchesLeft(
+  spent: DailySpend,
+  quotaSearches: number = SEARCH_DAY_QUOTA
+): number {
+  return Math.max(0, Math.floor(unitsLeft(spent, quotaSearches) / (SEARCH_UNITS + 1)));
+}
+
+export function unitsLeft(
+  spent: DailySpend,
+  quotaSearches: number = SEARCH_DAY_QUOTA
+): number {
+  return quotaSearches * SEARCH_UNITS - estimateUnits(spent);
 }
 
 function dayKeyBefore(day: string, n: number): string {

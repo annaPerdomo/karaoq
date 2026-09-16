@@ -69,6 +69,12 @@ vi.mock("../../lib/alerts", () => ({
   sendQuotaAlertOnce: (...args: unknown[]) => sendQuotaAlertMock(...args),
 }));
 
+// The ledger agreeing with YouTube is the default; one test has it disagree.
+const confirmDailyOutMock = vi.fn(async (limit: string | null) => limit === "daily");
+vi.mock("../../lib/searchQuotaStatus", () => ({
+  confirmDailyOut: (limit: string | null) => confirmDailyOutMock(limit),
+}));
+
 function demandWrite(): Record<string, unknown> | null {
   const call = recordDemandMock.mock.calls[0];
   return call ? (call[0] as Record<string, unknown>) : null;
@@ -142,6 +148,7 @@ function videoItems(ids: string[]) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  confirmDailyOutMock.mockImplementation(async (limit) => limit === "daily");
   rateLimitMock.mockReturnValue(true);
   markNotifiedMock.mockReturnValue(true);
   recordSearchResultsMock.mockResolvedValue({
@@ -676,6 +683,34 @@ describe("search_failed tracking", () => {
     await handler(createMockReq({ query: { q: "test" } }), res);
 
     expect(sendQuotaAlertMock).not.toHaveBeenCalled();
+  });
+
+  it("treats a 'per day' refusal the ledger disbelieves as a busy minute", async () => {
+    // 2026-09-14: YouTube said the day was out at 85 of 100 searches and
+    // served the next one. Nobody gets told search is gone until midnight.
+    confirmDailyOutMock.mockResolvedValue(false);
+    fetchMock.mockImplementation(async () =>
+      jsonResponse(
+        {
+          error: {
+            message: "Quota exceeded for quota metric 'Search Queries' and limit 'Search Queries per day'",
+            errors: [{ reason: "rateLimitExceeded" }],
+          },
+        },
+        false,
+        429
+      )
+    );
+
+    const res = createRes();
+    await handler(createMockReq({ query: { q: "test" } }), res);
+
+    expect(confirmDailyOutMock).toHaveBeenCalledWith("daily");
+    expect(sendQuotaAlertMock).not.toHaveBeenCalled();
+    expect(res.getStatus()).toBe(503);
+    expect((res.getBody() as { reason: string }).reason).toBe("busy");
+    expect(res.getHeader("Retry-After")).toBe("30");
+    expect(failureEvent()?.failReason).toBe("youtube_busy");
   });
 
   it("tells a burst apart from a spent day in what the singer is shown", async () => {

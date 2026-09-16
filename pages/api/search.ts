@@ -20,6 +20,7 @@ import {
   type SearchDemandOutcome,
 } from "../../lib/searchDemand";
 import { sendQuotaAlertOnce } from "../../lib/alerts";
+import { confirmDailyOut } from "../../lib/searchQuotaStatus";
 import { quotaResetsAt } from "../../lib/pacificTime";
 import {
   hasSearchOperators,
@@ -237,15 +238,10 @@ export default async function handler(
     console.warn("YouTube API search failed:", e?.message);
 
     const limit = e instanceof YoutubeApiError ? e.limit : null;
-    // A burst ceiling clears in seconds, so it must never latch the day's
-    // marker (lib/alerts) that every room poll reads: one room's busy minute
-    // would otherwise tell the whole platform search is gone until midnight.
-    const dailyOut = limit === "daily";
-    const failReason = dailyOut
-      ? "quota"
-      : limit === "burst"
-        ? "youtube_busy"
-        : "upstream";
+    // A refusal the ledger disbelieves is a busy minute, not search gone until midnight.
+    const dailyOut = await confirmDailyOut(limit);
+    const busy = limit !== null && !dailyOut;
+    const failReason = dailyOut ? "quota" : busy ? "youtube_busy" : "upstream";
     const failDetail = e instanceof YoutubeApiError ? e.detail : undefined;
 
     // Ahead of the stale-fallback return, so a day the cache quietly covers
@@ -309,7 +305,7 @@ export default async function handler(
 
     // Deliberately not `reason: "quota"`: the singer is told search is busy and
     // given a wait measured in seconds, not a countdown to midnight.
-    if (limit === "burst") {
+    if (busy) {
       res.setHeader("Retry-After", "30");
       res.status(503).json({
         code: 503,

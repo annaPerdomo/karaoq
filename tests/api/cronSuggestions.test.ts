@@ -35,7 +35,7 @@ process.env.MONGODB_DB = "test-db";
 process.env.YOUTUBE_API_KEY = "test-key";
 
 import handler from "../../pages/api/cron/suggestions";
-import { ledgerDay, recordSpend } from "../../lib/corpusBudget";
+import { ledgerDay, recordSpend, SEARCH_DAY_QUOTA } from "../../lib/corpusBudget";
 import { MIGRATION_ID } from "../../lib/corpusMigration";
 import { pacificDayKey, quotaResetsAtMs } from "../../lib/pacificTime";
 import { resetQuotaAlertMemo } from "../../lib/alerts";
@@ -462,9 +462,11 @@ describe("GET /api/cron/suggestions - the mop-up slot", () => {
   it("buys the day's remainder rather than the nightly cap", async () => {
     await recordSpend(Date.now(), { searches: 4 });
 
-    // 10 target less the 4 the day has spent, where a normal slot would take 2.
-    expect((await mop()).resolve).toMatchObject({ searched: 6 });
-    expect(ledger()).toMatchObject({ searches: 10, cronSearches: 6 });
+    // 10 searches' worth of units less the 4 the day has spent, where a normal
+    // slot would take 2. Five, not six: each search also costs its one
+    // enrichment unit (lib/corpusBudget estimateUnits).
+    expect((await mop()).resolve).toMatchObject({ searched: 5 });
+    expect(ledger()).toMatchObject({ searches: 9, cronSearches: 5 });
   });
 
   it("counts the rooms' searches against the remainder, not just its own", async () => {
@@ -473,7 +475,7 @@ describe("GET /api/cron/suggestions - the mop-up slot", () => {
     // remainder to mop up.
     await recordSpend(Date.now(), { searches: 10 });
 
-    expect((await mop()).resolve).toMatchObject({ skipped: "searches spent today" });
+    expect((await mop()).resolve).toMatchObject({ skipped: "day's quota already out" });
   });
 
   it("runs resolve alone, so the other steps can't eat its clock", async () => {
@@ -523,37 +525,30 @@ describe("GET /api/cron/suggestions - the mop-up slot", () => {
 
     const body = (await request({ slot: "3", mopUp: "1" })).getBody();
 
-    expect(body.steps.resolve).toMatchObject({ searched: 20 });
+    // 20 searches' worth of units affords 19 once each pays its enrichment unit.
+    expect(body.steps.resolve).toMatchObject({ searched: 19 });
     expect(body.gates.liveRooms).toBe(2);
   });
 
-  it("marks the day quota-out when the mop-up itself drains it", async () => {
+  it("records that the mop-up itself drained the day, and stops there", async () => {
     api.searchesBeforeQuota = 3;
 
     const steps = await mop();
 
     expect(steps.resolve).toMatchObject({ quotaSpent: true });
-    expect(collection("ops_alerts").get(`quota-out:${pacificDayKey()}`)).toBeDefined();
     expect(ledger()).toMatchObject({ mopUp: { quotaSpent: true } });
+    // Whether the day is out is the ledger's call (lib/searchQuotaStatus),
+    // never a marker written off YouTube's word.
+    expect(collection("ops_alerts").get(`quota-out:${pacificDayKey()}`)).toBeNull();
   });
 
-  it("does not mark the day quota-out on a burst 429, only a daily one", async () => {
+  it("tells a burst 429 apart from a daily one", async () => {
     api.searchesBeforeQuota = 3;
     api.quotaReason = "rateLimitExceeded";
 
     const steps = await mop();
 
     expect(steps.resolve).toMatchObject({ quotaSpent: true, quotaLimit: "burst" });
-    expect(collection("ops_alerts").get(`quota-out:${pacificDayKey()}`)).toBeNull();
-  });
-
-  it("does not mark the day quota-out from a regular slot's quota wall", async () => {
-    process.env.SUGGESTION_RESOLVE_PER_DAY = "10";
-    api.searchesBeforeQuota = 3;
-
-    await run();
-
-    expect(collection("ops_alerts").get(`quota-out:${pacificDayKey()}`)).toBeNull();
   });
 
   it("records what it searched on the ledger doc", async () => {
@@ -583,11 +578,9 @@ describe("GET /api/cron/suggestions - giving way to the rooms", () => {
     });
   }
 
-  function quotaOutToday(): void {
-    collection("ops_alerts").seed({
-      _id: `quota-out:${pacificDayKey()}`,
-      sentAt: new Date(),
-    });
+  /** The ledger can afford no more searches (lib/searchQuotaStatus). */
+  function quotaOutToday(): Promise<void> {
+    return recordSpend(Date.now(), { searches: SEARCH_DAY_QUOTA });
   }
 
   it("leaves the day's searches to a room that is mid-session", async () => {
@@ -625,7 +618,7 @@ describe("GET /api/cron/suggestions - giving way to the rooms", () => {
   });
 
   it("does not spend into a day whose quota is already gone", async () => {
-    quotaOutToday();
+    await quotaOutToday();
 
     expect((await run()).resolve).toMatchObject({
       skipped: "day's quota already out",
@@ -634,14 +627,14 @@ describe("GET /api/cron/suggestions - giving way to the rooms", () => {
   });
 
   it("harvests through a spent day, which costs no search quota", async () => {
-    quotaOutToday();
+    await quotaOutToday();
 
     expect((await run()).harvest).toMatchObject({ done: true });
   });
 
   it("runs anyway when a person asks it to", async () => {
     liveRoom(1);
-    quotaOutToday();
+    await quotaOutToday();
 
     const steps = await run({ force: "1" });
 

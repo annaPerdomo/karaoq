@@ -7,12 +7,12 @@ import {
   recordSpend,
   releaseRun,
   remaining,
+  searchesLeft,
   SEARCH_DAY_QUOTA,
   SEARCH_PER_DAY,
   spentToday,
   type DailySpend,
 } from "../../../lib/corpusBudget";
-import { markQuotaOutDay } from "../../../lib/alerts";
 import {
   CHANNEL_PAGES_PER_CHANNEL,
   CHANNEL_RESWEEP_MS,
@@ -30,7 +30,7 @@ import {
 } from "../../../lib/corpusSweep";
 import { CORPUS_BUSY_WINDOW_MS } from "../../../lib/liveWindows";
 import { liveRoomCount } from "../../../lib/liveRooms";
-import { pacificDayKey, quotaResetsAtMs } from "../../../lib/pacificTime";
+import { quotaResetsAtMs } from "../../../lib/pacificTime";
 import { searchQuotaResetsAt } from "../../../lib/searchQuotaStatus";
 import { recordDemand } from "../../../lib/songCorpus";
 import { suggestionCatalog } from "../../../lib/suggestionCatalog";
@@ -142,7 +142,7 @@ export default async function handler(
   // waste is what everyone has spent, and a quiet day is what makes the mop-up
   // worth running at all.
   const searchBudget = mopUp
-    ? remaining(envCount("SUGGESTION_DAY_QUOTA", SEARCH_DAY_QUOTA), spent.searches)
+    ? searchesLeft(spent, envCount("SUGGESTION_DAY_QUOTA", SEARCH_DAY_QUOTA))
     : remaining(
         envCount("SUGGESTION_RESOLVE_PER_DAY", SEARCH_PER_DAY),
         spent.cronSearches
@@ -162,10 +162,6 @@ export default async function handler(
         envCount("SUGGESTION_LIVE_ROOM_WINDOW_MS", CORPUS_BUSY_WINDOW_MS)
       );
 
-  // "Is there usage left" answered by observation, not arithmetic: the day's
-  // real ceiling isn't a number we know, but a day that has already tripped the
-  // daily-quota marker has none left by definition. Only a true daily
-  // exhaustion sets it — a burst ceiling no longer can (lib/youtubeApi).
   const daySpent = forced ? false : (await searchQuotaResetsAt()) !== null;
 
   /** Cheap and user-visible first; search is last, since rooms compete for it. */
@@ -290,9 +286,6 @@ export default async function handler(
         const { done, report } = await resolveWantedSongs(by, searchBudget, () =>
           bill({ searches: 1 })
         );
-        if (mopUp && report.quotaLimit === "daily") {
-          await markQuotaOutDay(pacificDayKey(new Date(started)));
-        }
         return { done, report: { ...report } };
       },
     },

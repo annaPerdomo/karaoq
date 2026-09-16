@@ -7,6 +7,7 @@ import { normalizeRoomId } from "../../lib/roomCode";
 import { parseIso8601Duration } from "../../lib/duration";
 import { trackEvent } from "../../lib/analytics";
 import { sendQuotaAlertOnce } from "../../lib/alerts";
+import { confirmDailyOut } from "../../lib/searchQuotaStatus";
 import { quotaResetsAt } from "../../lib/pacificTime";
 import { recordSpend } from "../../lib/corpusBudget";
 
@@ -187,13 +188,9 @@ export default async function handler(
     console.warn("YouTube API lookup failed:", e?.message);
 
     const limit = e instanceof YoutubeApiError ? e.limit : null;
-    // See /api/search: only a spent day may latch the marker every room reads.
-    const dailyOut = limit === "daily";
-    const failReason = dailyOut
-      ? "quota"
-      : limit === "burst"
-        ? "youtube_busy"
-        : "upstream";
+    const dailyOut = await confirmDailyOut(limit);
+    const busy = limit !== null && !dailyOut;
+    const failReason = dailyOut ? "quota" : busy ? "youtube_busy" : "upstream";
     const failDetail = e instanceof YoutubeApiError ? e.detail : undefined;
 
     // Ahead of the stale-fallback return, so the day the cache quietly covers
@@ -229,7 +226,7 @@ export default async function handler(
       return;
     }
 
-    if (limit === "burst") {
+    if (busy) {
       res.setHeader("Retry-After", "30");
       res.status(503).json({
         code: 503,
