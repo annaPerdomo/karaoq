@@ -4,13 +4,11 @@ import type {
   ErrorsData,
   LinkLookupData,
   SearchHealthData,
-  YoutubeQuotaData,
 } from '../types';
 import { ERROR_SOURCE_LABELS, formatTimestamp } from '../format';
 import StatTile from '../charts/StatTile';
 import ErrorGroup from './ErrorGroup';
 import SearchHealthCard from './SearchHealthCard';
-import QuotaCard from './QuotaCard';
 import { TapHint } from '../TapHint';
 
 /** Tones follow volume here: quiet is good. */
@@ -18,7 +16,6 @@ export default function ErrorsView({
   errors,
   searchHealth,
   linkLookups,
-  youtubeQuota,
   loading,
   onRetry,
   onOpenRoom,
@@ -26,7 +23,6 @@ export default function ErrorsView({
   errors: ErrorsData | null;
   searchHealth?: SearchHealthData;
   linkLookups?: LinkLookupData;
-  youtubeQuota?: YoutubeQuotaData;
   loading: boolean;
   onRetry: () => void;
   onOpenRoom: (roomId: string) => void;
@@ -134,9 +130,8 @@ export default function ErrorsView({
         </>
       )}
 
-      {/* Outside the errors branch: these come with the analytics payload, so a
-          failed errors fetch shouldn't hide the day's quota. */}
-      {youtubeQuota && <QuotaCard quota={youtubeQuota} />}
+      {/* Outside the errors branch: this comes with the analytics payload, so a
+          failed errors fetch shouldn't hide search health. */}
       {searchHealth && (
         <SearchHealthCard health={searchHealth} links={linkLookups} />
       )}
