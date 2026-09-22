@@ -2,6 +2,7 @@ import * as React from 'react';
 import AdminLogin from './admin/AdminLogin';
 import AdminShell from './admin/AdminShell';
 import RoomsView from './admin/rooms/RoomsView';
+import QuotaView from './admin/quota/QuotaView';
 import ErrorsView from './admin/errors/ErrorsView';
 import SuggestionsView from './admin/SuggestionsView';
 import PulseView from './admin/pulse/PulseView';
@@ -146,12 +147,14 @@ const Admin = (): React.ReactElement => {
           }}
         />
       )}
+      {view === 'quota' && (
+        <QuotaView secret={secret} onOpenRoom={openRoom} />
+      )}
       {view === 'errors' && (
         <ErrorsView
           errors={errors}
           searchHealth={data.searchHealth}
           linkLookups={data.linkLookups}
-          youtubeQuota={data.youtubeQuota}
           loading={errorsLoading}
           onRetry={() => fetchErrors(secret)}
           onOpenRoom={openRoom}

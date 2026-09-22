@@ -5,12 +5,14 @@ import {
   ErrorsIcon,
   FeedbackIcon,
   PulseIcon,
+  QuotaIcon,
   RoomsIcon,
   SuggestionsIcon,
 } from './icons';
 
 const NAV: { view: AdminView; label: string; icon: React.ComponentType }[] = [
   { view: 'rooms', label: 'Rooms', icon: RoomsIcon },
+  { view: 'quota', label: 'Quota', icon: QuotaIcon },
   { view: 'errors', label: 'Errors', icon: ErrorsIcon },
   { view: 'suggestions', label: 'Suggestions', icon: SuggestionsIcon },
   { view: 'pulse', label: 'Pulse', icon: PulseIcon },

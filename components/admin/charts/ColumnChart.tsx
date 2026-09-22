@@ -20,11 +20,15 @@ export default function ColumnChart({
   color = SERIES_1,
   height = 150,
   ariaLabel,
+  selected,
+  onSelect,
 }: {
   data: ColumnDatum[];
   color?: string;
   height?: number;
   ariaLabel?: string;
+  selected?: number;
+  onSelect?: (index: number) => void;
 }): React.ReactElement {
   const [active, setActive] = React.useState<number | null>(null);
 
@@ -57,8 +61,23 @@ export default function ColumnChart({
           {data.map((d, i) => (
             <div
               key={`${d.label}-${i}`}
-              className={styles.colCell}
+              className={`${styles.colCell} ${onSelect ? styles.colCellClickable : ''} ${
+                selected === i ? styles.colCellSelected : ''
+              }`}
               tabIndex={0}
+              role={onSelect ? 'button' : undefined}
+              aria-pressed={onSelect ? selected === i : undefined}
+              onClick={onSelect ? () => onSelect(i) : undefined}
+              onKeyDown={
+                onSelect
+                  ? (e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        onSelect(i);
+                      }
+                    }
+                  : undefined
+              }
               onPointerEnter={() => setActive(i)}
               onPointerLeave={() => setActive((a) => (a === i ? null : a))}
               onFocus={() => setActive(i)}

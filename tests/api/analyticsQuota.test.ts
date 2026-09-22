@@ -101,6 +101,51 @@ describe("GET /api/analytics/quota", () => {
     expect(body.days[0].searches).toBe(0);
   });
 
+  it("breaks each day's billed searches out per room, heaviest first, cache hits excluded", async () => {
+    const now = Date.now();
+    const hourAgo = new Date(now - 60 * 60 * 1000);
+    const nineDaysAgo = new Date(now - 9 * 24 * 60 * 60 * 1000);
+    const fortyDaysAgo = new Date(now - 40 * 24 * 60 * 60 * 1000);
+    const events = collectionFor("analytics_events");
+    [
+      { type: "search_run", roomId: "ABCD", searchCache: "miss", timestamp: hourAgo, country: "CZ", city: "Brno" },
+      { type: "search_run", roomId: "ABCD", searchCache: "miss", timestamp: new Date(now), country: "CZ", city: "Prague" },
+      { type: "search_run", roomId: "ABCD", searchCache: "fresh", timestamp: hourAgo },
+      { type: "search_run", roomId: "ABCD", searchCache: "corpus", timestamp: hourAgo },
+      { type: "search_run", roomId: "ABCD", searchCache: "stale", timestamp: nineDaysAgo },
+      { type: "search_run", roomId: "WXYZ", searchCache: "miss", timestamp: hourAgo },
+      { type: "search_run", roomId: "OLDR", searchCache: "miss", timestamp: nineDaysAgo },
+      { type: "search_run", roomId: "GONE", searchCache: "miss", timestamp: fortyDaysAgo },
+      { type: "search_run", roomId: "", searchCache: "miss", timestamp: hourAgo },
+      { type: "search_failed", roomId: "WXYZ", timestamp: hourAgo },
+    ].forEach((doc, i) => events.seed({ _id: `e${i}`, ...doc }));
+
+    const res = await get();
+    expect(res.getStatus()).toBe(200);
+    const body = res.getBody();
+    expect(body.roomsByDay).toHaveLength(30);
+    expect(body.roomsByDay.slice(-7).map((d: any) => d.day)).toEqual(body.days.map((d: any) => d.day));
+    const today = body.roomsByDay[29];
+    expect(today.day).toBe(ledgerDay(now));
+    expect(today.searches).toBe(4);
+    expect(today.roomCount).toBe(2);
+    expect(today.rooms.map((r: any) => r.roomId)).toEqual(["ABCD", "WXYZ"]);
+    expect(today.rooms[0]).toMatchObject({ searches: 2, country: "CZ", city: "Prague" });
+    expect(today.rooms[0].lastAt).toBe(new Date(now).toISOString());
+    expect(today.rooms[1]).toMatchObject({ searches: 1 });
+    expect(today.rooms[1].country).toBeUndefined();
+    const nineBack = body.roomsByDay.find((d: any) => d.rooms.some((r: any) => r.roomId === "OLDR"));
+    expect(nineBack).toBeDefined();
+    expect(body.roomsByDay.some((d: any) => d.rooms.some((r: any) => r.roomId === "GONE"))).toBe(false);
+    expect(body.roomsByDay[0]).toMatchObject({ searches: 0, roomCount: 0, rooms: [] });
+    expect(body.sourcesByDay).toHaveLength(30);
+    expect(body.sourcesByDay[29]).toEqual({
+      day: ledgerDay(now),
+      sources: { miss: 4, fresh: 1, coalesced: 0, stale: 0, corpus: 1 },
+    });
+    expect(body.sourcesByDay.find((d: any) => d.day === nineBack.day).sources.stale).toBe(1);
+  });
+
   it("405s on POST", async () => {
     const res = createRes();
     await handler(

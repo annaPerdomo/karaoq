@@ -154,7 +154,7 @@ export function unitsLeft(
   return quotaSearches * SEARCH_UNITS - estimateUnits(spent);
 }
 
-function dayKeyBefore(day: string, n: number): string {
+export function dayKeyBefore(day: string, n: number): string {
   const [y, m, d] = day.split("-").map(Number);
   return new Date(Date.UTC(y, m - 1, d - n)).toISOString().slice(0, 10);
 }

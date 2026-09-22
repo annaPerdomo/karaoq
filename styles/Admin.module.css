@@ -540,6 +540,10 @@
   color: var(--text-secondary);
 }
 
+.quotaWhere {
+  white-space: nowrap;
+}
+
 .quotaOverTotal {
   font-weight: 700;
   color: var(--text-primary);

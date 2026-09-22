@@ -29,6 +29,14 @@ export const RoomsIcon = () => (
   </Icon>
 );
 
+export const QuotaIcon = () => (
+  <Icon>
+    <path d="M4.5 17.5a8.5 8.5 0 1 1 15 0" />
+    <path d="M12 13.5 16 9" />
+    <path d="M12 13.5v.1" />
+  </Icon>
+);
+
 export const ErrorsIcon = () => (
   <Icon>
     <path d="M12 3 2.5 20h19L12 3Z" />

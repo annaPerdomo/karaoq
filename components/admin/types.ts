@@ -401,11 +401,42 @@ export interface ErrorGroupData {
   roomCount: number;
 }
 
+export interface RoomSpendWire {
+  roomId: string;
+  searches: number;
+  lastAt: string;
+  country?: string;
+  city?: string;
+}
+
+/** `searches` and `roomCount` cover the whole day; `rooms` is capped server-side
+ * and omits searches sent without a room id. */
+export interface DayRoomsWire {
+  day: string;
+  searches: number;
+  roomCount: number;
+  rooms: RoomSpendWire[];
+}
+
+/** Where /api/search answered from; only "miss" bills a YouTube search. */
+export type SearchSource = 'miss' | 'fresh' | 'coalesced' | 'stale' | 'corpus';
+
+export interface DaySourcesWire {
+  day: string;
+  sources: Record<SearchSource, number>;
+}
+
 /** Response contract of GET /api/analytics/quota. */
 export interface QuotaLedgerData {
   quota: number;
   today: string;
+  /** Next midnight Pacific, when Google resets the quota. */
+  resetsAt?: string;
   days: DaySpendWire[];
+  /** 30 days oldest-first, ending today. Absent from older deploys. */
+  roomsByDay?: DayRoomsWire[];
+  /** Same days as `roomsByDay`. Absent from older deploys. */
+  sourcesByDay?: DaySourcesWire[];
 }
 
-export type AdminView = 'rooms' | 'errors' | 'suggestions' | 'pulse' | 'feedback';
+export type AdminView = 'rooms' | 'quota' | 'errors' | 'suggestions' | 'pulse' | 'feedback';

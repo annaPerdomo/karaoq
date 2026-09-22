@@ -157,6 +157,23 @@
   background: rgba(255, 255, 255, 0.04);
 }
 
+.colCellClickable {
+  cursor: pointer;
+}
+
+.colCellSelected {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.colCellClickable:not(.colCellSelected) .colFill {
+  opacity: 0.55;
+}
+
+.colCellClickable:not(.colCellSelected):hover .colFill,
+.colCellClickable:not(.colCellSelected):focus-visible .colFill {
+  opacity: 0.8;
+}
+
 .colFill {
   width: 100%;
   max-width: 24px;
