@@ -585,7 +585,7 @@ const Display = (): React.ReactElement => {
                 <button
                   className={p.heightHandle}
                   title={t('customize.dragHeight')}
-                  aria-label={t('customize.dragHeight')}
+                  aria-label={t('edit.handle.nowBarHeight')}
                   {...edit.heightDragProps}
                 />
               </>
@@ -688,6 +688,8 @@ const Display = (): React.ReactElement => {
           onDiscard={edit.discard}
           onSave={edit.save}
           sideDragTarget={edit.sideDragTarget}
+          sidebarPosition={view.sidebarPosition}
+          onFlipSide={(sidebarPosition) => edit.change({ sidebarPosition })}
         />
       )}
     </main>

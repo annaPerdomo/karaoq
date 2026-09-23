@@ -13,6 +13,12 @@ export function useDisplayRemoteNav(
   enabled: boolean,
   edit: DisplayEditNav
 ): void {
+  // useRemoteNav's initialFocus only runs on the first arrow press; this covers OK alone.
+  React.useEffect(() => {
+    if (!enabled || !edit.editing) return;
+    pageRef.current?.querySelector<HTMLElement>('[role="button"]')?.focus();
+  }, [enabled, edit.editing, pageRef]);
+
   useRemoteNav(pageRef, {
     enabled,
     initialFocus: () =>

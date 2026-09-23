@@ -32,6 +32,11 @@
   background: rgba(0, 240, 255, 0.08);
 }
 
+.spot:focus-visible::after {
+  border-color: rgba(0, 240, 255, 0.55);
+  background: rgba(0, 240, 255, 0.06);
+}
+
 .hotspot {
   position: relative;
 }
@@ -390,9 +395,10 @@
   border: calc(2px * var(--tv-scale, 1)) dashed rgba(0, 240, 255, 0.4);
   background: rgba(0, 240, 255, 0.06);
   color: rgba(255, 255, 255, 0.8);
+  font: inherit;
   font-size: 0.8rem;
   font-weight: 700;
-  pointer-events: none;
+  cursor: pointer;
 }
 
 .dropZoneL { left: 0; border-radius: calc(10px * var(--tv-scale, 1)) 0 0 calc(10px * var(--tv-scale, 1)); }
@@ -402,6 +408,29 @@
   border-color: #00f0ff;
   background: rgba(0, 240, 255, 0.18);
 }
+
+/* 318 = the rail's 14px offset + 280px width + a 24px gap past its inner edge. */
+.sideFlipPill {
+  position: fixed;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  height: calc(40px * var(--tv-scale, 1));
+  padding: 0 1.1rem;
+  border-radius: calc(999px * var(--tv-scale, 1));
+  border: calc(2px * var(--tv-scale, 1)) solid rgba(0, 240, 255, 0.6);
+  background: rgba(10, 10, 25, 0.9);
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.sideFlipPillL { left: calc(318px * var(--tv-scale, 1)); }
+.sideFlipPillR { right: calc(318px * var(--tv-scale, 1)); }
 
 .rail {
   position: fixed;
@@ -626,6 +655,8 @@
 .discardBtn:focus-visible,
 .applyBtn:focus-visible,
 .doneBtn:focus-visible,
+.dropZone:focus-visible,
+.sideFlipPill:focus-visible,
 .ghost:focus-visible {
   outline: calc(4px * var(--tv-scale, 1)) solid #00f0ff;
   outline-offset: calc(3px * var(--tv-scale, 1));
@@ -640,9 +671,16 @@ html[data-tv] .swatch:focus,
 html[data-tv] .discardBtn:focus,
 html[data-tv] .applyBtn:focus,
 html[data-tv] .doneBtn:focus,
+html[data-tv] .dropZone:focus,
+html[data-tv] .sideFlipPill:focus,
 html[data-tv] .ghost:focus {
   outline: calc(4px * var(--tv-scale, 1)) solid #00f0ff;
   outline-offset: calc(3px * var(--tv-scale, 1));
+}
+
+html[data-tv] .spot:focus::after {
+  border-color: #00f0ff;
+  background: rgba(0, 240, 255, 0.08);
 }
 
 html[data-tv] .chrome:focus-within {

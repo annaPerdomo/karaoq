@@ -149,6 +149,7 @@ export function useConfigEdit<C extends SurfaceLayout, Id extends string>(opts: 
     max: SIDEBAR_WIDTH_MAX,
     axis: 'x',
     scale,
+    step: 20,
     invert: draft.sidebarPosition === 'right',
     onChange: (sidebarWidth) => change({ sidebarWidth } as Partial<C>),
   });
@@ -159,6 +160,7 @@ export function useConfigEdit<C extends SurfaceLayout, Id extends string>(opts: 
     max: nowPlayingBounds.max,
     axis: 'y',
     scale,
+    step: 8,
     invert: true,
     onChange: (nowPlayingHeight) => change({ nowPlayingHeight } as Partial<C>),
   });
