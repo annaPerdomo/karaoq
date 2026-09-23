@@ -2,7 +2,7 @@
   font-size: 0.68rem;
   color: var(--text-muted);
   border: 1px dashed rgba(255, 255, 255, 0.2);
-  border-radius: 999px;
+  border-radius: calc(999px * var(--tv-scale, 1));
   padding: 0.15rem 0.6rem;
   white-space: nowrap;
 }
@@ -15,8 +15,8 @@
   content: '';
   position: absolute;
   inset: 0;
-  border: 2px dashed transparent;
-  border-radius: 10px;
+  border: calc(2px * var(--tv-scale, 1)) dashed transparent;
+  border-radius: calc(10px * var(--tv-scale, 1));
   pointer-events: none;
   transition: border-color 0.15s, background 0.15s;
   z-index: 5;
@@ -38,15 +38,15 @@
 
 .spotTag {
   position: absolute;
-  top: 6px;
-  right: 6px;
+  top: calc(6px * var(--tv-scale, 1));
+  right: calc(6px * var(--tv-scale, 1));
   z-index: 6;
-  font-size: 11px;
+  font-size: calc(11px * var(--tv-scale, 1));
   font-weight: 700;
   color: #0a0a19;
   background: #00f0ff;
-  border-radius: 6px;
-  padding: 2px 8px;
+  border-radius: calc(6px * var(--tv-scale, 1));
+  padding: calc(2px * var(--tv-scale, 1)) calc(8px * var(--tv-scale, 1));
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.15s;
@@ -63,13 +63,13 @@
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  margin: 8px;
-  padding: 12px 10px;
+  margin: calc(8px * var(--tv-scale, 1));
+  padding: calc(12px * var(--tv-scale, 1)) calc(10px * var(--tv-scale, 1));
   font-size: 0.8rem;
   text-align: center;
   color: rgba(255, 255, 255, 0.45);
-  border: 2px dashed rgba(255, 255, 255, 0.25);
-  border-radius: 10px;
+  border: calc(2px * var(--tv-scale, 1)) dashed rgba(255, 255, 255, 0.25);
+  border-radius: calc(10px * var(--tv-scale, 1));
   background: none;
   cursor: pointer;
   transition: border-color 0.15s, color 0.15s;
@@ -82,16 +82,16 @@
 
 .ghostStrip {
   position: fixed;
-  bottom: 48px;
-  left: 16px;
-  right: calc(var(--sb-w, 280px) + 16px); /* sidebar + gutter */
+  bottom: calc(48px * var(--tv-scale, 1));
+  left: calc(16px * var(--tv-scale, 1));
+  right: calc(var(--sb-w, 280px) + calc(16px * var(--tv-scale, 1))); /* sidebar + gutter */
   z-index: 10;
   margin: 0;
 }
 
 .edLeft .ghostStrip {
-  right: 16px;
-  left: calc(var(--sb-w, 280px) + 16px);
+  right: calc(16px * var(--tv-scale, 1));
+  left: calc(var(--sb-w, 280px) + calc(16px * var(--tv-scale, 1)));
 }
 
 /* Host twin of .ghostStrip. The host's transport bar sits in normal flow (see
@@ -103,11 +103,11 @@
 
 .ghostChip {
   position: absolute;
-  top: 64px;
-  right: 24px;
+  top: calc(64px * var(--tv-scale, 1));
+  right: calc(24px * var(--tv-scale, 1));
   z-index: 9;
   margin: 0;
-  padding: 8px 12px;
+  padding: calc(8px * var(--tv-scale, 1)) calc(12px * var(--tv-scale, 1));
 }
 
 /* Carries the fixed placement so the wrapped real bar can drop to static flow. */
@@ -130,11 +130,11 @@
 
 .chrome {
   position: absolute;
-  top: 6px;
-  left: 6px;
+  top: calc(6px * var(--tv-scale, 1));
+  left: calc(6px * var(--tv-scale, 1));
   z-index: 6;
   display: flex;
-  gap: 6px;
+  gap: calc(6px * var(--tv-scale, 1));
   opacity: 0;
   transition: opacity 0.15s;
 }
@@ -148,13 +148,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  font-size: 13px;
+  width: calc(28px * var(--tv-scale, 1));
+  height: calc(28px * var(--tv-scale, 1));
+  font-size: calc(13px * var(--tv-scale, 1));
   color: #fff;
   background: rgba(10, 10, 25, 0.85);
   border: 1px solid rgba(0, 240, 255, 0.5);
-  border-radius: 8px;
+  border-radius: calc(8px * var(--tv-scale, 1));
   cursor: pointer;
   pointer-events: auto;
 }
@@ -189,14 +189,14 @@
 
 .cornerHandle {
   position: absolute;
-  right: -12px;
-  bottom: -12px;
+  right: calc(-12px * var(--tv-scale, 1));
+  bottom: calc(-12px * var(--tv-scale, 1));
   z-index: 6;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: calc(28px * var(--tv-scale, 1));
+  height: calc(28px * var(--tv-scale, 1));
   color: #0a0a19;
   background: #00f0ff;
   border: none;
@@ -218,15 +218,15 @@
 
 /* Full-width sections: the -12px offsets would clip at the sidebar edge, so tuck inside. */
 .cornerOnEdge {
-  right: 8px;
-  bottom: -12px;
+  right: calc(8px * var(--tv-scale, 1));
+  bottom: calc(-12px * var(--tv-scale, 1));
 }
 
 .widthHandle {
   position: absolute;
   top: 0;
   bottom: 0;
-  width: 14px;
+  width: calc(14px * var(--tv-scale, 1));
   z-index: 7;
   background: none;
   border: none;
@@ -241,7 +241,7 @@
   top: 0;
   bottom: 0;
   left: 50%;
-  width: 3px;
+  width: calc(3px * var(--tv-scale, 1));
   transform: translateX(-50%);
   background: rgba(0, 240, 255, 0.4);
   transition: background 0.15s;
@@ -258,27 +258,27 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 24px;
-  height: 44px;
-  border-radius: 999px;
+  width: calc(24px * var(--tv-scale, 1));
+  height: calc(44px * var(--tv-scale, 1));
+  border-radius: calc(999px * var(--tv-scale, 1));
   background: #00f0ff;
   color: #0a0a19;
-  font-size: 15px;
+  font-size: calc(15px * var(--tv-scale, 1));
   font-weight: 700;
-  line-height: 44px;
+  line-height: calc(44px * var(--tv-scale, 1));
   text-align: center;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
 }
 
-.widthHandleL { left: -7px; }
-.widthHandleR { right: -7px; }
+.widthHandleL { left: calc(-7px * var(--tv-scale, 1)); }
+.widthHandleR { right: calc(-7px * var(--tv-scale, 1)); }
 
 .heightHandle {
   position: absolute;
   left: 0;
   right: 0;
-  top: -7px;
-  height: 14px;
+  top: calc(-7px * var(--tv-scale, 1));
+  height: calc(14px * var(--tv-scale, 1));
   z-index: 7;
   background: none;
   border: none;
@@ -293,7 +293,7 @@
   left: 0;
   right: 0;
   top: 50%;
-  height: 3px;
+  height: calc(3px * var(--tv-scale, 1));
   transform: translateY(-50%);
   background: rgba(0, 240, 255, 0.4);
   transition: background 0.15s;
@@ -309,14 +309,14 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 44px;
-  height: 24px;
-  border-radius: 999px;
+  width: calc(44px * var(--tv-scale, 1));
+  height: calc(24px * var(--tv-scale, 1));
+  border-radius: calc(999px * var(--tv-scale, 1));
   background: #00f0ff;
   color: #0a0a19;
-  font-size: 15px;
+  font-size: calc(15px * var(--tv-scale, 1));
   font-weight: 700;
-  line-height: 24px;
+  line-height: calc(24px * var(--tv-scale, 1));
   text-align: center;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
 }
@@ -357,10 +357,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 8px 0;
-  font-size: 12px;
-  letter-spacing: 0.5px;
+  gap: calc(8px * var(--tv-scale, 1));
+  padding: calc(8px * var(--tv-scale, 1)) 0;
+  font-size: calc(12px * var(--tv-scale, 1));
+  letter-spacing: calc(0.5px * var(--tv-scale, 1));
   color: rgba(255, 255, 255, 0.4);
   background: rgba(255, 255, 255, 0.04);
   border: none;
@@ -387,7 +387,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2px dashed rgba(0, 240, 255, 0.4);
+  border: calc(2px * var(--tv-scale, 1)) dashed rgba(0, 240, 255, 0.4);
   background: rgba(0, 240, 255, 0.06);
   color: rgba(255, 255, 255, 0.8);
   font-size: 0.8rem;
@@ -395,8 +395,8 @@
   pointer-events: none;
 }
 
-.dropZoneL { left: 0; border-radius: 10px 0 0 10px; }
-.dropZoneR { right: 0; border-radius: 0 10px 10px 0; }
+.dropZoneL { left: 0; border-radius: calc(10px * var(--tv-scale, 1)) 0 0 calc(10px * var(--tv-scale, 1)); }
+.dropZoneR { right: 0; border-radius: 0 calc(10px * var(--tv-scale, 1)) calc(10px * var(--tv-scale, 1)) 0; }
 
 .dropZoneActive {
   border-color: #00f0ff;
@@ -405,11 +405,11 @@
 
 .rail {
   position: fixed;
-  top: 64px;
+  top: calc(64px * var(--tv-scale, 1));
   /* The 214px cap keeps the rail clear of the save bar and the real now-playing bar. */
-  max-height: calc(100vh - 214px);
-  max-height: calc(100dvh - 214px);
-  width: 280px;
+  max-height: calc(100vh - calc(214px * var(--tv-scale, 1)));
+  max-height: calc(100dvh - calc(214px * var(--tv-scale, 1)));
+  width: calc(280px * var(--tv-scale, 1));
   z-index: 50;
   overflow-y: auto;
   display: flex;
@@ -418,17 +418,17 @@
   padding: 0.6rem;
   background: rgba(10, 10, 25, 0.92);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 14px;
+  border-radius: calc(14px * var(--tv-scale, 1));
   backdrop-filter: blur(8px);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
 }
 
 .railLeft {
-  left: 14px;
+  left: calc(14px * var(--tv-scale, 1));
 }
 
 .railRight {
-  right: 14px;
+  right: calc(14px * var(--tv-scale, 1));
 }
 
 .railHint {
@@ -441,7 +441,7 @@
 .railCard {
   padding: 0.7rem 0.75rem;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
+  border-radius: calc(10px * var(--tv-scale, 1));
   background: rgba(255, 255, 255, 0.03);
   transition: border-color 0.15s, background 0.15s;
 }
@@ -469,7 +469,7 @@
   color: var(--text-secondary);
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
+  border-radius: calc(8px * var(--tv-scale, 1));
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
@@ -485,8 +485,8 @@
 }
 
 .swatchDot {
-  width: 22px;
-  height: 22px;
+  width: calc(22px * var(--tv-scale, 1));
+  height: calc(22px * var(--tv-scale, 1));
   border-radius: 50%;
 }
 
@@ -499,18 +499,18 @@
 
 .bar {
   position: fixed;
-  bottom: 24px;
+  bottom: calc(24px * var(--tv-scale, 1));
   left: 50%;
   transform: translateX(-50%);
   z-index: 55;
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  max-width: min(94vw, 680px);
+  max-width: min(94vw, calc(680px * var(--tv-scale, 1)));
   padding: 0.55rem 0.6rem 0.55rem 1.1rem;
   background: #14142a;
   border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 999px;
+  border-radius: calc(999px * var(--tv-scale, 1));
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(0, 0, 0, 0.4);
 }
 
@@ -527,9 +527,9 @@
 }
 
 .discardBtn {
-  height: 40px;
+  height: calc(40px * var(--tv-scale, 1));
   padding: 0 1.1rem;
-  border-radius: 999px;
+  border-radius: calc(999px * var(--tv-scale, 1));
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.18);
   color: var(--text-secondary);
@@ -547,14 +547,14 @@
 
 .applyBtn,
 .doneBtn {
-  height: 40px;
+  height: calc(40px * var(--tv-scale, 1));
   padding: 0 1.5rem;
-  border-radius: 999px;
+  border-radius: calc(999px * var(--tv-scale, 1));
   border: none;
   color: #fff;
   font-size: 0.9rem;
   font-weight: 800;
-  letter-spacing: 0.2px;
+  letter-spacing: calc(0.2px * var(--tv-scale, 1));
   cursor: pointer;
   transition: filter 0.15s, transform 0.05s;
 }
@@ -592,11 +592,11 @@
   font-weight: 600;
   color: var(--text-muted);
   border: 1px dashed rgba(255, 255, 255, 0.18);
-  border-radius: 10px;
+  border-radius: calc(10px * var(--tv-scale, 1));
 }
 
 @media (max-width: 860px) {
-  .rail {
+  html:not([data-tv]) .rail {
     top: auto;
     bottom: 64px;
     left: 10px;

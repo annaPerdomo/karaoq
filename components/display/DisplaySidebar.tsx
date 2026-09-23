@@ -51,6 +51,7 @@ interface DisplaySidebarProps {
   suggestions: SuggestedSong[];
   displayConfig: DisplayConfig;
   edit?: SidebarEdit;
+  scale?: number;
 }
 
 const DisplaySidebar = ({
@@ -64,6 +65,7 @@ const DisplaySidebar = ({
   suggestions,
   displayConfig,
   edit,
+  scale = 1,
 }: DisplaySidebarProps): React.ReactElement => {
   const { t } = useT();
   const view = displayConfig;
@@ -80,6 +82,7 @@ const DisplaySidebar = ({
     value: qrPxShown,
     min: QR_PX_MIN,
     max: qrPxFit,
+    scale,
     // qrSize rides along so displays predating fine-grained sizing approximate it.
     onChange: (px) => change({ qrPx: px, qrSize: nearestQrSize(px) }),
   });
@@ -89,7 +92,7 @@ const DisplaySidebar = ({
     value: bannerPx,
     min: BANNER_PX_MIN,
     max: BANNER_PX_MAX,
-    scale: 2,
+    scale: 2 * scale,
     onChange: (px) => change({ bannerPx: px }),
   });
 
@@ -143,6 +146,7 @@ const DisplaySidebar = ({
         origin={origin}
         size={nearestQrSize(qrPx)}
         sizePx={qrPxShown}
+        renderScale={scale}
         resizeHandle={
           edit && (
             <CornerHandle title={t('customize.dragResize')} dragProps={qrDrag} />
@@ -151,7 +155,7 @@ const DisplaySidebar = ({
       />
     ),
     banner: visible.banner && (
-      <p key="banner" className={styles.bannerLine} style={{ fontSize: bannerPx }}>
+      <p key="banner" className={styles.bannerLine} style={{ fontSize: bannerPx * scale }}>
         {bannerLine}
       </p>
     ),

@@ -120,7 +120,7 @@
   top: 0;
   left: 0;
   right: var(--sb-w, 280px);
-  height: 56px;
+  height: calc(56px * var(--tv-scale, 1));
   display: flex;
   align-items: center;
   padding: 0 1.25rem;
@@ -150,7 +150,7 @@
   font-family: var(--font-brand);
   font-weight: 400;
   font-size: 1.4rem;
-  letter-spacing: 2px;
+  letter-spacing: calc(2px * var(--tv-scale, 1));
   background: linear-gradient(135deg, var(--acc-a), var(--acc-b));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -166,9 +166,9 @@
   height: 100vh;
   margin-right: var(--sb-w, 280px);
   position: relative;
-  padding-top: 56px; /* space for fixed header */
+  padding-top: calc(56px * var(--tv-scale, 1)); /* space for fixed header */
   /* Clears the fixed nowBar; capped so a TV-sized bar can't swallow a small screen. */
-  padding-bottom: min(calc(var(--now-h, 132px) + 8px), 50vh);
+  padding-bottom: min(calc(var(--now-h, 132px) + calc(8px * var(--tv-scale, 1))), 50vh);
   box-sizing: border-box;
 }
 
@@ -179,15 +179,15 @@
 /* Kept below the iframe's bottom edge so it never overlaps YouTube's controls. */
 .videoFullscreen {
   position: fixed;
-  bottom: 40px;
-  right: calc(var(--sb-w, 280px) + 20px);
+  bottom: calc(40px * var(--tv-scale, 1));
+  right: calc(var(--sb-w, 280px) + calc(20px * var(--tv-scale, 1)));
   z-index: 11;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
+  width: calc(40px * var(--tv-scale, 1));
+  height: calc(40px * var(--tv-scale, 1));
+  border-radius: calc(10px * var(--tv-scale, 1));
   color: rgba(255, 255, 255, 0.6);
   background: rgba(var(--disp-surface-rgb), 0.6);
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -204,7 +204,7 @@
 }
 
 .videoFullscreenFarSide {
-  right: 20px;
+  right: calc(20px * var(--tv-scale, 1));
 }
 
 .video {
@@ -217,16 +217,16 @@
 /* Clears the fixed header: an absolute child is placed against the padding box,
    which starts above .videoArea's own padding-top. */
 .videoNotice {
-  --notice-top: 56px;
+  --notice-top: calc(56px * var(--tv-scale, 1));
 }
 
 .headerEdit {
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  height: 36px;
+  height: calc(36px * var(--tv-scale, 1));
   padding: 0 0.7rem;
-  border-radius: 10px;
+  border-radius: calc(10px * var(--tv-scale, 1));
   color: var(--text-muted);
   background: none;
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -242,8 +242,8 @@
 }
 
 .headerEdit > svg {
-  width: 15px;
-  height: 15px;
+  width: calc(15px * var(--tv-scale, 1));
+  height: calc(15px * var(--tv-scale, 1));
 }
 
 
@@ -271,8 +271,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 72px;
-  height: 72px;
+  width: calc(72px * var(--tv-scale, 1));
+  height: calc(72px * var(--tv-scale, 1));
   border-radius: 50%;
   background: linear-gradient(135deg, var(--acc-a), var(--acc-b));
   color: #fff;
@@ -324,7 +324,7 @@
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  letter-spacing: 2px;
+  letter-spacing: calc(2px * var(--tv-scale, 1));
 }
 
 .waitingText {
@@ -336,7 +336,7 @@
   font-family: var(--font-mono);
   font-weight: 700;
   color: #ffd700;
-  letter-spacing: 1px;
+  letter-spacing: calc(1px * var(--tv-scale, 1));
 }
 
 .readyState {
@@ -351,7 +351,7 @@
 
 .readyTag {
   font-size: 0.8rem;
-  letter-spacing: 4px;
+  letter-spacing: calc(4px * var(--tv-scale, 1));
   color: var(--acc-a);
   font-weight: 700;
   text-transform: uppercase;
@@ -373,7 +373,7 @@
   font-size: clamp(1rem, 2vw, 1.4rem);
   color: var(--text-muted);
   text-align: center;
-  max-width: 600px;
+  max-width: calc(600px * var(--tv-scale, 1));
   padding: 0 2rem;
   line-height: 1.5;
 }
@@ -396,7 +396,7 @@
   font-family: var(--font-brand);
   font-weight: 400;
   font-size: 0.65rem;
-  letter-spacing: 2px;
+  letter-spacing: calc(2px * var(--tv-scale, 1));
   color: rgba(200, 180, 255, 0.25);
 }
 
@@ -405,7 +405,7 @@
   color: rgba(200, 180, 255, 0.35);
   text-decoration: none;
   transition: color 0.3s;
-  letter-spacing: 0.3px;
+  letter-spacing: calc(0.3px * var(--tv-scale, 1));
 }
 
 .footerLink:hover {
@@ -469,8 +469,8 @@
 }
 
 .nowDot {
-  width: calc(8px * var(--now-scale, 1));
-  height: calc(8px * var(--now-scale, 1));
+  width: calc(8px * var(--now-scale, 1) * var(--tv-scale, 1));
+  height: calc(8px * var(--now-scale, 1) * var(--tv-scale, 1));
   border-radius: 50%;
   background: var(--acc-a);
   box-shadow: 0 0 8px var(--acc-a), 0 0 20px rgba(255, 45, 120, 0.3);
@@ -485,7 +485,7 @@
 
 .nowLabel {
   font-size: calc(0.65rem * var(--now-scale, 1));
-  letter-spacing: 3px;
+  letter-spacing: calc(3px * var(--now-scale, 1) * var(--tv-scale, 1));
   color: var(--acc-a);
   text-transform: uppercase;
   font-weight: 700;
@@ -514,8 +514,8 @@
 .reactionOverlay {
   position: absolute;
   inset: 0;
-  top: 56px; /* below the fixed header */
-  bottom: min(calc(var(--now-h, 132px) + 8px), 50vh); /* clear the now-playing bar */
+  top: calc(56px * var(--tv-scale, 1)); /* below the fixed header */
+  bottom: min(calc(var(--now-h, 132px) + calc(8px * var(--tv-scale, 1))), 50vh); /* clear the now-playing bar */
   pointer-events: none;
   z-index: 8;
   overflow: hidden;
@@ -563,7 +563,7 @@
   color: #fff;
   background: linear-gradient(135deg, var(--acc-a), var(--acc-b));
   padding: 0.35rem 0.75rem;
-  border-radius: 12px;
+  border-radius: calc(12px * var(--tv-scale, 1));
   white-space: nowrap;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
 }
@@ -600,7 +600,7 @@
 
 .qrLabel {
   font-size: 0.55rem;
-  letter-spacing: 2px;
+  letter-spacing: calc(2px * var(--tv-scale, 1));
   color: var(--text-muted);
   text-transform: uppercase;
   font-weight: 600;
@@ -610,7 +610,7 @@
   font-size: 0.8rem;
   font-weight: 600;
   color: var(--text-secondary);
-  letter-spacing: 0.5px;
+  letter-spacing: calc(0.5px * var(--tv-scale, 1));
   white-space: nowrap;
 }
 
@@ -618,7 +618,7 @@
   font-family: var(--font-mono);
   font-size: 1.6rem;
   font-weight: 700;
-  letter-spacing: 4px;
+  letter-spacing: calc(4px * var(--tv-scale, 1));
   color: #ffd700;
   text-shadow: 0 0 12px rgba(255, 215, 0, 0.4);
 }
@@ -651,7 +651,7 @@
 .upNextTitle {
   font-size: 0.72rem;
   font-weight: 600;
-  letter-spacing: 1.2px;
+  letter-spacing: calc(1.2px * var(--tv-scale, 1));
   text-transform: uppercase;
   color: var(--acc-a);
   display: flex;
@@ -668,7 +668,7 @@
   background: rgba(255, 45, 120, 0.2);
   color: var(--acc-a);
   padding: 0.1rem 0.4rem;
-  border-radius: 10px;
+  border-radius: calc(10px * var(--tv-scale, 1));
   letter-spacing: 0;
 }
 
@@ -721,7 +721,7 @@
   text-align: center;
   flex-shrink: 0;
   background: rgba(255, 45, 120, 0.12);
-  border-radius: 6px;
+  border-radius: calc(6px * var(--tv-scale, 1));
 }
 
 .upNextInfo {
@@ -774,9 +774,9 @@
 }
 
 .spinner {
-  width: 32px;
-  height: 32px;
-  border: 3px solid rgba(255, 255, 255, 0.1);
+  width: calc(32px * var(--tv-scale, 1));
+  height: calc(32px * var(--tv-scale, 1));
+  border: calc(3px * var(--tv-scale, 1)) solid rgba(255, 255, 255, 0.1);
   border-top-color: var(--acc-a);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
@@ -787,20 +787,20 @@
 }
 
 @media (max-width: 900px) {
-  .main {
+  html:not([data-tv]) .main {
     flex-direction: column;
   }
 
-  .videoArea,
-  .sidebarLeft .videoArea {
+  html:not([data-tv]) .videoArea,
+  html:not([data-tv]) .sidebarLeft .videoArea {
     min-height: 50vh;
     height: 50vh;
     margin-right: 0;
     margin-left: 0;
   }
 
-  .sidebar,
-  .sidebarLeft .sidebar {
+  html:not([data-tv]) .sidebar,
+  html:not([data-tv]) .sidebarLeft .sidebar {
     width: 100%;
     height: auto;
     position: relative;
@@ -810,39 +810,39 @@
     max-height: 50vh;
   }
 
-  .nowBar,
-  .sidebarLeft .nowBar {
+  html:not([data-tv]) .nowBar,
+  html:not([data-tv]) .sidebarLeft .nowBar {
     right: 0;
     left: 0;
   }
 
-  .sidebarLeft .header,
-  .sidebarLeft .footer {
+  html:not([data-tv]) .sidebarLeft .header,
+  html:not([data-tv]) .sidebarLeft .footer {
     left: 0;
   }
 
-  .reactionOverlay {
+  html:not([data-tv]) .reactionOverlay {
     bottom: 100px;
   }
 
-  .reactionEmoji {
+  html:not([data-tv]) .reactionEmoji {
     font-size: 2.25rem;
   }
 
-  .reactionText {
+  html:not([data-tv]) .reactionText {
     font-size: 1rem;
   }
 
-  .qrSection {
+  html:not([data-tv]) .qrSection {
     padding: 1rem;
   }
 
-  .qrCode {
+  html:not([data-tv]) .qrCode {
     font-size: 1.3rem;
     letter-spacing: 3px;
   }
 
-  .readySinger {
+  html:not([data-tv]) .readySinger {
     font-size: 2rem;
   }
 }

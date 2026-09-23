@@ -32,6 +32,12 @@ html {
   }
 }
 
+/* rem-based sizing (QrJoinCard, BoardsSummary, LanguageSwitcher, most of
+   Display.module.css) scales off the root font-size instead of a px calc(). */
+html[data-tv-scaled] {
+  font-size: calc(100% * var(--tv-scale, 1));
+}
+
 html,
 body {
   background: var(--bg-primary);

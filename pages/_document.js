@@ -9,8 +9,12 @@ import { TV_PATTERN } from '../lib/deviceType';
  * classify TVs by one definition.
  */
 const TV_FLAG_SCRIPT =
-  `try{if(${TV_PATTERN}.test(navigator.userAgent))` +
-  `document.documentElement.setAttribute('data-tv','1')}catch(e){}`;
+  `try{if(${TV_PATTERN}.test(navigator.userAgent)||/[?&]tv=1(&|$)/.test(location.search)){` +
+  `var d=document.documentElement;d.setAttribute('data-tv','1');` +
+  `if(/^\\/(?:[a-z]{2,3}\\/)?display\\//.test(location.pathname)){` +
+  `var s=Math.round(Math.min(3,Math.max(.75,Math.min(innerWidth/1280,innerHeight/720)))*1000)/1000;` +
+  `d.style.setProperty('--tv-scale',String(s));d.setAttribute('data-tv-scaled','1')}` +
+  `}}catch(e){}`;
 
 // `lang` is driven by the active i18n locale (not hardcoded) so localized
 // landing routes like /ja render `<html lang="ja">` for crawlers and a11y.

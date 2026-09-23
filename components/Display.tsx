@@ -15,6 +15,7 @@ import { startVisiblePolling } from '../app/queue/pollWhileVisible';
 import { isTextReaction } from '../app/queue/cheerConstants';
 import { AutoAdvance, AUTO_ADVANCE_OFF, DEFAULT_DISPLAY_CONFIG, DisplayConfig, DisplayTheme, normalizeAutoAdvance, normalizeDisplayConfig, normalizeSongLimit, PlayMode, QueueEntry, Reaction, Room, SingWithMePost, SuggestedSong } from '../pages/api/types';
 import { useAutoStart } from './hooks/useAutoStart';
+import { useTvScale } from './display/hooks/useTvScale';
 import { autoStartEpoch, playerCurrentTime, songSecondsLeft, WRAP_UP_WARN_SECONDS } from '../lib/autoAdvance';
 import { useT } from '../lib/i18n/I18nProvider';
 import { renderWithHeart } from '../lib/i18n/renderWithHeart';
@@ -61,6 +62,7 @@ const Display = (): React.ReactElement => {
     isPlaying,
   });
   const { adoptBroadcast } = timing;
+  const tvScaleFactor = useTvScale();
   const [displayPaused, setDisplayPaused] = React.useState(false);
   // Unset playMode (legacy rooms) is treated like "tv".
   const [playMode, setPlayMode] = React.useState<PlayMode | null>(null);
@@ -201,6 +203,7 @@ const Display = (): React.ReactElement => {
     joinCode,
     config: displayConfig,
     boardsOn,
+    scale: tvScaleFactor,
     onSaved: (nextConfig, nextBoards) => {
       setDisplayConfig(nextConfig);
       setBoardsOn(nextBoards);
@@ -491,8 +494,8 @@ const Display = (): React.ReactElement => {
     <main
       className={`${styles.main} ${themeClass} ${sideClass} ${editSideClass}`}
       style={{
-        '--sb-w': `${view.sidebarWidth}px`,
-        '--now-h': `${view.nowPlayingHeight}px`,
+        '--sb-w': `calc(${view.sidebarWidth}px * var(--tv-scale, 1))`,
+        '--now-h': `calc(${view.nowPlayingHeight}px * var(--tv-scale, 1))`,
         // CSS can't divide two px lengths into a unitless number, so the type
         // scale ratio is computed here.
         '--now-scale': `${view.nowPlayingHeight / DEFAULT_DISPLAY_CONFIG.nowPlayingHeight}`,
@@ -634,6 +637,7 @@ const Display = (): React.ReactElement => {
           singWithMe={singWithMe}
           suggestions={suggestions}
           displayConfig={view}
+          scale={tvScaleFactor}
           edit={
             edit.editing
               ? {
