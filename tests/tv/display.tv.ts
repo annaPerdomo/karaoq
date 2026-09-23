@@ -199,4 +199,97 @@ describe("display scales on a TV", () => {
       await close();
     }
   });
+
+  it("keeps the side-flip pill clear of the rail", async () => {
+    const { page, close } = await loadDisplay({ width: 1920, height: 1080 });
+    try {
+      await page.locator('[data-remote="customize"]').click({ timeout: 30_000 });
+
+      const rail = page.locator('[class*="rail_"]').first();
+      await rail.waitFor({ timeout: 15_000 });
+      const railBox = (await rail.boundingBox())!;
+
+      const railControl = page.locator('[class*="railCard_"], [class*="swatch_"]').first();
+      await railControl.waitFor({ timeout: 15_000 });
+      const controlBox = (await railControl.boundingBox())!;
+      const hitsRail = await page.evaluate(
+        ({ x, y }) => !!document.elementFromPoint(x, y)?.closest('[class*="rail_"]'),
+        { x: controlBox.x + controlBox.width / 2, y: controlBox.y + controlBox.height / 2 }
+      );
+      expect(hitsRail).toBe(true);
+
+      const pill = page.locator('[class*="sideFlipPill_"]');
+      await pill.waitFor({ timeout: 15_000 });
+      const pillBox = (await pill.boundingBox())!;
+      const intersects =
+        pillBox.x < railBox.x + railBox.width &&
+        pillBox.x + pillBox.width > railBox.x &&
+        pillBox.y < railBox.y + railBox.height &&
+        pillBox.y + pillBox.height > railBox.y;
+      expect(intersects).toBe(false);
+    } finally {
+      await close();
+    }
+  });
+
+  it("moves a section two slots with two ArrowDown presses, keeping focus on it", async () => {
+    const { page, close } = await loadDisplay({ width: 1920, height: 1080 });
+    try {
+      await page.locator('[data-remote="customize"]').click({ timeout: 30_000 });
+      const grips = page.locator('[data-grip]');
+      await grips.first().waitFor({ timeout: 15_000 });
+      const firstId = await grips.first().getAttribute("data-grip");
+
+      await grips.first().focus();
+      await page.keyboard.press("ArrowDown");
+      await page.keyboard.press("ArrowDown");
+
+      const ids = await page.evaluate(() =>
+        Array.from(document.querySelectorAll("[data-grip]")).map((el) => el.getAttribute("data-grip"))
+      );
+      expect(ids.indexOf(firstId)).toBe(2);
+
+      const focusedId = await page.evaluate(() => document.activeElement?.getAttribute("data-grip"));
+      expect(focusedId).toBe(firstId);
+    } finally {
+      await close();
+    }
+  });
+
+  it("resizes the sidebar from the keyboard and saves it", async () => {
+    const before = await (await fetch(`${BASE}/api/queue/${room.code}`)).json();
+    const startWidth: number = before.displayConfig.sidebarWidth;
+
+    const { page, close } = await loadDisplay({ width: 1920, height: 1080 });
+    try {
+      const customizeBtn = page.locator('[data-remote="customize"]');
+      await customizeBtn.waitFor({ timeout: 30_000 });
+      await customizeBtn.focus();
+      await page.keyboard.press("Enter");
+
+      const sidebarSpot = page.locator('[role="button"]').first();
+      await sidebarSpot.waitFor({ timeout: 15_000 });
+      await sidebarSpot.focus();
+      await page.keyboard.press("Enter");
+
+      const widthHandle = page.locator('[class*="widthHandle"]').first();
+      await widthHandle.waitFor({ timeout: 15_000 });
+      await widthHandle.focus();
+      // Default sidebar is right-anchored, which inverts the axis: Left widens it.
+      await page.keyboard.press("ArrowLeft");
+      await page.keyboard.press("ArrowLeft");
+
+      await page.locator('[data-remote="save"]').click({ timeout: 15_000 });
+
+      let after = before;
+      for (let i = 0; i < 20; i++) {
+        after = await (await fetch(`${BASE}/api/queue/${room.code}`)).json();
+        if (after.displayConfig.sidebarWidth === startWidth + 40) break;
+        await new Promise((r) => setTimeout(r, 500));
+      }
+      expect(after.displayConfig.sidebarWidth).toBe(startWidth + 40);
+    } finally {
+      await close();
+    }
+  });
 });
