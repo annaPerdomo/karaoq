@@ -154,4 +154,49 @@ describe("display scales on a TV", () => {
       await close();
     }
   });
+
+  it("moves focus with the remote and shows a visible outline", async () => {
+    const { page, close } = await loadDisplay({ width: 1920, height: 1080 });
+    try {
+      await page.locator('[data-remote="customize"]').waitFor({ timeout: 30_000 });
+      await page.keyboard.press("ArrowRight");
+      const focused = await page.evaluate(() => {
+        const el = document.activeElement as HTMLElement | null;
+        return el ? { tag: el.tagName, outline: getComputedStyle(el).outlineStyle } : null;
+      });
+      expect(focused?.tag).toBe("BUTTON");
+      expect(focused?.outline).not.toBe("none");
+    } finally {
+      await close();
+    }
+  });
+
+  it("lets a pointer remote hit the grip it aims at, not the Hide beside it", async () => {
+    const { page, close } = await loadDisplay({ width: 1920, height: 1080 });
+    try {
+      await page.locator('[data-remote="customize"]').click({ timeout: 30_000 });
+      const grips = page.locator('[class*="gripBtn"]');
+      await grips.first().waitFor({ timeout: 15_000 });
+      const before = await grips.count();
+
+      const hits = await page.evaluate(() => {
+        const grip = document.querySelector<HTMLElement>('[class*="gripBtn"]')!;
+        const hide = Array.from(grip.parentElement!.querySelectorAll<HTMLElement>("button")).find((b) => b !== grip);
+        const hitsItself = (el: HTMLElement) => {
+          const r = el.getBoundingClientRect();
+          const at = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+          return !!at && el.contains(at);
+        };
+        return { grip: hitsItself(grip), hide: hide ? hitsItself(hide) : null };
+      });
+      expect(hits.grip).toBe(true);
+      expect(hits.hide).not.toBe(false);
+
+      const box = (await grips.first().boundingBox())!;
+      await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+      expect(await grips.count()).toBe(before);
+    } finally {
+      await close();
+    }
+  });
 });
