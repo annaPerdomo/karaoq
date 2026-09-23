@@ -310,6 +310,7 @@
   "display.upNextTitle": "À suivre",
   "display.waiting": "Scanne le QR code ou va sur {url} et entre le code {code} pour ajouter des chansons et encourager les chanteurs !",
   "display.tapTitle": "Touche pour lancer la lecture",
+  "display.tapToStartTv": "Appuie sur OK pour lancer la musique",
   "display.tapHint": "Cet écran a besoin d'une touche avant que les vidéos puissent jouer — ensuite, les chansons démarrent automatiquement.",
   "display.moreCount": "+{count} de plus",
   "display.emptyQueue": "Aucune chanson dans la file — rejoins pour ajouter des chansons et encourager !",

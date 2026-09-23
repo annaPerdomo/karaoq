@@ -310,6 +310,7 @@
   "display.upNextTitle": "다음 곡",
   "display.waiting": "QR 코드를 스캔하거나 {url}에 접속해서 코드 {code}를 입력하면 곡을 추가하고 가수를 응원할 수 있어요!",
   "display.tapTitle": "탭해서 재생 시작",
+  "display.tapToStartTv": "OK를 눌러 음악을 시작하세요",
   "display.tapHint": "이 화면은 영상 재생 전에 한 번 탭이 필요해요 — 그다음부터는 곡이 자동으로 시작돼요.",
   "display.moreCount": "+{count}곡 더",
   "display.emptyQueue": "아직 대기 중인 곡이 없어요 — 참여해서 곡을 추가하고 응원해 주세요!",

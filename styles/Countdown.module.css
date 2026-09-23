@@ -590,3 +590,13 @@ html[data-tv] .cheer {
   background: #ffd700;
   box-shadow: 0 0 8px rgba(255, 215, 0, 0.8);
 }
+
+.countIn:focus-visible {
+  outline: calc(4px * var(--tv-scale, 1)) solid var(--cd-b);
+  outline-offset: calc(3px * var(--tv-scale, 1));
+}
+
+html[data-tv] .countIn:focus {
+  outline: calc(4px * var(--tv-scale, 1)) solid var(--cd-b);
+  outline-offset: calc(3px * var(--tv-scale, 1));
+}

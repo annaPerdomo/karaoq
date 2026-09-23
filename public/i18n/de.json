@@ -310,6 +310,7 @@
   "display.upNextTitle": "Als Nächstes",
   "display.waiting": "Scanne den QR-Code oder besuche {url} und gib den Code {code} ein, um Songs hinzuzufügen und die Sänger:innen anzufeuern!",
   "display.tapTitle": "Zum Starten tippen",
+  "display.tapToStartTv": "OK drücken, um die Musik zu starten",
   "display.tapHint": "Dieser Bildschirm braucht einen Tipp, bevor Videos abspielen können – danach starten die Songs automatisch.",
   "display.moreCount": "+{count} weitere",
   "display.emptyQueue": "Noch keine Songs in der Warteschlange – tritt bei, um Songs hinzuzufügen und anzufeuern!",

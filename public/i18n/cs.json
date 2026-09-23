@@ -310,6 +310,7 @@
   "display.upNextTitle": "Na řadě",
   "display.waiting": "Naskenuj QR kód nebo navštiv {url} a zadej kód {code}, ať přidáš písničky a zafandíš zpěvákům!",
   "display.tapTitle": "Klepni pro spuštění přehrávání",
+  "display.tapToStartTv": "Stiskni OK pro spuštění hudby",
   "display.tapHint": "Tahle obrazovka potřebuje jedno klepnutí, než se videa můžou přehrát — pak už písničky startují samy.",
   "display.moreCount": "+{count} dalších",
   "display.emptyQueue": "Ve frontě zatím nic není — přidej se, přidej písničky a fandi!",

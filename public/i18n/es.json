@@ -310,6 +310,7 @@
   "display.upNextTitle": "A continuación",
   "display.waiting": "¡Escanea el código QR o entra a {url} e ingresa el código {code} para agregar canciones y animar a quienes cantan!",
   "display.tapTitle": "Toca para iniciar la reproducción",
+  "display.tapToStartTv": "Pulsa OK para empezar la música",
   "display.tapHint": "Esta pantalla necesita un toque antes de que los videos puedan reproducirse; después de eso, las canciones empiezan automáticamente.",
   "display.moreCount": "+{count} más",
   "display.emptyQueue": "Aún no hay canciones en la fila. ¡Únete para agregar canciones y animar!",

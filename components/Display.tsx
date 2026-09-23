@@ -16,6 +16,8 @@ import { isTextReaction } from '../app/queue/cheerConstants';
 import { AutoAdvance, AUTO_ADVANCE_OFF, DEFAULT_DISPLAY_CONFIG, DisplayConfig, DisplayTheme, normalizeAutoAdvance, normalizeDisplayConfig, normalizeSongLimit, PlayMode, QueueEntry, Reaction, Room, SingWithMePost, SuggestedSong } from '../pages/api/types';
 import { useAutoStart } from './hooks/useAutoStart';
 import { useTvScale } from './display/hooks/useTvScale';
+import { useDisplayRemoteNav } from './display/hooks/useDisplayRemoteNav';
+import { isTvDevice } from '../lib/calmMotion';
 import { autoStartEpoch, playerCurrentTime, songSecondsLeft, WRAP_UP_WARN_SECONDS } from '../lib/autoAdvance';
 import { useT } from '../lib/i18n/I18nProvider';
 import { renderWithHeart } from '../lib/i18n/renderWithHeart';
@@ -86,6 +88,7 @@ const Display = (): React.ReactElement => {
   // growing over an all-night session would silently cancel this skip.
   const failedSkipRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const videoRef = React.useRef<HTMLIFrameElement>(null);
+  const pageRef = React.useRef<HTMLElement>(null);
 
   const [needsTap, setNeedsTap] = React.useState(false);
   const playbackConfirmedRef = React.useRef(false);
@@ -209,6 +212,8 @@ const Display = (): React.ReactElement => {
       setBoardsOn(nextBoards);
     },
   });
+
+  useDisplayRemoteNav(pageRef, isTvDevice(), edit);
 
   React.useEffect(() => {
     if (!joinCode) return;
@@ -492,6 +497,7 @@ const Display = (): React.ReactElement => {
 
   return (
     <main
+      ref={pageRef}
       className={`${styles.main} ${themeClass} ${sideClass} ${editSideClass}`}
       style={{
         '--sb-w': `calc(${view.sidebarWidth}px * var(--tv-scale, 1))`,
@@ -510,6 +516,7 @@ const Display = (): React.ReactElement => {
               className={styles.headerEdit}
               onClick={edit.enter}
               title={t('customize.button')}
+              data-remote="customize"
             >
               {Icons.brush}
               <span>{t('customize.button')}</span>

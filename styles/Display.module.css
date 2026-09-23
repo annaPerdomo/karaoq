@@ -861,3 +861,36 @@ html[data-tv] .themeNeon .nowGlow {
 }
 /* @calm-twin-end */
 
+.headerEdit:focus-visible,
+.videoFullscreen:focus-visible,
+.tapOverlay:focus-visible,
+.footerLink:focus-visible {
+  outline: calc(4px * var(--tv-scale, 1)) solid var(--acc-a);
+  outline-offset: calc(3px * var(--tv-scale, 1));
+}
+
+/* TV browsers rarely match :focus-visible for remote keys. */
+html[data-tv] .headerEdit:focus,
+html[data-tv] .videoFullscreen:focus,
+html[data-tv] .tapOverlay:focus,
+html[data-tv] .footerLink:focus {
+  outline: calc(4px * var(--tv-scale, 1)) solid var(--acc-a);
+  outline-offset: calc(3px * var(--tv-scale, 1));
+}
+
+/* Pointer remotes (LG Magic Remote, Samsung cursor) aim imprecisely. Controls
+   grow on a TV rather than carrying an invisible hit box, which would reach
+   over their neighbours and steal the click. */
+html[data-tv] .headerEdit {
+  height: calc(44px * var(--tv-scale, 1));
+}
+
+html[data-tv] .videoFullscreen {
+  width: calc(48px * var(--tv-scale, 1));
+  height: calc(48px * var(--tv-scale, 1));
+}
+
+html[data-tv] .footerLink {
+  display: inline-block;
+  padding: calc(8px * var(--tv-scale, 1));
+}

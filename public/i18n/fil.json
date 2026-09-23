@@ -310,6 +310,7 @@
   "display.upNextTitle": "Up Next",
   "display.waiting": "I-scan ang QR code o pumunta sa {url} at ilagay ang code {code} para magdagdag ng kanta at i-cheer ang mga singer!",
   "display.tapTitle": "I-tap para magsimulang tumugtog",
+  "display.tapToStartTv": "Pindutin ang OK para simulan ang musika",
   "display.tapHint": "Kailangan ng screen na ito ng isang tap bago makatugtog ang mga video — pagkatapos noon, awtomatiko nang magsisimula ang mga kanta.",
   "display.moreCount": "+{count} pa",
   "display.emptyQueue": "Wala pang kanta sa queue — sumali para magdagdag ng kanta at mag-cheer!",

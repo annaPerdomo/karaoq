@@ -310,6 +310,7 @@
   "display.upNextTitle": "Selanjutnya",
   "display.waiting": "Scan kode QR atau kunjungi {url} dan masukkan kode {code} untuk menambah lagu dan memberi semangat penyanyinya!",
   "display.tapTitle": "Ketuk untuk mulai memutar",
+  "display.tapToStartTv": "Tekan OK untuk mulai musik",
   "display.tapHint": "Layar ini perlu satu ketukan sebelum video bisa diputar — setelah itu, lagu mulai otomatis.",
   "display.moreCount": "+{count} lagi",
   "display.emptyQueue": "Belum ada lagu di antrean — gabung untuk menambah lagu dan memberi semangat!",

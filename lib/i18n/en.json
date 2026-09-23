@@ -310,6 +310,7 @@
   "display.upNextTitle": "Up Next",
   "display.waiting": "Scan the QR code or visit {url} and enter code {code} to add songs and cheer on the singers!",
   "display.tapTitle": "Tap to start playback",
+  "display.tapToStartTv": "Press OK to start the music",
   "display.tapHint": "This screen needs one tap before videos can play — after that, songs start automatically.",
   "display.moreCount": "+{count} more",
   "display.emptyQueue": "No songs queued yet — join to add songs and cheer!",

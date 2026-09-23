@@ -616,3 +616,83 @@
     min-height: 44px;
   }
 }
+
+.chromeBtn:focus-visible,
+.cornerHandle:focus-visible,
+.widthHandle:focus-visible,
+.heightHandle:focus-visible,
+.dragHandle:focus-visible,
+.swatch:focus-visible,
+.discardBtn:focus-visible,
+.applyBtn:focus-visible,
+.doneBtn:focus-visible,
+.ghost:focus-visible {
+  outline: calc(4px * var(--tv-scale, 1)) solid #00f0ff;
+  outline-offset: calc(3px * var(--tv-scale, 1));
+}
+
+html[data-tv] .chromeBtn:focus,
+html[data-tv] .cornerHandle:focus,
+html[data-tv] .widthHandle:focus,
+html[data-tv] .heightHandle:focus,
+html[data-tv] .dragHandle:focus,
+html[data-tv] .swatch:focus,
+html[data-tv] .discardBtn:focus,
+html[data-tv] .applyBtn:focus,
+html[data-tv] .doneBtn:focus,
+html[data-tv] .ghost:focus {
+  outline: calc(4px * var(--tv-scale, 1)) solid #00f0ff;
+  outline-offset: calc(3px * var(--tv-scale, 1));
+}
+
+html[data-tv] .chrome:focus-within {
+  opacity: 1;
+}
+
+/* A hit box may reach at most half the gap toward a neighbour, never over it. */
+html[data-tv] .chrome {
+  gap: calc(16px * var(--tv-scale, 1));
+  z-index: 8;
+}
+
+html[data-tv] .chromeBtn,
+html[data-tv] .cornerHandle {
+  position: relative;
+  width: calc(40px * var(--tv-scale, 1));
+  height: calc(40px * var(--tv-scale, 1));
+}
+
+html[data-tv] .cornerHandle {
+  position: absolute;
+}
+
+html[data-tv] .chromeBtn::before,
+html[data-tv] .cornerHandle::before {
+  content: '';
+  position: absolute;
+  inset: calc(-8px * var(--tv-scale, 1));
+}
+
+html[data-tv] .dragHandle {
+  padding: calc(14px * var(--tv-scale, 1)) 0;
+}
+
+/* Resize handles reach outward from the section edge, never over its chrome. */
+html[data-tv] .widthHandle {
+  width: calc(48px * var(--tv-scale, 1));
+}
+
+html[data-tv] .widthHandleL { left: calc(-42px * var(--tv-scale, 1)); }
+html[data-tv] .widthHandleR { right: calc(-42px * var(--tv-scale, 1)); }
+
+html[data-tv] .heightHandle {
+  top: calc(-42px * var(--tv-scale, 1));
+  height: calc(48px * var(--tv-scale, 1));
+}
+
+html[data-tv] .widthHandleL::before,
+html[data-tv] .widthHandleL::after { left: calc(100% - 6px * var(--tv-scale, 1)); }
+html[data-tv] .widthHandleR::before,
+html[data-tv] .widthHandleR::after { left: calc(6px * var(--tv-scale, 1)); }
+html[data-tv] .heightHandle::before,
+html[data-tv] .heightHandle::after { top: calc(100% - 6px * var(--tv-scale, 1)); }
