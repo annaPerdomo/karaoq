@@ -1,10 +1,10 @@
 import { useRouter } from 'next/router';
 import * as React from 'react';
 import getRoom from '../app/queue/getRoom';
+import { createHostedRoom } from '../app/queue/createHostedRoom';
 import {
   clearLastHostedRoom,
   getLastHostedRoom,
-  rememberLastHostedRoom,
 } from '../lib/lastRoom';
 import styles from '../styles/Home.module.css';
 import { useT } from '../lib/i18n/I18nProvider';
@@ -23,19 +23,12 @@ import FaqSection from './home/FaqSection';
 import HomeFooter from './home/HomeFooter';
 import GlobalReach from './home/GlobalReach';
 import Reveal from './home/Reveal';
+import TvStartCard from './home/TvStartCard';
 import { EMPTY_STATS, type PublicStats } from '../lib/publicStats';
+import { generateCode } from '../lib/roomCode';
 
 // Re-exported: pages/index.tsx builds its FAQPage JSON-LD from this path.
 export { FAQ_ITEMS } from './home/faq';
-
-function generateCode(): string {
-  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
-  let result = '';
-  for (let i = 0; i < 5; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return result;
-}
 
 const CUSTOM_CODE_PATTERN = /^[A-Z0-9]{3,12}$/;
 
@@ -128,21 +121,13 @@ const Home = ({ stats = EMPTY_STATS }: HomeProps): React.ReactElement => {
       localStorage.setItem('karaoq_host_name', name);
     } catch {}
     setCreating(true);
-    try {
-      const headers: Record<string, string> = {};
-      if (useCustom) headers['x-custom-code'] = '1';
-      const resp = await fetch(`/api/queue/${code}`, { method: 'POST', headers });
-      if (resp.ok) {
-        rememberLastHostedRoom(code);
-        router.push(`/host/${code}`);
-      } else if (resp.status === 409) {
-        setHostError(t('home.err.codeInUse'));
-        setCreating(false);
-      } else {
-        setHostError(t('home.err.generic'));
-        setCreating(false);
-      }
-    } catch {
+    const result = await createHostedRoom(code, { custom: useCustom });
+    if (result === 'ok') {
+      router.push(`/host/${code}`);
+    } else if (result === 'in-use') {
+      setHostError(t('home.err.codeInUse'));
+      setCreating(false);
+    } else {
       setHostError(t('home.err.generic'));
       setCreating(false);
     }
@@ -223,32 +208,37 @@ const Home = ({ stats = EMPTY_STATS }: HomeProps): React.ReactElement => {
 
             <HeroStage />
 
-            <HeroCtaCard
-              hostName={hostName}
-              customCode={customCode}
-              joinCode={joinCode}
-              showCustom={showCustom}
-              showJoin={showJoin}
-              creating={creating}
-              hostError={hostError}
-              nameInputRef={nameInputRef}
-              onHostNameChange={(v) => {
-                setHostName(v);
-                setHostError('');
-              }}
-              onCustomCodeChange={(v) => {
-                setCustomCode(v);
-                setHostError('');
-              }}
-              onJoinCodeChange={setJoinCode}
-              onToggleCustom={() => {
-                setShowCustom((v) => !v);
-                setHostError('');
-              }}
-              onShowJoin={() => setShowJoin(true)}
-              onHost={handleHost}
-              onJoin={handleJoin}
-            />
+            <div className={styles.heroCtaGroup}>
+              <TvStartCard />
+
+              <HeroCtaCard
+                hostName={hostName}
+                customCode={customCode}
+                joinCode={joinCode}
+                showCustom={showCustom}
+                showJoin={showJoin}
+                creating={creating}
+                hostError={hostError}
+                nameInputRef={nameInputRef}
+                onHostNameChange={(v) => {
+                  setHostName(v);
+                  setHostError('');
+                }}
+                onCustomCodeChange={(v) => {
+                  setCustomCode(v);
+                  setHostError('');
+                }}
+                onJoinCodeChange={setJoinCode}
+                onToggleCustom={() => {
+                  setShowCustom((v) => !v);
+                  setHostError('');
+                }}
+                onShowJoin={() => setShowJoin(true)}
+                onHost={handleHost}
+                onJoin={handleJoin}
+              />
+            </div>
+
           </div>
         </section>
 

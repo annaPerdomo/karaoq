@@ -11,3 +11,13 @@ export function normalizeRoomId(
 ): string | string[] | undefined {
   return typeof rawId === "string" ? rawId.toUpperCase() : rawId;
 }
+
+const CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+
+export function generateCode(): string {
+  let result = '';
+  for (let i = 0; i < 5; i++) {
+    result += CODE_CHARS.charAt(Math.floor(Math.random() * CODE_CHARS.length));
+  }
+  return result;
+}
