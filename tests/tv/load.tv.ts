@@ -49,6 +49,18 @@ describe.each(Object.entries(TV_AGENTS))("landing page on %s", (_name, ua) => {
     }
   });
 
+  it("shows the Start on this TV button, focused", async () => {
+    const { page, close } = await tvPage(ua);
+    try {
+      await page.goto(BASE, { waitUntil: "load", timeout: 60_000 });
+      const button = page.getByRole("button", { name: /start on this tv/i });
+      await expect.poll(() => button.isVisible(), { timeout: 30_000 }).toBe(true);
+      await expect.poll(() => button.evaluate((el) => el === document.activeElement)).toBe(true);
+    } finally {
+      await close();
+    }
+  });
+
   it("is flagged as a TV before first paint", async () => {
     const { page, close } = await tvPage(ua);
     try {
@@ -157,6 +169,16 @@ describe("desktop is unaffected", () => {
       await page.goto(BASE, { waitUntil: "load", timeout: 60_000 });
       expect(await page.locator("html").getAttribute("data-tv")).toBeNull();
       await expect.poll(() => page.locator("video").count(), { timeout: 20_000 }).toBe(1);
+    } finally {
+      await close();
+    }
+  });
+
+  it("does not render the Start on this TV button", async () => {
+    const { page, close } = await tvPage(DESKTOP_AGENT, { cpuThrottle: 1 });
+    try {
+      await page.goto(BASE, { waitUntil: "load", timeout: 60_000 });
+      expect(await page.getByRole("button", { name: /start on this tv/i }).count()).toBe(0);
     } finally {
       await close();
     }

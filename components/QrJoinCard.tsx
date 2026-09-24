@@ -12,10 +12,11 @@ interface QrJoinCardProps {
   onPrint?: () => void;
   size?: "small" | "normal" | "large";
   sizePx?: number;
+  renderScale?: number;
   resizeHandle?: React.ReactNode;
 }
 
-const QrJoinCard = ({ joinUrl, joinCode, origin, onClose, onPrint, size = "normal", sizePx, resizeHandle }: QrJoinCardProps): React.ReactElement => {
+const QrJoinCard = ({ joinUrl, joinCode, origin, onClose, onPrint, size = "normal", sizePx, renderScale = 1, resizeHandle }: QrJoinCardProps): React.ReactElement => {
   const { t } = useT();
   const displayUrl = (origin || 'karaoq.live').replace(/^https?:\/\/(www\.)?/, '');
 
@@ -34,7 +35,7 @@ const QrJoinCard = ({ joinUrl, joinCode, origin, onClose, onPrint, size = "norma
         <span className={styles.qrBox}>
           <QRCodeSVG
             value={joinUrl}
-            size={sizePx ?? QR_SIZE_PX[size]}
+            size={(sizePx ?? QR_SIZE_PX[size]) * renderScale}
             bgColor="transparent"
             fgColor="#ffffff"
             level="M"

@@ -1457,7 +1457,7 @@ const Host = ({
                       <button
                         className={p.heightHandle}
                         title={t('customize.dragHeight')}
-                        aria-label={t('customize.dragHeight')}
+                        aria-label={t('edit.handle.nowBarHeight')}
                         {...hostEdit.heightDragProps}
                       />
                     </>
@@ -1565,6 +1565,8 @@ const Host = ({
           onDiscard={hostEdit.discard}
           onSave={hostEdit.save}
           sideDragTarget={hostEdit.sideDragTarget}
+          sidebarPosition={hostView.sidebarPosition}
+          onFlipSide={(sidebarPosition) => hostEdit.change({ sidebarPosition })}
         />
       )}
 

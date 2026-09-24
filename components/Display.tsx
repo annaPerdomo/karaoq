@@ -15,6 +15,9 @@ import { startVisiblePolling } from '../app/queue/pollWhileVisible';
 import { isTextReaction } from '../app/queue/cheerConstants';
 import { AutoAdvance, AUTO_ADVANCE_OFF, DEFAULT_DISPLAY_CONFIG, DisplayConfig, DisplayTheme, normalizeAutoAdvance, normalizeDisplayConfig, normalizeSongLimit, PlayMode, QueueEntry, Reaction, Room, SingWithMePost, SuggestedSong } from '../pages/api/types';
 import { useAutoStart } from './hooks/useAutoStart';
+import { useTvScale } from './display/hooks/useTvScale';
+import { useDisplayRemoteNav } from './display/hooks/useDisplayRemoteNav';
+import { isTvDevice } from '../lib/calmMotion';
 import { autoStartEpoch, playerCurrentTime, songSecondsLeft, WRAP_UP_WARN_SECONDS } from '../lib/autoAdvance';
 import { useT } from '../lib/i18n/I18nProvider';
 import { renderWithHeart } from '../lib/i18n/renderWithHeart';
@@ -23,6 +26,8 @@ import FullscreenToggle from './FullscreenToggle';
 import DisplaySidebar from './display/DisplaySidebar';
 import NowPlayingBar from './display/NowPlayingBar';
 import DisplayStage from './display/DisplayStage';
+import HostFromPhoneCard from './display/HostFromPhoneCard';
+import { useHostFromPhoneVisible } from './display/hooks/useHostFromPhoneVisible';
 import p from '../styles/DisplayDesigner.module.css';
 import { useDisplayEdit } from './display/edit/useDisplayEdit';
 import { Spot, HideButton } from './edit/EditChrome';
@@ -61,6 +66,7 @@ const Display = (): React.ReactElement => {
     isPlaying,
   });
   const { adoptBroadcast } = timing;
+  const tvScaleFactor = useTvScale();
   const [displayPaused, setDisplayPaused] = React.useState(false);
   // Unset playMode (legacy rooms) is treated like "tv".
   const [playMode, setPlayMode] = React.useState<PlayMode | null>(null);
@@ -84,6 +90,7 @@ const Display = (): React.ReactElement => {
   // growing over an all-night session would silently cancel this skip.
   const failedSkipRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const videoRef = React.useRef<HTMLIFrameElement>(null);
+  const pageRef = React.useRef<HTMLElement>(null);
 
   const [needsTap, setNeedsTap] = React.useState(false);
   const playbackConfirmedRef = React.useRef(false);
@@ -201,11 +208,15 @@ const Display = (): React.ReactElement => {
     joinCode,
     config: displayConfig,
     boardsOn,
+    scale: tvScaleFactor,
     onSaved: (nextConfig, nextBoards) => {
       setDisplayConfig(nextConfig);
       setBoardsOn(nextBoards);
     },
   });
+
+  useDisplayRemoteNav(pageRef, isTvDevice(), edit);
+  const hostFromPhone = useHostFromPhoneVisible(joinCode, { editing: edit.editing, playing: isPlaying });
 
   React.useEffect(() => {
     if (!joinCode) return;
@@ -489,10 +500,11 @@ const Display = (): React.ReactElement => {
 
   return (
     <main
+      ref={pageRef}
       className={`${styles.main} ${themeClass} ${sideClass} ${editSideClass}`}
       style={{
-        '--sb-w': `${view.sidebarWidth}px`,
-        '--now-h': `${view.nowPlayingHeight}px`,
+        '--sb-w': `calc(${view.sidebarWidth}px * var(--tv-scale, 1))`,
+        '--now-h': `calc(${view.nowPlayingHeight}px * var(--tv-scale, 1))`,
         // CSS can't divide two px lengths into a unitless number, so the type
         // scale ratio is computed here.
         '--now-scale': `${view.nowPlayingHeight / DEFAULT_DISPLAY_CONFIG.nowPlayingHeight}`,
@@ -507,6 +519,7 @@ const Display = (): React.ReactElement => {
               className={styles.headerEdit}
               onClick={edit.enter}
               title={t('customize.button')}
+              data-remote="customize"
             >
               {Icons.brush}
               <span>{t('customize.button')}</span>
@@ -534,6 +547,10 @@ const Display = (): React.ReactElement => {
           wrapUpIn={wrapUpIn}
           onPlaybackFailed={handlePlaybackFailed}
         />
+
+        {hostFromPhone.show && (
+          <HostFromPhoneCard origin={origin} joinCode={joinCode} onHide={hostFromPhone.hide} />
+        )}
 
         {reactionsOn && visibleReactions.length > 0 && (
           <div className={styles.reactionOverlay}>
@@ -575,7 +592,7 @@ const Display = (): React.ReactElement => {
                 <button
                   className={p.heightHandle}
                   title={t('customize.dragHeight')}
-                  aria-label={t('customize.dragHeight')}
+                  aria-label={t('edit.handle.nowBarHeight')}
                   {...edit.heightDragProps}
                 />
               </>
@@ -634,6 +651,7 @@ const Display = (): React.ReactElement => {
           singWithMe={singWithMe}
           suggestions={suggestions}
           displayConfig={view}
+          scale={tvScaleFactor}
           edit={
             edit.editing
               ? {
@@ -677,6 +695,8 @@ const Display = (): React.ReactElement => {
           onDiscard={edit.discard}
           onSave={edit.save}
           sideDragTarget={edit.sideDragTarget}
+          sidebarPosition={view.sidebarPosition}
+          onFlipSide={(sidebarPosition) => edit.change({ sidebarPosition })}
         />
       )}
     </main>

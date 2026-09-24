@@ -23,7 +23,17 @@ export function Spot<Id extends string>({
   return (
     <div
       className={`${positioned ? '' : p.hotspot} ${p.spot} ${selected === id ? p.spotOn : ''} ${className}`}
+      tabIndex={0}
+      role="button"
+      aria-label={label}
       onClick={(e) => {
+        e.stopPropagation();
+        onSelect(id);
+      }}
+      onKeyDown={(e) => {
+        if (e.target !== e.currentTarget) return;
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        e.preventDefault();
         e.stopPropagation();
         onSelect(id);
       }}
@@ -37,10 +47,12 @@ export function Spot<Id extends string>({
 
 export function CornerHandle({
   title,
+  ariaLabel,
   dragProps,
   className = '',
 }: {
   title: string;
+  ariaLabel?: string;
   dragProps: React.ComponentProps<'button'>;
   className?: string;
 }) {
@@ -48,7 +60,7 @@ export function CornerHandle({
     <button
       className={`${p.cornerHandle} ${className}`}
       title={title}
-      aria-label={title}
+      aria-label={ariaLabel ?? title}
       {...dragProps}
     >
       <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

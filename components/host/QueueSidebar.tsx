@@ -198,7 +198,7 @@ export function QueueSidebar({
           <button
             className={`${p.widthHandle} ${hostConfig.sidebarPosition === "right" ? p.widthHandleL : p.widthHandleR}`}
             title={t('customize.dragWidth')}
-            aria-label={t('customize.dragWidth')}
+            aria-label={t('edit.handle.sidebarWidth')}
             {...widthDragProps}
           />
         </>

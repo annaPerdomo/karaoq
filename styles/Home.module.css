@@ -374,6 +374,18 @@ html[data-tv] .dpNumB, html[data-tv] .dpCount3 { animation: none !important; opa
   align-items: flex-start;
 }
 
+.heroCtaGroup {
+  width: 100%;
+  min-width: 0;
+  grid-column: 1;
+  grid-row: 3;
+  align-self: start;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
 /* Sized relative to .hostCard, not .heroCta, so it stays centered even where
    .heroCta centers instead of left-aligning it (stacked mobile). z-index: -1
    only stays local because .hostCard's position+z-index forms a stacking
@@ -616,6 +628,13 @@ html[data-tv] .dpNumB, html[data-tv] .dpCount3 { animation: none !important; opa
   text-transform: uppercase;
   color: #ffe9a8;
   text-shadow: 0 0 14px rgba(255, 233, 168, 0.45);
+}
+
+.tvStartBody {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #b8b8c8;
+  line-height: 1.4;
 }
 
 .heroNote {
@@ -2624,6 +2643,7 @@ html[data-tv] .dpNumB, html[data-tv] .dpCount3 { animation: none !important; opa
   .brandMark,
   .heroContent,
   .heroCta,
+  .heroCtaGroup,
   .heroStage {
     grid-column: auto;
     grid-row: auto;
@@ -2633,14 +2653,14 @@ html[data-tv] .dpNumB, html[data-tv] .dpCount3 { animation: none !important; opa
      reading order side by side and stays a sane tab order here. */
   .brandMark { order: 1; }
   .heroContent { order: 2; }
-  .heroCta { order: 3; }
+  .heroCta, .heroCtaGroup { order: 3; }
   .heroStage { order: 4; }
   .heroContent {
     text-align: center;
     align-items: center;
   }
   .brandMark { margin-bottom: 0; }
-  .heroCta { align-items: center; }
+  .heroCta, .heroCtaGroup { align-items: center; }
   .heroSub { margin-left: auto; margin-right: auto; }
   /* The form sits right below and the row gap provides the rhythm; the pitch
      shouldn't add its own trailing space (sub or resume banner, whichever

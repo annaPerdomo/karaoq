@@ -88,6 +88,7 @@ export function SidebarSections({
     value: qrPxShown,
     min: QR_PX_MIN,
     max: qrPxFit,
+    step: 8,
     onChange: (qrPx) => edit?.onChange({ qrPx }),
   });
 
@@ -96,6 +97,7 @@ export function SidebarSections({
     min: BANNER_PX_MIN,
     max: BANNER_PX_MAX,
     scale: 2,
+    step: 2,
     onChange: (bannerPx) => edit?.onChange({ bannerPx }),
   });
 
@@ -201,7 +203,11 @@ export function SidebarSections({
               />
             </button>
             {!!edit && (
-              <CornerHandle title={t("customize.dragResize")} dragProps={qrDrag} />
+              <CornerHandle
+                title={t("customize.dragResize")}
+                ariaLabel={t("edit.handle.qrSize")}
+                dragProps={qrDrag}
+              />
             )}
           </span>
           <div className={styles.qrShelfInfo}>
@@ -279,7 +285,7 @@ export function SidebarSections({
           className={section === "queue" ? p.grow : ""}
           chrome={
             <SectionChrome
-              gripProps={gripProps(section)}
+              gripProps={gripProps(section, t("edit.moveSection", { section: t(SECTION_LABEL[section]) }))}
               // No eye for the banner — hiding it would erase its text. Same rule on the display.
               onHide={
                 section === "banner"
@@ -290,6 +296,7 @@ export function SidebarSections({
               {section === "banner" && (
                 <CornerHandle
                   title={t("customize.dragResize")}
+                  ariaLabel={t("edit.handle.bannerSize")}
                   dragProps={bannerDrag}
                   className={p.cornerOnEdge}
                 />

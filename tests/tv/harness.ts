@@ -88,12 +88,15 @@ export async function stopHarness() {
  */
 export async function tvPage(
   userAgent: string,
-  { cpuThrottle = 6 }: { cpuThrottle?: number } = {}
+  {
+    cpuThrottle = 6,
+    viewport = { width: 1920, height: 1080 },
+  }: { cpuThrottle?: number; viewport?: { width: number; height: number } } = {}
 ): Promise<{ page: Page; errors: string[]; close: () => Promise<void> }> {
   if (!browser) throw new Error("harness not started");
   const context = await browser.newContext({
     userAgent,
-    viewport: { width: 1920, height: 1080 },
+    viewport,
     deviceScaleFactor: 1,
   });
   const page = await context.newPage();

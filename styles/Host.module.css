@@ -3208,3 +3208,13 @@ html[data-tv] .transportHeart {
     display: none;
   }
 }
+
+.spToggleRow:focus-visible {
+  outline: calc(3px * var(--tv-scale, 1)) solid #00f0ff;
+  outline-offset: calc(-3px * var(--tv-scale, 1));
+}
+
+html[data-tv] .spToggleRow:focus {
+  outline: calc(3px * var(--tv-scale, 1)) solid #00f0ff;
+  outline-offset: calc(-3px * var(--tv-scale, 1));
+}

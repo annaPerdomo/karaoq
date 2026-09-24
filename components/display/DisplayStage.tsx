@@ -1,6 +1,7 @@
 import * as React from 'react';
 import styles from '../../styles/Display.module.css';
 import { QueueEntry } from '../../pages/api/types';
+import { isTvDevice } from '../../lib/calmMotion';
 import { useT } from '../../lib/i18n/I18nProvider';
 import formatSongTitle from '../../lib/songTitle';
 import { embedSrc } from '../player/embed';
@@ -59,6 +60,12 @@ export default function DisplayStage({
     if (playbackFailed) onPlaybackFailedRef.current();
   }, [playbackFailed]);
 
+  // Never pull focus off a control the viewer is on, e.g. Save mid-Customize.
+  const focusTapOnTv = React.useCallback((el: HTMLButtonElement | null) => {
+    const idle = !document.activeElement || document.activeElement === document.body;
+    if (el && idle && isTvDevice()) el.focus();
+  }, []);
+
   return (
     <>
       {loading ? (
@@ -77,6 +84,7 @@ export default function DisplayStage({
           allow="autoplay; encrypted-media"
           allowFullScreen
           onLoad={onIframeLoad}
+          tabIndex={-1}
         />
       ) : currentSong ? (
         <div className={styles.readyState}>
@@ -126,13 +134,20 @@ export default function DisplayStage({
       {/* !playbackFailed: a dead video never confirms playback either, so the
           watchdog fires too and its opaque overlay would bury the notice. */}
       {needsTap && isPlaying && currentSong && !playbackFailed && (
-        <button className={styles.tapOverlay} onClick={onUnlock}>
+        <button
+          className={styles.tapOverlay}
+          onClick={onUnlock}
+          data-remote="tap-start"
+          ref={focusTapOnTv}
+        >
           <span className={styles.tapPlayIcon}>
             <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
               <path d="M8 5v14l11-7z" />
             </svg>
           </span>
-          <span className={styles.tapTitle}>{t('display.tapTitle')}</span>
+          <span className={styles.tapTitle}>
+            {isTvDevice() ? t('display.tapToStartTv') : t('display.tapTitle')}
+          </span>
           <span className={styles.tapHint}>
             {t('display.tapHint')}
           </span>

@@ -51,6 +51,7 @@ interface DisplaySidebarProps {
   suggestions: SuggestedSong[];
   displayConfig: DisplayConfig;
   edit?: SidebarEdit;
+  scale?: number;
 }
 
 const DisplaySidebar = ({
@@ -64,6 +65,7 @@ const DisplaySidebar = ({
   suggestions,
   displayConfig,
   edit,
+  scale = 1,
 }: DisplaySidebarProps): React.ReactElement => {
   const { t } = useT();
   const view = displayConfig;
@@ -80,6 +82,8 @@ const DisplaySidebar = ({
     value: qrPxShown,
     min: QR_PX_MIN,
     max: qrPxFit,
+    scale,
+    step: 8,
     // qrSize rides along so displays predating fine-grained sizing approximate it.
     onChange: (px) => change({ qrPx: px, qrSize: nearestQrSize(px) }),
   });
@@ -89,7 +93,8 @@ const DisplaySidebar = ({
     value: bannerPx,
     min: BANNER_PX_MIN,
     max: BANNER_PX_MAX,
-    scale: 2,
+    scale: 2 * scale,
+    step: 2,
     onChange: (px) => change({ bannerPx: px }),
   });
 
@@ -109,8 +114,8 @@ const DisplaySidebar = ({
     onReorder: (sidebarOrder) => change({ sidebarOrder }),
   });
 
-  const chromeFor = (id: SidebarSection, onHide?: () => void) => (
-    <SectionChrome gripProps={gripProps(id)} onHide={onHide} />
+  const chromeFor = (id: SidebarSection, label: string, onHide?: () => void) => (
+    <SectionChrome gripProps={gripProps(id, t('edit.moveSection', { section: label }))} onHide={onHide} />
   );
 
   const hiddenTap = (section: string) => t('customize.hiddenTap', { section });
@@ -143,15 +148,20 @@ const DisplaySidebar = ({
         origin={origin}
         size={nearestQrSize(qrPx)}
         sizePx={qrPxShown}
+        renderScale={scale}
         resizeHandle={
           edit && (
-            <CornerHandle title={t('customize.dragResize')} dragProps={qrDrag} />
+            <CornerHandle
+              title={t('customize.dragResize')}
+              ariaLabel={t('edit.handle.qrSize')}
+              dragProps={qrDrag}
+            />
           )
         }
       />
     ),
     banner: visible.banner && (
-      <p key="banner" className={styles.bannerLine} style={{ fontSize: bannerPx }}>
+      <p key="banner" className={styles.bannerLine} style={{ fontSize: bannerPx * scale }}>
         {bannerLine}
       </p>
     ),
@@ -178,7 +188,7 @@ const DisplaySidebar = ({
               selected={edit.selected}
               onSelect={edit.onSelect}
               label={t('customize.qr')}
-              chrome={chromeFor('qr', () => change({ qrSize: 'hidden' }))}
+              chrome={chromeFor('qr', t('customize.qr'), () => change({ qrSize: 'hidden' }))}
             >
               {liveSections.qr}
             </Spot>
@@ -201,9 +211,10 @@ const DisplaySidebar = ({
               label={t('customize.banner')}
               chrome={
                 <>
-                  {chromeFor('banner')}
+                  {chromeFor('banner', t('customize.banner'))}
                   <CornerHandle
                     title={t('customize.dragResize')}
+                    ariaLabel={t('edit.handle.bannerSize')}
                     dragProps={bannerDrag}
                     className={p.cornerOnEdge}
                   />
@@ -229,7 +240,7 @@ const DisplaySidebar = ({
               onSelect={edit.onSelect}
               label={t('customize.queue')}
               className={p.grow}
-              chrome={chromeFor('upNext', () => change({ showUpNext: false }))}
+              chrome={chromeFor('upNext', t('customize.queue'), () => change({ showUpNext: false }))}
             >
               {liveSections.upNext}
             </Spot>
@@ -248,7 +259,7 @@ const DisplaySidebar = ({
               selected={edit.selected}
               onSelect={edit.onSelect}
               label={t('customize.boards')}
-              chrome={chromeFor('boards', edit.onToggleBoards)}
+              chrome={chromeFor('boards', t('customize.boards'), edit.onToggleBoards)}
             >
               {boardsHasContent ? (
                 boardsSummary
@@ -277,7 +288,7 @@ const DisplaySidebar = ({
         <button
           className={`${p.widthHandle} ${view.sidebarPosition === 'right' ? p.widthHandleL : p.widthHandleR}`}
           title={t('customize.dragWidth')}
-          aria-label={t('customize.dragWidth')}
+          aria-label={t('edit.handle.sidebarWidth')}
           {...edit.widthDragProps}
         />
       )}

@@ -30,12 +30,12 @@ export function EditBar({
           <button className={p.discardBtn} onClick={onDiscard} disabled={saving}>
             {t('customize.discard')}
           </button>
-          <button className={p.applyBtn} onClick={onSave} disabled={saving}>
+          <button className={p.applyBtn} onClick={onSave} disabled={saving} data-remote="save">
             {t('customize.apply')}
           </button>
         </>
       ) : (
-        <button className={p.doneBtn} onClick={onDiscard}>
+        <button className={p.doneBtn} onClick={onDiscard} data-remote="done">
           {t('customize.done')}
         </button>
       )}
