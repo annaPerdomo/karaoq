@@ -25,6 +25,7 @@ import setFairMode from "../app/queue/setFairMode";
 import setAutoAdvance from "../app/queue/setAutoAdvance";
 import setSongLimit from "../app/queue/setSongLimit";
 import cancelAutoStart from "../app/queue/cancelAutoStart";
+import { useCohostInviteKey } from "./host/hooks/useCohostInviteKey";
 import postVideoEnded from "../app/queue/postVideoEnded";
 import { useAutoStart } from "./hooks/useAutoStart";
 import { useAutoArm } from "./hooks/useAutoArm";
@@ -81,6 +82,7 @@ import { QrModal } from "./host/QrModal";
 import { ConfirmRemoveModal } from "./host/ConfirmRemoveModal";
 import { WelcomePrompt } from "./host/WelcomePrompt";
 import { HostHeader } from "./host/HostHeader";
+import { HostGate } from "./host/HostGate";
 import { SongStage } from "./host/SongStage";
 import { TransportBar } from "./host/TransportBar";
 import { QueueSidebar } from "./host/QueueSidebar";
@@ -99,9 +101,9 @@ const HOST_THEME_CLASS: Record<DisplayTheme, string> = {
 
 // `remote` = co-host surface: queue management plus previous/next skip — no
 // player, and play/pause stays on the host devices.
-const Host = ({
+function HostBody({
   remote = false,
-}: { remote?: boolean } = {}): React.ReactElement => {
+}: { remote?: boolean } = {}): React.ReactElement {
   const router = useRouter();
   const { t, tn, locale } = useT();
   const joinCode = normalizeRoomId(router.query.joinCode) as string | undefined;
@@ -138,6 +140,7 @@ const Host = ({
   }, [endedEntryId]);
   const [playbackSheetOpen, setPlaybackSheetOpen] = React.useState(false);
   const [songLimit, setSongLimitState] = React.useState<number | null>(null);
+  const [roomKeyed, setRoomKeyed] = React.useState<boolean | null>(null);
   const songLimitRef = React.useRef<number | null>(null);
   songLimitRef.current = songLimit;
   const timing = useRoomTiming({
@@ -365,14 +368,13 @@ const Host = ({
   }
 
   async function copyCohostLink() {
-    if (!joinCode) return;
-    const base = origin || window.location.origin;
-    const url = `${base}/remote/${joinCode}`;
+    // Empty until a keyed room's key resolves — the modal hides Copy until then.
+    if (!cohostUrl) return;
     try {
-      await navigator.clipboard.writeText(url);
+      await navigator.clipboard.writeText(cohostUrl);
       showToast(t('host.toast.cohostCopied'));
     } catch {
-      showToast(url);
+      showToast(cohostUrl);
     }
   }
 
@@ -429,6 +431,7 @@ const Host = ({
     setAutoAdvanceState(normalizeAutoAdvance(room.autoAdvance));
     setSongLimitState(normalizeSongLimit(room.songLimitSeconds));
     setAutoStartAt(autoStartEpoch(room.autoStartAt));
+    setRoomKeyed(room.keyed ?? false);
     const ended = room.endedEntryId ?? null;
     if (preEndedRef.current === undefined) preEndedRef.current = ended;
     setEndedEntryId(ended);
@@ -446,6 +449,7 @@ const Host = ({
     onSaved: setHostConfigState,
   });
   const hostView = hostEdit.view;
+  const { cohostUrl, keyStatus, retryMint } = useCohostInviteKey({ joinCode, roomKeyed, open: cohostOpen, origin });
 
   React.useEffect(() => {
     if (!joinCode) return;
@@ -1268,7 +1272,6 @@ const Host = ({
   );
 
   const joinUrl = origin ? `${origin}/sing/${joinCode}` : "";
-  const cohostUrl = origin ? `${origin}/remote/${joinCode}` : "";
   const displayUrl = (origin || "karaoq.live").replace(
     /^https?:\/\/(www\.)?/,
     "",
@@ -1581,8 +1584,10 @@ const Host = ({
         <CohostInviteModal
           cohostUrl={cohostUrl}
           cohostDisplayUrl={cohostDisplayUrl}
+          keyStatus={keyStatus}
           onClose={() => setCohostOpen(false)}
           onCopyLink={copyCohostLink}
+          onRetry={retryMint}
         />
       )}
 
@@ -1629,6 +1634,10 @@ const Host = ({
       )}
     </main>
   );
-};
+}
+
+const Host = ({ remote = false }: { remote?: boolean } = {}): React.ReactElement => (
+  <HostGate remote={remote} body={<HostBody remote={remote} />} />
+);
 
 export default Host;

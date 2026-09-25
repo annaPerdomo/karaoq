@@ -1,4 +1,5 @@
 import { getActiveLocale, LOCALE_HEADER } from "../../lib/i18n/activeLocale";
+import { clearCohostLinkKey, setRoomKey } from "../../lib/roomKeyStore";
 
 export default async function createRoom(
   roomId: string,
@@ -11,6 +12,13 @@ export default async function createRoom(
     };
     if (priorPlayToken) headers["x-play-token"] = priorPlayToken;
     const resp = await fetch(`/api/queue/${roomId}`, { method: "POST", headers });
+    if (resp.ok) {
+      const data = (await resp.json()) as { roomKey?: unknown };
+      if (typeof data.roomKey === "string") {
+        setRoomKey(roomId, data.roomKey, "host");
+        clearCohostLinkKey(roomId);
+      }
+    }
     return resp.ok;
   } catch {
     return false;

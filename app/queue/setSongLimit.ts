@@ -1,3 +1,5 @@
+import { notifyRoomKeyRejected, roomKeyHeaders } from "../../lib/roomKeyStore";
+
 /** Set (or, with null, clear) the room's per-song time limit. */
 export default async function setSongLimit(
   roomId: string,
@@ -9,7 +11,9 @@ export default async function setSongLimit(
   try {
     const resp = await fetch(`/api/queue/${roomId}/song-limit?${params}`, {
       method: "POST",
+      headers: roomKeyHeaders(roomId),
     });
+    if (resp.status === 403) notifyRoomKeyRejected(roomId);
     return resp.ok;
   } catch {
     return false;

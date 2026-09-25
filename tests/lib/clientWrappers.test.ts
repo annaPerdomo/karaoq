@@ -16,7 +16,7 @@ describe("Client API wrappers", () => {
 
   describe("createRoom", () => {
     it("sends POST to /api/queue/:id and returns true on success", async () => {
-      mockFetch.mockResolvedValue({ ok: true });
+      mockFetch.mockResolvedValue({ ok: true, json: () => Promise.resolve({}) });
       const { default: createRoom } = await import("../../app/queue/createRoom");
 
       const result = await createRoom("ABC12");

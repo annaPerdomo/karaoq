@@ -7,7 +7,7 @@ vi.mock("next/router", () => ({
   useRouter: () => ({ push: mockPush }),
 }));
 
-global.fetch = vi.fn().mockResolvedValue({ ok: true });
+global.fetch = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({}) });
 
 // IntersectionObserver stub for scroll-reveal
 class MockIntersectionObserver {
@@ -29,7 +29,7 @@ Element.prototype.scrollIntoView = vi.fn();
 describe("Home component", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    (fetch as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: true });
+    (fetch as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: true, json: () => Promise.resolve({}) });
   });
 
   it("renders the brand name and hero headline", () => {

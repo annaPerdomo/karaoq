@@ -692,6 +692,7 @@ const Display = (): React.ReactElement => {
           dirty={edit.dirty}
           saving={edit.saving}
           saveFailed={edit.saveFailed}
+          saveForbidden={edit.saveForbidden}
           onDiscard={edit.discard}
           onSave={edit.save}
           sideDragTarget={edit.sideDragTarget}

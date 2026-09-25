@@ -6,12 +6,14 @@ export function EditBar({
   dirty,
   saving,
   saveFailed,
+  saveForbidden = false,
   onDiscard,
   onSave,
 }: {
   dirty: boolean;
   saving: boolean;
   saveFailed: boolean;
+  saveForbidden?: boolean;
   onDiscard: () => void;
   onSave: () => void;
 }) {
@@ -20,7 +22,7 @@ export function EditBar({
     <div className={p.bar}>
       <span className={`${p.actionsHint} ${saveFailed ? p.actionsHintError : ''}`}>
         {saveFailed
-          ? t('customize.saveFailed')
+          ? t(saveForbidden ? 'display.needsHostKey' : 'customize.saveFailed')
           : dirty
             ? t('customize.unsaved')
             : t('customize.synced')}

@@ -12,7 +12,10 @@ afterEach(() => {
 
 describe("createHostedRoom", () => {
   it("returns 'ok' and remembers the room on success", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true, status: 200 }) as Response));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({ ok: true, status: 200, json: async () => ({}) }) as unknown as Response)
+    );
     const result = await createHostedRoom("ABCDE");
     expect(result).toBe("ok");
     expect(getLastHostedRoom()?.code).toBe("ABCDE");
@@ -36,7 +39,9 @@ describe("createHostedRoom", () => {
   });
 
   it("sends x-custom-code when custom is requested", async () => {
-    const fetchMock = vi.fn(async () => ({ ok: true, status: 200 }) as Response);
+    const fetchMock = vi.fn(
+      async () => ({ ok: true, status: 200, json: async () => ({}) }) as unknown as Response
+    );
     vi.stubGlobal("fetch", fetchMock);
     await createHostedRoom("MYCODE", { custom: true });
     expect(fetchMock).toHaveBeenCalledWith(

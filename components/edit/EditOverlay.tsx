@@ -10,6 +10,7 @@ export function EditOverlay({
   dirty,
   saving,
   saveFailed,
+  saveForbidden = false,
   onDiscard,
   onSave,
   sideDragTarget,
@@ -20,6 +21,7 @@ export function EditOverlay({
   dirty: boolean;
   saving: boolean;
   saveFailed: boolean;
+  saveForbidden?: boolean;
   onDiscard: () => void;
   onSave: () => void;
   sideDragTarget: SidebarPosition | null;
@@ -36,6 +38,7 @@ export function EditOverlay({
         dirty={dirty}
         saving={saving}
         saveFailed={saveFailed}
+        saveForbidden={saveForbidden}
         onDiscard={onDiscard}
         onSave={onSave}
       />

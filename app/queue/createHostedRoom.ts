@@ -1,4 +1,5 @@
 import { rememberLastHostedRoom } from "../../lib/lastRoom";
+import { clearCohostLinkKey, setRoomKey } from "../../lib/roomKeyStore";
 
 export async function createHostedRoom(
   code: string,
@@ -10,6 +11,12 @@ export async function createHostedRoom(
     const resp = await fetch(`/api/queue/${code}`, { method: "POST", headers });
     if (resp.ok) {
       rememberLastHostedRoom(code);
+      const data = (await resp.json()) as { roomKey?: unknown };
+      if (typeof data.roomKey === "string") {
+        setRoomKey(code, data.roomKey, "host");
+        // A new host key means any previously-shared invite link is stale.
+        clearCohostLinkKey(code);
+      }
       return "ok";
     }
     if (resp.status === 409) return "in-use";

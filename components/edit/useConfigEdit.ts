@@ -19,7 +19,7 @@ export function useConfigEdit<C extends SurfaceLayout, Id extends string>(opts: 
   config: C;
   keys: (keyof C)[];
   nowPlayingBounds: { min: number; max: number };
-  save: (joinCode: string, draft: C) => Promise<boolean>;
+  save: (joinCode: string, draft: C) => Promise<boolean | "forbidden">;
   onSaved: (draft: C) => void;
   extraDirty?: boolean;
   onReset?: () => void;
@@ -42,6 +42,7 @@ export function useConfigEdit<C extends SurfaceLayout, Id extends string>(opts: 
   const [selected, setSelected] = React.useState<Id | null>(null);
   const [saving, setSaving] = React.useState(false);
   const [saveFailed, setSaveFailed] = React.useState(false);
+  const [saveForbidden, setSaveForbidden] = React.useState(false);
   // What we last wrote, held until the server echoes it back. See `settled`.
   const [justSaved, setJustSaved] = React.useState<C | null>(null);
   const [sideDragTarget, setSideDragTarget] = React.useState<SidebarPosition | null>(null);
@@ -91,6 +92,7 @@ export function useConfigEdit<C extends SurfaceLayout, Id extends string>(opts: 
     setDraft(settled);
     setSelected(null);
     setSaveFailed(false);
+    setSaveForbidden(false);
     onReset?.();
   }
 
@@ -112,15 +114,17 @@ export function useConfigEdit<C extends SurfaceLayout, Id extends string>(opts: 
     if (!joinCode) return;
     setSaving(true);
     setSaveFailed(false);
-    const ok = await persist(joinCode, draft);
+    setSaveForbidden(false);
+    const result = await persist(joinCode, draft);
     setSaving(false);
-    if (ok) {
+    if (result === true) {
       setJustSaved(draft);
       onSaved(draft);
       setSelected(null);
       setEditing(false);
     } else {
       setSaveFailed(true);
+      setSaveForbidden(result === "forbidden");
     }
   }
 
@@ -172,6 +176,7 @@ export function useConfigEdit<C extends SurfaceLayout, Id extends string>(opts: 
     dirty,
     saving,
     saveFailed,
+    saveForbidden,
     selected,
     setSelected,
     sideDragTarget,
