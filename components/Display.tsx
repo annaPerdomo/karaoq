@@ -26,8 +26,6 @@ import FullscreenToggle from './FullscreenToggle';
 import DisplaySidebar from './display/DisplaySidebar';
 import NowPlayingBar from './display/NowPlayingBar';
 import DisplayStage from './display/DisplayStage';
-import HostFromPhoneCard from './display/HostFromPhoneCard';
-import { useHostFromPhoneVisible } from './display/hooks/useHostFromPhoneVisible';
 import p from '../styles/DisplayDesigner.module.css';
 import { useDisplayEdit } from './display/edit/useDisplayEdit';
 import { Spot, HideButton } from './edit/EditChrome';
@@ -216,7 +214,6 @@ const Display = (): React.ReactElement => {
   });
 
   useDisplayRemoteNav(pageRef, isTvDevice(), edit);
-  const hostFromPhone = useHostFromPhoneVisible(joinCode, { editing: edit.editing, playing: isPlaying });
 
   React.useEffect(() => {
     if (!joinCode) return;
@@ -547,10 +544,6 @@ const Display = (): React.ReactElement => {
           wrapUpIn={wrapUpIn}
           onPlaybackFailed={handlePlaybackFailed}
         />
-
-        {hostFromPhone.show && (
-          <HostFromPhoneCard origin={origin} joinCode={joinCode} onHide={hostFromPhone.hide} />
-        )}
 
         {reactionsOn && visibleReactions.length > 0 && (
           <div className={styles.reactionOverlay}>

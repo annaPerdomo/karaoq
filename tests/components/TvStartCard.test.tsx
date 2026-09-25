@@ -22,11 +22,11 @@ describe("TvStartCard", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it("creates a room, sets tv mode, remembers it, and navigates on press", async () => {
+  it("creates a room, sets tv mode, and navigates on press", async () => {
     document.documentElement.setAttribute("data-tv", "1");
     const fetchMock = vi.fn(async (url: string) => {
       if (String(url).includes("/mode")) return { ok: true } as Response;
-      return { ok: true, status: 200 } as Response;
+      return { ok: true, status: 200, json: async () => ({}) } as unknown as Response;
     });
     vi.stubGlobal("fetch", fetchMock);
 
@@ -39,7 +39,6 @@ describe("TvStartCard", () => {
     const path = mockPush.mock.calls[0][0] as string;
     expect(path).toMatch(/^\/display\/[A-Z2-9]{5}$/);
     const code = path.split("/").pop()!;
-    expect(sessionStorage.getItem("karaoq_tv_host")).toBe(code);
     expect(fetchMock).toHaveBeenCalledWith(
       expect.stringContaining(`/api/queue/${code}/mode`),
       expect.any(Object)

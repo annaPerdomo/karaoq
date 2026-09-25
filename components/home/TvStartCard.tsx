@@ -32,9 +32,6 @@ export default function TvStartCard() {
       return;
     }
     await setPlayMode(code, 'tv');
-    try {
-      sessionStorage.setItem('karaoq_tv_host', code);
-    } catch {}
     router.push(`/display/${code}`);
   }
 
