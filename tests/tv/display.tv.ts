@@ -298,4 +298,30 @@ describe("display scales on a TV", () => {
       await close();
     }
   });
+
+  it("hides Connect a phone for a keyless viewer", async () => {
+    const { page, close } = await loadDisplay({ width: 1920, height: 1080 });
+    try {
+      await page.locator('[data-remote="customize"]').waitFor({ timeout: 30_000 });
+      expect(await page.locator('[data-remote="connect-phone"]').count()).toBe(0);
+    } finally {
+      await close();
+    }
+  });
+
+  it("shows Connect a phone for the seeded host and reaches it with the remote", async () => {
+    const { page, close } = await loadDisplay(
+      { width: 1920, height: 1080 },
+      { code: room.code, key: room.roomKey }
+    );
+    try {
+      const button = page.locator('[data-remote="connect-phone"]');
+      await button.waitFor({ timeout: 30_000 });
+      await button.focus();
+      const focused = await page.evaluate(() => document.activeElement?.getAttribute("data-remote"));
+      expect(focused).toBe("connect-phone");
+    } finally {
+      await close();
+    }
+  });
 });

@@ -165,4 +165,43 @@ describe("TvPairCard", () => {
 
     expect(await screen.findByRole("button", { name: /get a new code/i })).toBeInTheDocument();
   });
+
+  it("issues one poll per interval despite rapid visibility toggles", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    document.documentElement.setAttribute("data-tv", "1");
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ code: "482917", secret: "s3cr3t", expiresAt: Date.now() + 600_000 }),
+      } as Response)
+      .mockResolvedValue({ ok: true, json: async () => ({ status: "waiting" }) } as Response);
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<TvPairCard />);
+    const button = await screen.findByRole("button", { name: /show on this tv/i });
+    await act(async () => {
+      fireEvent.click(button);
+    });
+    const afterCreate = fetchMock.mock.calls.length;
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2000);
+    });
+    expect(fetchMock.mock.calls.length).toBe(afterCreate + 1);
+
+    await act(async () => {
+      Object.defineProperty(document, "hidden", { value: true, configurable: true });
+      document.dispatchEvent(new Event("visibilitychange"));
+      Object.defineProperty(document, "hidden", { value: false, configurable: true });
+      document.dispatchEvent(new Event("visibilitychange"));
+      Object.defineProperty(document, "hidden", { value: true, configurable: true });
+      document.dispatchEvent(new Event("visibilitychange"));
+      Object.defineProperty(document, "hidden", { value: false, configurable: true });
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    expect(fetchMock.mock.calls.length).toBe(afterCreate + 2);
+
+    Object.defineProperty(document, "hidden", { value: false, configurable: true });
+  });
 });
