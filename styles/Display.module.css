@@ -894,3 +894,110 @@ html[data-tv] .footerLink {
   display: inline-block;
   padding: calc(8px * var(--tv-scale, 1));
 }
+
+.connectPhoneBtn {
+  display: flex;
+  align-items: center;
+  gap: calc(6px * var(--tv-scale, 1));
+  height: calc(36px * var(--tv-scale, 1));
+  padding: 0 calc(11px * var(--tv-scale, 1));
+  border-radius: calc(10px * var(--tv-scale, 1));
+  color: var(--text-muted);
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.connectPhoneBtn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+}
+
+.connectPhoneBtn > svg {
+  width: calc(15px * var(--tv-scale, 1));
+  height: calc(15px * var(--tv-scale, 1));
+}
+
+.connectPhonePanel {
+  position: absolute;
+  z-index: 25;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  width: min(90%, calc(420px * var(--tv-scale, 1)));
+  padding: 1.6rem;
+  border-radius: calc(18px * var(--tv-scale, 1));
+  background: rgba(var(--disp-surface-rgb), 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(10px);
+  text-align: center;
+}
+
+.connectPhoneCode {
+  font-size: 2.4rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+
+.connectPhoneBody {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.connectPhoneCountdown {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.connectPhoneDone {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.connectPhoneRetry,
+.connectPhoneClose {
+  padding: 0.6rem 1.3rem;
+  border-radius: calc(10px * var(--tv-scale, 1));
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-secondary);
+}
+
+.connectPhoneRetry:hover,
+.connectPhoneClose:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.connectPhoneBtn:focus-visible,
+.connectPhoneRetry:focus-visible,
+.connectPhoneClose:focus-visible {
+  outline: calc(3px * var(--tv-scale, 1)) solid var(--acc-b);
+  outline-offset: calc(2px * var(--tv-scale, 1));
+}
+
+html[data-tv] .connectPhoneBtn:focus,
+html[data-tv] .connectPhoneRetry:focus,
+html[data-tv] .connectPhoneClose:focus {
+  outline: calc(3px * var(--tv-scale, 1)) solid var(--acc-b);
+  outline-offset: calc(2px * var(--tv-scale, 1));
+}
+
+html[data-tv] .connectPhoneBtn {
+  height: calc(44px * var(--tv-scale, 1));
+}

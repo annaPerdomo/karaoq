@@ -34,6 +34,9 @@ import { displayRailToggles } from './display/edit/railToggles';
 import { EditOverlay } from './edit/EditOverlay';
 import { SAMPLE_QUEUE } from './display/edit/sampleContent';
 import { Icons } from './host/icons';
+import { ConnectPhoneButton } from './display/ConnectPhoneButton';
+import { ConnectPhonePanel } from './display/ConnectPhonePanel';
+import { useConnectPhone } from './display/hooks/useConnectPhone';
 
 const POLL_INTERVAL = 1500;
 // How long a refused embed's notice shows before the queue moves on.
@@ -213,7 +216,8 @@ const Display = (): React.ReactElement => {
     },
   });
 
-  useDisplayRemoteNav(pageRef, isTvDevice(), edit);
+  const connectPhone = useConnectPhone(joinCode, edit.editing);
+  useDisplayRemoteNav(pageRef, isTvDevice(), edit, connectPhone);
 
   React.useEffect(() => {
     if (!joinCode) return;
@@ -522,6 +526,7 @@ const Display = (): React.ReactElement => {
               <span>{t('customize.button')}</span>
             </button>
           )}
+          {!edit.editing && !loading && <ConnectPhoneButton joinCode={joinCode} onPress={connectPhone.openPanel} />}
           <LanguageSwitcher className={styles.headerLang} />
         </div>
       </header>
@@ -544,6 +549,9 @@ const Display = (): React.ReactElement => {
           wrapUpIn={wrapUpIn}
           onPlaybackFailed={handlePlaybackFailed}
         />
+
+        {/* Shown only on demand and single-use: the code sits on a screen the whole room can see. */}
+        {connectPhone.open && !edit.editing && <ConnectPhonePanel stage={connectPhone.stage} code={connectPhone.code} secondsLeft={connectPhone.secondsLeft} onClose={connectPhone.close} onRetry={connectPhone.retry} />}
 
         {reactionsOn && visibleReactions.length > 0 && (
           <div className={styles.reactionOverlay}>
