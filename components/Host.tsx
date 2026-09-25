@@ -87,6 +87,7 @@ import { WelcomePrompt } from "./host/WelcomePrompt";
 import { HostHeader } from "./host/HostHeader";
 import { HostGate } from "./host/HostGate";
 import { SongStage } from "./host/SongStage";
+import { UseTvAsScreenBanner } from "./host/UseTvAsScreenBanner";
 import { TransportBar } from "./host/TransportBar";
 import { QueueSidebar } from "./host/QueueSidebar";
 import { useHostEdit } from "./host/edit/useHostEdit";
@@ -340,16 +341,17 @@ function HostBody({
 
   // Persisted on the room (every host device agrees) and in localStorage
   // (fallback for rooms predating server-stored modes).
-  function rememberMode(mode: PlayMode) {
-    if (!joinCode) return;
+  function rememberMode(mode: PlayMode): Promise<boolean> {
+    if (!joinCode) return Promise.resolve(false);
     try {
       localStorage.setItem(playModeStorageKey(joinCode), mode);
     } catch {}
     // Hold polling so an in-flight poll with the old mode can't flip the pill
     // back before the write lands.
     pausePolling();
-    savePlayMode(joinCode, mode).then((ok) => {
+    return savePlayMode(joinCode, mode).then((ok) => {
       if (!ok) resyncAfterFailedWrite();
+      return ok;
     });
   }
 
@@ -1405,6 +1407,7 @@ function HostBody({
         className={`${styles.content} ${hostView.sidebarPosition === "left" ? styles.contentSidebarLeft : ""}`}
       >
         <div className={tvMode ? styles.controlPanel : styles.playerArea}>
+          <UseTvAsScreenBanner remote={remote} playMode={playMode} joinCode={joinCode} onUseAsScreen={async () => { const ok = await rememberMode('tv'); if (ok) setPlayMode('tv'); else showToast(t('pair.err.generic')); return ok; }} />
           <SongStage
             loading={loading}
             currentSong={currentSong}

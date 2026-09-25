@@ -3218,3 +3218,71 @@ html[data-tv] .spToggleRow:focus {
   outline: calc(3px * var(--tv-scale, 1)) solid #00f0ff;
   outline-offset: calc(-3px * var(--tv-scale, 1));
 }
+
+.tvScreenBanner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 0.9rem 1.1rem;
+  margin-bottom: 0.75rem;
+  border-radius: 14px;
+  background: rgba(0, 240, 255, 0.08);
+  border: 1px solid rgba(0, 240, 255, 0.25);
+}
+
+.tvScreenText {
+  min-width: 0;
+}
+
+.tvScreenTitle {
+  display: block;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+}
+
+.tvScreenBody {
+  margin: 0.2rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.tvScreenActions {
+  display: flex;
+  gap: 0.6rem;
+  flex-shrink: 0;
+}
+
+.tvScreenUse {
+  padding: 0.6rem 1.1rem;
+  border-radius: 10px;
+  border: none;
+  background: linear-gradient(135deg, #ff2d78, #ff6b35);
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.tvScreenKeep {
+  padding: 0.6rem 1.1rem;
+  border-radius: 10px;
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.tvScreenUse:focus-visible,
+.tvScreenKeep:focus-visible {
+  outline: 3px solid #00f0ff;
+  outline-offset: 2px;
+}
+
+html[data-tv] .tvScreenUse:focus,
+html[data-tv] .tvScreenKeep:focus {
+  outline: 3px solid #00f0ff;
+  outline-offset: 2px;
+}
