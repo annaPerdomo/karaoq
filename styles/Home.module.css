@@ -653,6 +653,14 @@ html[data-tv] .dpNumB, html[data-tv] .dpCount3 { animation: none !important; opa
   text-align: center;
 }
 
+.connectTvHero {
+  margin-top: 0.85rem;
+  width: 100%;
+  max-width: 380px;
+  display: flex;
+  justify-content: center;
+}
+
 .heroNote {
   margin: 0.85rem 0 0;
   max-width: 380px;

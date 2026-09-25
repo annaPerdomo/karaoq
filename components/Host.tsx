@@ -77,6 +77,9 @@ import {
 import { ReactionOverlay } from "./host/ReactionOverlay";
 import { MobileFooter } from "./host/MobileFooter";
 import { CohostInviteModal } from "./host/CohostInviteModal";
+import { ConnectTvLauncher } from "./host/ConnectTvLauncher";
+import { useConnectTv } from "./host/hooks/useConnectTv";
+import { usePairedToast } from "./host/hooks/usePairedToast";
 import FeedbackModal from "./feedback/FeedbackModal";
 import { QrModal } from "./host/QrModal";
 import { ConfirmRemoveModal } from "./host/ConfirmRemoveModal";
@@ -366,6 +369,9 @@ function HostBody({
     setModeMenuOpen(false);
     showToast(t('host.toast.displayOpened'));
   }
+
+  const { connectTvRef, onTvPaired } = useConnectTv({ joinCode, setPlayMode, rememberMode, showToast, message: t('pair.remoteNow') });
+  usePairedToast({ remote, joinCode, message: t('pair.remoteNow'), showToast });
 
   async function copyCohostLink() {
     // Empty until a keyed room's key resolves — the modal hides Copy until then.
@@ -1391,6 +1397,7 @@ function HostBody({
           setSettingsOpen(false);
           setFeedbackOpen(true);
         }}
+        onConnectTv={() => { setSettingsOpen(false); setModeMenuOpen(false); connectTvRef.current?.open(); }}
         onBrandClick={() => router.push("/")}
       />
 
@@ -1590,7 +1597,7 @@ function HostBody({
           onRetry={retryMint}
         />
       )}
-
+      {joinCode && <ConnectTvLauncher ref={connectTvRef} joinCode={joinCode} onPaired={onTvPaired} />}
       {feedbackOpen && (
         <FeedbackModal
           onClose={() => setFeedbackOpen(false)}

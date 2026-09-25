@@ -24,6 +24,8 @@ import HomeFooter from './home/HomeFooter';
 import GlobalReach from './home/GlobalReach';
 import Reveal from './home/Reveal';
 import TvPairCard from './home/TvPairCard';
+import ConnectTvHero from './home/ConnectTvHero';
+import { createRoomForPairing } from '../app/pairing/createRoomForPairing';
 import { EMPTY_STATS, type PublicStats } from '../lib/publicStats';
 import { generateCode } from '../lib/roomCode';
 
@@ -236,6 +238,15 @@ const Home = ({ stats = EMPTY_STATS }: HomeProps): React.ReactElement => {
                 onShowJoin={() => setShowJoin(true)}
                 onHost={handleHost}
                 onJoin={handleJoin}
+              />
+
+              <ConnectTvHero
+                onNeedsRoom={() => createRoomForPairing(hostName)}
+                onPaired={(r) =>
+                  router.push(
+                    r.kind === 'screen' ? `/host/${r.roomId}?paired=1` : `/remote/${r.roomId}`
+                  )
+                }
               />
             </div>
 
