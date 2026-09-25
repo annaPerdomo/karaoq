@@ -74,6 +74,7 @@ import {
 import { brandStyle } from "../lib/brandStyle";
 import { v4 as uuidv4 } from "uuid";
 import { useT } from "../lib/i18n/I18nProvider";
+import { isTvDevice } from "../lib/calmMotion";
 import { POLL_INTERVAL, DISPLAY_GONE_CONFIRM_MS } from "./host/constants";
 import { formatSongTitle, includesCurrentInSidebar, shouldClaimPlayback, uniqueSingerCount } from "./host/utils";
 import {
@@ -303,9 +304,10 @@ const Host = ({
     if (!joinCode) return;
     try {
       const saved = localStorage.getItem(qrHiddenStorageKey(joinCode));
-      setQrShelfOpen(saved === null ? window.innerWidth > 1024 : saved !== "1");
+      // Ignores width on a TV: the QR is the display's job there, not the host's.
+      setQrShelfOpen(saved === null ? !isTvDevice() && window.innerWidth > 1024 : saved !== "1");
     } catch {
-      setQrShelfOpen(window.innerWidth > 1024);
+      setQrShelfOpen(!isTvDevice() && window.innerWidth > 1024);
     }
   }, [joinCode]);
 
