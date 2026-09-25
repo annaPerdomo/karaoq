@@ -4,6 +4,7 @@ import { trackEvent } from "../../../../lib/analytics";
 import { rateLimit } from "../../../../lib/limits";
 import { getRoomsCollection } from "../../../../lib/mongodb";
 import { normalizeRoomId } from "../../../../lib/roomCode";
+import { hashRoomKey, isLegacyRoom, mintRoomKey, publicRoom } from "../../../../lib/roomKeys";
 import { AUTO_START_STALE_MS } from "../../../../lib/autoAdvance";
 import { pruneRoomYoutubeData, roomPruneUpdate } from "../../../../lib/youtubeRetention";
 import { searchQuotaResetsAt } from "../../../../lib/searchQuotaStatus";
@@ -22,9 +23,11 @@ const DISPLAY_LIVE_MS = 75_000;
 // hold, so a co-host's Play during a long reorder can expire this and appear to do nothing.
 const PLAY_GRACE_MS = 15_000;
 
+type RoomResponse = Omit<Room, "keys"> & { roomKey?: string; roomKeyRole?: "host" };
+
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse<Room | ApiError>
+  res: NextApiResponse<RoomResponse | ApiError>
 ) {
   const roomId = normalizeRoomId(req.query.id);
 
@@ -64,13 +67,13 @@ export default async function handler(
               },
             }
           );
-          res.status(200).json({ ...existing, isPlaying: false });
+          res.status(200).json(publicRoom({ ...existing, isPlaying: false, keyed: !isLegacyRoom(existing) }));
         } else {
           await collection.updateOne(
             { id: roomId },
             { $set: { lastActivity: new Date() } }
           );
-          res.status(200).json(existing);
+          res.status(200).json(publicRoom({ ...existing, keyed: !isLegacyRoom(existing) }));
         }
       } else if (!ROOM_CODE_PATTERN.test(roomId)) {
         res.status(400).json({ code: 400, message: "Invalid room code." });
@@ -78,6 +81,7 @@ export default async function handler(
         res.status(429).json({ code: 429, message: "Too many rooms created, try again later." });
       } else {
         const now = new Date();
+        const hostKey = mintRoomKey();
         const room: Room = {
           id: roomId,
           queue: [],
@@ -92,6 +96,7 @@ export default async function handler(
           displayConfig: DEFAULT_DISPLAY_CONFIG,
           createdAt: now,
           lastActivity: now,
+          keys: [{ hash: hashRoomKey(hostKey), role: "host", createdAt: now }],
         };
         try {
           await collection.insertOne(room);
@@ -110,7 +115,7 @@ export default async function handler(
                 { id: roomId },
                 { $set: { lastActivity: new Date() } }
               );
-              res.status(200).json(winner);
+              res.status(200).json(publicRoom({ ...winner, keyed: !isLegacyRoom(winner) }));
               return;
             }
           }
@@ -120,7 +125,7 @@ export default async function handler(
         // it. Fire-and-forget was silently losing room_created events, which the whole activation
         // funnel counts from.
         await trackEvent(req, "room_created", { roomId, fairMode: room.fairMode });
-        res.status(201).json(room);
+        res.status(201).json({ ...publicRoom(room), keyed: true, roomKey: hostKey, roomKeyRole: "host" });
       }
     } else if (req.method === "GET") {
       res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
@@ -197,7 +202,8 @@ export default async function handler(
             : undefined;
 
         res.status(200).json({
-          ...room,
+          ...publicRoom(room),
+          keyed: !isLegacyRoom(room),
           autoStartAt,
           ...(pruned
             ? {

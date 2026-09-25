@@ -347,6 +347,10 @@ export interface Room {
   createdAt?: Date;
   /** Bumped on every write; drives the TTL index. */
   lastActivity?: Date;
+  /** Per-room access keys; never sent to a client — see lib/roomKeys publicRoom. */
+  keys?: { hash: string; role: "host" | "cohost" | "display"; createdAt: Date }[];
+  /** Computed on GET/POST from `keys`, never stored: true once any key exists. */
+  keyed?: boolean;
 }
 
 export interface QueueEntry {

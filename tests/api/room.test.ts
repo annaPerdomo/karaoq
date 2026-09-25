@@ -80,6 +80,9 @@ describe("POST /api/queue/[id] - Room creation", () => {
       displayConfig: DEFAULT_DISPLAY_CONFIG,
       createdAt: expect.any(Date),
       lastActivity: expect.any(Date),
+      keyed: true,
+      roomKey: expect.any(String),
+      roomKeyRole: "host",
     });
     expect(mockCollection.insertOne).toHaveBeenCalledWith({
       id: "ABC12",
@@ -93,7 +96,24 @@ describe("POST /api/queue/[id] - Room creation", () => {
       displayConfig: DEFAULT_DISPLAY_CONFIG,
       createdAt: expect.any(Date),
       lastActivity: expect.any(Date),
+      keys: [
+        { hash: expect.any(String), role: "host", createdAt: expect.any(Date) },
+      ],
     });
+  });
+
+  it("stores only the host key's hash, never the plaintext", async () => {
+    mockCollection.findOne.mockResolvedValue(null);
+    mockCollection.insertOne.mockResolvedValue({ insertedId: "x" });
+
+    const req = createMockReq({ method: "POST", query: { id: "ABC12" } });
+    const res = createRes();
+    await handler(req, res);
+
+    const body = res.getBody() as Room & { roomKey: string };
+    const stored = mockCollection.insertOne.mock.calls[0][0] as Room;
+    expect(stored.keys?.[0].hash).not.toBe(body.roomKey);
+    expect(stored).not.toHaveProperty("roomKey");
   });
 
   it("resets isPlaying when the device that was playing reconnects", async () => {
@@ -118,6 +138,7 @@ describe("POST /api/queue/[id] - Room creation", () => {
 
     expect(res.getStatus()).toBe(200);
     expect((res.getBody() as Room).isPlaying).toBe(false);
+    expect((res.getBody() as Room & { keyed: boolean }).keyed).toBe(false);
     expect(mockCollection.updateOne).toHaveBeenCalledWith(
       { id: "ABC12" },
       {
@@ -210,6 +231,28 @@ describe("POST /api/queue/[id] - Room creation", () => {
     );
   });
 
+  it("returns no key when joining an existing room", async () => {
+    const existing: Room = {
+      id: "ABC12",
+      queue: [],
+      activeVideoIndex: 0,
+      isPlaying: false,
+      reactionsEnabled: true,
+      keys: [{ hash: "abc", role: "host", createdAt: new Date() }],
+    };
+    mockCollection.findOne.mockResolvedValue(existing);
+    mockCollection.updateOne.mockResolvedValue({ matchedCount: 1 });
+
+    const req = createMockReq({ method: "POST", query: { id: "ABC12" } });
+    const res = createRes();
+    await handler(req, res);
+
+    const body = res.getBody() as Room & { roomKey?: string; keyed: boolean };
+    expect(body.roomKey).toBeUndefined();
+    expect(body.keyed).toBe(true);
+    expect(body).not.toHaveProperty("keys");
+  });
+
   it("rejects non-string room ID with 400", async () => {
     const req = createMockReq({ method: "POST", query: { id: ["a", "b"] } });
     const res = createRes();
@@ -285,8 +328,29 @@ describe("GET /api/queue/[id] - Room retrieval", () => {
       displayConfig: DEFAULT_DISPLAY_CONFIG,
       reactions: [],
       serverNow: expect.any(Number),
+      keyed: false,
     });
     expect(mockCollection.updateOne).not.toHaveBeenCalled();
+  });
+
+  it("never includes keys in a GET response, even when the room has them", async () => {
+    const room: Room = {
+      id: "XYZ99",
+      queue: [],
+      activeVideoIndex: 0,
+      isPlaying: false,
+      reactionsEnabled: true,
+      keys: [{ hash: "abc", role: "host", createdAt: new Date() }],
+    };
+    mockCollection.findOne.mockResolvedValue(room);
+
+    const req = createMockReq({ method: "GET", query: { id: "XYZ99" } });
+    const res = createRes();
+    await handler(req, res);
+
+    const body = res.getBody() as Room & { keyed: boolean };
+    expect(body).not.toHaveProperty("keys");
+    expect(body.keyed).toBe(true);
   });
 
   it("heals orphaned TV playback when no display is alive", async () => {

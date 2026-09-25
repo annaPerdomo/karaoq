@@ -52,6 +52,8 @@ async function post(at: string | undefined, id = "ROOM1") {
 describe("POST /api/queue/[id]/session-end", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Legacy room (no keys) by default — every check passes.
+    mockCollection.findOne.mockResolvedValue({ id: "ROOM1" });
     mockCollection.updateOne.mockResolvedValue({ matchedCount: 1 });
   });
 

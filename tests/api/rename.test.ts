@@ -35,7 +35,11 @@ function createRes() {
 }
 
 describe("POST /api/queue/[id]/rename - Rename a queue entry's singer", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // Legacy room (no keys) by default — every check passes.
+    mockCollection.findOne.mockResolvedValue({ id: "ROOM1" });
+  });
 
   it("renames via a positional $set so concurrent queue writes survive", async () => {
     mockCollection.updateOne.mockResolvedValue({ matchedCount: 1, modifiedCount: 1 });

@@ -53,7 +53,11 @@ const validConfig: HostConfig = {
 };
 
 describe("POST /api/queue/[id]/host-config - Save host config", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // Legacy room (no keys) by default — every check passes.
+    mockCollection.findOne.mockResolvedValue({ id: "ROOM1" });
+  });
 
   it("stores the config and bumps lastActivity", async () => {
     mockCollection.updateOne.mockResolvedValue({ matchedCount: 1 });

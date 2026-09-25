@@ -4,6 +4,7 @@ import { trackEvent } from "../../../../lib/analytics";
 import { rateLimit } from "../../../../lib/limits";
 import { getRoomsCollection } from "../../../../lib/mongodb";
 import { normalizeRoomId } from "../../../../lib/roomCode";
+import { allows, roomKeyFromRequest } from "../../../../lib/roomKeys";
 
 // Independent of auto-advance: alone, the surface cuts the song and waits for
 // Play; with both, the next singer follows on.
@@ -37,6 +38,15 @@ export default async function handler(
 
   try {
     const collection = await getRoomsCollection();
+    const keyRoom = await collection.findOne({ id: roomId }, { projection: { keys: 1 } });
+    if (!keyRoom) {
+      res.status(404).json({ code: 404, message: "Room not found." });
+      return;
+    }
+    if (!allows(keyRoom, roomKeyFromRequest(req), ["host", "cohost", "display"])) {
+      res.status(403).json({ code: 403, message: "room-key" });
+      return;
+    }
     const result = await collection.updateOne(
       { id: roomId },
       seconds === null

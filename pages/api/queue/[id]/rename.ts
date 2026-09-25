@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from "next";
 import { MAX_NAME_LENGTH } from "../../../../lib/limits";
 import { getRoomsCollection } from "../../../../lib/mongodb";
 import { normalizeRoomId } from "../../../../lib/roomCode";
+import { allows, roomKeyFromRequest } from "../../../../lib/roomKeys";
 
 // Rename the singer on one queue entry (the host's inline edit). Positional
 // $set touches only that entry, so concurrent queue writes are never clobbered.
@@ -30,6 +31,15 @@ export default async function handler(
 
   try {
     const collection = await getRoomsCollection();
+    const keyRoom = await collection.findOne({ id: roomId }, { projection: { keys: 1 } });
+    if (!keyRoom) {
+      res.status(404).json({ code: 404, message: "Room or entry not found." });
+      return;
+    }
+    if (!allows(keyRoom, roomKeyFromRequest(req), ["host", "cohost"])) {
+      res.status(403).json({ code: 403, message: "room-key" });
+      return;
+    }
     const result = await collection.updateOne(
       { id: roomId, "queue.id": entryId },
       { $set: { "queue.$.userName": userName, lastActivity: new Date() } }
