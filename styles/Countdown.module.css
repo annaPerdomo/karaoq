@@ -555,6 +555,49 @@ html[data-tv] .cheer {
   }
 }
 
+/* Sizes the countdown from the viewport height, not a fixed breakpoint px,
+   so the ring and heading fit above the transport bar at any TV resolution. */
+html[data-tv] .stageMain,
+html[data-tv] .stageMainCounting {
+  --stage-pad: 0.5rem;
+  --up-next-top: 8%;
+}
+
+html[data-tv] .stack {
+  gap: 0.3rem;
+}
+
+html[data-tv] .upNextLabel {
+  font-size: 0.7rem;
+  letter-spacing: 2px;
+}
+
+html[data-tv] .upNextSinger {
+  font-size: clamp(1.4rem, 3.2vh, 2rem);
+}
+
+html[data-tv] .upNextSong {
+  font-size: clamp(0.75rem, 1.3vh, 0.95rem);
+}
+
+html[data-tv] .stageCount {
+  gap: 0.3rem;
+}
+
+html[data-tv] .caption {
+  margin: 0 0 0.2rem;
+  font-size: 0.8rem;
+}
+
+html[data-tv] .stageCount .ring {
+  --ring-size: min(150px, 18vh);
+}
+
+/* Floors the em-relative unit label without growing the ring itself. */
+html[data-tv] .ringUnit {
+  font-size: max(0.7rem, 1em);
+}
+
 /* Song limit: the last seconds before the cut. Positioned against whichever
    surface's player wraps it — the display stage or the host's video frame. */
 .wrapUpPill {
