@@ -55,9 +55,17 @@ export default function TvPairCard() {
     if (stage !== 'showing' || !pairing) return;
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | null = null;
+    let inFlight = false;
 
     async function poll() {
+      if (inFlight) return;
+      if (timer) {
+        clearTimeout(timer);
+        timer = null;
+      }
+      inFlight = true;
       const result = await pollPairing(pairing!.code, pairing!.secret);
+      inFlight = false;
       if (cancelled) return;
       if (result.status === 'claimed') {
         setRoomKey(result.roomId, pairing!.secret, 'display');
@@ -77,7 +85,12 @@ export default function TvPairCard() {
     }
 
     function onVisibilityChange() {
-      if (!document.hidden && !cancelled) poll();
+      if (document.hidden || cancelled) return;
+      if (timer) {
+        clearTimeout(timer);
+        timer = null;
+      }
+      poll();
     }
 
     document.addEventListener('visibilitychange', onVisibilityChange);
