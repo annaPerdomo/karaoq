@@ -118,7 +118,7 @@ describe("host screen on a TV", () => {
       }),
     });
     expect(res.status).toBe(200);
-    const { page, close } = await tvPage(TV_AGENTS.tizen);
+    const { page, close } = await tvPage(TV_AGENTS.tizen, { roomKey: { code: room.code, key: room.roomKey } });
     try {
       await page.goto(`${BASE}/host/${room.code}`, { waitUntil: "load", timeout: 60_000 });
       const nameBox = page.getByPlaceholder(/enter your name/i);
@@ -145,7 +145,7 @@ describe("host screen on a TV", () => {
   });
 
   it("loads the room without errors", async () => {
-    const { page, errors, close } = await tvPage(TV_AGENTS.tizen);
+    const { page, errors, close } = await tvPage(TV_AGENTS.tizen, { roomKey: { code: room.code, key: room.roomKey } });
     try {
       await page.goto(`${BASE}/host/${room.code}`, { waitUntil: "load", timeout: 60_000 });
       // If the join code rendered, the room resolved and the screen is usable.
