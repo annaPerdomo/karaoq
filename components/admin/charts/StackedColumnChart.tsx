@@ -16,16 +16,27 @@ function niceTicks(max: number): number[] {
 
 const fmt = (n: number) => n.toLocaleString('en-US');
 
+export interface ReferenceLine {
+  value: number;
+  label: string;
+}
+
 export default function StackedColumnChart({
   data,
   series,
   height = 180,
   ariaLabel,
+  reference,
+  selected,
+  onSelect,
 }: {
   data: StackedDatum[];
   series: StackedSeries[];
   height?: number;
   ariaLabel?: string;
+  reference?: ReferenceLine;
+  selected?: number;
+  onSelect?: (index: number) => void;
 }): React.ReactElement {
   const [active, setActive] = React.useState<number | null>(null);
 
@@ -34,7 +45,7 @@ export default function StackedColumnChart({
   }
 
   const totals = data.map((d) => d.segments.reduce((a, b) => a + b, 0));
-  const max = Math.max(...totals, 1);
+  const max = Math.max(...totals, reference?.value ?? 0, 1);
   const ticks = niceTicks(max);
   const scaleMax = ticks[0] || 1;
   const xLabels =
@@ -54,13 +65,36 @@ export default function StackedColumnChart({
             <span className={styles.colTick}>{fmt(t)}</span>
           </div>
         ))}
+        {reference && (
+          <div
+            className={styles.colRefLine}
+            style={{ bottom: `${(reference.value / scaleMax) * 100}%` }}
+          >
+            <span className={styles.colRefLabel}>{reference.label}</span>
+          </div>
+        )}
         <div className={styles.colBaseline} />
         <div className={styles.colCells}>
           {data.map((d, i) => (
             <div
               key={`${d.label}-${i}`}
-              className={styles.colCell}
+              className={`${styles.colCell} ${onSelect ? styles.colCellClickable : ''} ${
+                selected === i ? styles.colCellSelected : ''
+              }`}
               tabIndex={0}
+              role={onSelect ? 'button' : undefined}
+              aria-pressed={onSelect ? selected === i : undefined}
+              onClick={onSelect ? () => onSelect(i) : undefined}
+              onKeyDown={
+                onSelect
+                  ? (e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        onSelect(i);
+                      }
+                    }
+                  : undefined
+              }
               onPointerEnter={() => setActive(i)}
               onPointerLeave={() => setActive((a) => (a === i ? null : a))}
               onFocus={() => setActive(i)}
@@ -97,6 +131,7 @@ export default function StackedColumnChart({
                       {sr.name}: {fmt(d.segments[s] ?? 0)}
                     </span>
                   ))}
+                  {d.note && <span className={styles.chartTipNote}>{d.note}</span>}
                 </div>
               )}
             </div>

@@ -23,7 +23,7 @@ export default function QuotaToday({
 }): React.ReactElement {
   const searches = ledger?.searches ?? 0;
   const cron = ledger?.cronSearches ?? 0;
-  const roomSearches = searches - cron;
+  const roomSearches = searches - cron - (ledger?.unloggedSearches ?? 0);
   const left = Math.max(0, quota - searches);
   const resets = resetsAt ? new Date(resetsAt) : null;
   // Fetched once, never polled: a countdown would freeze at 0m, a clock time stays true.
@@ -39,7 +39,7 @@ export default function QuotaToday({
         <StatTile
           label="Searches used"
           value={searches}
-          sub={`of ${quota} · ${roomSearches} by rooms, ${cron} by the nightly corpus job`}
+          sub={`of ${quota} · ${roomSearches} by rooms, ${cron} by the corpus job`}
           tone={tone(searches, quota)}
         />
         <StatTile

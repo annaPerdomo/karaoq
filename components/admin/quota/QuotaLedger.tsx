@@ -42,7 +42,7 @@ export default function QuotaLedger({ data }: { data: QuotaLedgerData }): React.
                     {formatDay(day.day)}
                     {day.day === data.today ? ' (today)' : ''}
                   </td>
-                  <td>{day.searches - day.cronSearches}</td>
+                  <td>{day.searches - day.cronSearches - (day.unloggedSearches ?? 0)}</td>
                   <td>{day.cronSearches}</td>
                   <td className={day.searches >= data.quota ? styles.quotaOverTotal : undefined}>
                     {day.searches} of {data.quota}
