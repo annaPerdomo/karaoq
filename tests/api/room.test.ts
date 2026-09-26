@@ -380,6 +380,44 @@ describe("GET /api/queue/[id] - Room retrieval", () => {
     );
   });
 
+  it("wakes a dormant room when a screen first opens it", async () => {
+    const room: Room = {
+      id: "XYZ99",
+      queue: [],
+      activeVideoIndex: 0,
+      isPlaying: false,
+      reactionsEnabled: true,
+      lastActivity: new Date(Date.now() - 3 * 60 * 60 * 1000),
+    };
+    mockCollection.findOne.mockResolvedValue(room);
+
+    const res = createRes();
+    await handler(createMockReq({ method: "GET", query: { id: "XYZ99", wake: "1" } }), res);
+
+    expect(mockCollection.updateOne).toHaveBeenCalledWith(
+      { id: "XYZ99" },
+      { $set: { lastActivity: expect.any(Date) } }
+    );
+    const body = res.getBody() as Room;
+    expect(Date.now() - new Date(body.lastActivity!).getTime()).toBeLessThan(5_000);
+  });
+
+  it("leaves lastActivity alone on a wake read of a room that isn't dormant", async () => {
+    const room: Room = {
+      id: "XYZ99",
+      queue: [],
+      activeVideoIndex: 0,
+      isPlaying: false,
+      reactionsEnabled: true,
+      lastActivity: new Date(Date.now() - 60_000),
+    };
+    mockCollection.findOne.mockResolvedValue(room);
+
+    await handler(createMockReq({ method: "GET", query: { id: "XYZ99", wake: "1" } }), createRes());
+
+    expect(mockCollection.updateOne).not.toHaveBeenCalled();
+  });
+
   it("refreshes a stale display heartbeat without bumping lastActivity", async () => {
     const room: Room = {
       id: "XYZ99",

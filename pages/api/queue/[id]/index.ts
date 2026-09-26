@@ -7,6 +7,7 @@ import { normalizeRoomId } from "../../../../lib/roomCode";
 import { AUTO_START_STALE_MS } from "../../../../lib/autoAdvance";
 import { pruneRoomYoutubeData, roomPruneUpdate } from "../../../../lib/youtubeRetention";
 import { searchQuotaResetsAt } from "../../../../lib/searchQuotaStatus";
+import { isRoomDormant } from "../../../../lib/roomDormancy";
 
 const REACTION_TTL_MS = 30000;
 
@@ -17,8 +18,7 @@ const ROOM_CODE_PATTERN = /^[A-Z0-9]{3,12}$/;
 // Displays heartbeat ~10s from a Web Worker; the window still survives a worst-case once-per-minute
 // throttled beat so a hidden-but-playing display is never mistaken for a dead one.
 const DISPLAY_LIVE_MS = 75_000;
-// A visible display's poll doubles as its heartbeat (the separate beat only runs while its tab is
-// hidden), refreshed at most this often so a poll isn't a write every 1.5s.
+// A visible display's poll is its heartbeat; Display only POSTs display-seen while hidden.
 const DISPLAY_SEEN_REFRESH_MS = 10_000;
 // Time for a display to load and start heartbeating after play — and, in here-mode, for a host page
 // to claim the surface — before playback counts as orphaned. A host mid-drag re-arms its polling
@@ -172,6 +172,13 @@ export default async function handler(
             );
             if (result.matchedCount > 0) isPlaying = false;
           }
+        }
+
+        // Only when dormant: otherwise page loads alone would keep an abandoned room from expiring.
+        if (req.query.wake === "1" && isRoomDormant({ isPlaying, lastActivity: room.lastActivity, serverNow: now })) {
+          const woke = new Date(now);
+          await collection.updateOne({ id: roomId }, { $set: { lastActivity: woke } });
+          room.lastActivity = woke;
         }
 
         // Like the display-seen route, this deliberately leaves lastActivity alone.

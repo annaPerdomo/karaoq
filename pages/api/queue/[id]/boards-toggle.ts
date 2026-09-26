@@ -38,7 +38,7 @@ export default async function handler(
     } else {
       await collection.updateOne(
         { id: roomId },
-        { $set: { boardsOnDisplay: enabled } }
+        { $set: { boardsOnDisplay: enabled, lastActivity: new Date() } }
       );
       // boardsOnDisplay defaults to ON, so turning boards OFF is the deviation.
       await trackEvent(req, "display_config_saved", {

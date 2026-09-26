@@ -43,6 +43,8 @@ const POLL_INTERVAL = 1500;
 const FAILED_VIDEO_SKIP_MS = 6000;
 // Server treats a display as gone after ~75s without a heartbeat.
 const HEARTBEAT_INTERVAL = 10_000;
+// Must stay above DORMANT_POLL_MS.
+const POLL_HEARTBEAT_STALE_MS = 30_000;
 
 const THEME_CLASS: Record<DisplayTheme, string> = {
   classic: '',
@@ -76,6 +78,7 @@ const Display = (): React.ReactElement => {
   const [loadError, setLoadError] = React.useState(false);
   const notFoundPollsRef = React.useRef(0);
   const dormantRef = React.useRef(false);
+  const lastPollOkRef = React.useRef(0);
   const [origin, setOrigin] = React.useState('');
   const [reactionsOn, setReactionsOn] = React.useState(true);
   const [displayConfig, setDisplayConfig] = React.useState<DisplayConfig>(DEFAULT_DISPLAY_CONFIG);
@@ -118,6 +121,15 @@ const Display = (): React.ReactElement => {
     if (!joinCode || error) return;
     const beat = () => postDisplaySeen(joinCode).catch(() => {});
     beat();
+    // The room GET heartbeats a visible display; beat anyway if polls stop landing.
+    const beatUnlessPollCarries = () => {
+      if (
+        document.visibilityState === 'hidden' ||
+        Date.now() - lastPollOkRef.current > POLL_HEARTBEAT_STALE_MS
+      ) {
+        beat();
+      }
+    };
 
     let stopTicker: () => void;
     try {
@@ -125,15 +137,10 @@ const Display = (): React.ReactElement => {
       const url = URL.createObjectURL(new Blob([src], { type: 'application/javascript' }));
       const worker = new Worker(url);
       URL.revokeObjectURL(url);
-      // While visible, the room poll carries the heartbeat (see the room GET).
-      worker.onmessage = () => {
-        if (document.visibilityState === 'hidden') beat();
-      };
+      worker.onmessage = beatUnlessPollCarries;
       stopTicker = () => worker.terminate();
     } catch {
-      const interval = setInterval(() => {
-        if (document.visibilityState === 'hidden') beat();
-      }, HEARTBEAT_INTERVAL);
+      const interval = setInterval(beatUnlessPollCarries, HEARTBEAT_INTERVAL);
       stopTicker = () => clearInterval(interval);
     }
 
@@ -187,6 +194,7 @@ const Display = (): React.ReactElement => {
   }
 
   function applyRoom(room: Room, animateReactions = true) {
+    dormantRef.current = isRoomDormant(room);
     setQueue(room.queue);
     setSingWithMe(room.singWithMe ?? []);
     setSuggestions(room.suggestions ?? []);
@@ -231,7 +239,7 @@ const Display = (): React.ReactElement => {
     let cancelled = false;
 
     async function init() {
-      let room = await getRoom(joinCode!, { display: true });
+      let room = await getRoom(joinCode!, { display: true, wake: true });
       if (cancelled) return;
       if (room === "notFound") {
         setError(t('display.errorTitle'));
@@ -290,7 +298,7 @@ const Display = (): React.ReactElement => {
         return;
       }
       notFoundPollsRef.current = 0;
-      dormantRef.current = isRoomDormant(room);
+      lastPollOkRef.current = Date.now();
       applyRoom(room);
       setLoadError(false);
       setLoading(false);

@@ -1,8 +1,6 @@
 import type { Room } from "../pages/api/types";
 
-// A room nobody has written to for this long, with nothing playing, is almost
-// always a party that ended with a TV or laptop tab still open. Those tabs poll
-// forever, so they slow down; the first write anywhere in the room wakes them.
+// Quiet this long with nothing playing is almost always an ended party with a tab left open.
 export const DORMANT_AFTER_MS = 2 * 60 * 60 * 1000;
 export const DORMANT_POLL_MS = 20_000;
 

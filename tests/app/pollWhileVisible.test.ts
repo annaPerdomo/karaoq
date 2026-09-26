@@ -29,4 +29,18 @@ describe("startVisiblePolling", () => {
     expect(fn).toHaveBeenCalledTimes(2);
     stop();
   });
+
+  it("reads the next pace after the response lands, so a wake-up applies at once", async () => {
+    vi.useFakeTimers();
+    let dormant = true;
+    let resolve!: () => void;
+    const fn = vi.fn(() => new Promise<void>((r) => { resolve = () => { dormant = false; r(); }; }));
+    const stop = startVisiblePolling(fn, () => (dormant ? 20_000 : 1000));
+    await vi.advanceTimersByTimeAsync(20_000);
+    expect(fn).toHaveBeenCalledTimes(1);
+    resolve();
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(fn).toHaveBeenCalledTimes(2);
+    stop();
+  });
 });

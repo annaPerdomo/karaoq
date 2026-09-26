@@ -167,6 +167,7 @@ const Sing = (): React.ReactElement => {
 
   // animateReactions=false on the first load only seeds the seen-set.
   function adoptRoom(room: Room, animateReactions = true) {
+    dormantRef.current = isRoomDormant(room);
     setQueue(room.queue);
     applyBoards(room);
     setActiveIndex(room.activeVideoIndex);
@@ -183,7 +184,7 @@ const Sing = (): React.ReactElement => {
 
     let cancelled = false;
     async function init() {
-      const room = await getRoom(joinCode!);
+      const room = await getRoom(joinCode!, { wake: true });
       if (cancelled) return;
       if (room === "notFound") {
         setError(t('sing.error.notFound'));
@@ -211,7 +212,6 @@ const Sing = (): React.ReactElement => {
         return;
       }
       notFoundPollsRef.current = 0;
-      dormantRef.current = isRoomDormant(room);
       adoptRoom(room);
       setLoadError(false);
       setLoading(false);

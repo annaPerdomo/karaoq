@@ -57,7 +57,10 @@ describe("Client API wrappers", () => {
       const result = await getRoom("XYZ99");
 
       expect(result).toEqual(roomData);
-      expect(mockFetch).toHaveBeenCalledWith("/api/queue/XYZ99", { cache: "no-store" });
+      expect(mockFetch).toHaveBeenCalledWith("/api/queue/XYZ99", {
+        cache: "no-store",
+        signal: expect.any(AbortSignal),
+      });
     });
 
     it("returns \"notFound\" only on a definitive 404", async () => {

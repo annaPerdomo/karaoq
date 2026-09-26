@@ -417,6 +417,7 @@ const Host = ({
   // doesn't play locally, co-hosts so the transport knows when a live display
   // is driving playback.
   function applyRoomState(room: Room) {
+    dormantRef.current = isRoomDormant(room);
     searchBack.applyRoom(room);
     setQueue(room.queue);
     applyBoards(room);
@@ -458,7 +459,7 @@ const Host = ({
       // Co-hosts only read — never create. Sending our stored play token lets the
       // server reset play state only when WE were the playback surface and reloaded.
       if (!remote) await createRoom(joinCode!, readStoredPlayToken(joinCode!));
-      const room = await getRoom(joinCode!);
+      const room = await getRoom(joinCode!, { wake: true });
       if (cancelled) return;
       if (room === "notFound") {
         setError(t('host.error.notFound'));
@@ -499,7 +500,6 @@ const Host = ({
         return;
       }
       notFoundPollsRef.current = 0;
-      dormantRef.current = isRoomDormant(room);
       applyRoomState(room);
       processReactions(room.reactions);
       // A successful poll also recovers a failed initial load.
