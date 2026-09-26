@@ -9,6 +9,7 @@ import type {
   SingWithMeRow,
 } from './roomDetailLabels';
 import type { DaySpend, MopUpOutcome } from '../../lib/corpusBudget';
+import type { ResolvedSong } from '../../lib/corpusResolve';
 
 export type MopUpWire = Omit<MopUpOutcome, 'at'> & { at: string };
 export type DaySpendWire = Omit<DaySpend, 'mopUp'> & { mopUp?: MopUpWire };
@@ -412,6 +413,20 @@ export interface DaySourcesWire {
   sources: Record<SearchSource, number>;
 }
 
+/** Unless `recorded`, only `rooms` is known, read from search_run events,
+ * which undercount. */
+export interface DayBilledWire {
+  day: string;
+  recorded: boolean;
+  out: boolean;
+  rooms: number;
+  nightly: number;
+  mopUp: number;
+  /** Billed because YouTube said the day was out before the ledger did. */
+  unlogged: number;
+  mopUpSongs?: ResolvedSong[];
+}
+
 /** Response contract of GET /api/analytics/quota. */
 export interface QuotaLedgerData {
   quota: number;
@@ -423,6 +438,8 @@ export interface QuotaLedgerData {
   roomsByDay?: DayRoomsWire[];
   /** Same days as `roomsByDay`. Absent from older deploys. */
   sourcesByDay?: DaySourcesWire[];
+  /** Same days as `roomsByDay`. Absent from older deploys. */
+  billedByDay?: DayBilledWire[];
 }
 
 export type AdminView = 'rooms' | 'quota' | 'errors' | 'suggestions' | 'pulse' | 'feedback';

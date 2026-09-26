@@ -1,15 +1,18 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { isAuthorizedAdmin } from "../../../lib/adminAuth";
 import {
+  type DaySpend,
   SEARCH_DAY_QUOTA,
   dayKeyBefore,
   ledgerDay,
+  searchesLeft,
   spentRecent,
 } from "../../../lib/corpusBudget";
 import { getAnalyticsDb } from "../../../lib/mongodb";
 import { quotaResetsAt } from "../../../lib/pacificTime";
 import type { AnalyticsEvent } from "../../../lib/analytics";
 import type {
+  DayBilledWire,
   DayRoomsWire,
   DaySourcesWire,
   DaySpendWire,
@@ -18,9 +21,8 @@ import type {
   SearchSource,
 } from "../../../components/admin/types";
 
-/** The ledger's days; cron_state's TTL drops older ones. */
 const LEDGER_DAYS = 7;
-/** search_run events live 90 days, so the room breakdown can look back further. */
+/** Within LEDGER_KEEP_DAYS, and search_run events live 90 days. */
 const HISTORY_DAYS = 30;
 const MAX_ROOMS_PER_DAY = 50;
 
@@ -97,6 +99,39 @@ async function searchesByDay(
   };
 }
 
+/** search_run events are fire-and-forget, so they only stand in for days the
+ *  ledger no longer holds. */
+function billedDay(spend: DaySpend, rooms: DayRoomsWire | undefined): DayBilledWire {
+  if (!spend.recorded) {
+    return {
+      day: spend.day,
+      recorded: false,
+      out: false,
+      rooms: rooms?.searches ?? 0,
+      nightly: 0,
+      mopUp: 0,
+      unlogged: 0,
+    };
+  }
+  const unlogged = spend.unloggedSearches ?? 0;
+  const mopUp = Math.min(
+    spend.cronSearches,
+    spend.mopUpSearches ?? spend.mopUp?.searched ?? 0
+  );
+  return {
+    day: spend.day,
+    recorded: true,
+    // In units, as the cron and room search read it: a spent day stops short
+    // of 100 searches, since each also bills its enrichment lookup.
+    out: searchesLeft(spend, SEARCH_DAY_QUOTA) === 0,
+    rooms: Math.max(0, spend.searches - spend.cronSearches - unlogged),
+    nightly: spend.cronSearches - mopUp,
+    mopUp,
+    unlogged,
+    mopUpSongs: spend.mopUp?.songs,
+  };
+}
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -114,12 +149,14 @@ export default async function handler(
   try {
     const now = Date.now();
     const [spent, searches] = await Promise.all([
-      spentRecent(now, LEDGER_DAYS),
+      spentRecent(now, HISTORY_DAYS),
       searchesByDay(now),
     ]);
-    const days: DaySpendWire[] = spent.map((day) => ({
+    const days: DaySpendWire[] = spent.slice(-LEDGER_DAYS).map((day) => ({
       ...day,
-      mopUp: day.mopUp ? { ...day.mopUp, at: day.mopUp.at.toISOString() } : undefined,
+      mopUp: day.mopUp
+        ? { ...day.mopUp, songs: undefined, at: day.mopUp.at.toISOString() }
+        : undefined,
     }));
     const data: QuotaLedgerData = {
       quota: SEARCH_DAY_QUOTA,
@@ -127,6 +164,7 @@ export default async function handler(
       resetsAt: quotaResetsAt(new Date(now)),
       days,
       ...searches,
+      billedByDay: spent.map((day, i) => billedDay(day, searches.roomsByDay[i])),
     };
     res.status(200).json(data);
   } catch (e) {

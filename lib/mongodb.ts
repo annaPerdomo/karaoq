@@ -589,7 +589,7 @@ export async function getSearchDemandCollection(): Promise<
 
 // Where each nightly step stopped, so a run that hits the 300s function cap
 // resumes. A cursor untouched for a week names a step that no longer runs.
-const CRON_STATE_TTL_SECONDS = 7 * 24 * 60 * 60;
+export const CRON_STATE_TTL_SECONDS = 7 * 24 * 60 * 60;
 
 export interface CronStateDoc {
   /** The step name, e.g. "sweep", "harvest", "migrate-v1". */
@@ -608,9 +608,11 @@ export interface CronStateDoc {
    *  One doc per day rather than one rolling doc, so every write is a plain
    *  $inc — rooms bill their searches here too now (see lib/corpusBudget), and
    *  a read-modify-write would lose them. They expire on the `cursorAt` clock
-   *  above, a week being long enough to read a spent day back. */
+   *  above, set ahead so the admin can chart a month (LEDGER_KEEP_DAYS). */
   searches?: number;
   cronSearches?: number;
+  mopUpSearches?: number;
+  unloggedSearches?: number;
   pages?: number;
   lookups?: number;
   /** The mop-up's own outcome for that day; see lib/corpusBudget. */

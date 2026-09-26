@@ -469,6 +469,36 @@ describe("GET /api/cron/suggestions - the mop-up slot", () => {
     expect(ledger()).toMatchObject({ searches: 9, cronSearches: 5 });
   });
 
+  it("bills its searches as the mop-up's share and keeps what each one found", async () => {
+    await recordSpend(Date.now(), { searches: 4 });
+
+    await mop();
+
+    expect(ledger()).toMatchObject({ searches: 9, cronSearches: 5, mopUpSearches: 5 });
+    expect(ledger().mopUp.songs).toHaveLength(5);
+    expect(ledger().mopUp.songs[0]).toMatchObject({ outcome: "new", cutsAdded: 1 });
+  });
+
+  it("adds a retry's searches to the first run's instead of replacing them", async () => {
+    await recordSpend(Date.now(), { searches: 4 });
+    await mop();
+    const first = ledger().mopUp.songs;
+    process.env.SUGGESTION_DAY_QUOTA = "13";
+
+    await mop();
+
+    // The chart's mop-up segment and the song list count the same searches.
+    const { mopUpSearches, mopUp } = ledger();
+    expect(mopUpSearches).toBeGreaterThan(first.length);
+    expect(mopUp.searched).toBe(mopUpSearches);
+    expect(mopUp.songs).toHaveLength(mopUpSearches);
+    expect(mopUp.songs.slice(0, first.length)).toEqual(first);
+  });
+
+  it("leaves the song list out of the run's log", async () => {
+    expect((await mop()).resolve.songs).toBeUndefined();
+  });
+
   it("counts the rooms' searches against the remainder, not just its own", async () => {
     // The nightly cap reads cronSearches so a busy evening can't cancel the run;
     // the mop-up reads the whole day, because a day rooms have spent has no

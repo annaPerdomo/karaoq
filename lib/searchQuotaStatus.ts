@@ -45,7 +45,7 @@ export async function confirmDailyOut(limit: "burst" | "daily" | null): Promise<
     const out = unitsLeft(spent, quota) <= UNBILLED_SLACK_UNITS;
     if (out) {
       const short = searchesLeft(spent, quota);
-      if (short > 0) await recordSpend(now, { searches: short });
+      if (short > 0) await recordSpend(now, { searches: short, unloggedSearches: short });
     }
     cache = { day: pacificDayKey(), out, at: now };
     return out;

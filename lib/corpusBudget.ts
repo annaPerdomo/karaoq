@@ -1,6 +1,7 @@
 import { randomUUID } from "crypto";
 
-import { getCronStateCollection } from "./mongodb";
+import { CRON_STATE_TTL_SECONDS, getCronStateCollection } from "./mongodb";
+import type { ResolvedSong } from "./corpusResolve";
 import { pacificDayKey, quotaResetsAtMs } from "./pacificTime";
 
 // vercel.json invokes this cron more than once a day: a slot buys wall-clock and
@@ -40,6 +41,11 @@ export interface DailySpend {
   /** The cron's own share of `searches`. Held apart so a busy day of singing
    *  doesn't read as the cron having already taken its nightly bite. */
   cronSearches: number;
+  /** The mop-up's share of `cronSearches`. Absent on days before it was kept. */
+  mopUpSearches?: number;
+  /** Searches billed on YouTube's word alone (lib/searchQuotaStatus
+   *  confirmDailyOut): spend that reached Google but no counter above saw. */
+  unloggedSearches?: number;
   pages: number;
   /** videos.list units bought outside the cron — today only the report endpoint.
    *  The sweep and the harvest spend units too and do not bill them here. */
@@ -61,6 +67,14 @@ function ledgerId(at: number): string {
   return `${LEDGER_ID}:${ledgerDay(at)}`;
 }
 
+export const LEDGER_KEEP_DAYS = 31;
+
+/** cron_state's one TTL index runs on `cursorAt` with a week's expiry, so a
+ *  ledger doc outlives it by setting that clock the difference ahead. */
+function ledgerExpiryClock(at: number): Date {
+  return new Date(at + LEDGER_KEEP_DAYS * 86_400_000 - CRON_STATE_TTL_SECONDS * 1000);
+}
+
 export async function spentToday(at: number): Promise<DailySpend> {
   const state = await getCronStateCollection();
   const doc = await state.findOne({ _id: ledgerId(at) });
@@ -78,7 +92,14 @@ export async function recordSpend(
   at: number,
   spent: Partial<DailySpend>
 ): Promise<void> {
-  if (!spent.searches && !spent.cronSearches && !spent.pages && !spent.lookups) {
+  if (
+    !spent.searches &&
+    !spent.cronSearches &&
+    !spent.mopUpSearches &&
+    !spent.unloggedSearches &&
+    !spent.pages &&
+    !spent.lookups
+  ) {
     return;
   }
   const state = await getCronStateCollection();
@@ -88,13 +109,14 @@ export async function recordSpend(
       $inc: {
         searches: spent.searches ?? 0,
         cronSearches: spent.cronSearches ?? 0,
+        mopUpSearches: spent.mopUpSearches ?? 0,
+        unloggedSearches: spent.unloggedSearches ?? 0,
         pages: spent.pages ?? 0,
         lookups: spent.lookups ?? 0,
       },
-      // cursorAt, not updatedAt, is cron_state's TTL clock (lib/mongodb), and a
-      // day's ledger should indeed be collected a week after its last write —
-      // otherwise one doc per day accumulates forever.
-      $set: { cursorAt: new Date(at), updatedAt: new Date(at) },
+      // cursorAt, not updatedAt, is cron_state's TTL clock (lib/mongodb); without
+      // it one doc per day accumulates forever.
+      $set: { cursorAt: ledgerExpiryClock(at), updatedAt: new Date(at) },
     },
     { upsert: true }
   );
@@ -102,6 +124,8 @@ export async function recordSpend(
 
 export interface DaySpend extends DailySpend {
   day: string;
+  /** False for a day with no ledger doc: nothing billed, or already expired. */
+  recorded: boolean;
   mopUp?: MopUpOutcome;
 }
 
@@ -111,23 +135,32 @@ export interface MopUpOutcome {
   budget: number;
   searched: number;
   filled: number;
+  songs?: ResolvedSong[];
   skipped: string | null;
   quotaSpent: boolean;
   /** Distinguishes a step that threw from one that ran and found nothing. */
   error: string | null;
 }
 
-/** GitHub Actions and Vercel can both land inside the window; a skip must not
- *  clobber the real run's outcome. */
+/** GitHub retries inside the window, so a second run adds to the first and an
+ *  empty one never clobbers it. Runs hold the lease, so the read can't race. */
 export async function recordMopUp(at: number, outcome: MopUpOutcome): Promise<void> {
   const state = await getCronStateCollection();
-  if (outcome.searched === 0 && outcome.skipped) {
-    const existing = await state.findOne({ _id: ledgerId(at) });
-    if (existing?.mopUp) return;
-  }
+  const earlier = (await state.findOne({ _id: ledgerId(at) }))?.mopUp;
+  if (earlier && outcome.searched === 0) return;
+  const merged: MopUpOutcome =
+    earlier && earlier.searched > 0
+      ? {
+          ...outcome,
+          budget: earlier.budget + outcome.budget,
+          searched: earlier.searched + outcome.searched,
+          filled: earlier.filled + outcome.filled,
+          songs: [...(earlier.songs ?? []), ...(outcome.songs ?? [])],
+        }
+      : outcome;
   await state.updateOne(
     { _id: ledgerId(at) },
-    { $set: { mopUp: outcome, cursorAt: new Date(at), updatedAt: new Date(at) } },
+    { $set: { mopUp: merged, cursorAt: ledgerExpiryClock(at), updatedAt: new Date(at) } },
     { upsert: true }
   );
 }
@@ -159,8 +192,7 @@ export function dayKeyBefore(day: string, n: number): string {
   return new Date(Date.UTC(y, m - 1, d - n)).toISOString().slice(0, 10);
 }
 
-// Oldest first, zero-filled. Only a week is readable: cron_state's TTL
-// (lib/mongodb) collects older docs.
+// Oldest first, zero-filled. Only LEDGER_KEEP_DAYS are readable.
 export async function spentRecent(at: number, days: number): Promise<DaySpend[]> {
   const today = ledgerDay(at);
   const keys: string[] = [];
@@ -174,8 +206,11 @@ export async function spentRecent(at: number, days: number): Promise<DaySpend[]>
     const doc = byId.get(`${LEDGER_ID}:${day}`);
     return {
       day,
+      recorded: Boolean(doc),
       searches: doc?.searches ?? 0,
       cronSearches: doc?.cronSearches ?? 0,
+      mopUpSearches: doc?.mopUpSearches,
+      unloggedSearches: doc?.unloggedSearches,
       pages: doc?.pages ?? 0,
       lookups: doc?.lookups ?? 0,
       mopUp: doc?.mopUp,

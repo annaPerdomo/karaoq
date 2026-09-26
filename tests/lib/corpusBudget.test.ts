@@ -34,6 +34,7 @@ import {
   releaseRun,
   remaining,
   spentRecent,
+  LEDGER_KEEP_DAYS,
 } from "../../lib/corpusBudget";
 import { quotaResetsAtMs } from "../../lib/pacificTime";
 
@@ -123,6 +124,25 @@ describe("spentRecent", () => {
     expect(days[2]).toMatchObject({ searches: 3, cronSearches: 1 });
   });
 
+  it("tells a day the ledger holds from one it zero-filled", async () => {
+    const at = Date.parse("2026-09-10T20:00:00Z");
+    await recordSpend(at, { searches: 3, mopUpSearches: 2, unloggedSearches: 1 });
+
+    const [before, today] = await spentRecent(at, 2);
+
+    expect(before.recorded).toBe(false);
+    expect(today).toMatchObject({ recorded: true, mopUpSearches: 2, unloggedSearches: 1 });
+  });
+
+  it("keeps a day's ledger a month past cron_state's week-long TTL", async () => {
+    const at = Date.parse("2026-09-10T20:00:00Z");
+    await recordSpend(at, { searches: 1 });
+
+    const doc = state().get(`budget:${ledgerDay(at)}`);
+    const expiresAt = doc.cursorAt.getTime() + 7 * 24 * 60 * MINUTE;
+    expect(expiresAt - at).toBe(LEDGER_KEEP_DAYS * 24 * 60 * MINUTE);
+  });
+
   it("walks back over the 23-hour spring-forward day without skipping it", async () => {
     // 00:30 PDT on Mar 9, 2026; 24 clock hours earlier is still Mar 7.
     const at = Date.parse("2026-03-09T07:30:00Z");
@@ -208,32 +228,30 @@ describe("recordMopUp", () => {
     });
   });
 
-  it("still overwrites when the later run actually searched something", async () => {
+  it("adds a later run that searched to the earlier one", async () => {
     const at = Date.now();
-    await recordMopUp(at, {
-      at: new Date(at),
-      liveRooms: 0,
-      budget: 10,
-      searched: 3,
-      filled: 1,
-      skipped: null,
-      quotaSpent: false,
-      error: null,
-    });
+    const song = (title: string) => ({ title, artist: "A", outcome: "new" as const, cutsAdded: 1 });
+    const run = { at: new Date(at), liveRooms: 0, skipped: null, quotaSpent: false, error: null };
+    await recordMopUp(at, { ...run, budget: 10, searched: 3, filled: 1, songs: [song("one")] });
 
-    await recordMopUp(at, {
-      at: new Date(at),
-      liveRooms: 0,
-      budget: 10,
-      searched: 5,
-      filled: 2,
-      skipped: null,
-      quotaSpent: false,
-      error: null,
-    });
+    await recordMopUp(at, { ...run, budget: 7, searched: 5, filled: 2, songs: [song("two")] });
 
-    expect(state().get(`budget:${ledgerDay(at)}`)).toMatchObject({
-      mopUp: { searched: 5, filled: 2 },
+    expect(state().get(`budget:${ledgerDay(at)}`).mopUp).toMatchObject({
+      budget: 17,
+      searched: 8,
+      filled: 3,
+      songs: [song("one"), song("two")],
     });
+  });
+
+  it("keeps the earlier run when a retry found nothing to search", async () => {
+    const at = Date.now();
+    const run = { at: new Date(at), liveRooms: 0, skipped: null, quotaSpent: false, error: null };
+    await recordMopUp(at, { ...run, budget: 10, searched: 3, filled: 1 });
+
+    // Wanted and thin lists already exhausted: no skip reason, just nothing done.
+    await recordMopUp(at, { ...run, budget: 7, searched: 0, filled: 0 });
+
+    expect(state().get(`budget:${ledgerDay(at)}`).mopUp).toMatchObject({ searched: 3, filled: 1 });
   });
 });

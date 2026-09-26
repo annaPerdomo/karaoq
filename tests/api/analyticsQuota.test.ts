@@ -146,6 +146,58 @@ describe("GET /api/analytics/quota", () => {
     expect(body.sourcesByDay.find((d: any) => d.day === nineBack.day).sources.stale).toBe(1);
   });
 
+  it("splits each ledger day by who billed it, and falls back to room events past it", async () => {
+    const now = Date.now();
+    const today = ledgerDay(now);
+    const songs = [{ title: "Dancing Queen", artist: "ABBA", outcome: "new", cutsAdded: 3 }];
+    collectionFor("cron_state").seed({
+      _id: `budget:${today}`,
+      searches: 100,
+      cronSearches: 70,
+      mopUpSearches: 30,
+      unloggedSearches: 2,
+      pages: 0,
+      lookups: 0,
+      mopUp: { at: new Date(now), liveRooms: 0, budget: 30, searched: 30, filled: 1, songs, skipped: null, quotaSpent: false, error: null },
+    });
+    const twentyDaysAgo = new Date(now - 20 * 24 * 60 * 60 * 1000);
+    collectionFor("analytics_events").seed({
+      _id: "e1", type: "search_run", roomId: "ABCD", searchCache: "miss", timestamp: twentyDaysAgo,
+    });
+
+    const body = (await get()).getBody();
+
+    expect(body.billedByDay).toHaveLength(30);
+    expect(body.billedByDay[29]).toEqual({
+      day: today,
+      recorded: true,
+      out: true,
+      rooms: 28,
+      nightly: 40,
+      mopUp: 30,
+      unlogged: 2,
+      mopUpSongs: songs,
+    });
+    const old = body.billedByDay.find((d: any) => d.rooms === 1);
+    expect(old).toMatchObject({ recorded: false, nightly: 0, mopUp: 0 });
+  });
+
+  it("reads an older ledger doc's mop-up share from its outcome", async () => {
+    const now = Date.now();
+    collectionFor("cron_state").seed({
+      _id: `budget:${ledgerDay(now)}`,
+      searches: 90,
+      cronSearches: 77,
+      pages: 0,
+      lookups: 0,
+      mopUp: { at: new Date(now), liveRooms: 0, budget: 37, searched: 37, filled: 36, skipped: null, quotaSpent: false, error: null },
+    });
+
+    const body = (await get()).getBody();
+
+    expect(body.billedByDay[29]).toMatchObject({ rooms: 13, nightly: 40, mopUp: 37, unlogged: 0 });
+  });
+
   it("405s on POST", async () => {
     const res = createRes();
     await handler(

@@ -22,7 +22,7 @@ import {
 import { migrateToCorpus } from "../../../lib/corpusMigration";
 import { proposeUnmappedAdds, PROPOSAL_SCAN_LIMIT } from "../../../lib/corpusProposals";
 import { publishCorpus } from "../../../lib/corpusPublish";
-import { resolveWantedSongs } from "../../../lib/corpusResolve";
+import { type ResolvedSong, resolveWantedSongs } from "../../../lib/corpusResolve";
 import {
   REFRESH_AFTER_DAYS,
   SWEEP_PER_RUN,
@@ -165,6 +165,7 @@ export default async function handler(
   const daySpent = forced ? false : (await searchQuotaResetsAt()) !== null;
 
   /** Cheap and user-visible first; search is last, since rooms compete for it. */
+  let resolvedSongs: ResolvedSong[] = [];
   const steps: StepSpec[] = [
     {
       name: "migrate",
@@ -286,7 +287,10 @@ export default async function handler(
         const { done, report } = await resolveWantedSongs(by, searchBudget, () =>
           bill({ searches: 1 })
         );
-        return { done, report: { ...report } };
+        // Kept for the mop-up's ledger entry, out of the run log it would swamp.
+        const { songs, ...logged } = report;
+        resolvedSongs = songs;
+        return { done, report: logged };
       },
     },
   ];
@@ -300,9 +304,10 @@ export default async function handler(
       const by = Math.min(Date.now() + step.budgetMs, deadline - reserved);
       // A search the cron runs is both a call against the day and the cron's
       // own share of it, so it is billed to both counters (lib/corpusBudget).
-      const billed: DailySpend = {
+      const billed: DailySpend & { mopUpSearches: number } = {
         searches: 0,
         cronSearches: 0,
+        mopUpSearches: 0,
         pages: 0,
         lookups: 0,
       };
@@ -310,6 +315,7 @@ export default async function handler(
         const { done, report } = await step.run(by, (units) => {
           billed.searches += units.searches ?? 0;
           billed.cronSearches += units.searches ?? 0;
+          if (mopUp) billed.mopUpSearches += units.searches ?? 0;
           billed.pages += units.pages ?? 0;
         });
         ran[step.name] = { done, ...report };
@@ -334,6 +340,7 @@ export default async function handler(
   if (mopUp) {
     const resolved = (ran.resolve ?? {}) as {
       searched?: number;
+      widened?: number;
       filled?: number;
       quotaSpent?: boolean;
       skipped?: string;
@@ -343,8 +350,9 @@ export default async function handler(
       at: new Date(started),
       liveRooms,
       budget: searchBudget,
-      searched: resolved.searched ?? 0,
+      searched: (resolved.searched ?? 0) + (resolved.widened ?? 0),
       filled: resolved.filled ?? 0,
+      songs: resolvedSongs,
       skipped: resolved.skipped ?? null,
       quotaSpent: resolved.quotaSpent ?? false,
       error: resolved.error ?? null,
