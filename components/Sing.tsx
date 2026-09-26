@@ -12,6 +12,7 @@ import postReaction from '../app/queue/postReaction';
 import { REACTION_COOLDOWN_MS, isTextReaction } from '../app/queue/cheerConstants';
 import { startSessionTracking } from '../app/queue/trackSession';
 import { startVisiblePolling } from '../app/queue/pollWhileVisible';
+import { DORMANT_POLL_MS, isRoomDormant } from '../lib/roomDormancy';
 import { useSearchBackNotice } from '../app/queue/useSearchBackNotice';
 import SearchBackToast from './search/SearchBackToast';
 import { DisplayTheme, QueueEntry, Reaction, Room, normalizeDisplayConfig } from '../pages/api/types';
@@ -56,6 +57,7 @@ const Sing = (): React.ReactElement => {
   const [loadError, setLoadError] = React.useState(false);
   const [initNonce, setInitNonce] = React.useState(0);
   const notFoundPollsRef = React.useRef(0);
+  const dormantRef = React.useRef(false);
   const [reactionCooldown, setReactionCooldown] = React.useState(false);
   const [lastSentEmoji, setLastSentEmoji] = React.useState<string | null>(null);
   const [mobileQueueOpen, setMobileQueueOpen] = React.useState(false);
@@ -209,10 +211,11 @@ const Sing = (): React.ReactElement => {
         return;
       }
       notFoundPollsRef.current = 0;
+      dormantRef.current = isRoomDormant(room);
       adoptRoom(room);
       setLoadError(false);
       setLoading(false);
-    }, POLL_INTERVAL);
+    }, () => (dormantRef.current ? DORMANT_POLL_MS : POLL_INTERVAL));
   }, [joinCode, error, processReactions, applyBoards, applyTiming, applySearchBack]);
 
   function handleSongAdded(entry: QueueEntry) {

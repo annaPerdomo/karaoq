@@ -3,7 +3,8 @@
 // so returning users never see stale state.
 export function startVisiblePolling(
   fn: () => void | Promise<unknown>,
-  intervalMs: number
+  // A function is re-read before every tick, so a poll can change its own pace.
+  intervalMs: number | (() => number)
 ): () => void {
   // One tick at a time: without this, a slow response can resolve after a
   // faster later one and apply an older snapshot — on the display that
@@ -29,7 +30,11 @@ export function startVisiblePolling(
     if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
     run();
   };
-  const interval = setInterval(tick, intervalMs);
+  const nextDelay = () => (typeof intervalMs === "function" ? intervalMs() : intervalMs);
+  let timer = setTimeout(function loop() {
+    tick();
+    timer = setTimeout(loop, nextDelay());
+  }, nextDelay());
 
   const onVisibilityChange = () => {
     if (document.visibilityState === "visible") run();
@@ -39,7 +44,7 @@ export function startVisiblePolling(
   }
 
   return () => {
-    clearInterval(interval);
+    clearTimeout(timer);
     if (typeof document !== "undefined") {
       document.removeEventListener("visibilitychange", onVisibilityChange);
     }

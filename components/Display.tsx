@@ -12,6 +12,7 @@ import { onRoomState, onDisplayPause, broadcastVideoEnded } from '../app/queue/r
 import { useRoomTiming } from './hooks/useRoomTiming';
 import { startSessionTracking } from '../app/queue/trackSession';
 import { startVisiblePolling } from '../app/queue/pollWhileVisible';
+import { DORMANT_POLL_MS, isRoomDormant } from '../lib/roomDormancy';
 import { isTextReaction } from '../app/queue/cheerConstants';
 import { AutoAdvance, AUTO_ADVANCE_OFF, DEFAULT_DISPLAY_CONFIG, DisplayConfig, DisplayTheme, normalizeAutoAdvance, normalizeDisplayConfig, normalizeSongLimit, PlayMode, QueueEntry, Reaction, Room, SingWithMePost, SuggestedSong } from '../pages/api/types';
 import { useAutoStart } from './hooks/useAutoStart';
@@ -74,6 +75,7 @@ const Display = (): React.ReactElement => {
   const [error, setError] = React.useState<string | null>(null);
   const [loadError, setLoadError] = React.useState(false);
   const notFoundPollsRef = React.useRef(0);
+  const dormantRef = React.useRef(false);
   const [origin, setOrigin] = React.useState('');
   const [reactionsOn, setReactionsOn] = React.useState(true);
   const [displayConfig, setDisplayConfig] = React.useState<DisplayConfig>(DEFAULT_DISPLAY_CONFIG);
@@ -123,10 +125,15 @@ const Display = (): React.ReactElement => {
       const url = URL.createObjectURL(new Blob([src], { type: 'application/javascript' }));
       const worker = new Worker(url);
       URL.revokeObjectURL(url);
-      worker.onmessage = beat;
+      // While visible, the room poll carries the heartbeat (see the room GET).
+      worker.onmessage = () => {
+        if (document.visibilityState === 'hidden') beat();
+      };
       stopTicker = () => worker.terminate();
     } catch {
-      const interval = setInterval(beat, HEARTBEAT_INTERVAL);
+      const interval = setInterval(() => {
+        if (document.visibilityState === 'hidden') beat();
+      }, HEARTBEAT_INTERVAL);
       stopTicker = () => clearInterval(interval);
     }
 
@@ -283,10 +290,11 @@ const Display = (): React.ReactElement => {
         return;
       }
       notFoundPollsRef.current = 0;
+      dormantRef.current = isRoomDormant(room);
       applyRoom(room);
       setLoadError(false);
       setLoading(false);
-    }, POLL_INTERVAL);
+    }, () => (dormantRef.current ? DORMANT_POLL_MS : POLL_INTERVAL));
   }, [joinCode, error]);
 
   const currentSongId = queue[activeIndex]?.id;

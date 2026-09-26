@@ -372,6 +372,48 @@ describe("GET /api/queue/[id] - Room retrieval", () => {
     await handler(req, res);
 
     expect((res.getBody() as Room).isPlaying).toBe(true);
+    // The only write is the display's own heartbeat — never a heal.
+    expect(mockCollection.updateOne).toHaveBeenCalledTimes(1);
+    expect(mockCollection.updateOne).toHaveBeenCalledWith(
+      { id: "XYZ99" },
+      { $set: { displayLastSeen: expect.any(Date) } }
+    );
+  });
+
+  it("refreshes a stale display heartbeat without bumping lastActivity", async () => {
+    const room: Room = {
+      id: "XYZ99",
+      queue: [],
+      activeVideoIndex: 0,
+      isPlaying: false,
+      reactionsEnabled: true,
+      displayLastSeen: new Date(Date.now() - 11_000),
+    };
+    mockCollection.findOne.mockResolvedValue(room);
+
+    await handler(createMockReq({ method: "GET", query: { id: "XYZ99", display: "1" } }), createRes());
+
+    expect(mockCollection.updateOne).toHaveBeenCalledWith(
+      { id: "XYZ99" },
+      { $set: { displayLastSeen: expect.any(Date) } }
+    );
+  });
+
+  it("skips the heartbeat write while it is still fresh, and for non-display readers", async () => {
+    const room: Room = {
+      id: "XYZ99",
+      queue: [],
+      activeVideoIndex: 0,
+      isPlaying: false,
+      reactionsEnabled: true,
+      displayLastSeen: new Date(Date.now() - 2_000),
+    };
+    mockCollection.findOne.mockResolvedValue(room);
+    await handler(createMockReq({ method: "GET", query: { id: "XYZ99", display: "1" } }), createRes());
+
+    mockCollection.findOne.mockResolvedValue({ ...room, displayLastSeen: undefined });
+    await handler(createMockReq({ method: "GET", query: { id: "XYZ99" } }), createRes());
+
     expect(mockCollection.updateOne).not.toHaveBeenCalled();
   });
 

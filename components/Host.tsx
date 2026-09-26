@@ -42,6 +42,7 @@ import postReaction from "../app/queue/postReaction";
 import { REACTION_COOLDOWN_MS } from "../app/queue/cheerConstants";
 import { startSessionTracking } from "../app/queue/trackSession";
 import { startVisiblePolling } from "../app/queue/pollWhileVisible";
+import { DORMANT_POLL_MS, isRoomDormant } from "../lib/roomDormancy";
 import { useSearchBackNotice } from "../app/queue/useSearchBackNotice";
 import SearchBackToast from "./search/SearchBackToast";
 import {
@@ -122,6 +123,7 @@ const Host = ({
   const [initNonce, setInitNonce] = React.useState(0);
   // Consecutive not-found polls — a single blip must not surface not-found.
   const notFoundPollsRef = React.useRef(0);
+  const dormantRef = React.useRef(false);
   const [origin, setOrigin] = React.useState("");
   const [confirmRemove, setConfirmRemove] = React.useState<string | null>(null);
   const [reactionsOn, setReactionsOn] = React.useState(true);
@@ -497,12 +499,13 @@ const Host = ({
         return;
       }
       notFoundPollsRef.current = 0;
+      dormantRef.current = isRoomDormant(room);
       applyRoomState(room);
       processReactions(room.reactions);
       // A successful poll also recovers a failed initial load.
       setLoadError(false);
       setLoading(false);
-    }, POLL_INTERVAL);
+    }, () => (dormantRef.current ? DORMANT_POLL_MS : POLL_INTERVAL));
   }, [joinCode, error, isPaused]);
 
   // Auto-fallback to "this screen" when a cast display disappears (hosts only).
