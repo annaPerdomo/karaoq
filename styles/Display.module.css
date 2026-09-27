@@ -897,6 +897,7 @@ html[data-tv] .footerLink {
 
 .connectPhoneBtn {
   display: flex;
+  white-space: nowrap;
   align-items: center;
   gap: calc(6px * var(--tv-scale, 1));
   height: calc(36px * var(--tv-scale, 1));

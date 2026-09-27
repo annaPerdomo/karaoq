@@ -39,6 +39,7 @@ export function ConnectPhonePanel({
         </>
       ) : code ? (
         <>
+          <p className={styles.connectPhoneBody}>{t("display.connectPhone.lead")}</p>
           <div className={styles.connectPhoneCode}>{formatPairCode(code)}</div>
           <p className={styles.connectPhoneBody}>{t("display.connectPhone.steps")}</p>
           <p className={styles.connectPhoneCountdown}>{t("home.tv.expiresIn", { seconds: secondsLeft })}</p>

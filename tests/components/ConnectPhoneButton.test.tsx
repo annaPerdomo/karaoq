@@ -10,14 +10,14 @@ describe("ConnectPhoneButton", () => {
 
   it("shows when host", () => {
     render(<ConnectPhoneButton isHost={true} onPress={vi.fn()} />);
-    expect(screen.getByRole("button", { name: /connect a phone/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /control the room from your phone/i })).toBeInTheDocument();
   });
 
   it("hides once isHost flips to false", () => {
     const { rerender } = render(<ConnectPhoneButton isHost={true} onPress={vi.fn()} />);
-    expect(screen.getByRole("button", { name: /connect a phone/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /control the room from your phone/i })).toBeInTheDocument();
 
     rerender(<ConnectPhoneButton isHost={false} onPress={vi.fn()} />);
-    expect(screen.queryByRole("button", { name: /connect a phone/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /control the room from your phone/i })).not.toBeInTheDocument();
   });
 });

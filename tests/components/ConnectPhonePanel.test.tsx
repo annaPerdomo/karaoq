@@ -9,11 +9,12 @@ describe("ConnectPhonePanel", () => {
     );
     expect(screen.getByText("4829 1765")).toBeInTheDocument();
     expect(screen.getByText(/42s/)).toBeInTheDocument();
+    expect(screen.getByText(/the tv keeps playing/i)).toBeInTheDocument();
   });
 
   it("shows the done message when claimed", () => {
     render(<ConnectPhonePanel stage="claimed" code="" secondsLeft={0} onClose={vi.fn()} onRetry={vi.fn()} />);
-    expect(screen.getByText(/your phone is the host now/i)).toBeInTheDocument();
+    expect(screen.getByText(/your phone controls the room now/i)).toBeInTheDocument();
   });
 
   it("shows an expired notice with a new-code button", () => {
