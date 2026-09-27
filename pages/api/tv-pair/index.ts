@@ -35,6 +35,8 @@ export default async function handler(
     return;
   }
 
+  let minterHash: string | undefined;
+
   try {
     if (kind === "remote") {
       const roomId = normalizeRoomId((body as { roomId?: unknown }).roomId as string | undefined);
@@ -44,13 +46,18 @@ export default async function handler(
       }
       const rooms = await getRoomsCollection();
       const room = await rooms.findOne({ id: roomId }, { projection: { keys: 1 } });
-      if (!room || isLegacyRoom(room) || !allows(room, roomKeyFromRequest(req), ["host"])) {
+      const requestKey = roomKeyFromRequest(req);
+      if (!room || isLegacyRoom(room) || !allows(room, requestKey, ["host"])) {
         res.status(403).json({ code: 403, message: "room-key" });
         return;
       }
+      minterHash = hashRoomKey(requestKey as string);
     }
 
     const pairings = await getTvPairingsCollection();
+    if (minterHash) {
+      await pairings.deleteMany({ minterHash, claimedAt: { $exists: false } });
+    }
     const secret = mintRoomKey();
     const now = new Date();
     let code: string | null = null;
@@ -63,7 +70,7 @@ export default async function handler(
           secretHash: hashRoomKey(secret),
           createdAt: now,
           ...(kind === "remote"
-            ? { roomId: normalizeRoomId((body as { roomId?: unknown }).roomId as string) as string }
+            ? { roomId: normalizeRoomId((body as { roomId?: unknown }).roomId as string) as string, minterHash }
             : {}),
         });
         code = candidate;

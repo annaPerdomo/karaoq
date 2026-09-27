@@ -7,7 +7,8 @@ import { hashRoomKey } from "../../../lib/roomKeys";
 type PollResponse =
   | { status: "waiting" }
   | { status: "expired" }
-  | { status: "claimed"; roomId: string };
+  | { status: "claimed"; roomId: string }
+  | { status: "claimed"; roomId: string; yourRole: "display" };
 
 export default async function handler(
   req: NextApiRequest,
@@ -34,7 +35,11 @@ export default async function handler(
       return;
     }
     if (pairing.claimedAt && pairing.roomId) {
-      res.status(200).json({ status: "claimed", roomId: pairing.roomId });
+      res.status(200).json(
+        pairing.kind === "remote" && pairing.minterHash
+          ? { status: "claimed", roomId: pairing.roomId, yourRole: "display" }
+          : { status: "claimed", roomId: pairing.roomId }
+      );
       return;
     }
     if (Date.now() - pairing.createdAt.getTime() > PAIR_TTL_MS) {

@@ -701,6 +701,7 @@ export interface TvPairingDoc {
   createdAt: Date;
   roomId?: string;
   claimedAt?: Date;
+  minterHash?: string;
 }
 
 let tvPairingIndexesEnsured = false;

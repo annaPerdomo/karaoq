@@ -7,13 +7,12 @@ import { normalizeRoomId } from "../../../../lib/roomCode";
 import { PAIR_TTL_MS } from "../../../../lib/pairing";
 import { allows, hashRoomKey, isLegacyRoom, mintRoomKey, roomKeyFromRequest } from "../../../../lib/roomKeys";
 
-// A cap on display keys minted by pairing only — host and cohost keys are never evicted.
+// A cap on display keys minted by pairing only — host keys are never evicted.
 const MAX_DISPLAY_KEYS = 10;
-const MAX_COHOST_KEYS = 20;
 
 type ClaimResponse =
   | { kind: "screen"; roomId: string }
-  | { kind: "remote"; roomId: string; roomKey: string; roomKeyRole: "cohost" };
+  | { kind: "remote"; roomId: string; roomKey: string; roomKeyRole: "host" };
 
 export default async function handler(
   req: NextApiRequest,
@@ -117,23 +116,30 @@ export default async function handler(
       return;
     }
 
-    const room = await rooms.findOne({ id: roomId }, { projection: { keys: 1 } });
-    const cohostKeys = (room?.keys ?? []).filter((k) => k.role === "cohost");
-    if (cohostKeys.length >= MAX_COHOST_KEYS) {
-      const oldest = cohostKeys.reduce((a, b) => (a.createdAt < b.createdAt ? a : b));
-      await rooms.updateOne({ id: roomId }, { $pull: { keys: { hash: oldest.hash } } });
-    }
     const roomKey = mintRoomKey();
+    const newKeyHash = hashRoomKey(roomKey);
     await rooms.updateOne(
       { id: roomId },
       {
-        $push: { keys: { hash: hashRoomKey(roomKey), role: "cohost", createdAt: new Date() } },
+        $push: { keys: { hash: newKeyHash, role: "host", createdAt: new Date() } },
         $set: { lastActivity: new Date() },
       }
     );
 
+    if (pairing.minterHash) {
+      const demoted = await rooms.updateOne(
+        { id: roomId, keys: { $elemMatch: { hash: pairing.minterHash, role: "host" } } },
+        { $set: { "keys.$.role": "display" } }
+      );
+      if (demoted.modifiedCount === 0) {
+        await rooms.updateOne({ id: roomId }, { $pull: { keys: { hash: newKeyHash } } });
+        res.status(410).json({ message: "pair-expired" });
+        return;
+      }
+    }
+
     await trackEvent(req, "tv_paired", { roomId, pairKind: "remote" });
-    res.status(200).json({ kind: "remote", roomId, roomKey, roomKeyRole: "cohost" });
+    res.status(200).json({ kind: "remote", roomId, roomKey, roomKeyRole: "host" });
   } catch (e) {
     console.error(e);
     res.status(500).json({ code: 500, message: "Internal server error." });
