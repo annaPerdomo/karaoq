@@ -13,7 +13,7 @@ describe("ConnectPhonePanel", () => {
 
   it("shows the done message when claimed", () => {
     render(<ConnectPhonePanel stage="claimed" code="" secondsLeft={0} onClose={vi.fn()} onRetry={vi.fn()} />);
-    expect(screen.getByText(/phone connected/i)).toBeInTheDocument();
+    expect(screen.getByText(/your phone is the host now/i)).toBeInTheDocument();
   });
 
   it("shows an expired notice with a new-code button", () => {

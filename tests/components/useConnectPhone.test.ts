@@ -1,9 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
 import { useConnectPhone } from "../../components/display/hooks/useConnectPhone";
+import { getRoomKey, setRoomKey } from "../../lib/roomKeyStore";
 
 beforeEach(() => {
   vi.clearAllMocks();
+  localStorage.clear();
 });
 
 afterEach(() => {
@@ -48,6 +50,32 @@ describe("useConnectPhone", () => {
       await vi.advanceTimersByTimeAsync(4100);
     });
     expect(result.current.open).toBe(false);
+  });
+
+  it("rewrites the stored key to display and flips isHost false when claimed as yourRole display", async () => {
+    setRoomKey("ROOM1", "tv-host-key", "host");
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ code: "48291765", secret: "s3cr3t", expiresAt: Date.now() + 600_000 }),
+      } as Response)
+      .mockResolvedValue({
+        ok: true,
+        json: async () => ({ status: "claimed", roomId: "ROOM1", yourRole: "display" }),
+      } as Response);
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() => useConnectPhone("ROOM1"));
+    await waitFor(() => expect(result.current.isHost).toBe(true));
+    await act(async () => result.current.openPanel());
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2100);
+    });
+    expect(result.current.stage).toBe("claimed");
+    expect(getRoomKey("ROOM1")).toEqual({ key: "tv-host-key", role: "display" });
+    expect(result.current.isHost).toBe(false);
   });
 
   it("moves to expired when the poll reports it", async () => {

@@ -128,13 +128,13 @@ describe("Home component", () => {
     expect(submitBtn).toBeDisabled();
   });
 
-  it("pairs a phone as a co-host and routes to the remote page", async () => {
+  it("pairs a phone as the host and routes to the host page", async () => {
     (fetch as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
       if (String(url).startsWith("/api/tv-pair")) {
         return Promise.resolve({
           ok: true,
           status: 200,
-          json: async () => ({ kind: "remote", roomId: "ROOM1", roomKey: "k", roomKeyRole: "cohost" }),
+          json: async () => ({ kind: "remote", roomId: "ROOM1", roomKey: "k", roomKeyRole: "host" }),
         } as Response);
       }
       return Promise.resolve({ ok: true, json: async () => ({}) } as Response);
@@ -146,7 +146,7 @@ describe("Home component", () => {
     fireEvent.change(screen.getByPlaceholderText("000 000"), { target: { value: "482917" } });
     fireEvent.click(screen.getByRole("button", { name: /^connect$/i }));
 
-    await waitFor(() => expect(mockPush).toHaveBeenCalledWith("/remote/ROOM1"));
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith("/host/ROOM1?paired=1"));
   });
 
   it("supports Enter key to join", () => {

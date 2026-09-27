@@ -42,11 +42,11 @@ describe("useConnectTv", () => {
     expect(mockPush).not.toHaveBeenCalled();
   });
 
-  it("navigates to the remote page for a remote result, without adopting TV mode", () => {
+  it("navigates to the host page for a remote result, without adopting TV mode", () => {
     const { result, setPlayMode, rememberMode, showToast } = setup("ROOM1");
     result.current.onTvPaired({ kind: "remote", roomId: "ROOM2" });
 
-    expect(mockPush).toHaveBeenCalledWith("/remote/ROOM2");
+    expect(mockPush).toHaveBeenCalledWith("/host/ROOM2?paired=1");
     expect(setPlayMode).not.toHaveBeenCalled();
     expect(rememberMode).not.toHaveBeenCalled();
     expect(showToast).not.toHaveBeenCalled();

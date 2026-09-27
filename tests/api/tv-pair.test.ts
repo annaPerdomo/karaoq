@@ -12,6 +12,7 @@ const pairings = {
   insertOne: vi.fn(),
   findOne: vi.fn(),
   findOneAndUpdate: vi.fn(),
+  deleteMany: vi.fn(),
   createIndex: vi.fn().mockResolvedValue(undefined),
 };
 
@@ -58,6 +59,7 @@ describe("POST /api/tv-pair (create)", () => {
     vi.clearAllMocks();
     __resetRateLimits();
     pairings.insertOne.mockResolvedValue({ acknowledged: true });
+    pairings.deleteMany.mockResolvedValue({ deletedCount: 0 });
   });
 
   it("mints a screen pairing, storing only the secret hash", async () => {
@@ -118,6 +120,43 @@ describe("POST /api/tv-pair (create)", () => {
 
     expect(res.getStatus()).toBe(200);
   });
+
+  it("stores the minting device's key hash on a remote pairing", async () => {
+    rooms.findOne.mockResolvedValue({
+      id: "ROOM1",
+      keys: [{ hash: hashRoomKey("host-key"), role: "host", createdAt: new Date() }],
+    });
+    const req = createMockReq({
+      method: "POST",
+      body: { kind: "remote", roomId: "ROOM1" },
+      headers: { "x-room-key": "host-key" },
+    });
+    const res = createRes();
+    await createHandler(req, res);
+
+    const inserted = pairings.insertOne.mock.calls[0][0];
+    expect(inserted.minterHash).toBe(hashRoomKey("host-key"));
+  });
+
+  it("voids the minter's earlier unclaimed code before minting a new one", async () => {
+    rooms.findOne.mockResolvedValue({
+      id: "ROOM1",
+      keys: [{ hash: hashRoomKey("host-key"), role: "host", createdAt: new Date() }],
+    });
+    const req = createMockReq({
+      method: "POST",
+      body: { kind: "remote", roomId: "ROOM1" },
+      headers: { "x-room-key": "host-key" },
+    });
+    const res = createRes();
+    await createHandler(req, res);
+
+    expect(res.getStatus()).toBe(200);
+    expect(pairings.deleteMany).toHaveBeenCalledWith({
+      minterHash: hashRoomKey("host-key"),
+      claimedAt: { $exists: false },
+    });
+  });
 });
 
 describe("GET /api/tv-pair/[code] (poll)", () => {
@@ -176,6 +215,37 @@ describe("GET /api/tv-pair/[code] (poll)", () => {
     expect(res.getBody()).toEqual({ status: "claimed", roomId: "ROOM1" });
   });
 
+  it("reports claimed with yourRole display for a claimed remote pairing, and never a key", async () => {
+    pairings.findOne.mockResolvedValue({
+      _id: "654321",
+      kind: "remote",
+      secretHash: hashRoomKey("s"),
+      createdAt: new Date(),
+      roomId: "ROOM1",
+      claimedAt: new Date(),
+      minterHash: hashRoomKey("tv-host-key"),
+    });
+    const req = createMockReq({ method: "GET", query: { code: "654321" }, headers: { "x-pair-secret": "s" } });
+    const res = createRes();
+    await pollHandler(req, res);
+    expect(res.getBody()).toEqual({ status: "claimed", roomId: "ROOM1", yourRole: "display" });
+  });
+
+  it("omits yourRole for a claimed remote pairing that predates minterHash", async () => {
+    pairings.findOne.mockResolvedValue({
+      _id: "654321",
+      kind: "remote",
+      secretHash: hashRoomKey("s"),
+      createdAt: new Date(),
+      roomId: "ROOM1",
+      claimedAt: new Date(),
+    });
+    const req = createMockReq({ method: "GET", query: { code: "654321" }, headers: { "x-pair-secret": "s" } });
+    const res = createRes();
+    await pollHandler(req, res);
+    expect(res.getBody()).toEqual({ status: "claimed", roomId: "ROOM1" });
+  });
+
   it("reports claimed even past the TTL — the room already has the key", async () => {
     pairings.findOne.mockResolvedValue({
       _id: "123456",
@@ -209,6 +279,7 @@ describe("POST /api/tv-pair/[code]/claim", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     __resetRateLimits();
+    rooms.updateOne.mockResolvedValue({ modifiedCount: 1 });
   });
 
   it("responds needs-room for a screen claim with no roomId, without claiming", async () => {
@@ -330,16 +401,17 @@ describe("POST /api/tv-pair/[code]/claim", () => {
     expect(res.getStatus()).toBe(410);
   });
 
-  it("claims a remote pairing, returning a cohost key", async () => {
+  it("claims a remote pairing, returning a host key and demoting the minter to display", async () => {
+    const minterHash = hashRoomKey("tv-host-key");
     pairings.findOne.mockResolvedValue({
       _id: "654321",
       kind: "remote",
       secretHash: hashRoomKey("s"),
       createdAt: new Date(),
       roomId: "ROOM1",
+      minterHash,
     });
     pairings.findOneAndUpdate.mockResolvedValue({ _id: "654321", roomId: "ROOM1", claimedAt: new Date() });
-    rooms.findOne.mockResolvedValue({ id: "ROOM1", keys: [] });
 
     const req = createMockReq({ method: "POST", query: { code: "654321" }, body: {} });
     const res = createRes();
@@ -350,7 +422,67 @@ describe("POST /api/tv-pair/[code]/claim", () => {
     expect(body.kind).toBe("remote");
     expect(body.roomId).toBe("ROOM1");
     expect(body.roomKey).toBeTruthy();
-    expect(body.roomKeyRole).toBe("cohost");
+    expect(body.roomKeyRole).toBe("host");
+    expect(rooms.updateOne).toHaveBeenCalledWith(
+      { id: "ROOM1" },
+      {
+        $push: { keys: { hash: hashRoomKey(body.roomKey), role: "host", createdAt: expect.any(Date) } },
+        $set: { lastActivity: expect.any(Date) },
+      }
+    );
+    expect(rooms.updateOne).toHaveBeenCalledWith(
+      { id: "ROOM1", keys: { $elemMatch: { hash: minterHash, role: "host" } } },
+      { $set: { "keys.$.role": "display" } }
+    );
+  });
+
+  it("does not try to demote a minter when the pairing predates minterHash", async () => {
+    pairings.findOne.mockResolvedValue({
+      _id: "654321",
+      kind: "remote",
+      secretHash: hashRoomKey("s"),
+      createdAt: new Date(),
+      roomId: "ROOM1",
+    });
+    pairings.findOneAndUpdate.mockResolvedValue({ _id: "654321", roomId: "ROOM1", claimedAt: new Date() });
+
+    const req = createMockReq({ method: "POST", query: { code: "654321" }, body: {} });
+    const res = createRes();
+    await claimHandler(req, res);
+
+    expect(res.getStatus()).toBe(200);
+    expect(rooms.updateOne).toHaveBeenCalledTimes(1);
+  });
+
+  it("refuses the claim and rolls back the new key when the minter is no longer a host", async () => {
+    const minterHash = hashRoomKey("stale-tv-key");
+    pairings.findOne.mockResolvedValue({
+      _id: "654321",
+      kind: "remote",
+      secretHash: hashRoomKey("s"),
+      createdAt: new Date(),
+      roomId: "ROOM1",
+      minterHash,
+    });
+    pairings.findOneAndUpdate.mockResolvedValue({ _id: "654321", roomId: "ROOM1", claimedAt: new Date() });
+    rooms.updateOne
+      .mockResolvedValueOnce(undefined)
+      .mockResolvedValueOnce({ modifiedCount: 0 })
+      .mockResolvedValueOnce(undefined);
+
+    const req = createMockReq({ method: "POST", query: { code: "654321" }, body: {} });
+    const res = createRes();
+    await claimHandler(req, res);
+
+    expect(res.getStatus()).toBe(410);
+    expect(res.getBody()).toEqual({ message: "pair-expired" });
+    expect(rooms.updateOne).toHaveBeenCalledTimes(3);
+    const pushedHash = rooms.updateOne.mock.calls[0][1].$push.keys.hash;
+    expect(rooms.updateOne).toHaveBeenNthCalledWith(
+      3,
+      { id: "ROOM1" },
+      { $pull: { keys: { hash: pushedHash } } }
+    );
   });
 
   it("rate limits repeated claim attempts", async () => {
