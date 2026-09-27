@@ -842,7 +842,7 @@
   "display.connectPhone": "スマホを接続",
   "display.connectPhone.steps": "スマホでkaraoq.liveを開き、「テレビを接続」をタップしてこのコードを入力してください",
   "display.connectPhone.close": "閉じる",
-  "display.connectPhone.done": "スマホが接続されました",
+  "display.connectPhone.done": "あなたのスマホがホストになりました",
   "host.settings.tv": "テレビ",
   "pair.connect": "接続",
   "pair.err.expired": "そのコードは期限切れか、既に使用されています。テレビに新しいコードを表示してください。",

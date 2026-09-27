@@ -842,7 +842,7 @@
   "display.connectPhone": "Ikonekta ang telepono",
   "display.connectPhone.steps": "Sa iyong telepono, buksan ang karaoq.live, i-tap ang Ikonekta ang TV at ilagay ang code na ito",
   "display.connectPhone.close": "Isara",
-  "display.connectPhone.done": "Nakonekta ang telepono",
+  "display.connectPhone.done": "Ang telepono mo na ngayon ang host",
   "host.settings.tv": "TV",
   "pair.connect": "Ikonekta",
   "pair.err.expired": "Nag-expire na o nagamit na ang code na iyon. Magpakita ng bago sa TV.",

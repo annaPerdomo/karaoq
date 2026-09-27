@@ -1,4 +1,7 @@
 import { roomKeyHeaders, setRoomKey } from "../../lib/roomKeyStore";
+import type { RoomKeyRole } from "../../lib/roomKeys";
+
+const ROOM_KEY_ROLES: RoomKeyRole[] = ["host", "cohost", "display"];
 
 export type ClaimResult =
   | { ok: true; kind: "screen"; roomId: string }
@@ -28,8 +31,13 @@ export async function claimPairing(code: string, roomId?: string): Promise<Claim
     };
     if (typeof data.roomId !== "string") return { ok: false, reason: "error" };
 
-    if (data.kind === "remote" && typeof data.roomKey === "string" && data.roomKeyRole === "cohost") {
-      setRoomKey(data.roomId, data.roomKey, "cohost");
+    if (
+      data.kind === "remote" &&
+      typeof data.roomKey === "string" &&
+      typeof data.roomKeyRole === "string" &&
+      (ROOM_KEY_ROLES as string[]).includes(data.roomKeyRole)
+    ) {
+      setRoomKey(data.roomId, data.roomKey, data.roomKeyRole as RoomKeyRole);
       return { ok: true, kind: "remote", roomId: data.roomId };
     }
     if (data.kind === "screen") {

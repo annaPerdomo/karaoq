@@ -842,7 +842,7 @@
   "display.connectPhone": "Connecter un téléphone",
   "display.connectPhone.steps": "Sur votre téléphone, ouvrez karaoq.live, appuyez sur Connecter une télé et saisissez ce code",
   "display.connectPhone.close": "Fermer",
-  "display.connectPhone.done": "Téléphone connecté",
+  "display.connectPhone.done": "Votre téléphone est maintenant l'hôte",
   "host.settings.tv": "TV",
   "pair.connect": "Connecter",
   "pair.err.expired": "Ce code a expiré ou a déjà été utilisé. Affichez-en un nouveau sur la télé.",

@@ -26,6 +26,7 @@ import Reveal from './home/Reveal';
 import TvPairCard from './home/TvPairCard';
 import ConnectTvHero from './home/ConnectTvHero';
 import { createRoomForPairing } from '../app/pairing/createRoomForPairing';
+import { rememberLastHostedRoom } from '../lib/lastRoom';
 import { EMPTY_STATS, type PublicStats } from '../lib/publicStats';
 import { generateCode } from '../lib/roomCode';
 
@@ -242,11 +243,10 @@ const Home = ({ stats = EMPTY_STATS }: HomeProps): React.ReactElement => {
 
               <ConnectTvHero
                 onNeedsRoom={() => createRoomForPairing(hostName)}
-                onPaired={(r) =>
-                  router.push(
-                    r.kind === 'screen' ? `/host/${r.roomId}?paired=1` : `/remote/${r.roomId}`
-                  )
-                }
+                onPaired={(r) => {
+                  if (r.kind === 'remote') rememberLastHostedRoom(r.roomId);
+                  router.push(`/host/${r.roomId}?paired=1`);
+                }}
               />
             </div>
 

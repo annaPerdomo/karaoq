@@ -1,6 +1,7 @@
 import * as React from "react";
 import { useRouter } from "next/router";
 import { PlayMode } from "../../../pages/api/types";
+import { rememberLastHostedRoom } from "../../../lib/lastRoom";
 import { ConnectTvLauncherHandle } from "../ConnectTvLauncher";
 
 export function useConnectTv(opts: {
@@ -15,7 +16,10 @@ export function useConnectTv(opts: {
   const connectTvRef = React.useRef<ConnectTvLauncherHandle>(null);
 
   function onTvPaired(r: { kind: "screen" | "remote"; roomId: string }) {
-    if (r.kind === "remote") return router.push(`/remote/${r.roomId}`);
+    if (r.kind === "remote") {
+      rememberLastHostedRoom(r.roomId);
+      return router.push(`/host/${r.roomId}?paired=1`);
+    }
     if (r.roomId === joinCode) {
       setPlayMode("tv");
       rememberMode("tv");

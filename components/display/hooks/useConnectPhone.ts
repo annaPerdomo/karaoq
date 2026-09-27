@@ -2,6 +2,7 @@ import * as React from "react";
 import { createPairing } from "../../../app/pairing/createPairing";
 import { pollPairing } from "../../../app/pairing/pollPairing";
 import { PAIR_TTL_MS } from "../../../lib/pairing";
+import { getRoomKey, setRoomKey } from "../../../lib/roomKeyStore";
 
 const POLL_MS = 2000;
 const CLAIMED_HOLD_MS = 4000;
@@ -13,6 +14,11 @@ export function useConnectPhone(joinCode: string | undefined, editing = false) {
   const [stage, setStage] = React.useState<ConnectPhoneStage>("creating");
   const [pairing, setPairing] = React.useState<{ code: string; secret: string } | null>(null);
   const [secondsLeft, setSecondsLeft] = React.useState(0);
+  const [isHost, setIsHost] = React.useState(false);
+
+  React.useEffect(() => {
+    setIsHost(!!joinCode && getRoomKey(joinCode)?.role === "host");
+  }, [joinCode]);
   // Computed once on arrival, then re-diffed every tick — never expiresAt
   // minus Date.now(), which drifts when the tab was backgrounded.
   const deadlineRef = React.useRef(0);
@@ -90,6 +96,11 @@ export function useConnectPhone(joinCode: string | undefined, editing = false) {
       inFlight = false;
       if (cancelled) return;
       if (result.status === "claimed") {
+        if (result.yourRole === "display" && joinCode) {
+          const stored = getRoomKey(joinCode);
+          if (stored) setRoomKey(joinCode, stored.key, "display");
+          setIsHost(false);
+        }
         setStage("claimed");
         return;
       }
@@ -122,7 +133,7 @@ export function useConnectPhone(joinCode: string | undefined, editing = false) {
       if (timer) clearTimeout(timer);
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
-  }, [open, stage, pairing]);
+  }, [open, stage, pairing, joinCode]);
 
   React.useEffect(() => {
     if (stage !== "claimed") return;
@@ -130,5 +141,5 @@ export function useConnectPhone(joinCode: string | undefined, editing = false) {
     return () => clearTimeout(id);
   }, [stage, close]);
 
-  return { open, stage, code: pairing?.code ?? "", secondsLeft, openPanel, close, retry: create };
+  return { open, stage, code: pairing?.code ?? "", secondsLeft, isHost, openPanel, close, retry: create };
 }

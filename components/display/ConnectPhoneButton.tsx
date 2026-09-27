@@ -1,22 +1,16 @@
 import * as React from "react";
 import styles from "../../styles/Display.module.css";
 import { useT } from "../../lib/i18n/I18nProvider";
-import { getRoomKey } from "../../lib/roomKeyStore";
 import { Icons } from "../host/icons";
 
 export function ConnectPhoneButton({
-  joinCode,
+  isHost,
   onPress,
 }: {
-  joinCode: string | undefined;
+  isHost: boolean;
   onPress: () => void;
 }) {
   const { t } = useT();
-  const [isHost, setIsHost] = React.useState(false);
-
-  React.useEffect(() => {
-    setIsHost(!!joinCode && getRoomKey(joinCode)?.role === "host");
-  }, [joinCode]);
 
   if (!isHost) return null;
 

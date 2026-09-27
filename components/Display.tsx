@@ -526,7 +526,9 @@ const Display = (): React.ReactElement => {
               <span>{t('customize.button')}</span>
             </button>
           )}
-          {!edit.editing && !loading && <ConnectPhoneButton joinCode={joinCode} onPress={connectPhone.openPanel} />}
+          {!edit.editing && !loading && (
+            <ConnectPhoneButton isHost={connectPhone.isHost} onPress={connectPhone.openPanel} />
+          )}
           <LanguageSwitcher className={styles.headerLang} />
         </div>
       </header>

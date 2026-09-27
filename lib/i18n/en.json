@@ -241,7 +241,7 @@
   "display.connectPhone": "Connect a phone",
   "display.connectPhone.steps": "On your phone, open karaoq.live, tap Connect a TV and enter this code",
   "display.connectPhone.close": "Close",
-  "display.connectPhone.done": "Phone connected",
+  "display.connectPhone.done": "Your phone is the host now",
   "home.how.title": "How It Works",
   "home.how.sub": "Three steps, under a minute — whether it's two friends or a whole bar.",
   "home.step1.tag": "You, the host",

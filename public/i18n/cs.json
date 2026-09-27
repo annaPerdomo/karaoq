@@ -842,7 +842,7 @@
   "display.connectPhone": "Připojit telefon",
   "display.connectPhone.steps": "V telefonu otevřete karaoq.live, klepněte na Připojit TV a zadejte tento kód",
   "display.connectPhone.close": "Zavřít",
-  "display.connectPhone.done": "Telefon připojen",
+  "display.connectPhone.done": "Váš telefon je teď hostitel",
   "host.settings.tv": "TV",
   "pair.connect": "Připojit",
   "pair.err.expired": "Tento kód vypršel nebo už byl použit. Zobrazte na TV nový.",

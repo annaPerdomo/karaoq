@@ -1,7 +1,7 @@
 export type PairingPoll =
   | { status: "waiting" }
   | { status: "expired" }
-  | { status: "claimed"; roomId: string }
+  | { status: "claimed"; roomId: string; yourRole?: "display" }
   | { status: "error" };
 
 export async function pollPairing(code: string, secret: string): Promise<PairingPoll> {
@@ -11,11 +11,15 @@ export async function pollPairing(code: string, secret: string): Promise<Pairing
     });
     if (resp.status === 404) return { status: "expired" };
     if (!resp.ok) return { status: "error" };
-    const data = (await resp.json()) as { status?: unknown; roomId?: unknown };
+    const data = (await resp.json()) as { status?: unknown; roomId?: unknown; yourRole?: unknown };
     if (data.status === "waiting") return { status: "waiting" };
     if (data.status === "expired") return { status: "expired" };
     if (data.status === "claimed" && typeof data.roomId === "string") {
-      return { status: "claimed", roomId: data.roomId };
+      return {
+        status: "claimed",
+        roomId: data.roomId,
+        ...(data.yourRole === "display" ? { yourRole: "display" as const } : {}),
+      };
     }
     return { status: "error" };
   } catch {
