@@ -3,6 +3,7 @@ import { createPairing } from "../../../app/pairing/createPairing";
 import { pollPairing } from "../../../app/pairing/pollPairing";
 import { PAIR_TTL_MS } from "../../../lib/pairing";
 import { getRoomKey, setRoomKey } from "../../../lib/roomKeyStore";
+import { isTvDevice } from "../../../lib/calmMotion";
 
 const POLL_MS = 2000;
 const CLAIMED_HOLD_MS = 4000;
@@ -17,7 +18,9 @@ export function useConnectPhone(joinCode: string | undefined, editing = false) {
   const [isHost, setIsHost] = React.useState(false);
 
   React.useEffect(() => {
-    setIsHost(!!joinCode && getRoomKey(joinCode)?.role === "host");
+    // TV-only: claiming the code demotes this device's key to "display", which
+    // would lock a laptop host's own host tab out.
+    setIsHost(!!joinCode && getRoomKey(joinCode)?.role === "host" && isTvDevice());
   }, [joinCode]);
   // Computed once on arrival, then re-diffed every tick — never expiresAt
   // minus Date.now(), which drifts when the tab was backgrounded.

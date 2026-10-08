@@ -6,11 +6,13 @@ import { getRoomKey, setRoomKey } from "../../lib/roomKeyStore";
 beforeEach(() => {
   vi.clearAllMocks();
   localStorage.clear();
+  document.documentElement.removeAttribute("data-tv");
 });
 
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.useRealTimers();
+  document.documentElement.removeAttribute("data-tv");
 });
 
 describe("useConnectPhone", () => {
@@ -53,6 +55,7 @@ describe("useConnectPhone", () => {
   });
 
   it("rewrites the stored key to display and flips isHost false when claimed as yourRole display", async () => {
+    document.documentElement.setAttribute("data-tv", "1");
     setRoomKey("ROOM1", "tv-host-key", "host");
     vi.useFakeTimers({ shouldAdvanceTime: true });
     const fetchMock = vi
@@ -75,6 +78,14 @@ describe("useConnectPhone", () => {
     });
     expect(result.current.stage).toBe("claimed");
     expect(getRoomKey("ROOM1")).toEqual({ key: "tv-host-key", role: "display" });
+    expect(result.current.isHost).toBe(false);
+  });
+
+  it("keeps isHost false for a host-keyed device that isn't a TV", async () => {
+    setRoomKey("ROOM1", "laptop-host-key", "host");
+
+    const { result } = renderHook(() => useConnectPhone("ROOM1"));
+    await waitFor(() => expect(getRoomKey("ROOM1")?.role).toBe("host"));
     expect(result.current.isHost).toBe(false);
   });
 
