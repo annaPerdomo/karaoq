@@ -3,6 +3,7 @@ import { once } from "node:events";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { chromium, type Browser, type Page } from "playwright-core";
+import { ROOM_KEYS_HEADER } from "../../lib/roomKeysHeader";
 
 const ROOT = join(__dirname, "../..");
 const PORT = Number(process.env.TV_TEST_PORT ?? 3199);
@@ -179,7 +180,7 @@ export async function seedRoom(): Promise<{
   await sweep();
   const res = await fetch(`${BASE}/api/queue/${code}`, {
     method: "POST",
-    headers: { "x-karaoq-demo": "1" },
+    headers: { "x-karaoq-demo": "1", [ROOM_KEYS_HEADER]: "1" },
   });
   const { roomKey } = (await res.json()) as { roomKey: string };
   return { code, roomKey, cleanup: sweep };

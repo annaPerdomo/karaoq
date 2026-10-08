@@ -1,12 +1,18 @@
 import { randomBytes, createHash, timingSafeEqual } from "crypto";
 import type { NextApiRequest } from "next";
 import { Room } from "../pages/api/types";
+import { ROOM_KEYS_HEADER } from "./roomKeysHeader";
 
 export type RoomKeyRole = "host" | "cohost" | "display";
 
 export function roomKeyFromRequest(req: NextApiRequest): string | undefined {
   const header = req.headers["x-room-key"];
   return Array.isArray(header) ? header[0] : header;
+}
+
+export function wantsRoomKeys(req: NextApiRequest): boolean {
+  const header = req.headers[ROOM_KEYS_HEADER];
+  return (Array.isArray(header) ? header[0] : header) === "1";
 }
 
 export function mintRoomKey(): string {

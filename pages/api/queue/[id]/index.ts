@@ -4,7 +4,13 @@ import { trackEvent } from "../../../../lib/analytics";
 import { rateLimit } from "../../../../lib/limits";
 import { getRoomsCollection } from "../../../../lib/mongodb";
 import { normalizeRoomId } from "../../../../lib/roomCode";
-import { hashRoomKey, isLegacyRoom, mintRoomKey, publicRoom } from "../../../../lib/roomKeys";
+import {
+  hashRoomKey,
+  isLegacyRoom,
+  mintRoomKey,
+  publicRoom,
+  wantsRoomKeys,
+} from "../../../../lib/roomKeys";
 import { AUTO_START_STALE_MS } from "../../../../lib/autoAdvance";
 import { pruneRoomYoutubeData, roomPruneUpdate } from "../../../../lib/youtubeRetention";
 import { searchQuotaResetsAt } from "../../../../lib/searchQuotaStatus";
@@ -81,7 +87,10 @@ export default async function handler(
         res.status(429).json({ code: 429, message: "Too many rooms created, try again later." });
       } else {
         const now = new Date();
-        const hostKey = mintRoomKey();
+        // Opt-in: a tab loaded before the Oct 2026 deploy ignores `roomKey`, so minting one
+        // would lock its creator out. Can default to keyed once those tabs have cycled.
+        const keyed = wantsRoomKeys(req);
+        const hostKey = keyed ? mintRoomKey() : undefined;
         const room: Room = {
           id: roomId,
           queue: [],
@@ -96,7 +105,9 @@ export default async function handler(
           displayConfig: DEFAULT_DISPLAY_CONFIG,
           createdAt: now,
           lastActivity: now,
-          keys: [{ hash: hashRoomKey(hostKey), role: "host", createdAt: now }],
+          ...(hostKey
+            ? { keys: [{ hash: hashRoomKey(hostKey), role: "host", createdAt: now }] }
+            : {}),
         };
         try {
           await collection.insertOne(room);
@@ -125,7 +136,11 @@ export default async function handler(
         // it. Fire-and-forget was silently losing room_created events, which the whole activation
         // funnel counts from.
         await trackEvent(req, "room_created", { roomId, fairMode: room.fairMode });
-        res.status(201).json({ ...publicRoom(room), keyed: true, roomKey: hostKey, roomKeyRole: "host" });
+        res.status(201).json(
+          hostKey
+            ? { ...publicRoom(room), keyed: true, roomKey: hostKey, roomKeyRole: "host" }
+            : { ...publicRoom(room), keyed: false }
+        );
       }
     } else if (req.method === "GET") {
       res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");

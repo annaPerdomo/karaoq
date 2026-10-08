@@ -63,7 +63,11 @@ describe("POST /api/queue/[id] - Room creation", () => {
     mockCollection.findOne.mockResolvedValue(null);
     mockCollection.insertOne.mockResolvedValue({ insertedId: "x" });
 
-    const req = createMockReq({ method: "POST", query: { id: "ABC12" } });
+    const req = createMockReq({
+      method: "POST",
+      query: { id: "ABC12" },
+      headers: { "x-room-keys": "1" },
+    });
     const res = createRes();
     await handler(req, res);
 
@@ -106,7 +110,11 @@ describe("POST /api/queue/[id] - Room creation", () => {
     mockCollection.findOne.mockResolvedValue(null);
     mockCollection.insertOne.mockResolvedValue({ insertedId: "x" });
 
-    const req = createMockReq({ method: "POST", query: { id: "ABC12" } });
+    const req = createMockReq({
+      method: "POST",
+      query: { id: "ABC12" },
+      headers: { "x-room-keys": "1" },
+    });
     const res = createRes();
     await handler(req, res);
 
@@ -114,6 +122,24 @@ describe("POST /api/queue/[id] - Room creation", () => {
     const stored = mockCollection.insertOne.mock.calls[0][0] as Room;
     expect(stored.keys?.[0].hash).not.toBe(body.roomKey);
     expect(stored).not.toHaveProperty("roomKey");
+  });
+
+  it("creates a room with no keys when the client does not opt in", async () => {
+    mockCollection.findOne.mockResolvedValue(null);
+    mockCollection.insertOne.mockResolvedValue({ insertedId: "x" });
+
+    const req = createMockReq({ method: "POST", query: { id: "ABC12" } });
+    const res = createRes();
+    await handler(req, res);
+
+    expect(res.getStatus()).toBe(201);
+    const body = res.getBody() as Room & { keyed: boolean; roomKey?: string };
+    expect(body.keyed).toBe(false);
+    expect(body.roomKey).toBeUndefined();
+    expect(body).not.toHaveProperty("roomKeyRole");
+
+    const stored = mockCollection.insertOne.mock.calls[0][0] as Room;
+    expect(stored).not.toHaveProperty("keys");
   });
 
   it("resets isPlaying when the device that was playing reconnects", async () => {
