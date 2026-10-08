@@ -637,6 +637,30 @@ html[data-tv] .dpNumB, html[data-tv] .dpCount3 { animation: none !important; opa
   line-height: 1.4;
 }
 
+.pairCode {
+  font-size: 2.6rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+  text-align: center;
+}
+
+.pairCountdown {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #707080;
+  text-align: center;
+}
+
+.connectTvHero {
+  margin-top: 0.85rem;
+  width: 100%;
+  max-width: 380px;
+  display: flex;
+  justify-content: center;
+}
+
 .heroNote {
   margin: 0.85rem 0 0;
   max-width: 380px;

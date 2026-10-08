@@ -3,6 +3,7 @@ import { once } from "node:events";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { chromium, type Browser, type Page } from "playwright-core";
+import { ROOM_KEYS_HEADER } from "../../lib/roomKeysHeader";
 
 const ROOT = join(__dirname, "../..");
 const PORT = Number(process.env.TV_TEST_PORT ?? 3199);
@@ -86,12 +87,25 @@ export async function stopHarness() {
  * stands in for a TV SoC: without it a MacBook renders anything smoothly and
  * the test proves nothing about the device it is named after.
  */
+export interface SeededRoomKey {
+  code: string;
+  key: string;
+  role?: "host" | "cohost" | "display";
+}
+
 export async function tvPage(
   userAgent: string,
   {
     cpuThrottle = 6,
     viewport = { width: 1920, height: 1080 },
-  }: { cpuThrottle?: number; viewport?: { width: number; height: number } } = {}
+    roomKey,
+  }: {
+    cpuThrottle?: number;
+    viewport?: { width: number; height: number };
+    // A seeded room mints and stores a real key (below), so a fresh browser
+    // context needs one too, the way a host's own device would have it.
+    roomKey?: SeededRoomKey;
+  } = {}
 ): Promise<{ page: Page; errors: string[]; close: () => Promise<void> }> {
   if (!browser) throw new Error("harness not started");
   const context = await browser.newContext({
@@ -99,6 +113,19 @@ export async function tvPage(
     viewport,
     deviceScaleFactor: 1,
   });
+  if (roomKey) {
+    await context.addInitScript(
+      ({ code, key, role }) => {
+        try {
+          localStorage.setItem(
+            `karaoq_room_key_${code}`,
+            JSON.stringify({ key, role: role ?? "host" })
+          );
+        } catch {}
+      },
+      roomKey
+    );
+  }
   const page = await context.newPage();
 
   // Vercel injects /_vercel/insights/script.js at deploy time, so `next start`
@@ -129,7 +156,13 @@ export async function tvPage(
   return { page, errors, close: () => context.close() };
 }
 
-export async function seedRoom(): Promise<{ code: string; cleanup: () => Promise<void> }> {
+export async function seedRoom(): Promise<{
+  code: string;
+  // Minted by the real create route, same as any host's first visit — a
+  // browser context needs this in localStorage or the room reads as locked.
+  roomKey: string;
+  cleanup: () => Promise<void>;
+}> {
   // Dev and karaoq.live share one Atlas database, so this is a row in the live
   // rooms collection — hence the demo header. Fixed rather than random because
   // an interrupted run leaves a row no TTL removes; the next run sweeps it.
@@ -145,9 +178,10 @@ export async function seedRoom(): Promise<{ code: string; cleanup: () => Promise
     }
   };
   await sweep();
-  await fetch(`${BASE}/api/queue/${code}`, {
+  const res = await fetch(`${BASE}/api/queue/${code}`, {
     method: "POST",
-    headers: { "x-karaoq-demo": "1" },
+    headers: { "x-karaoq-demo": "1", [ROOM_KEYS_HEADER]: "1" },
   });
-  return { code, cleanup: sweep };
+  const { roomKey } = (await res.json()) as { roomKey: string };
+  return { code, roomKey, cleanup: sweep };
 }

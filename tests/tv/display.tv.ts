@@ -39,8 +39,11 @@ const TV_VIEWPORTS = [
   { width: 3840, height: 2160 },
 ];
 
-async function loadDisplay(viewport: { width: number; height: number }) {
-  const { page, close } = await tvPage(TV_AGENTS.tizen, { viewport });
+async function loadDisplay(
+  viewport: { width: number; height: number },
+  roomKey?: { code: string; key: string }
+) {
+  const { page, close } = await tvPage(TV_AGENTS.tizen, { viewport, roomKey });
   await page.goto(`${BASE}/display/${room.code}`, { waitUntil: "load", timeout: 60_000 });
   // _document sets --tv-scale inline before hydration, but useTvScale's effect
   // re-derives and re-applies it, so assertions wait for the settled value.
@@ -260,7 +263,10 @@ describe("display scales on a TV", () => {
     const before = await (await fetch(`${BASE}/api/queue/${room.code}`)).json();
     const startWidth: number = before.displayConfig.sidebarWidth;
 
-    const { page, close } = await loadDisplay({ width: 1920, height: 1080 });
+    const { page, close } = await loadDisplay(
+      { width: 1920, height: 1080 },
+      { code: room.code, key: room.roomKey }
+    );
     try {
       const customizeBtn = page.locator('[data-remote="customize"]');
       await customizeBtn.waitFor({ timeout: 30_000 });
@@ -288,6 +294,32 @@ describe("display scales on a TV", () => {
         await new Promise((r) => setTimeout(r, 500));
       }
       expect(after.displayConfig.sidebarWidth).toBe(startWidth + 40);
+    } finally {
+      await close();
+    }
+  });
+
+  it("hides Connect a phone for a keyless viewer", async () => {
+    const { page, close } = await loadDisplay({ width: 1920, height: 1080 });
+    try {
+      await page.locator('[data-remote="customize"]').waitFor({ timeout: 30_000 });
+      expect(await page.locator('[data-remote="connect-phone"]').count()).toBe(0);
+    } finally {
+      await close();
+    }
+  });
+
+  it("shows Connect a phone for the seeded host and reaches it with the remote", async () => {
+    const { page, close } = await loadDisplay(
+      { width: 1920, height: 1080 },
+      { code: room.code, key: room.roomKey }
+    );
+    try {
+      const button = page.locator('[data-remote="connect-phone"]');
+      await button.waitFor({ timeout: 30_000 });
+      await button.focus();
+      const focused = await page.evaluate(() => document.activeElement?.getAttribute("data-remote"));
+      expect(focused).toBe("connect-phone");
     } finally {
       await close();
     }

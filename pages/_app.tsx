@@ -56,7 +56,9 @@ function MyApp({ Component, pageProps }: AppProps) {
           otherwise send raw pathnames — and a join code is the whole key to a
           room. Gated on isReady: room pages are statically optimized, so
           asPath settles a tick late and would bill one visit as two. */}
-      {router.isReady && <Analytics route={router.pathname} path={router.asPath} />}
+      {router.isReady && (
+        <Analytics route={router.pathname} path={router.asPath.split('#')[0]} />
+      )}
     </I18nProvider>
   );
 }

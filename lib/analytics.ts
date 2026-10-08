@@ -28,7 +28,8 @@ export type EventType =
   | "song_postponed"
   | "search_failed"
   | "search_run"
-  | "link_lookup";
+  | "link_lookup"
+  | "tv_paired";
 
 export interface AnalyticsEvent {
   type: EventType;
@@ -97,6 +98,8 @@ export interface AnalyticsEvent {
   // YouTube metadata, keeping these rows clear of the 30-day retention split.
   src?: "paste" | "trending" | "unknown";
   lookupOutcome?: "hit" | "not_found" | "not_embeddable";
+  // tv_paired: which pairing kind was claimed.
+  pairKind?: "screen" | "remote";
   lookupCache?: "fresh" | "miss";
   locale?: Locale;
   // Key of the youtube_song_data doc holding this event's title/video id until

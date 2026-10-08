@@ -46,7 +46,11 @@ function makeQueue(...ids: string[]): QueueEntry[] {
 }
 
 describe("POST /api/queue/[id]/remove - Remove entry from queue", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // Legacy room (no keys) by default — every check passes.
+    mockCollection.findOne.mockResolvedValue({ id: "ROOM1" });
+  });
 
   it("removes the entry with an atomic $pull (concurrent adds survive)", async () => {
     const room: Room = {
@@ -211,5 +215,66 @@ describe("POST /api/queue/[id]/remove - Remove entry from queue", () => {
     await handler(req, res);
 
     expect(res.getStatus()).toBe(404);
+  });
+
+  it("rejects a keyed room's removal with no key", async () => {
+    mockCollection.findOne.mockResolvedValue({
+      id: "ROOM1",
+      keys: [{ hash: "abc", role: "host", createdAt: new Date() }],
+    });
+
+    const req = createMockReq({
+      method: "POST",
+      query: { id: "ROOM1", entryId: "a" },
+    });
+    const res = createRes();
+    await handler(req, res);
+
+    expect(res.getStatus()).toBe(403);
+    expect(mockCollection.findOneAndUpdate).not.toHaveBeenCalled();
+  });
+
+  it("allows a keyed room's removal with the cohost key", async () => {
+    const { hashRoomKey } = await import("../../lib/roomKeys");
+    mockCollection.findOne.mockResolvedValue({
+      id: "ROOM1",
+      keys: [{ hash: hashRoomKey("cohost-key"), role: "cohost", createdAt: new Date() }],
+    });
+    mockCollection.findOneAndUpdate.mockResolvedValue({
+      id: "ROOM1",
+      queue: makeQueue("a"),
+      activeVideoIndex: 0,
+      isPlaying: false,
+    });
+    mockCollection.updateOne.mockResolvedValue({ matchedCount: 0, modifiedCount: 0 });
+
+    const req = createMockReq({
+      method: "POST",
+      query: { id: "ROOM1", entryId: "a" },
+      headers: { "x-room-key": "cohost-key" },
+    });
+    const res = createRes();
+    await handler(req, res);
+
+    expect(res.getStatus()).toBe(200);
+  });
+
+  it("rejects a keyed room's removal with the display key", async () => {
+    const { hashRoomKey } = await import("../../lib/roomKeys");
+    mockCollection.findOne.mockResolvedValue({
+      id: "ROOM1",
+      keys: [{ hash: hashRoomKey("display-key"), role: "display", createdAt: new Date() }],
+    });
+
+    const req = createMockReq({
+      method: "POST",
+      query: { id: "ROOM1", entryId: "a" },
+      headers: { "x-room-key": "display-key" },
+    });
+    const res = createRes();
+    await handler(req, res);
+
+    expect(res.getStatus()).toBe(403);
+    expect(mockCollection.findOneAndUpdate).not.toHaveBeenCalled();
   });
 });

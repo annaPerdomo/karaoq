@@ -65,3 +65,7 @@ export function qrHiddenStorageKey(joinCode: string): string {
 export function cheersHiddenStorageKey(joinCode: string): string {
   return `karaoq_cheers_hidden_${joinCode}`;
 }
+
+export function tvScreenDismissedStorageKey(joinCode: string): string {
+  return `karaoq_tv_screen_dismissed_${joinCode}`;
+}

@@ -693,6 +693,36 @@ export async function getOpsAlertsCollection(): Promise<Collection<OpsAlertDoc>>
   return db.collection<OpsAlertDoc>("ops_alerts");
 }
 
+// The TTL frees the numeric `_id` for reuse rather than leaving it claimed forever.
+const TV_PAIRING_TTL_SECONDS = 600;
+
+export interface TvPairingDoc {
+  _id: string;
+  kind: "screen" | "remote";
+  secretHash: string;
+  createdAt: Date;
+  roomId?: string;
+  claimedAt?: Date;
+  minterHash?: string;
+}
+
+let tvPairingIndexesEnsured = false;
+
+export async function getTvPairingsCollection(): Promise<Collection<TvPairingDoc>> {
+  const client = await getMongoClient();
+  const db = client.db(process.env.MONGODB_DB);
+  if (!tvPairingIndexesEnsured) {
+    tvPairingIndexesEnsured = true;
+    db.collection("tv_pairings")
+      .createIndex({ createdAt: 1 }, { expireAfterSeconds: TV_PAIRING_TTL_SECONDS })
+      .catch((e) => {
+        console.error("TV pairing index creation failed:", e);
+        tvPairingIndexesEnsured = false;
+      });
+  }
+  return db.collection<TvPairingDoc>("tv_pairings");
+}
+
 let feedbackIndexesEnsured = false;
 
 // No TTL on purpose: every other collection expires, but a bug report is the

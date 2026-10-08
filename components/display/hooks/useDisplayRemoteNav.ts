@@ -11,7 +11,8 @@ interface DisplayEditNav {
 export function useDisplayRemoteNav(
   pageRef: React.RefObject<HTMLElement>,
   enabled: boolean,
-  edit: DisplayEditNav
+  edit: DisplayEditNav,
+  connectPhone?: { open: boolean; close: () => void }
 ): void {
   // useRemoteNav's initialFocus only runs on the first arrow press; this covers OK alone.
   React.useEffect(() => {
@@ -25,7 +26,9 @@ export function useDisplayRemoteNav(
       pageRef.current?.querySelector<HTMLElement>('[data-remote="tap-start"]') ??
       pageRef.current?.querySelector<HTMLElement>('[data-remote="customize"]') ??
       null,
-    onBack: edit.editing
+    onBack: connectPhone?.open && !edit.editing
+      ? connectPhone.close
+      : edit.editing
       ? () => {
           if (edit.dirty) {
             pageRef.current?.querySelector<HTMLElement>('[data-remote="save"]')?.focus();

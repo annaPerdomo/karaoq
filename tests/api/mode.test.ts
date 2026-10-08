@@ -35,7 +35,11 @@ function createRes() {
 }
 
 describe("POST /api/queue/[id]/mode - Set play mode", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // Legacy room (no keys) by default — every check passes.
+    mockCollection.findOne.mockResolvedValue({ id: "ROOM1" });
+  });
 
   it("stores tv mode on the room", async () => {
     mockCollection.updateOne.mockResolvedValue({ matchedCount: 1 });
@@ -84,6 +88,7 @@ describe("POST /api/queue/[id]/mode - Set play mode", () => {
   });
 
   it("returns 404 for non-existent room", async () => {
+    mockCollection.findOne.mockResolvedValue(null);
     mockCollection.updateOne.mockResolvedValue({ matchedCount: 0 });
 
     const req = createMockReq({

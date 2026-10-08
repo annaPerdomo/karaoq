@@ -5,6 +5,7 @@ import { rateLimit } from "../../../../lib/limits";
 import { getRoomsCollection } from "../../../../lib/mongodb";
 import { normalizeRoomId } from "../../../../lib/roomCode";
 import { AUTO_START_STALE_MS } from "../../../../lib/autoAdvance";
+import { allows, roomKeyFromRequest } from "../../../../lib/roomKeys";
 
 // Switching off also drops any countdown: a display mid-countdown must not
 // start under the old setting.
@@ -30,6 +31,15 @@ export default async function handler(
 
   try {
     const collection = await getRoomsCollection();
+    const keyRoom = await collection.findOne({ id: roomId }, { projection: { keys: 1 } });
+    if (!keyRoom) {
+      res.status(404).json({ code: 404, message: "Room not found." });
+      return;
+    }
+    if (!allows(keyRoom, roomKeyFromRequest(req), ["host", "cohost", "display"])) {
+      res.status(403).json({ code: 403, message: "room-key" });
+      return;
+    }
 
     if (req.query.cancel === "1") {
       const result = await collection.updateOne(

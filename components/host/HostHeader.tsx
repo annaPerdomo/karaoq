@@ -34,6 +34,7 @@ export function HostHeader({
   onInviteCohost,
   onPrintQr,
   onSendFeedback,
+  onConnectTv,
   onBrandClick,
 }: {
   remote: boolean;
@@ -64,6 +65,7 @@ export function HostHeader({
   onInviteCohost: () => void;
   onPrintQr: () => void;
   onSendFeedback: () => void;
+  onConnectTv: () => void;
   onBrandClick: () => void;
 }) {
   const { t } = useT();
@@ -125,6 +127,13 @@ export function HostHeader({
                   </div>
                   {tvMode && <span className={styles.modeCheck}>✓</span>}
                 </button>
+                <div className={styles.spSep} />
+                <button className={styles.modeMenuItem} onClick={onConnectTv}>
+                  {Icons.tv}
+                  <div>
+                    <div className={styles.spBtnTitle}>{t('pair.menuItem')}</div>
+                  </div>
+                </button>
               </div>
             </>
           )}
@@ -172,6 +181,7 @@ export function HostHeader({
         onInviteCohost={onInviteCohost}
         onPrintQr={onPrintQr}
         onSendFeedback={onSendFeedback}
+        onConnectTv={onConnectTv}
       />
     </header>
   );

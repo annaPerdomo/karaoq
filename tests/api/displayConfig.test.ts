@@ -52,7 +52,11 @@ const validConfig: DisplayConfig = {
 };
 
 describe("POST /api/queue/[id]/display-config - Save display config", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // Legacy room (no keys) by default — every check passes.
+    mockCollection.findOne.mockResolvedValue({ id: "ROOM1" });
+  });
 
   it("stores the trimmed config and bumps lastActivity", async () => {
     mockCollection.updateOne.mockResolvedValue({ matchedCount: 1 });
@@ -349,6 +353,45 @@ describe("POST /api/queue/[id]/display-config - Save display config", () => {
     await handler(req, res);
 
     expect(res.getStatus()).toBe(404);
+  });
+
+  it("rejects a keyed room's save with no key", async () => {
+    mockCollection.findOne.mockResolvedValue({
+      id: "ROOM1",
+      keys: [{ hash: "abc", role: "host", createdAt: new Date() }],
+    });
+
+    const req = createMockReq({
+      method: "POST",
+      query: { id: "ROOM1" },
+      body: validConfig,
+    });
+    const res = createRes();
+    await handler(req, res);
+
+    expect(res.getStatus()).toBe(403);
+    expect(mockCollection.updateOne).not.toHaveBeenCalled();
+  });
+
+  it("allows a keyed room's save with the display key", async () => {
+    const { hashRoomKey } = await import("../../lib/roomKeys");
+    mockCollection.findOne.mockResolvedValue({
+      id: "ROOM1",
+      keys: [{ hash: hashRoomKey("display-key"), role: "display", createdAt: new Date() }],
+    });
+    mockCollection.updateOne.mockResolvedValue({ matchedCount: 1 });
+
+    const req = createMockReq({
+      method: "POST",
+      query: { id: "ROOM1" },
+      headers: { "x-room-key": "display-key" },
+      body: validConfig,
+    });
+    const res = createRes();
+    await handler(req, res);
+
+    expect(res.getStatus()).toBe(200);
+    expect(mockCollection.updateOne).toHaveBeenCalled();
   });
 
   it("rejects non-POST methods with 405", async () => {

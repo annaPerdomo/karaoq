@@ -27,8 +27,6 @@ import FullscreenToggle from './FullscreenToggle';
 import DisplaySidebar from './display/DisplaySidebar';
 import NowPlayingBar from './display/NowPlayingBar';
 import DisplayStage from './display/DisplayStage';
-import HostFromPhoneCard from './display/HostFromPhoneCard';
-import { useHostFromPhoneVisible } from './display/hooks/useHostFromPhoneVisible';
 import p from '../styles/DisplayDesigner.module.css';
 import { useDisplayEdit } from './display/edit/useDisplayEdit';
 import { Spot, HideButton } from './edit/EditChrome';
@@ -37,6 +35,9 @@ import { displayRailToggles } from './display/edit/railToggles';
 import { EditOverlay } from './edit/EditOverlay';
 import { SAMPLE_QUEUE } from './display/edit/sampleContent';
 import { Icons } from './host/icons';
+import { ConnectPhoneButton } from './display/ConnectPhoneButton';
+import { ConnectPhonePanel } from './display/ConnectPhonePanel';
+import { useConnectPhone } from './display/hooks/useConnectPhone';
 
 const POLL_INTERVAL = 1500;
 // How long a refused embed's notice shows before the queue moves on.
@@ -230,8 +231,8 @@ const Display = (): React.ReactElement => {
     },
   });
 
-  useDisplayRemoteNav(pageRef, isTvDevice(), edit);
-  const hostFromPhone = useHostFromPhoneVisible(joinCode, { editing: edit.editing, playing: isPlaying });
+  const connectPhone = useConnectPhone(joinCode, edit.editing);
+  useDisplayRemoteNav(pageRef, isTvDevice(), edit, connectPhone);
 
   React.useEffect(() => {
     if (!joinCode) return;
@@ -541,6 +542,9 @@ const Display = (): React.ReactElement => {
               <span>{t('customize.button')}</span>
             </button>
           )}
+          {!edit.editing && !loading && (
+            <ConnectPhoneButton isHost={connectPhone.isHost} onPress={connectPhone.openPanel} />
+          )}
           <LanguageSwitcher className={styles.headerLang} />
         </div>
       </header>
@@ -564,9 +568,8 @@ const Display = (): React.ReactElement => {
           onPlaybackFailed={handlePlaybackFailed}
         />
 
-        {hostFromPhone.show && (
-          <HostFromPhoneCard origin={origin} joinCode={joinCode} onHide={hostFromPhone.hide} />
-        )}
+        {/* Shown only on demand and single-use: the code sits on a screen the whole room can see. */}
+        {connectPhone.open && !edit.editing && <ConnectPhonePanel stage={connectPhone.stage} code={connectPhone.code} secondsLeft={connectPhone.secondsLeft} onClose={connectPhone.close} onRetry={connectPhone.retry} />}
 
         {reactionsOn && visibleReactions.length > 0 && (
           <div className={styles.reactionOverlay}>
@@ -708,6 +711,7 @@ const Display = (): React.ReactElement => {
           dirty={edit.dirty}
           saving={edit.saving}
           saveFailed={edit.saveFailed}
+          saveForbidden={edit.saveForbidden}
           onDiscard={edit.discard}
           onSave={edit.save}
           sideDragTarget={edit.sideDragTarget}

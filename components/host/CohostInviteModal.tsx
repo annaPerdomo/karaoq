@@ -1,17 +1,22 @@
 import styles from "../../styles/Host.module.css";
 import { QRCodeSVG } from "qrcode.react";
 import { useT } from "../../lib/i18n/I18nProvider";
+import { CohostKeyStatus } from "./hooks/useCohostInviteKey";
 
 export function CohostInviteModal({
   cohostUrl,
   cohostDisplayUrl,
+  keyStatus,
   onClose,
   onCopyLink,
+  onRetry,
 }: {
   cohostUrl: string;
   cohostDisplayUrl: string;
+  keyStatus: CohostKeyStatus;
   onClose: () => void;
   onCopyLink: () => void;
+  onRetry: () => void;
 }) {
   const { t } = useT();
   return (
@@ -35,27 +40,38 @@ export function CohostInviteModal({
           <li>{t('host.cohost.step3')}</li>
           <li>{t('host.cohost.step4')}</li>
         </ol>
-        {cohostUrl && (
-          <div className={styles.qrModalCode}>
-            <QRCodeSVG
-              value={cohostUrl}
-              size={220}
-              bgColor="transparent"
-              fgColor="#00f0ff"
-              level="M"
-            />
-          </div>
+        {keyStatus === "error" ? (
+          <>
+            <p className={styles.cohostLink}>{t('host.cohost.keyError')}</p>
+            <button className={styles.qrModalPrint} onClick={onRetry}>
+              {t('host.cohost.retry')}
+            </button>
+          </>
+        ) : !cohostUrl ? (
+          <p className={styles.cohostLink}>{t('host.loading')}</p>
+        ) : (
+          <>
+            <div className={styles.qrModalCode}>
+              <QRCodeSVG
+                value={cohostUrl}
+                size={220}
+                bgColor="transparent"
+                fgColor="#00f0ff"
+                level="M"
+              />
+            </div>
+            <p className={styles.qrModalScan}>{t('host.scan')}</p>
+            <p className={styles.qrModalAlt}>
+              {t('host.cohost.sendLink')}
+            </p>
+            <p className={styles.cohostLink}>
+              <strong>{cohostDisplayUrl}</strong>
+            </p>
+            <button className={styles.qrModalPrint} onClick={onCopyLink}>
+              {t('host.cohost.copyLink')}
+            </button>
+          </>
         )}
-        <p className={styles.qrModalScan}>{t('host.scan')}</p>
-        <p className={styles.qrModalAlt}>
-          {t('host.cohost.sendLink')}
-        </p>
-        <p className={styles.cohostLink}>
-          <strong>{cohostDisplayUrl}</strong>
-        </p>
-        <button className={styles.qrModalPrint} onClick={onCopyLink}>
-          {t('host.cohost.copyLink')}
-        </button>
       </div>
     </div>
   );

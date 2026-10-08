@@ -1,3 +1,5 @@
+import { notifyRoomKeyRejected, roomKeyHeaders } from "../../lib/roomKeyStore";
+
 export default async function updatePosition(
   roomId: string,
   activeVideoIndex: number
@@ -8,7 +10,9 @@ export default async function updatePosition(
   try {
     const resp = await fetch(`/api/queue/${roomId}/position?${params}`, {
       method: "POST",
+      headers: roomKeyHeaders(roomId),
     });
+    if (resp.status === 403) notifyRoomKeyRejected(roomId);
     return resp.ok;
   } catch {
     return false;

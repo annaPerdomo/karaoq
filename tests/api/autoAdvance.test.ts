@@ -51,6 +51,8 @@ const ROOM: Room = {
 describe("POST /api/queue/[id]/auto-advance - the room's auto-advance setting", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Legacy room (no keys) by default — every check passes.
+    mockCollection.findOne.mockResolvedValue(ROOM);
     mockCollection.updateOne.mockResolvedValue({ matchedCount: 1 });
   });
 
@@ -180,7 +182,6 @@ describe("POST /api/queue/[id]/auto-advance - the room's auto-advance setting", 
     await handler(req, res);
 
     expect(res.getStatus()).toBe(200);
-    expect(mockCollection.findOne).not.toHaveBeenCalled();
     expect(mockCollection.updateOne).toHaveBeenCalledWith(
       { id: "ROOM1" },
       { $unset: { autoStartAt: "" }, $set: { lastActivity: expect.any(Date) } }

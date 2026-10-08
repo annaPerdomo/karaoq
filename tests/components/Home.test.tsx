@@ -7,7 +7,7 @@ vi.mock("next/router", () => ({
   useRouter: () => ({ push: mockPush }),
 }));
 
-global.fetch = vi.fn().mockResolvedValue({ ok: true });
+global.fetch = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({}) });
 
 // IntersectionObserver stub for scroll-reveal
 class MockIntersectionObserver {
@@ -29,7 +29,7 @@ Element.prototype.scrollIntoView = vi.fn();
 describe("Home component", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    (fetch as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: true });
+    (fetch as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: true, json: () => Promise.resolve({}) });
   });
 
   it("renders the brand name and hero headline", () => {
@@ -126,6 +126,27 @@ describe("Home component", () => {
     const submitBtns = screen.getAllByRole("button", { name: /^Join$/i });
     const submitBtn = submitBtns[submitBtns.length - 1];
     expect(submitBtn).toBeDisabled();
+  });
+
+  it("pairs a phone as the host and routes to the host page", async () => {
+    (fetch as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      if (String(url).startsWith("/api/tv-pair")) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: async () => ({ kind: "remote", roomId: "ROOM1", roomKey: "k", roomKeyRole: "host" }),
+        } as Response);
+      }
+      return Promise.resolve({ ok: true, json: async () => ({}) } as Response);
+    });
+
+    render(<Home />);
+
+    fireEvent.click(screen.getByRole("button", { name: /connect a tv/i }));
+    fireEvent.change(screen.getByPlaceholderText("000 000"), { target: { value: "482917" } });
+    fireEvent.click(screen.getByRole("button", { name: /^connect$/i }));
+
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith("/host/ROOM1?paired=1"));
   });
 
   it("supports Enter key to join", () => {

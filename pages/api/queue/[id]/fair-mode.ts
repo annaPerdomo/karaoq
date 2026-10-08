@@ -4,6 +4,7 @@ import { arrivalOrder, fairOrder, withArrivalTimes } from "../../../../lib/fairQ
 import { rateLimit } from "../../../../lib/limits";
 import { getRoomsCollection } from "../../../../lib/mongodb";
 import { normalizeRoomId } from "../../../../lib/roomCode";
+import { allows, roomKeyFromRequest } from "../../../../lib/roomKeys";
 
 // Both directions re-sort the upcoming songs atomically. The queue-equality filter makes the write
 // optimistic (same CAS style as reorder.ts), so a concurrent add/remove retries on a fresh snapshot.
@@ -39,6 +40,10 @@ export default async function handler(
       const room = await collection.findOne({ id: roomId });
       if (!room) {
         res.status(404).json({ code: 404, message: "Room not found." });
+        return;
+      }
+      if (!allows(room, roomKeyFromRequest(req), ["host", "cohost"])) {
+        res.status(403).json({ code: 403, message: "room-key" });
         return;
       }
 

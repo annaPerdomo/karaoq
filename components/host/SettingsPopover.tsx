@@ -25,6 +25,7 @@ export function SettingsPopover({
   onInviteCohost,
   onPrintQr,
   onSendFeedback,
+  onConnectTv,
 }: {
   isOpen: boolean;
   onClose: () => void;
@@ -44,6 +45,7 @@ export function SettingsPopover({
   onInviteCohost: () => void;
   onPrintQr: () => void;
   onSendFeedback: () => void;
+  onConnectTv: () => void;
 }) {
   const { t } = useT();
   const ref = React.useRef<HTMLDivElement>(null);
@@ -153,6 +155,16 @@ export function SettingsPopover({
           <div className={styles.spSep} />
         </>
       )}
+      <div className={styles.spGroup}>
+        <div className={styles.spLabel}>{t('host.settings.tv')}</div>
+        <button className={styles.spBtn} onClick={onConnectTv}>
+          {Icons.tv}
+          <div>
+            <div className={styles.spBtnTitle}>{t('pair.menuItem')}</div>
+          </div>
+        </button>
+      </div>
+      <div className={styles.spSep} />
       <div className={styles.spGroup}>
         <div className={styles.spLabel}>{remote ? t('host.role.cohost') : t('host.role.host')}</div>
         <button className={styles.spBtn} onClick={onChangeName}>

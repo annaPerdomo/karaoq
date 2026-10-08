@@ -42,6 +42,8 @@ function createRes() {
 describe("POST /api/queue/[id]/song-limit - the room's per-song time limit", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Legacy room (no keys) by default — every check passes.
+    mockCollection.findOne.mockResolvedValue({ id: "ROOM1" });
     mockCollection.updateOne.mockResolvedValue({ matchedCount: 1 });
   });
 

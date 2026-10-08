@@ -49,11 +49,11 @@ describe.each(Object.entries(TV_AGENTS))("landing page on %s", (_name, ua) => {
     }
   });
 
-  it("shows the Start on this TV button, focused", async () => {
+  it("shows the Show on this TV button, focused", async () => {
     const { page, close } = await tvPage(ua);
     try {
       await page.goto(BASE, { waitUntil: "load", timeout: 60_000 });
-      const button = page.getByRole("button", { name: /start on this tv/i });
+      const button = page.getByRole("button", { name: /show on this tv/i });
       await expect.poll(() => button.isVisible(), { timeout: 30_000 }).toBe(true);
       await expect.poll(() => button.evaluate((el) => el === document.activeElement)).toBe(true);
     } finally {
@@ -118,7 +118,7 @@ describe("host screen on a TV", () => {
       }),
     });
     expect(res.status).toBe(200);
-    const { page, close } = await tvPage(TV_AGENTS.tizen);
+    const { page, close } = await tvPage(TV_AGENTS.tizen, { roomKey: { code: room.code, key: room.roomKey } });
     try {
       await page.goto(`${BASE}/host/${room.code}`, { waitUntil: "load", timeout: 60_000 });
       const nameBox = page.getByPlaceholder(/enter your name/i);
@@ -145,7 +145,7 @@ describe("host screen on a TV", () => {
   });
 
   it("loads the room without errors", async () => {
-    const { page, errors, close } = await tvPage(TV_AGENTS.tizen);
+    const { page, errors, close } = await tvPage(TV_AGENTS.tizen, { roomKey: { code: room.code, key: room.roomKey } });
     try {
       await page.goto(`${BASE}/host/${room.code}`, { waitUntil: "load", timeout: 60_000 });
       // If the join code rendered, the room resolved and the screen is usable.
@@ -174,11 +174,14 @@ describe("desktop is unaffected", () => {
     }
   });
 
-  it("does not render the Start on this TV button", async () => {
+  it("shows Connect a TV and not the TV pairing card", async () => {
     const { page, close } = await tvPage(DESKTOP_AGENT, { cpuThrottle: 1 });
     try {
       await page.goto(BASE, { waitUntil: "load", timeout: 60_000 });
-      expect(await page.getByRole("button", { name: /start on this tv/i }).count()).toBe(0);
+      await expect
+        .poll(() => page.getByText(/connect a tv/i).first().isVisible(), { timeout: 30_000 })
+        .toBe(true);
+      expect(await page.getByRole("button", { name: /show on this tv/i }).count()).toBe(0);
     } finally {
       await close();
     }

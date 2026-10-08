@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { getRoomsCollection } from "../../../../lib/mongodb";
 import { normalizeRoomId } from "../../../../lib/roomCode";
+import { allows, roomKeyFromRequest } from "../../../../lib/roomKeys";
 
 export default async function handler(
   req: NextApiRequest,
@@ -21,6 +22,15 @@ export default async function handler(
 
   try {
     const collection = await getRoomsCollection();
+    const keyRoom = await collection.findOne({ id: roomId }, { projection: { keys: 1 } });
+    if (!keyRoom) {
+      res.status(404).json({ code: 404, message: "Room not found." });
+      return;
+    }
+    if (!allows(keyRoom, roomKeyFromRequest(req), ["host", "cohost"])) {
+      res.status(403).json({ code: 403, message: "room-key" });
+      return;
+    }
     // Atomic $pull instead of a read-modify-write $set: a full-array write
     // from a stale snapshot would silently delete songs added concurrently.
     // The "before" image tells us exactly where the entry sat at pull time.

@@ -3,6 +3,7 @@ import { trackEvent } from "../../../../lib/analytics";
 import { rateLimit } from "../../../../lib/limits";
 import { getRoomsCollection } from "../../../../lib/mongodb";
 import { normalizeRoomId } from "../../../../lib/roomCode";
+import { allows, roomKeyFromRequest } from "../../../../lib/roomKeys";
 
 export default async function handler(
   req: NextApiRequest,
@@ -35,6 +36,8 @@ export default async function handler(
 
     if (!room) {
       res.status(404).json({ code: 404, message: "Room not found." });
+    } else if (!allows(room, roomKeyFromRequest(req), ["host", "cohost"])) {
+      res.status(403).json({ code: 403, message: "room-key" });
     } else {
       await collection.updateOne(
         { id: roomId },
