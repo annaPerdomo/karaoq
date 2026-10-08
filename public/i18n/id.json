@@ -847,7 +847,7 @@
   "host.settings.tv": "TV",
   "pair.connect": "Hubungkan",
   "pair.err.expired": "Kode itu kedaluwarsa atau sudah dipakai. Tampilkan kode baru di TV.",
-  "pair.err.invalid": "Masukkan kode 6 digit dari TV.",
+  "pair.err.invalid": "Masukkan kode yang ditampilkan di TV.",
   "pair.err.generic": "Tidak dapat terhubung. Coba lagi.",
   "pair.err.rateLimited": "Terlalu banyak percobaan. Tunggu semenit lalu coba lagi.",
   "pair.menuItem": "Hubungkan TV dengan kode",

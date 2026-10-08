@@ -847,7 +847,7 @@
   "host.settings.tv": "TV",
   "pair.connect": "연결",
   "pair.err.expired": "코드가 만료되었거나 이미 사용되었습니다. TV에 새 코드를 표시하세요.",
-  "pair.err.invalid": "TV에 표시된 6자리 코드를 입력하세요.",
+  "pair.err.invalid": "TV에 표시된 코드를 입력하세요.",
   "pair.err.generic": "연결할 수 없습니다. 다시 시도하세요.",
   "pair.err.rateLimited": "시도 횟수가 너무 많습니다. 1분 기다린 후 다시 시도하세요.",
   "pair.menuItem": "코드로 TV 연결",

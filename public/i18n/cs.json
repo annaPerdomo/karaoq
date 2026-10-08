@@ -847,7 +847,7 @@
   "host.settings.tv": "TV",
   "pair.connect": "Připojit",
   "pair.err.expired": "Tento kód vypršel nebo už byl použit. Zobrazte na TV nový.",
-  "pair.err.invalid": "Zadejte 6místný kód z TV.",
+  "pair.err.invalid": "Zadejte kód zobrazený na TV.",
   "pair.err.generic": "Nepodařilo se připojit. Zkuste to znovu.",
   "pair.err.rateLimited": "Příliš mnoho pokusů. Počkejte minutu a zkuste to znovu.",
   "pair.menuItem": "Připojit TV pomocí kódu",

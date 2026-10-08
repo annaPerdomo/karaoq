@@ -364,7 +364,7 @@
   "host.settings.changeName": "Change your name",
   "pair.connect": "Connect",
   "pair.err.expired": "That code expired or was already used. Show a new one on the TV.",
-  "pair.err.invalid": "Enter the 6-digit code from the TV.",
+  "pair.err.invalid": "Enter the code shown on the TV.",
   "pair.err.generic": "Couldn't connect. Try again.",
   "pair.err.rateLimited": "Too many tries. Wait a minute and try again.",
   "pair.menuItem": "Connect a TV with a code",

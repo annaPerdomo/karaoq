@@ -16,9 +16,35 @@ describe("ConnectTvForm", () => {
     fireEvent.click(screen.getByRole("button", { name: /connect/i }));
 
     await waitFor(() => {
-      expect(screen.getByText(/enter the 6-digit code/i)).toBeInTheDocument();
+      expect(screen.getByText(/enter the code shown on the tv/i)).toBeInTheDocument();
     });
     expect(fetchMock).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
+
+  it("has room for the longer 8-digit remote code", () => {
+    render(<ConnectTvForm onPaired={vi.fn()} />);
+    expect(screen.getByRole("textbox")).toHaveAttribute("maxLength", "9");
+  });
+
+  it("submits a claim for an 8-digit remote code", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ kind: "remote", roomId: "ROOM1", roomKey: "key", roomKeyRole: "cohost" }),
+    } as Response);
+    vi.stubGlobal("fetch", fetchMock);
+    const onPaired = vi.fn();
+    render(<ConnectTvForm onPaired={onPaired} />);
+
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: "4829 1753" } });
+    fireEvent.click(screen.getByRole("button", { name: /connect/i }));
+
+    await waitFor(() => expect(onPaired).toHaveBeenCalledWith({ kind: "remote", roomId: "ROOM1" }));
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/tv-pair/48291753/claim",
+      expect.objectContaining({ method: "POST" })
+    );
     vi.unstubAllGlobals();
   });
 

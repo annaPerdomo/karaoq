@@ -847,7 +847,7 @@
   "host.settings.tv": "TV",
   "pair.connect": "Ikonekta",
   "pair.err.expired": "Nag-expire na o nagamit na ang code na iyon. Magpakita ng bago sa TV.",
-  "pair.err.invalid": "Ilagay ang 6-digit na code mula sa TV.",
+  "pair.err.invalid": "Ilagay ang code na ipinapakita sa TV.",
   "pair.err.generic": "Hindi makakonekta. Subukan muli.",
   "pair.err.rateLimited": "Sobrang dami ng pagsubok. Maghintay ng isang minuto at subukan muli.",
   "pair.menuItem": "Ikonekta ang isang TV gamit ang code",

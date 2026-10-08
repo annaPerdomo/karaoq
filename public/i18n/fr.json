@@ -847,7 +847,7 @@
   "host.settings.tv": "TV",
   "pair.connect": "Connecter",
   "pair.err.expired": "Ce code a expiré ou a déjà été utilisé. Affichez-en un nouveau sur la télé.",
-  "pair.err.invalid": "Saisissez le code à 6 chiffres affiché sur la télé.",
+  "pair.err.invalid": "Saisissez le code affiché sur la télé.",
   "pair.err.generic": "Impossible de se connecter. Réessayez.",
   "pair.err.rateLimited": "Trop de tentatives. Attendez une minute puis réessayez.",
   "pair.menuItem": "Connecter une télé avec un code",

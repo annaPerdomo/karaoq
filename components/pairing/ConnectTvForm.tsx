@@ -66,7 +66,7 @@ export function ConnectTvForm({ roomId, onPaired, onNeedsRoom }: ConnectTvFormPr
         autoComplete="one-time-code"
         placeholder="000 000"
         aria-label={t('pair.connect')}
-        maxLength={7}
+        maxLength={9}
         value={code}
         onChange={(e) => {
           setCode(e.target.value);

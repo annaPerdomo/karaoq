@@ -847,7 +847,7 @@
   "host.settings.tv": "テレビ",
   "pair.connect": "接続",
   "pair.err.expired": "そのコードは期限切れか、既に使用されています。テレビに新しいコードを表示してください。",
-  "pair.err.invalid": "テレビに表示されている6桁のコードを入力してください。",
+  "pair.err.invalid": "テレビに表示されているコードを入力してください。",
   "pair.err.generic": "接続できませんでした。もう一度お試しください。",
   "pair.err.rateLimited": "試行回数が多すぎます。1分待ってから再度お試しください。",
   "pair.menuItem": "コードでテレビを接続",
