@@ -880,6 +880,37 @@
     left: 0;
   }
 
+  html:not([data-tv]) .footer {
+    right: 0;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.2rem 0.75rem;
+  }
+
+  html:not([data-tv]) .sidebar,
+  html:not([data-tv]) .sidebarLeft .sidebar {
+    max-height: calc(50vh - 3.6rem);
+    overflow-y: auto;
+  }
+
+  /* The boards summary alone can outgrow the half-height sidebar. */
+  html:not([data-tv]) .upNextSection {
+    flex: none;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  html:not([data-tv]) .upNextList {
+    flex: none;
+    overflow-y: visible;
+  }
+
+  html:not([data-tv]) .videoFullscreen {
+    right: 12px;
+    bottom: 4rem;
+    z-index: 21;
+  }
+
   html:not([data-tv]) .reactionOverlay {
     bottom: 100px;
   }
