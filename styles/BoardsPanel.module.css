@@ -32,6 +32,8 @@
 .boardsTitle {
   display: inline-flex;
   align-items: center;
+  flex: 1 1 auto;
+  min-width: 0;
   gap: 0.45rem;
   font-size: 0.65rem;
   letter-spacing: 1.5px;
@@ -41,6 +43,7 @@
 }
 
 .boardsCountBadge {
+  flex-shrink: 0;
   min-width: 1.1rem;
   padding: 0 0.3rem;
   border-radius: 999px;
@@ -53,6 +56,7 @@
 }
 
 .boardsCaret {
+  flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -106,5 +110,11 @@
   }
   50% {
     opacity: 0.4;
+  }
+}
+
+@media (max-width: 360px) {
+  .boardsTitle {
+    letter-spacing: 1px;
   }
 }

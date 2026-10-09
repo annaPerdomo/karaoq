@@ -1168,7 +1168,7 @@
    reachable. Collapse the nested scroll areas so the parent (the Sing page's
    search panel, the host's search overlay, or the post modal) scrolls the
    whole thing as one page. */
-@media (max-width: 640px) {
+@media (max-width: 640px), (max-height: 480px) {
   .container {
     flex: 0 0 auto;
     overflow: visible;
@@ -1206,6 +1206,8 @@
   padding: 1.5rem;
   max-width: 380px;
   width: 90%;
+  max-height: calc(100dvh - 2rem);
+  overflow-y: auto;
   text-align: center;
   animation: slideUp 0.2s ease;
 }
@@ -1352,3 +1354,9 @@ html[data-tv] .skeletonAdd::after {
   animation: none;
 }
 /* @calm-twin-end */
+
+@media (max-height: 500px) {
+  .previewWrap {
+    max-width: 220px;
+  }
+}

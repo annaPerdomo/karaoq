@@ -523,3 +523,10 @@
     opacity: 1;
   }
 }
+
+@media (max-height: 500px) {
+  .previewWrap {
+    max-width: 240px;
+    margin: 0 auto;
+  }
+}
