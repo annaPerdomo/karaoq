@@ -24,6 +24,8 @@ export function useConfigEdit<C extends SurfaceLayout, Id extends string>(opts: 
   extraDirty?: boolean;
   onReset?: () => void;
   scale?: number;
+  // A TV renders the sidebar boosted, so its width drag converts at that scale.
+  sidebarScale?: number;
 }) {
   const {
     joinCode,
@@ -35,6 +37,7 @@ export function useConfigEdit<C extends SurfaceLayout, Id extends string>(opts: 
     extraDirty = false,
     onReset,
     scale = 1,
+    sidebarScale = scale,
   } = opts;
 
   const [editing, setEditing] = React.useState(false);
@@ -148,7 +151,7 @@ export function useConfigEdit<C extends SurfaceLayout, Id extends string>(opts: 
     min: SIDEBAR_WIDTH_MIN,
     max: SIDEBAR_WIDTH_MAX,
     axis: 'x',
-    scale,
+    scale: sidebarScale,
     step: 20,
     invert: draft.sidebarPosition === 'right',
     onChange: (sidebarWidth) => change({ sidebarWidth } as Partial<C>),

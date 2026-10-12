@@ -85,7 +85,8 @@
   }
 }
 
-/* --sb-w is set inline on .main from displayConfig.sidebarWidth. */
+/* --sb-w, --sb-scale and --sb-boost are set inline on .main from
+   displayConfig.sidebarWidth and the TV sidebar boost. */
 .sidebarLeft .sidebar {
   right: auto;
   left: 0;
@@ -711,9 +712,9 @@
 }
 
 .upNextTitle {
-  font-size: 0.72rem;
+  font-size: calc(0.72rem * var(--sb-scale, 1));
   font-weight: 600;
-  letter-spacing: calc(1.2px * var(--tv-scale, 1));
+  letter-spacing: calc(1.2px * var(--tv-scale, 1) * var(--sb-scale, 1));
   text-transform: uppercase;
   color: var(--acc-a);
   display: flex;
@@ -725,7 +726,7 @@
 }
 
 .upNextCount {
-  font-size: 0.6rem;
+  font-size: calc(0.6rem * var(--sb-scale, 1));
   font-weight: 700;
   background: rgba(255, 45, 120, 0.2);
   color: var(--acc-a);
@@ -738,7 +739,7 @@
    singer names rather than competing with them. */
 .upNextTotal {
   margin-left: auto;
-  font-size: 0.6rem;
+  font-size: calc(0.6rem * var(--sb-scale, 1));
   font-weight: 600;
   letter-spacing: 0;
   color: var(--text-muted);
@@ -747,7 +748,7 @@
 }
 
 .upNextEta {
-  font-size: 0.62rem;
+  font-size: calc(0.62rem * var(--sb-scale, 1));
   color: var(--text-muted);
   white-space: nowrap;
   flex-shrink: 0;
@@ -772,11 +773,11 @@
 }
 
 .upNextNum {
-  font-size: 0.62rem;
+  font-size: calc(0.62rem * var(--sb-scale, 1));
   font-weight: 700;
   color: var(--acc-a);
-  width: 1.4rem;
-  height: 1.4rem;
+  width: calc(1.4rem * var(--sb-scale, 1));
+  height: calc(1.4rem * var(--sb-scale, 1));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -795,7 +796,7 @@
 }
 
 .upNextItemSinger {
-  font-size: 0.85rem;
+  font-size: calc(0.85rem * var(--sb-scale, 1));
   font-weight: 600;
   color: var(--acc-b);
   white-space: nowrap;
@@ -804,7 +805,7 @@
 }
 
 .upNextItemSong {
-  font-size: 0.75rem;
+  font-size: calc(0.75rem * var(--sb-scale, 1));
   color: var(--text-primary);
   line-height: 1.35;
   word-break: break-word;
@@ -812,7 +813,7 @@
 
 .emptyQueue {
   padding: 2rem 1.25rem;
-  font-size: 0.85rem;
+  font-size: calc(0.85rem * var(--sb-scale, 1));
   color: var(--text-muted);
   text-align: center;
 }

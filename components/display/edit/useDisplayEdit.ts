@@ -21,8 +21,9 @@ export function useDisplayEdit(opts: {
   boardsOn: boolean;
   onSaved: (config: DisplayConfig, boardsOn: boolean) => void;
   scale?: number;
+  sidebarScale?: number;
 }) {
-  const { joinCode, config, boardsOn, onSaved, scale } = opts;
+  const { joinCode, config, boardsOn, onSaved, scale, sidebarScale } = opts;
   const [boardsDraft, setBoardsDraft] = React.useState(boardsOn);
   // Mirrors useConfigEdit's justSaved so a poll predating our write can't revert boards.
   const savedBoards = React.useRef(boardsOn);
@@ -46,6 +47,7 @@ export function useDisplayEdit(opts: {
     keys: CONFIG_KEYS,
     nowPlayingBounds: { min: DISPLAY_NOW_H_MIN, max: DISPLAY_NOW_H_MAX },
     scale,
+    sidebarScale,
     extraDirty: boardsDraft !== settledBoards,
     onReset: () => setBoardsDraft(settledBoards),
     // Send boards only when changed: keeps untouched rooms out of the boardsOnDisplay stat.

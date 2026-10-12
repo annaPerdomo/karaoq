@@ -69,7 +69,7 @@ const Display = (): React.ReactElement => {
     isPlaying,
   });
   const { adoptBroadcast } = timing;
-  const tvScaleFactor = useTvScale();
+  const { scale: tvScaleFactor, sidebarScale } = useTvScale();
   const [displayPaused, setDisplayPaused] = React.useState(false);
   // Unset playMode (legacy rooms) is treated like "tv".
   const [playMode, setPlayMode] = React.useState<PlayMode | null>(null);
@@ -224,6 +224,7 @@ const Display = (): React.ReactElement => {
     config: displayConfig,
     boardsOn,
     scale: tvScaleFactor,
+    sidebarScale,
     onSaved: (nextConfig, nextBoards) => {
       setDisplayConfig(nextConfig);
       setBoardsOn(nextBoards);
@@ -519,11 +520,14 @@ const Display = (): React.ReactElement => {
       ref={pageRef}
       className={`${styles.main} ${themeClass} ${sideClass} ${editSideClass}`}
       style={{
-        '--sb-w': `calc(${view.sidebarWidth}px * var(--tv-scale, 1))`,
+        '--sb-w': `${view.sidebarWidth * sidebarScale}px`,
         '--now-h': `calc(${view.nowPlayingHeight}px * var(--tv-scale, 1))`,
         // CSS can't divide two px lengths into a unitless number, so the type
         // scale ratio is computed here.
         '--now-scale': `${view.nowPlayingHeight / DEFAULT_DISPLAY_CONFIG.nowPlayingHeight}`,
+        // Relative to the root rem, which already carries tvScale.
+        '--sb-boost': `${sidebarScale / tvScaleFactor}`,
+        '--sb-scale': `${Math.max(1, view.sidebarWidth / DEFAULT_DISPLAY_CONFIG.sidebarWidth) * (sidebarScale / tvScaleFactor)}`,
       } as React.CSSProperties}
       onClick={edit.editing ? () => edit.setSelected(null) : undefined}
     >
@@ -667,7 +671,7 @@ const Display = (): React.ReactElement => {
           singWithMe={singWithMe}
           suggestions={suggestions}
           displayConfig={view}
-          scale={tvScaleFactor}
+          scale={sidebarScale}
           edit={
             edit.editing
               ? {

@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { tvScale } from "../../lib/tvScale";
+import { TV_SIDEBAR_BOOST, tvScale } from "../../lib/tvScale";
+import { DEFAULT_DISPLAY_CONFIG } from "../../pages/api/types";
 import {
   BASE,
   DESKTOP_AGENT,
@@ -92,6 +93,20 @@ describe("display scales on a TV", () => {
     const [r0, r1, r2] = ratios;
     expect(Math.abs(r1 - r0) / r0).toBeLessThan(0.02);
     expect(Math.abs(r2 - r0) / r0).toBeLessThan(0.02);
+  });
+
+  it.each(TV_VIEWPORTS)("keeps the sidebar at its boosted size at %o", async (viewport) => {
+    const { page, close } = await loadDisplay(viewport);
+    try {
+      const sidebar = page.locator('[class*="sidebar_"]').first();
+      await sidebar.waitFor({ timeout: 30_000 });
+      const box = await sidebar.boundingBox();
+      const expected =
+        DEFAULT_DISPLAY_CONFIG.sidebarWidth * tvScale(viewport.width, viewport.height) * TV_SIDEBAR_BOOST;
+      expect(Math.abs(box!.width - expected)).toBeLessThan(2);
+    } finally {
+      await close();
+    }
   });
 
   it("keeps the QR proportional and visible across TV sizes", async () => {

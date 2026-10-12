@@ -1,5 +1,6 @@
 import { Html, Head, Main, NextScript } from 'next/document';
 import { TV_PATTERN } from '../lib/deviceType';
+import { TV_DESIGN_H, TV_DESIGN_W, TV_SCALE_MAX, TV_SCALE_MIN } from '../lib/tvScale';
 
 /**
  * Flags smart TVs on <html> before the first paint. Inline and blocking rather
@@ -12,7 +13,7 @@ const TV_FLAG_SCRIPT =
   `try{if(${TV_PATTERN}.test(navigator.userAgent)||/[?&]tv=1(&|$)/.test(location.search)){` +
   `var d=document.documentElement;d.setAttribute('data-tv','1');` +
   `if(/^\\/(?:[a-z]{2,3}\\/)?display\\//.test(location.pathname)){` +
-  `var s=Math.round(Math.min(3,Math.max(.75,Math.min(innerWidth/1280,innerHeight/720)))*1000)/1000;` +
+  `var s=Math.round(Math.min(${TV_SCALE_MAX},Math.max(${TV_SCALE_MIN},Math.min(innerWidth/${TV_DESIGN_W},innerHeight/${TV_DESIGN_H})))*1000)/1000;` +
   `d.style.setProperty('--tv-scale',String(s));d.setAttribute('data-tv-scaled','1')}` +
   `}}catch(e){}`;
 
