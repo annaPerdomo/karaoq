@@ -77,6 +77,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .nowGlow,
+  .nowDot,
+  .footerHeart,
   .themeNeon .nowGlow {
     animation: none;
   }
@@ -946,10 +949,32 @@
    Generated from the block above, and tests/lib/calmCss.test.ts fails if the
    two ever drift — edit the reduced-motion block, then re-run that test. */
 /* @calm-twin-start */
+html[data-tv] .nowGlow,
+html[data-tv] .nowDot,
+html[data-tv] .footerHeart,
 html[data-tv] .themeNeon .nowGlow {
   animation: none;
 }
 /* @calm-twin-end */
+
+/* Tizen flashes translucent or backdrop-blurred fixed layers empty while a video
+   plays, so on a TV they paint the same tint opaque over the page colour. */
+html[data-tv] .header {
+  background: linear-gradient(rgba(var(--disp-surface-rgb), 0.85), rgba(var(--disp-surface-rgb), 0.85)),
+    var(--bg-primary);
+  backdrop-filter: none;
+}
+
+html[data-tv] .sidebar {
+  background: linear-gradient(rgba(var(--disp-surface-rgb), 0.4), rgba(var(--disp-surface-rgb), 0.4)),
+    var(--bg-primary);
+}
+
+html[data-tv] .videoFullscreen,
+html[data-tv] .tapOverlay,
+html[data-tv] .connectPhonePanel {
+  backdrop-filter: none;
+}
 
 .headerEdit:focus-visible,
 .videoFullscreen:focus-visible,

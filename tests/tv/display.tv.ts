@@ -132,6 +132,26 @@ describe("display scales on a TV", () => {
     expect(Math.abs(r2 - r0) / r0).toBeLessThan(0.03);
   });
 
+  // Tizen flashed these two layers empty mid-song while they were translucent.
+  it("paints the header and sidebar opaque, with no backdrop blur", async () => {
+    const { page, close } = await loadDisplay({ width: 1920, height: 1080 });
+    try {
+      const header = page.locator('[class*="header_"]').first();
+      const sidebar = page.locator('[class*="sidebar_"]').first();
+      await sidebar.waitFor({ timeout: 30_000 });
+      for (const el of [header, sidebar]) {
+        const style = await el.evaluate((n) => {
+          const cs = getComputedStyle(n);
+          return { blur: cs.backdropFilter, image: cs.backgroundImage };
+        });
+        expect(style.blur).toBe("none");
+        expect(style.image).toContain("linear-gradient");
+      }
+    } finally {
+      await close();
+    }
+  });
+
   it("leaves desktop at its unscaled sidebar width and root font size", async () => {
     const { page, close } = await tvPage(DESKTOP_AGENT, {
       cpuThrottle: 1,
