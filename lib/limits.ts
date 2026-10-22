@@ -1,6 +1,7 @@
 import type { NextApiRequest } from "next";
 import type { DisplayConfig, FeedbackKind, HostConfig, QueueEntry, SingWithMePost, SuggestedSong } from "../pages/api/types";
 import { DISPLAY_THEMES as DISPLAY_THEME_LIST, FEEDBACK_KINDS } from "../pages/api/types";
+import { sanitizeRef } from "./firstTouch";
 import { VIDEO_ID_RE } from "./videoLink";
 
 // Server-side caps on anonymous writes: the UI enforces friendlier limits; these stop curl from
@@ -28,6 +29,7 @@ export interface SanitizedFeedback {
   roomId?: string;
   role?: "host" | "singer";
   page?: string;
+  ref?: string;
 }
 
 /** The message is the only field that can reject a submission; the rest fall
@@ -55,6 +57,7 @@ export function sanitizeFeedback(body: unknown): SanitizedFeedback | null {
     roomId: capped(e.roomId, MAX_ENTRY_ID_LENGTH),
     role: e.role === "host" || e.role === "singer" ? e.role : undefined,
     page: capped(e.page, MAX_FEEDBACK_PAGE_LENGTH),
+    ref: sanitizeRef(typeof e.ref === "string" ? e.ref : undefined),
   };
 }
 

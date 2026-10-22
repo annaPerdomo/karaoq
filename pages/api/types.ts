@@ -20,6 +20,8 @@ export interface FeedbackEntry {
   role?: "host" | "singer";
   /** Separates a landing-page suggestion from an in-room bug. */
   page?: string;
+  /** First-touch attribution (lib/firstTouch.ts), when the sender arrived via one. */
+  ref?: string;
   locale?: Locale;
   country?: string;
   userAgent?: string;
