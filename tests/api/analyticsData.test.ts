@@ -33,6 +33,7 @@ const fakeCollection = {
       if (isSourcesPipeline(pipeline)) {
         return [
           { _id: "reddit", count: 5 },
+          { _id: "from a room link", count: 4 },
           { _id: "direct", count: 3 },
           { _id: "untracked", count: 1 },
         ];
@@ -77,7 +78,7 @@ describe("GET /api/analytics/data - growth.sources", () => {
     adminAuthMock.mockReturnValue(true);
   });
 
-  it("groups room_created over the last 7 days by ref, falling back to referrer, then direct vs. untracked", async () => {
+  it("groups room_created by ref, referrer, a room-link entry, direct, or untracked", async () => {
     const req = createMockReq({ method: "GET" });
     const res = createRes();
     await handler(req, res);
@@ -86,6 +87,7 @@ describe("GET /api/analytics/data - growth.sources", () => {
     const body = res.getBody() as { growth: { sources: { _id: string; count: number }[] } };
     expect(body.growth.sources).toEqual([
       { _id: "reddit", count: 5 },
+      { _id: "from a room link", count: 4 },
       { _id: "direct", count: 3 },
       { _id: "untracked", count: 1 },
     ]);

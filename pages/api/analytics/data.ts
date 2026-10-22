@@ -886,7 +886,18 @@ export default async function handler(
                   {
                     $ifNull: [
                       "$referrer",
-                      { $cond: [{ $ifNull: ["$entry", false] }, "direct", "untracked"] },
+                      {
+                        $cond: [
+                          {
+                            $regexMatch: {
+                              input: { $ifNull: ["$entry", ""] },
+                              regex: "^/(host|sing|remote|display)/",
+                            },
+                          },
+                          "from a room link",
+                          { $cond: [{ $ifNull: ["$entry", false] }, "direct", "untracked"] },
+                        ],
+                      },
                     ],
                   },
                 ],
