@@ -68,8 +68,12 @@ function MyApp({ Component, pageProps }: AppProps) {
       {/* Passing route turns the script's own auto-tracking off, which would
           otherwise send raw pathnames — and a join code is the whole key to a
           room. Gated on isReady: room pages are statically optimized, so
-          asPath settles a tick late and would bill one visit as two. */}
-      {router.isReady && <Analytics route={router.pathname} path={router.asPath} />}
+          asPath settles a tick late and would bill one visit as two.
+          NEXT_PUBLIC_KARAOQ_SELF_HOST opts the VM build out: off Vercel
+          there's no /_vercel/insights endpoint to call. */}
+      {router.isReady && process.env.NEXT_PUBLIC_KARAOQ_SELF_HOST !== '1' && (
+        <Analytics route={router.pathname} path={router.asPath} />
+      )}
     </I18nProvider>
   );
 }
