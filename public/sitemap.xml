@@ -1530,4 +1530,854 @@
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
+  <url>
+    <loc>https://www.karaoq.live/songs</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.karaoq.live/songs"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://www.karaoq.live/ja/songs"/>
+    <xhtml:link rel="alternate" hreflang="fil" href="https://www.karaoq.live/fil/songs"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.karaoq.live/es/songs"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://www.karaoq.live/ko/songs"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://www.karaoq.live/pt/songs"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.karaoq.live/de/songs"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://www.karaoq.live/id/songs"/>
+    <xhtml:link rel="alternate" hreflang="cs" href="https://www.karaoq.live/cs/songs"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://www.karaoq.live/fr/songs"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.karaoq.live/songs"/>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.karaoq.live/ja/songs</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.karaoq.live/songs"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://www.karaoq.live/ja/songs"/>
+    <xhtml:link rel="alternate" hreflang="fil" href="https://www.karaoq.live/fil/songs"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.karaoq.live/es/songs"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://www.karaoq.live/ko/songs"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://www.karaoq.live/pt/songs"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.karaoq.live/de/songs"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://www.karaoq.live/id/songs"/>
+    <xhtml:link rel="alternate" hreflang="cs" href="https://www.karaoq.live/cs/songs"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://www.karaoq.live/fr/songs"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.karaoq.live/songs"/>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.karaoq.live/fil/songs</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.karaoq.live/songs"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://www.karaoq.live/ja/songs"/>
+    <xhtml:link rel="alternate" hreflang="fil" href="https://www.karaoq.live/fil/songs"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.karaoq.live/es/songs"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://www.karaoq.live/ko/songs"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://www.karaoq.live/pt/songs"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.karaoq.live/de/songs"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://www.karaoq.live/id/songs"/>
+    <xhtml:link rel="alternate" hreflang="cs" href="https://www.karaoq.live/cs/songs"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://www.karaoq.live/fr/songs"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.karaoq.live/songs"/>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.karaoq.live/es/songs</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.karaoq.live/songs"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://www.karaoq.live/ja/songs"/>
+    <xhtml:link rel="alternate" hreflang="fil" href="https://www.karaoq.live/fil/songs"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.karaoq.live/es/songs"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://www.karaoq.live/ko/songs"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://www.karaoq.live/pt/songs"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.karaoq.live/de/songs"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://www.karaoq.live/id/songs"/>
+    <xhtml:link rel="alternate" hreflang="cs" href="https://www.karaoq.live/cs/songs"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://www.karaoq.live/fr/songs"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.karaoq.live/songs"/>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.karaoq.live/ko/songs</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.karaoq.live/songs"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://www.karaoq.live/ja/songs"/>
+    <xhtml:link rel="alternate" hreflang="fil" href="https://www.karaoq.live/fil/songs"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.karaoq.live/es/songs"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://www.karaoq.live/ko/songs"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://www.karaoq.live/pt/songs"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.karaoq.live/de/songs"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://www.karaoq.live/id/songs"/>
+    <xhtml:link rel="alternate" hreflang="cs" href="https://www.karaoq.live/cs/songs"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://www.karaoq.live/fr/songs"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.karaoq.live/songs"/>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.karaoq.live/pt/songs</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.karaoq.live/songs"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://www.karaoq.live/ja/songs"/>
+    <xhtml:link rel="alternate" hreflang="fil" href="https://www.karaoq.live/fil/songs"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.karaoq.live/es/songs"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://www.karaoq.live/ko/songs"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://www.karaoq.live/pt/songs"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.karaoq.live/de/songs"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://www.karaoq.live/id/songs"/>
+    <xhtml:link rel="alternate" hreflang="cs" href="https://www.karaoq.live/cs/songs"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://www.karaoq.live/fr/songs"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.karaoq.live/songs"/>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.karaoq.live/de/songs</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.karaoq.live/songs"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://www.karaoq.live/ja/songs"/>
+    <xhtml:link rel="alternate" hreflang="fil" href="https://www.karaoq.live/fil/songs"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.karaoq.live/es/songs"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://www.karaoq.live/ko/songs"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://www.karaoq.live/pt/songs"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.karaoq.live/de/songs"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://www.karaoq.live/id/songs"/>
+    <xhtml:link rel="alternate" hreflang="cs" href="https://www.karaoq.live/cs/songs"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://www.karaoq.live/fr/songs"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.karaoq.live/songs"/>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.karaoq.live/id/songs</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.karaoq.live/songs"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://www.karaoq.live/ja/songs"/>
+    <xhtml:link rel="alternate" hreflang="fil" href="https://www.karaoq.live/fil/songs"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.karaoq.live/es/songs"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://www.karaoq.live/ko/songs"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://www.karaoq.live/pt/songs"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.karaoq.live/de/songs"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://www.karaoq.live/id/songs"/>
+    <xhtml:link rel="alternate" hreflang="cs" href="https://www.karaoq.live/cs/songs"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://www.karaoq.live/fr/songs"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.karaoq.live/songs"/>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.karaoq.live/cs/songs</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.karaoq.live/songs"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://www.karaoq.live/ja/songs"/>
+    <xhtml:link rel="alternate" hreflang="fil" href="https://www.karaoq.live/fil/songs"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.karaoq.live/es/songs"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://www.karaoq.live/ko/songs"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://www.karaoq.live/pt/songs"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.karaoq.live/de/songs"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://www.karaoq.live/id/songs"/>
+    <xhtml:link rel="alternate" hreflang="cs" href="https://www.karaoq.live/cs/songs"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://www.karaoq.live/fr/songs"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.karaoq.live/songs"/>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.karaoq.live/fr/songs</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.karaoq.live/songs"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://www.karaoq.live/ja/songs"/>
+    <xhtml:link rel="alternate" hreflang="fil" href="https://www.karaoq.live/fil/songs"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.karaoq.live/es/songs"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://www.karaoq.live/ko/songs"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://www.karaoq.live/pt/songs"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.karaoq.live/de/songs"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://www.karaoq.live/id/songs"/>
+    <xhtml:link rel="alternate" hreflang="cs" href="https://www.karaoq.live/cs/songs"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://www.karaoq.live/fr/songs"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.karaoq.live/songs"/>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.karaoq.live/songs/us</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.karaoq.live/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://www.karaoq.live/ja/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="fil" href="https://www.karaoq.live/fil/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.karaoq.live/es/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://www.karaoq.live/ko/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://www.karaoq.live/pt/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.karaoq.live/de/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://www.karaoq.live/id/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="cs" href="https://www.karaoq.live/cs/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://www.karaoq.live/fr/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.karaoq.live/songs/us"/>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.karaoq.live/ja/songs/us</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.karaoq.live/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://www.karaoq.live/ja/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="fil" href="https://www.karaoq.live/fil/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.karaoq.live/es/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://www.karaoq.live/ko/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://www.karaoq.live/pt/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.karaoq.live/de/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://www.karaoq.live/id/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="cs" href="https://www.karaoq.live/cs/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://www.karaoq.live/fr/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.karaoq.live/songs/us"/>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.karaoq.live/fil/songs/us</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.karaoq.live/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://www.karaoq.live/ja/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="fil" href="https://www.karaoq.live/fil/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.karaoq.live/es/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://www.karaoq.live/ko/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://www.karaoq.live/pt/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.karaoq.live/de/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://www.karaoq.live/id/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="cs" href="https://www.karaoq.live/cs/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://www.karaoq.live/fr/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.karaoq.live/songs/us"/>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.karaoq.live/es/songs/us</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.karaoq.live/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://www.karaoq.live/ja/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="fil" href="https://www.karaoq.live/fil/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.karaoq.live/es/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://www.karaoq.live/ko/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://www.karaoq.live/pt/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.karaoq.live/de/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://www.karaoq.live/id/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="cs" href="https://www.karaoq.live/cs/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://www.karaoq.live/fr/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.karaoq.live/songs/us"/>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.karaoq.live/ko/songs/us</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.karaoq.live/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://www.karaoq.live/ja/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="fil" href="https://www.karaoq.live/fil/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.karaoq.live/es/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://www.karaoq.live/ko/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://www.karaoq.live/pt/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.karaoq.live/de/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://www.karaoq.live/id/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="cs" href="https://www.karaoq.live/cs/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://www.karaoq.live/fr/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.karaoq.live/songs/us"/>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.karaoq.live/pt/songs/us</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.karaoq.live/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://www.karaoq.live/ja/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="fil" href="https://www.karaoq.live/fil/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.karaoq.live/es/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://www.karaoq.live/ko/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://www.karaoq.live/pt/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.karaoq.live/de/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://www.karaoq.live/id/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="cs" href="https://www.karaoq.live/cs/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://www.karaoq.live/fr/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.karaoq.live/songs/us"/>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.karaoq.live/de/songs/us</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.karaoq.live/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://www.karaoq.live/ja/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="fil" href="https://www.karaoq.live/fil/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.karaoq.live/es/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://www.karaoq.live/ko/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://www.karaoq.live/pt/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.karaoq.live/de/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://www.karaoq.live/id/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="cs" href="https://www.karaoq.live/cs/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://www.karaoq.live/fr/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.karaoq.live/songs/us"/>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.karaoq.live/id/songs/us</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.karaoq.live/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://www.karaoq.live/ja/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="fil" href="https://www.karaoq.live/fil/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.karaoq.live/es/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://www.karaoq.live/ko/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://www.karaoq.live/pt/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.karaoq.live/de/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://www.karaoq.live/id/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="cs" href="https://www.karaoq.live/cs/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://www.karaoq.live/fr/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.karaoq.live/songs/us"/>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.karaoq.live/cs/songs/us</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.karaoq.live/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://www.karaoq.live/ja/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="fil" href="https://www.karaoq.live/fil/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.karaoq.live/es/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://www.karaoq.live/ko/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://www.karaoq.live/pt/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.karaoq.live/de/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://www.karaoq.live/id/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="cs" href="https://www.karaoq.live/cs/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://www.karaoq.live/fr/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.karaoq.live/songs/us"/>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.karaoq.live/fr/songs/us</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.karaoq.live/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://www.karaoq.live/ja/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="fil" href="https://www.karaoq.live/fil/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.karaoq.live/es/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://www.karaoq.live/ko/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://www.karaoq.live/pt/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.karaoq.live/de/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://www.karaoq.live/id/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="cs" href="https://www.karaoq.live/cs/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://www.karaoq.live/fr/songs/us"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.karaoq.live/songs/us"/>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.karaoq.live/songs/ph</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.karaoq.live/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://www.karaoq.live/ja/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="fil" href="https://www.karaoq.live/fil/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.karaoq.live/es/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://www.karaoq.live/ko/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://www.karaoq.live/pt/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.karaoq.live/de/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://www.karaoq.live/id/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="cs" href="https://www.karaoq.live/cs/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://www.karaoq.live/fr/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.karaoq.live/songs/ph"/>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.karaoq.live/ja/songs/ph</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.karaoq.live/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://www.karaoq.live/ja/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="fil" href="https://www.karaoq.live/fil/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.karaoq.live/es/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://www.karaoq.live/ko/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://www.karaoq.live/pt/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.karaoq.live/de/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://www.karaoq.live/id/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="cs" href="https://www.karaoq.live/cs/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://www.karaoq.live/fr/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.karaoq.live/songs/ph"/>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.karaoq.live/fil/songs/ph</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.karaoq.live/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://www.karaoq.live/ja/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="fil" href="https://www.karaoq.live/fil/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.karaoq.live/es/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://www.karaoq.live/ko/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://www.karaoq.live/pt/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.karaoq.live/de/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://www.karaoq.live/id/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="cs" href="https://www.karaoq.live/cs/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://www.karaoq.live/fr/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.karaoq.live/songs/ph"/>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.karaoq.live/es/songs/ph</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.karaoq.live/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://www.karaoq.live/ja/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="fil" href="https://www.karaoq.live/fil/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.karaoq.live/es/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://www.karaoq.live/ko/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://www.karaoq.live/pt/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.karaoq.live/de/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://www.karaoq.live/id/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="cs" href="https://www.karaoq.live/cs/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://www.karaoq.live/fr/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.karaoq.live/songs/ph"/>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.karaoq.live/ko/songs/ph</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.karaoq.live/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://www.karaoq.live/ja/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="fil" href="https://www.karaoq.live/fil/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.karaoq.live/es/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://www.karaoq.live/ko/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://www.karaoq.live/pt/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.karaoq.live/de/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://www.karaoq.live/id/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="cs" href="https://www.karaoq.live/cs/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://www.karaoq.live/fr/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.karaoq.live/songs/ph"/>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.karaoq.live/pt/songs/ph</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.karaoq.live/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://www.karaoq.live/ja/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="fil" href="https://www.karaoq.live/fil/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.karaoq.live/es/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://www.karaoq.live/ko/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://www.karaoq.live/pt/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.karaoq.live/de/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://www.karaoq.live/id/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="cs" href="https://www.karaoq.live/cs/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://www.karaoq.live/fr/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.karaoq.live/songs/ph"/>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.karaoq.live/de/songs/ph</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.karaoq.live/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://www.karaoq.live/ja/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="fil" href="https://www.karaoq.live/fil/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.karaoq.live/es/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://www.karaoq.live/ko/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://www.karaoq.live/pt/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.karaoq.live/de/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://www.karaoq.live/id/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="cs" href="https://www.karaoq.live/cs/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://www.karaoq.live/fr/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.karaoq.live/songs/ph"/>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.karaoq.live/id/songs/ph</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.karaoq.live/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://www.karaoq.live/ja/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="fil" href="https://www.karaoq.live/fil/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.karaoq.live/es/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://www.karaoq.live/ko/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://www.karaoq.live/pt/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.karaoq.live/de/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://www.karaoq.live/id/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="cs" href="https://www.karaoq.live/cs/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://www.karaoq.live/fr/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.karaoq.live/songs/ph"/>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.karaoq.live/cs/songs/ph</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.karaoq.live/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://www.karaoq.live/ja/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="fil" href="https://www.karaoq.live/fil/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.karaoq.live/es/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://www.karaoq.live/ko/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://www.karaoq.live/pt/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.karaoq.live/de/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://www.karaoq.live/id/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="cs" href="https://www.karaoq.live/cs/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://www.karaoq.live/fr/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.karaoq.live/songs/ph"/>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.karaoq.live/fr/songs/ph</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.karaoq.live/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://www.karaoq.live/ja/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="fil" href="https://www.karaoq.live/fil/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.karaoq.live/es/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://www.karaoq.live/ko/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://www.karaoq.live/pt/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.karaoq.live/de/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://www.karaoq.live/id/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="cs" href="https://www.karaoq.live/cs/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://www.karaoq.live/fr/songs/ph"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.karaoq.live/songs/ph"/>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.karaoq.live/songs/ca</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.karaoq.live/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://www.karaoq.live/ja/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="fil" href="https://www.karaoq.live/fil/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.karaoq.live/es/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://www.karaoq.live/ko/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://www.karaoq.live/pt/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.karaoq.live/de/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://www.karaoq.live/id/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="cs" href="https://www.karaoq.live/cs/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://www.karaoq.live/fr/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.karaoq.live/songs/ca"/>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.karaoq.live/ja/songs/ca</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.karaoq.live/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://www.karaoq.live/ja/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="fil" href="https://www.karaoq.live/fil/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.karaoq.live/es/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://www.karaoq.live/ko/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://www.karaoq.live/pt/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.karaoq.live/de/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://www.karaoq.live/id/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="cs" href="https://www.karaoq.live/cs/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://www.karaoq.live/fr/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.karaoq.live/songs/ca"/>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.karaoq.live/fil/songs/ca</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.karaoq.live/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://www.karaoq.live/ja/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="fil" href="https://www.karaoq.live/fil/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.karaoq.live/es/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://www.karaoq.live/ko/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://www.karaoq.live/pt/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.karaoq.live/de/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://www.karaoq.live/id/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="cs" href="https://www.karaoq.live/cs/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://www.karaoq.live/fr/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.karaoq.live/songs/ca"/>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.karaoq.live/es/songs/ca</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.karaoq.live/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://www.karaoq.live/ja/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="fil" href="https://www.karaoq.live/fil/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.karaoq.live/es/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://www.karaoq.live/ko/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://www.karaoq.live/pt/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.karaoq.live/de/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://www.karaoq.live/id/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="cs" href="https://www.karaoq.live/cs/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://www.karaoq.live/fr/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.karaoq.live/songs/ca"/>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.karaoq.live/ko/songs/ca</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.karaoq.live/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://www.karaoq.live/ja/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="fil" href="https://www.karaoq.live/fil/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.karaoq.live/es/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://www.karaoq.live/ko/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://www.karaoq.live/pt/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.karaoq.live/de/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://www.karaoq.live/id/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="cs" href="https://www.karaoq.live/cs/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://www.karaoq.live/fr/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.karaoq.live/songs/ca"/>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.karaoq.live/pt/songs/ca</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.karaoq.live/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://www.karaoq.live/ja/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="fil" href="https://www.karaoq.live/fil/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.karaoq.live/es/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://www.karaoq.live/ko/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://www.karaoq.live/pt/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.karaoq.live/de/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://www.karaoq.live/id/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="cs" href="https://www.karaoq.live/cs/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://www.karaoq.live/fr/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.karaoq.live/songs/ca"/>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.karaoq.live/de/songs/ca</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.karaoq.live/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://www.karaoq.live/ja/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="fil" href="https://www.karaoq.live/fil/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.karaoq.live/es/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://www.karaoq.live/ko/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://www.karaoq.live/pt/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.karaoq.live/de/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://www.karaoq.live/id/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="cs" href="https://www.karaoq.live/cs/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://www.karaoq.live/fr/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.karaoq.live/songs/ca"/>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.karaoq.live/id/songs/ca</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.karaoq.live/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://www.karaoq.live/ja/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="fil" href="https://www.karaoq.live/fil/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.karaoq.live/es/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://www.karaoq.live/ko/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://www.karaoq.live/pt/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.karaoq.live/de/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://www.karaoq.live/id/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="cs" href="https://www.karaoq.live/cs/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://www.karaoq.live/fr/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.karaoq.live/songs/ca"/>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.karaoq.live/cs/songs/ca</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.karaoq.live/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://www.karaoq.live/ja/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="fil" href="https://www.karaoq.live/fil/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.karaoq.live/es/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://www.karaoq.live/ko/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://www.karaoq.live/pt/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.karaoq.live/de/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://www.karaoq.live/id/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="cs" href="https://www.karaoq.live/cs/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://www.karaoq.live/fr/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.karaoq.live/songs/ca"/>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.karaoq.live/fr/songs/ca</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.karaoq.live/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://www.karaoq.live/ja/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="fil" href="https://www.karaoq.live/fil/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.karaoq.live/es/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://www.karaoq.live/ko/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://www.karaoq.live/pt/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.karaoq.live/de/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://www.karaoq.live/id/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="cs" href="https://www.karaoq.live/cs/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://www.karaoq.live/fr/songs/ca"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.karaoq.live/songs/ca"/>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.karaoq.live/songs/fr</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.karaoq.live/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://www.karaoq.live/ja/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="fil" href="https://www.karaoq.live/fil/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.karaoq.live/es/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://www.karaoq.live/ko/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://www.karaoq.live/pt/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.karaoq.live/de/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://www.karaoq.live/id/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="cs" href="https://www.karaoq.live/cs/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://www.karaoq.live/fr/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.karaoq.live/songs/fr"/>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.karaoq.live/ja/songs/fr</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.karaoq.live/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://www.karaoq.live/ja/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="fil" href="https://www.karaoq.live/fil/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.karaoq.live/es/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://www.karaoq.live/ko/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://www.karaoq.live/pt/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.karaoq.live/de/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://www.karaoq.live/id/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="cs" href="https://www.karaoq.live/cs/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://www.karaoq.live/fr/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.karaoq.live/songs/fr"/>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.karaoq.live/fil/songs/fr</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.karaoq.live/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://www.karaoq.live/ja/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="fil" href="https://www.karaoq.live/fil/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.karaoq.live/es/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://www.karaoq.live/ko/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://www.karaoq.live/pt/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.karaoq.live/de/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://www.karaoq.live/id/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="cs" href="https://www.karaoq.live/cs/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://www.karaoq.live/fr/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.karaoq.live/songs/fr"/>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.karaoq.live/es/songs/fr</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.karaoq.live/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://www.karaoq.live/ja/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="fil" href="https://www.karaoq.live/fil/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.karaoq.live/es/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://www.karaoq.live/ko/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://www.karaoq.live/pt/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.karaoq.live/de/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://www.karaoq.live/id/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="cs" href="https://www.karaoq.live/cs/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://www.karaoq.live/fr/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.karaoq.live/songs/fr"/>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.karaoq.live/ko/songs/fr</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.karaoq.live/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://www.karaoq.live/ja/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="fil" href="https://www.karaoq.live/fil/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.karaoq.live/es/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://www.karaoq.live/ko/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://www.karaoq.live/pt/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.karaoq.live/de/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://www.karaoq.live/id/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="cs" href="https://www.karaoq.live/cs/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://www.karaoq.live/fr/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.karaoq.live/songs/fr"/>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.karaoq.live/pt/songs/fr</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.karaoq.live/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://www.karaoq.live/ja/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="fil" href="https://www.karaoq.live/fil/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.karaoq.live/es/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://www.karaoq.live/ko/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://www.karaoq.live/pt/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.karaoq.live/de/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://www.karaoq.live/id/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="cs" href="https://www.karaoq.live/cs/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://www.karaoq.live/fr/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.karaoq.live/songs/fr"/>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.karaoq.live/de/songs/fr</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.karaoq.live/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://www.karaoq.live/ja/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="fil" href="https://www.karaoq.live/fil/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.karaoq.live/es/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://www.karaoq.live/ko/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://www.karaoq.live/pt/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.karaoq.live/de/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://www.karaoq.live/id/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="cs" href="https://www.karaoq.live/cs/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://www.karaoq.live/fr/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.karaoq.live/songs/fr"/>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.karaoq.live/id/songs/fr</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.karaoq.live/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://www.karaoq.live/ja/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="fil" href="https://www.karaoq.live/fil/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.karaoq.live/es/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://www.karaoq.live/ko/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://www.karaoq.live/pt/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.karaoq.live/de/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://www.karaoq.live/id/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="cs" href="https://www.karaoq.live/cs/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://www.karaoq.live/fr/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.karaoq.live/songs/fr"/>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.karaoq.live/cs/songs/fr</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.karaoq.live/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://www.karaoq.live/ja/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="fil" href="https://www.karaoq.live/fil/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.karaoq.live/es/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://www.karaoq.live/ko/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://www.karaoq.live/pt/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.karaoq.live/de/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://www.karaoq.live/id/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="cs" href="https://www.karaoq.live/cs/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://www.karaoq.live/fr/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.karaoq.live/songs/fr"/>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.karaoq.live/fr/songs/fr</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.karaoq.live/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://www.karaoq.live/ja/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="fil" href="https://www.karaoq.live/fil/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.karaoq.live/es/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://www.karaoq.live/ko/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://www.karaoq.live/pt/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.karaoq.live/de/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://www.karaoq.live/id/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="cs" href="https://www.karaoq.live/cs/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://www.karaoq.live/fr/songs/fr"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.karaoq.live/songs/fr"/>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
 </urlset>

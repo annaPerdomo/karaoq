@@ -27,6 +27,7 @@ Key facts:
 
 ## Main pages
 - [Home](https://www.karaoq.live/): Product overview, how it works, FAQ, and the flow to create or join a room.
+- [Most-sung karaoke songs](https://www.karaoq.live/songs): The most-sung karaoke songs on KaraoQ, ranked by real queue data and refreshed daily, with country-specific lists.
 
 ## Optional
 - [Sitemap](https://www.karaoq.live/sitemap.xml): All pages, including every localized version.

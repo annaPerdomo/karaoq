@@ -496,6 +496,7 @@ export function fakeCollection(lookup?: LookupFrom) {
           projection = spec;
           return cursor;
         },
+        maxTimeMS: (_ms: number) => cursor,
         toArray: async () =>
           found.map((doc) => project(copy(doc), projection)),
       };

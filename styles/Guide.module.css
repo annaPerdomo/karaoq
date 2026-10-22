@@ -486,6 +486,82 @@
   flex: 0 0 auto;
 }
 
+/* ── Song chart list (pages/songs/*) ── */
+
+.songList {
+  list-style: none;
+  margin: 0 0 48px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  counter-reset: song-rank;
+}
+
+.songEntry {
+  counter-increment: song-rank;
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  padding: 14px 18px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.songRank {
+  flex: 0 0 auto;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: #00f0ff;
+  min-width: 2ch;
+}
+.songRank::before { content: counter(song-rank) "."; }
+
+.songText {
+  font-size: 1.02rem;
+  color: #fff;
+}
+
+.countryLinks {
+  margin: 0 0 48px;
+}
+
+.countryLinksHeading {
+  font-family: var(--font-headline);
+  font-size: 1.05rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin: 0 0 16px;
+}
+
+.countryLinkList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.countryLink {
+  display: inline-flex;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 0.9rem;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.countryLink:hover {
+  background: rgba(255, 45, 120, 0.08);
+  border-color: rgba(255, 45, 120, 0.4);
+  color: #fff;
+}
+
 @media (max-width: 520px) {
   .step { padding: 18px; gap: 14px; }
   .stepNum { width: 32px; height: 32px; font-size: 1rem; }
