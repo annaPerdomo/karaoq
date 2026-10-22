@@ -94,6 +94,39 @@ describe("POST /api/queue/[id]/videos - Add song to queue", () => {
     );
   });
 
+  it("sends the 200 response before the analytics insert resolves", async () => {
+    const room: Room = { id: "ROOM1", queue: [], activeVideoIndex: 0, isPlaying: false };
+    mockCollection.findOne.mockResolvedValue(room);
+    mockCollection.updateOne.mockResolvedValue({ matchedCount: 1, modifiedCount: 1 });
+
+    let resolveInsert!: () => void;
+    const deferred = new Promise<void>((resolve) => { resolveInsert = resolve; });
+    mockCollection.insertOne.mockImplementation(() => deferred.then(() => ({ insertedId: "x" })));
+
+    const req = createMockReq({
+      method: "POST",
+      query: { id: "ROOM1" },
+      body: {
+        entryId: "entry-1",
+        userName: "Anna",
+        videoId: "dQw4w9WgXcQ",
+        songTitle: "Never Gonna Give You Up",
+      },
+    });
+    const res = createRes();
+
+    let handlerDone = false;
+    const handlerPromise = handler(req, res).then(() => { handlerDone = true; });
+
+    await new Promise((r) => setTimeout(r, 0));
+    expect(res.getStatus()).toBe(200);
+    expect(handlerDone).toBe(false);
+
+    resolveInsert();
+    await handlerPromise;
+    expect(handlerDone).toBe(true);
+  });
+
   // The queue-time estimate is only as good as what gets stored here.
   it("stores the song's length when the search knew it", async () => {
     const room: Room = { id: "ROOM1", queue: [], activeVideoIndex: 0, isPlaying: false };

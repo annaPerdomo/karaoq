@@ -192,7 +192,7 @@ export default async function handler(
       }
 
       // singerKeys is what fair rotation splits by, so the duet count matches the turns charged.
-      trackEvent(req, "song_added", {
+      const songAddedTracked = trackEvent(req, "song_added", {
         roomId: roomId as string,
         userName,
         songTitle,
@@ -222,6 +222,7 @@ export default async function handler(
           }
         );
       }
+      await songAddedTracked;
     }
   } catch (e) {
     console.error(e);
