@@ -2,7 +2,6 @@ import { NextApiRequest, NextApiResponse } from "next";
 import { isAuthorizedAdmin } from "../../../lib/adminAuth";
 import {
   type DaySpend,
-  SEARCH_DAY_QUOTA,
   dayKeyBefore,
   ledgerDay,
   searchesLeft,
@@ -10,6 +9,7 @@ import {
 } from "../../../lib/corpusBudget";
 import { getAnalyticsDb } from "../../../lib/mongodb";
 import { quotaResetsAt } from "../../../lib/pacificTime";
+import { dayQuota } from "../../../lib/searchQuotaStatus";
 import type { AnalyticsEvent } from "../../../lib/analytics";
 import type {
   DayBilledWire,
@@ -123,7 +123,7 @@ function billedDay(spend: DaySpend, rooms: DayRoomsWire | undefined): DayBilledW
     recorded: true,
     // In units, as the cron and room search read it: a spent day stops short
     // of 100 searches, since each also bills its enrichment lookup.
-    out: searchesLeft(spend, SEARCH_DAY_QUOTA) === 0,
+    out: searchesLeft(spend, dayQuota()) === 0,
     rooms: Math.max(0, spend.searches - spend.cronSearches - unlogged),
     nightly: spend.cronSearches - mopUp,
     mopUp,
@@ -159,7 +159,7 @@ export default async function handler(
         : undefined,
     }));
     const data: QuotaLedgerData = {
-      quota: SEARCH_DAY_QUOTA,
+      quota: dayQuota(),
       today: ledgerDay(now),
       resetsAt: quotaResetsAt(new Date(now)),
       days,

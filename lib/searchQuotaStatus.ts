@@ -9,7 +9,7 @@ import {
 import { pacificDayKey, quotaResetsAt } from "./pacificTime";
 
 /** Env override shared with the cron (SUGGESTION_DAY_QUOTA), in searches. */
-function dayQuota(): number {
+export function dayQuota(): number {
   const n = Number(process.env.SUGGESTION_DAY_QUOTA);
   return Number.isFinite(n) && n > 0 ? n : SEARCH_DAY_QUOTA;
 }
