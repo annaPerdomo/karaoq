@@ -1,15 +1,21 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { isAuthorizedAdmin } from "../../../lib/adminAuth";
 import {
+  type ArtistEvidence,
   PROMOTE_MIN_COUNTRIES,
   PROMOTE_MIN_ROOMS,
   approveProposal,
+  buildArtistEvidence,
   parseIdentityOverride,
   pickIdentity,
   qualifies,
   rejectProposal,
 } from "../../../lib/corpusPromote";
-import { getSongProposalsCollection, type SongProposalDoc } from "../../../lib/mongodb";
+import {
+  getKaraokeSongsCollection,
+  getSongProposalsCollection,
+  type SongProposalDoc,
+} from "../../../lib/mongodb";
 
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 200;
@@ -42,12 +48,12 @@ function countriesFor(p: SongProposalDoc): string[] {
   );
 }
 
-function toRow(p: SongProposalDoc) {
+function toRow(p: SongProposalDoc, evidence: ArtistEvidence) {
   return {
     id: p._id,
     label: p.label,
     candidates: p.candidates,
-    picked: pickIdentity(p),
+    picked: pickIdentity(p, evidence),
     rooms: p.rooms,
     searchRooms: p.searchRooms ?? 0,
     countries: countriesFor(p),
@@ -80,8 +86,15 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse): Promise<voi
     .limit(limit)
     .toArray();
 
+  const songs = await getKaraokeSongsCollection();
+  const [songRows, proposalRows] = await Promise.all([
+    songs.find({}, { projection: { artist: 1, nativeArtist: 1, origin: 1 } }).toArray(),
+    proposals.find({}, { projection: { candidates: 1 } }).toArray(),
+  ]);
+  const evidence = buildArtistEvidence({ songs: songRows, proposals: proposalRows });
+
   res.status(200).json({
-    rows: rows.map(toRow),
+    rows: rows.map((p) => toRow(p, evidence)),
     thresholds: { minRooms: PROMOTE_MIN_ROOMS, minCountries: PROMOTE_MIN_COUNTRIES },
   });
 }

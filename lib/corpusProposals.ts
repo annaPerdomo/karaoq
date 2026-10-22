@@ -37,7 +37,7 @@ const MAX_EXTRA_TOKENS = 6;
 const MERGE_COVERAGE = 0.8;
 
 /** Spaced only, so "Ben&Ben", "K-Pop" and "Jay-R" keep their punctuation. */
-export const TITLE_SEPARATOR = new RegExp("\\s+[-–—|:]\\s+");
+export const TITLE_SEPARATOR = new RegExp("\\s+[-–—|:•]\\s+");
 
 // Bracketed groups that only say "this is a karaoke cut" — dropped from the
 // label so the queue reads as song names.

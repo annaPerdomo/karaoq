@@ -91,8 +91,9 @@ export function cleanChartArtist(artist: string): string {
 const FIRST_CREDIT_SEPARATOR = /\s&\s|,\s|\sx\s/i;
 
 /** Only for matching against a pack entry keyed on one name — never what gets
- *  inserted. */
-function firstCreditedArtist(artist: string): string {
+ *  inserted. Exported for corpusPromote's evidence scoring, which credits the
+ *  same first-named act. */
+export function firstCreditedArtist(artist: string): string {
   return artist.split(FIRST_CREDIT_SEPARATOR)[0].trim();
 }
 

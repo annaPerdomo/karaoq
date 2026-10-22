@@ -22,7 +22,7 @@ import {
 } from "../../../lib/corpusHarvest";
 import { feedCharts } from "../../../lib/chartFeed";
 import { migrateToCorpus } from "../../../lib/corpusMigration";
-import { promoteDemand } from "../../../lib/corpusPromote";
+import { promoteDemand, repairDemandIdentities } from "../../../lib/corpusPromote";
 import { proposeUnmappedAdds, PROPOSAL_SCAN_LIMIT } from "../../../lib/corpusProposals";
 import { publishCorpus } from "../../../lib/corpusPublish";
 import { type ResolvedSong, resolveWantedSongs } from "../../../lib/corpusResolve";
@@ -225,6 +225,17 @@ export default async function handler(
           by,
           envCount("SUGGESTION_PROPOSAL_SCAN", PROPOSAL_SCAN_LIMIT)
         );
+        return { done, report: { ...report } };
+      },
+    },
+    {
+      // Guarded one-off, runs exactly once: repairs identities the first
+      // promote run got wrong, so promote right after re-evaluates them.
+      name: "repair",
+      budgetMs: 20_000,
+      floorMs: 0,
+      run: async (by) => {
+        const { done, report } = await repairDemandIdentities(by);
         return { done, report: { ...report } };
       },
     },

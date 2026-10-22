@@ -47,6 +47,7 @@ process.env.YOUTUBE_API_KEY = "test-key";
 import handler from "../../pages/api/cron/suggestions";
 import { ledgerDay, recordSpend, SEARCH_DAY_QUOTA } from "../../lib/corpusBudget";
 import { MIGRATION_ID } from "../../lib/corpusMigration";
+import { REPAIR_ID } from "../../lib/corpusPromote";
 import { pacificDayKey, quotaResetsAtMs } from "../../lib/pacificTime";
 import { resetQuotaAlertMemo } from "../../lib/alerts";
 import { resetSearchQuotaStatusCache } from "../../lib/searchQuotaStatus";
@@ -202,6 +203,12 @@ function migrationDone(): void {
   state().seed({ _id: MIGRATION_ID, done: true, updatedAt: new Date() });
 }
 
+/** The repair is a one-off; a test exercising some other step pre-marks it
+ *  done so it doesn't sweep up that test's own origin: "demand" fixtures. */
+function repairDone(): void {
+  state().seed({ _id: REPAIR_ID, done: true, updatedAt: new Date() });
+}
+
 const catalogEntries = Array.from(suggestionCatalog().values());
 
 /** Reachable with a plain "<artist> <title>" upload title, unlike the
@@ -333,6 +340,7 @@ describe("GET /api/cron/suggestions - the run budget", () => {
 
   it("spends a tight budget on the sweep before the harvest starts", async () => {
     migrationDone();
+    repairDone();
     seedSong(PLAIN, ["live1"]);
     seedVideo("live1");
     api.uploads = [{ videoId: "up1", title: `${PLAIN.artist} ${PLAIN.title} (Karaoke)` }];
@@ -355,7 +363,10 @@ describe("GET /api/cron/suggestions - the run budget", () => {
 });
 
 describe("GET /api/cron/suggestions - one run at a time", () => {
-  beforeEach(migrationDone);
+  beforeEach(() => {
+    migrationDone();
+    repairDone();
+  });
 
   it("skips a slot that overlaps a run still holding the lease", async () => {
     state().seed({
@@ -387,6 +398,7 @@ describe("GET /api/cron/suggestions - one run at a time", () => {
 describe("GET /api/cron/suggestions - the daily quota ledger", () => {
   beforeEach(() => {
     migrationDone();
+    repairDone();
     process.env.SUGGESTION_RESOLVE_PER_DAY = "2";
     seedSong(catalogEntries[0], [], 30);
     seedSong(catalogEntries[1], [], 20);
@@ -463,6 +475,7 @@ describe("GET /api/cron/suggestions - the mop-up slot", () => {
 
   beforeEach(() => {
     migrationDone();
+    repairDone();
     process.env.SUGGESTION_RESOLVE_PER_DAY = "2";
     process.env.SUGGESTION_DAY_QUOTA = "10";
     for (const entry of catalogEntries.slice(0, 8)) seedSong(entry, [], 30);
@@ -613,6 +626,7 @@ describe("GET /api/cron/suggestions - the mop-up slot", () => {
 describe("GET /api/cron/suggestions - giving way to the rooms", () => {
   beforeEach(() => {
     migrationDone();
+    repairDone();
     process.env.SUGGESTION_RESOLVE_PER_DAY = "2";
     seedSong(catalogEntries[0], [], 30);
     seedSong(catalogEntries[1], [], 20);
@@ -704,7 +718,10 @@ describe("GET /api/cron/suggestions - giving way to the rooms", () => {
 });
 
 describe("GET /api/cron/suggestions - the run's clock", () => {
-  beforeEach(migrationDone);
+  beforeEach(() => {
+    migrationDone();
+    repairDone();
+  });
 
   it("caps the harvest so the search step is never handed a spent clock", async () => {
     seedSong(PLAIN, [], 30);
@@ -734,8 +751,35 @@ describe("GET /api/cron/suggestions - the run's clock", () => {
   });
 });
 
-describe("GET /api/cron/suggestions - promote", () => {
+describe("GET /api/cron/suggestions - repair", () => {
+  const prevVercelEnv = process.env.VERCEL_ENV;
   beforeEach(migrationDone);
+  afterEach(() => {
+    process.env.VERCEL_ENV = prevVercelEnv;
+  });
+
+  it("runs before promote, and stays out of the mop-up slot", async () => {
+    const steps = await run({ search: "0" });
+    const order = Object.keys(steps);
+
+    expect(order.indexOf("repair")).toBeLessThan(order.indexOf("promote"));
+
+    const mopUpSteps = await run({ slot: "3", mopUp: "1", force: "1" });
+    expect(Object.keys(mopUpSteps)).not.toContain("repair");
+  });
+
+  it("does nothing outside production", async () => {
+    delete process.env.VERCEL_ENV;
+    const steps = await run({ search: "0" });
+    expect(steps.repair).toMatchObject({ skipped: "not production" });
+  });
+});
+
+describe("GET /api/cron/suggestions - promote", () => {
+  beforeEach(() => {
+    migrationDone();
+    repairDone();
+  });
 
   it("runs between propose and claim, and stays out of the mop-up slot", async () => {
     const steps = await run({ search: "0" });
@@ -750,7 +794,10 @@ describe("GET /api/cron/suggestions - promote", () => {
 });
 
 describe("GET /api/cron/suggestions - charts", () => {
-  beforeEach(migrationDone);
+  beforeEach(() => {
+    migrationDone();
+    repairDone();
+  });
 
   it("runs between promote and claim, and stays out of the mop-up slot", async () => {
     const steps = await run({ search: "0" });
@@ -765,7 +812,10 @@ describe("GET /api/cron/suggestions - charts", () => {
 });
 
 describe("GET /api/cron/suggestions - sweep", () => {
-  beforeEach(migrationDone);
+  beforeEach(() => {
+    migrationDone();
+    repairDone();
+  });
 
   it("drops what YouTube stopped serving and re-reads what it still does", async () => {
     seedSong(PLAIN, ["live1", "gone1", "blocked1"]);
@@ -998,7 +1048,10 @@ describe("GET /api/cron/suggestions - sweep", () => {
 });
 
 describe("GET /api/cron/suggestions - publish", () => {
-  beforeEach(migrationDone);
+  beforeEach(() => {
+    migrationDone();
+    repairDone();
+  });
 
   /** Enough live cuts for the store to answer a tap with. */
   function seedResolved(entry: CatalogEntry, count = 10): string[] {
@@ -1121,7 +1174,10 @@ describe("GET /api/cron/suggestions - publish", () => {
 });
 
 describe("GET /api/cron/suggestions - harvest", () => {
-  beforeEach(migrationDone);
+  beforeEach(() => {
+    migrationDone();
+    repairDone();
+  });
 
   it("files a matching upload under its song and parks the channel's cursor", async () => {
     api.uploads = [{ videoId: "up1", title: `${PLAIN.artist} ${PLAIN.title} (Karaoke)` }];
@@ -1216,6 +1272,7 @@ describe("GET /api/cron/suggestions - resolve", () => {
 
   beforeEach(() => {
     migrationDone();
+    repairDone();
     seedSong(first, [], 30);
     seedSong(second, [], 20);
     seedSong(third, [], 10);

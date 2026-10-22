@@ -127,7 +127,9 @@ describe("GET /api/analytics/proposals", () => {
     const row = res.getBody().rows[0];
     expect(row.videoIds).toEqual(["v1", "v2", "v3"]);
     expect(row.qualifies).toBe(true);
-    expect(row.picked).toEqual({ artist: "Mag Dungan Ta", title: "The Agadiers" });
+    // No evidence in the fixture (no other songs or proposals seeded), and no
+    // knownArtist: nothing names either side as the artist, so it's left null.
+    expect(row.picked).toBeNull();
   });
 
   async function get(view: string) {
@@ -206,7 +208,7 @@ describe("POST /api/analytics/proposals", () => {
   });
 
   it("approves and promotes", async () => {
-    proposals().seed(proposal({ rooms: 0, addsByCountry: {} }));
+    proposals().seed(proposal({ rooms: 0, addsByCountry: {}, knownArtist: "Mag Dungan Ta" }));
 
     const res = createRes();
     await handler(
