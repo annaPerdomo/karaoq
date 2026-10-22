@@ -10,6 +10,7 @@ import { Analytics } from '@vercel/analytics/react'
 import { I18nProvider, useT } from '../lib/i18n/I18nProvider'
 import { renderWithHeart } from '../lib/i18n/renderWithHeart'
 import { installErrorReporting } from '../lib/errorReporting'
+import { captureFirstTouch } from '../lib/firstTouch'
 import FeedbackTrigger from '../components/feedback/FeedbackTrigger'
 import PwaHead from '../components/PwaHead'
 
@@ -30,6 +31,9 @@ function MyApp({ Component, pageProps }: AppProps) {
   const router = useRouter();
   useEffect(() => {
     installErrorReporting();
+  }, []);
+  useEffect(() => {
+    captureFirstTouch(window.location.href, document.referrer, Date.now());
   }, []);
   // Allowlisted rather than excluding app screens one by one: the footer is
   // `position: fixed`, so a screen that isn't listed here only has to exist to

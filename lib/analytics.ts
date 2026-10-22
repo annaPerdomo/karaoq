@@ -5,6 +5,7 @@ import { getAnalyticsDb, getYoutubeSongDataCollection } from "./mongodb";
 import { splitYoutubeSongData } from "./youtubeRetention";
 import type { Locale } from "./i18n/config";
 import { asLocale, LOCALE_HEADER, type LocaleSource } from "./i18n/activeLocale";
+import { sanitizeEntry, sanitizeReferrerHost, sanitizeRef } from "./firstTouch";
 
 export type EventType =
   | "room_created"
@@ -99,6 +100,10 @@ export interface AnalyticsEvent {
   lookupOutcome?: "hit" | "not_found" | "not_embeddable";
   lookupCache?: "fresh" | "miss";
   locale?: Locale;
+  // From the client's lib/firstTouch.ts headers via attributionFromRequest; room_created only.
+  ref?: string;
+  referrer?: string;
+  entry?: string;
   // Key of the youtube_song_data doc holding this event's title/video id until
   // it expires at 30 days. Absent on events from before the split.
   songDataId?: string;
@@ -145,6 +150,28 @@ export function extractGeo(req: NextApiRequest) {
     country: headerString(req.headers["x-vercel-ip-country"]),
     region: headerString(req.headers["x-vercel-ip-region"]),
     city: headerString(req.headers["x-vercel-ip-city"]),
+  };
+}
+
+const FIRST_TOUCH_REF_HEADER = "x-karaoq-ref";
+const FIRST_TOUCH_REFERRER_HEADER = "x-karaoq-referrer";
+const FIRST_TOUCH_ENTRY_HEADER = "x-karaoq-entry";
+
+export function attributionFromRequest(
+  req: NextApiRequest
+): { ref?: string; referrer?: string; entry?: string } {
+  const ref = sanitizeRef(headerString(req.headers[FIRST_TOUCH_REF_HEADER]));
+  const referrerHeader = headerString(req.headers[FIRST_TOUCH_REFERRER_HEADER]);
+  const referrer = referrerHeader
+    ? sanitizeReferrerHost(
+        referrerHeader.includes("://") ? referrerHeader : `https://${referrerHeader}`
+      )
+    : undefined;
+  const entry = sanitizeEntry(headerString(req.headers[FIRST_TOUCH_ENTRY_HEADER]));
+  return {
+    ...(ref ? { ref } : {}),
+    ...(referrer ? { referrer } : {}),
+    ...(entry ? { entry } : {}),
   };
 }
 

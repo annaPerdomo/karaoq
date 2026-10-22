@@ -151,6 +151,8 @@ export interface GrowthData {
   rooms: { _id: string; rooms: number; withSong: number }[];
   /** Keyed by via — see VIA_LABELS. */
   songs: { _id: string; via: Record<string, number> }[];
+  /** room_created by ref ?? referrer ?? direct/untracked, last 7 days, top 10. Absent on an older deploy. */
+  sources?: { _id: string; count: number }[];
 }
 
 export interface SurfaceCustomization {

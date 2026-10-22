@@ -1,4 +1,5 @@
 import { getActiveLocale, LOCALE_HEADER } from "../../lib/i18n/activeLocale";
+import { firstTouchHeaders } from "../../lib/firstTouch";
 
 export default async function createRoom(
   roomId: string,
@@ -8,6 +9,7 @@ export default async function createRoom(
   try {
     const headers: Record<string, string> = {
       [LOCALE_HEADER]: getActiveLocale().locale,
+      ...firstTouchHeaders(),
     };
     if (priorPlayToken) headers["x-play-token"] = priorPlayToken;
     const resp = await fetch(`/api/queue/${roomId}`, { method: "POST", headers });
