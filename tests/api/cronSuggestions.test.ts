@@ -45,7 +45,7 @@ process.env.MONGODB_DB = "test-db";
 process.env.YOUTUBE_API_KEY = "test-key";
 
 import handler from "../../pages/api/cron/suggestions";
-import { ledgerDay, recordSpend, SEARCH_DAY_QUOTA } from "../../lib/corpusBudget";
+import { DAY_CALL_QUOTA, ledgerDay, recordSpend, SEARCH_CALLS } from "../../lib/corpusBudget";
 import { MIGRATION_ID } from "../../lib/corpusMigration";
 import { REPAIR_ID } from "../../lib/corpusPromote";
 import { pacificDayKey, quotaResetsAtMs } from "../../lib/pacificTime";
@@ -279,7 +279,7 @@ beforeEach(() => {
   process.env.KARAOKE_CHANNELS = CHANNEL;
   delete process.env.KARAOKE_PLAYLISTS;
   delete process.env.SUGGESTION_RESOLVE_PER_DAY;
-  delete process.env.SUGGESTION_DAY_QUOTA;
+  delete process.env.YOUTUBE_DAY_CALLS;
 });
 
 afterEach(() => {
@@ -477,7 +477,7 @@ describe("GET /api/cron/suggestions - the mop-up slot", () => {
     migrationDone();
     repairDone();
     process.env.SUGGESTION_RESOLVE_PER_DAY = "2";
-    process.env.SUGGESTION_DAY_QUOTA = "10";
+    process.env.YOUTUBE_DAY_CALLS = "18";
     for (const entry of catalogEntries.slice(0, 8)) seedSong(entry, [], 30);
     api.searchHits = [{ videoId: "hit1", title: "One (Karaoke)" }];
     fakeClock(quotaResetsAtMs(new Date()) - 10 * 60_000);
@@ -486,9 +486,7 @@ describe("GET /api/cron/suggestions - the mop-up slot", () => {
   it("buys the day's remainder rather than the nightly cap", async () => {
     await recordSpend(Date.now(), { searches: 4 });
 
-    // 10 searches' worth of units less the 4 the day has spent, where a normal
-    // slot would take 2. Five, not six: each search also costs its one
-    // enrichment unit (lib/corpusBudget estimateUnits).
+    // 18 calls minus the 4 searches already spent (8 calls) leaves 5.
     expect((await mop()).resolve).toMatchObject({ searched: 5 });
     expect(ledger()).toMatchObject({ searches: 9, cronSearches: 5 });
   });
@@ -507,7 +505,7 @@ describe("GET /api/cron/suggestions - the mop-up slot", () => {
     await recordSpend(Date.now(), { searches: 4 });
     await mop();
     const first = ledger().mopUp.songs;
-    process.env.SUGGESTION_DAY_QUOTA = "13";
+    process.env.YOUTUBE_DAY_CALLS = "24";
 
     await mop();
 
@@ -583,12 +581,12 @@ describe("GET /api/cron/suggestions - the mop-up slot", () => {
   it("ignores live rooms inside its window and spends the whole remainder", async () => {
     collection("rooms").seed({ _id: "LIVE1", id: "LIVE1", lastActivity: new Date(Date.now()) });
     collection("rooms").seed({ _id: "LIVE2", id: "LIVE2", lastActivity: new Date(Date.now()) });
-    process.env.SUGGESTION_DAY_QUOTA = "20";
+    process.env.YOUTUBE_DAY_CALLS = "38";
     for (const entry of catalogEntries.slice(8, 20)) seedSong(entry, [], 30);
 
     const body = (await request({ slot: "3", mopUp: "1" })).getBody();
 
-    // 20 searches' worth of units affords 19 once each pays its enrichment unit.
+    // 38 calls is 19 searches' worth — one short of the 20 songs seeded.
     expect(body.steps.resolve).toMatchObject({ searched: 19 });
     expect(body.gates.liveRooms).toBe(2);
   });
@@ -644,7 +642,7 @@ describe("GET /api/cron/suggestions - giving way to the rooms", () => {
 
   /** The ledger can afford no more searches (lib/searchQuotaStatus). */
   function quotaOutToday(): Promise<void> {
-    return recordSpend(Date.now(), { searches: SEARCH_DAY_QUOTA });
+    return recordSpend(Date.now(), { searches: Math.ceil(DAY_CALL_QUOTA / SEARCH_CALLS) });
   }
 
   it("leaves the day's searches to a room that is mid-session", async () => {

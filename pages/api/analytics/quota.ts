@@ -121,8 +121,6 @@ function billedDay(spend: DaySpend, rooms: DayRoomsWire | undefined): DayBilledW
   return {
     day: spend.day,
     recorded: true,
-    // In units, as the cron and room search read it: a spent day stops short
-    // of 100 searches, since each also bills its enrichment lookup.
     out: searchesLeft(spend, dayQuota()) === 0,
     rooms: Math.max(0, spend.searches - spend.cronSearches - unlogged),
     nightly: spend.cronSearches - mopUp,
@@ -158,8 +156,9 @@ export default async function handler(
         ? { ...day.mopUp, songs: undefined, at: day.mopUp.at.toISOString() }
         : undefined,
     }));
+    const today = spent[spent.length - 1];
     const data: QuotaLedgerData = {
-      quota: dayQuota(),
+      quota: today.searches + searchesLeft(today, dayQuota()),
       today: ledgerDay(now),
       resetsAt: quotaResetsAt(new Date(now)),
       days,

@@ -28,7 +28,7 @@ process.env.MONGODB_DB = "test-db";
 process.env.ANALYTICS_SECRET = "s3cret";
 
 import handler from "../../pages/api/analytics/quota";
-import { SEARCH_DAY_QUOTA, ledgerDay } from "../../lib/corpusBudget";
+import { ledgerDay } from "../../lib/corpusBudget";
 
 function createRes() {
   let statusCode = 200;
@@ -92,7 +92,7 @@ describe("GET /api/analytics/quota", () => {
     const res = await get();
     expect(res.getStatus()).toBe(200);
     const body = res.getBody();
-    expect(body.quota).toBe(SEARCH_DAY_QUOTA);
+    expect(body.quota).toBe(4750);
     expect(body.today).toBe(today);
     expect(body.days).toHaveLength(7);
     expect(body.days[6].day).toBe(today);
@@ -168,6 +168,10 @@ describe("GET /api/analytics/quota", () => {
     collectionFor("analytics_events").seed({
       _id: "e1", type: "search_run", roomId: "ABCD", searchCache: "miss", timestamp: twentyDaysAgo,
     });
+
+    // 100 searches is 200 calls; pin the day's call quota there so this day reads as out.
+    process.env.YOUTUBE_DAY_CALLS = "200";
+    onTestFinished(() => delete process.env.YOUTUBE_DAY_CALLS);
 
     const body = (await get()).getBody();
 

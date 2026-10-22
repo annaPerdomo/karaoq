@@ -25,6 +25,7 @@ process.env.MONGODB_DB = "test-db";
 
 import {
   confirmDailyOut,
+  dayQuota,
   resetSearchQuotaStatusCache,
   searchQuotaResetsAt,
 } from "../../lib/searchQuotaStatus";
@@ -46,7 +47,7 @@ afterEach(() => {
 
 describe("searchQuotaResetsAt", () => {
   it("returns the reset time once the ledger can't afford another search", async () => {
-    mockFindOne.mockResolvedValue(ledger({ searches: 100 }));
+    mockFindOne.mockResolvedValue(ledger({ searches: 4750 }));
 
     const resetsAt = await searchQuotaResetsAt();
 
@@ -55,7 +56,7 @@ describe("searchQuotaResetsAt", () => {
   });
 
   it("returns null while search is fine", async () => {
-    mockFindOne.mockResolvedValue(ledger({ searches: 85, pages: 126, lookups: 5 }));
+    mockFindOne.mockResolvedValue(ledger({ searches: 4000, pages: 126, lookups: 5 }));
     expect(await searchQuotaResetsAt()).toBeNull();
   });
 
@@ -71,18 +72,19 @@ describe("searchQuotaResetsAt", () => {
   });
 
   it("counts harvest pages and lookups against the last search", async () => {
-    // 98 searches is 9,898 units; 131 more leaves less than one search's worth.
-    mockFindOne.mockResolvedValue(ledger({ searches: 98, pages: 126, lookups: 5 }));
+    // 4,684 searches is 9,368 calls; 131 more leaves less than one search's worth.
+    mockFindOne.mockResolvedValue(ledger({ searches: 4684, pages: 126, lookups: 5 }));
     expect(await searchQuotaResetsAt()).not.toBeNull();
   });
 
-  it("honours the SUGGESTION_DAY_QUOTA override", async () => {
-    process.env.SUGGESTION_DAY_QUOTA = "150";
+  it("honours the YOUTUBE_DAY_CALLS override", async () => {
+    // 150 searches is fine under the 9,500 default but out under a 300-call override.
+    process.env.YOUTUBE_DAY_CALLS = "300";
     try {
-      mockFindOne.mockResolvedValue(ledger({ searches: 120 }));
-      expect(await searchQuotaResetsAt()).toBeNull();
+      mockFindOne.mockResolvedValue(ledger({ searches: 150 }));
+      expect(await searchQuotaResetsAt()).not.toBeNull();
     } finally {
-      delete process.env.SUGGESTION_DAY_QUOTA;
+      delete process.env.YOUTUBE_DAY_CALLS;
     }
   });
 
@@ -98,7 +100,7 @@ describe("searchQuotaResetsAt", () => {
     vi.useFakeTimers();
     // 23:59:50 Pacific (PDT = UTC-7): quota is out, cache fills.
     vi.setSystemTime(new Date("2026-08-23T06:59:50Z"));
-    mockFindOne.mockResolvedValue(ledger({ searches: 100 }));
+    mockFindOne.mockResolvedValue(ledger({ searches: 4750 }));
     expect(await searchQuotaResetsAt()).not.toBeNull();
 
     // 00:00:10 Pacific, 20s later — inside the age TTL, so only the day key
@@ -118,7 +120,7 @@ describe("searchQuotaResetsAt", () => {
   it("keeps serving the same-day cached answer through a Mongo blip", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-08-23T04:00:00Z")); // 21:00 Pacific
-    mockFindOne.mockResolvedValue(ledger({ searches: 100 }));
+    mockFindOne.mockResolvedValue(ledger({ searches: 4750 }));
     expect(await searchQuotaResetsAt()).not.toBeNull();
 
     // Past the TTL but the same evening: the refresh fails, and the stale
@@ -132,14 +134,13 @@ describe("searchQuotaResetsAt", () => {
 
 describe("confirmDailyOut", () => {
   it("disbelieves a 'per day' refusal the ledger says came early", async () => {
-    // 2026-09-14: YouTube said the day was out at 85 searches, then served
-    // nine more.
-    mockFindOne.mockResolvedValue(ledger({ searches: 85, pages: 126, lookups: 5 }));
+    // 100 searches spent leaves 9,300 calls of headroom — nowhere near the line.
+    mockFindOne.mockResolvedValue(ledger({ searches: 100 }));
     expect(await confirmDailyOut("daily")).toBe(false);
   });
 
   it("confirms one the ledger agrees with", async () => {
-    mockFindOne.mockResolvedValue(ledger({ searches: 100 }));
+    mockFindOne.mockResolvedValue(ledger({ searches: 4750 }));
     expect(await confirmDailyOut("daily")).toBe(true);
     expect(mockUpdateOne).not.toHaveBeenCalled();
   });
@@ -147,7 +148,7 @@ describe("confirmDailyOut", () => {
   it("believes one within the ledger's unbilled slack and bills the gap", async () => {
     // A full day reads a search or two under Google's console: the sweep's
     // videos.list calls and searches that failed after the call are unbilled.
-    mockFindOne.mockResolvedValue(ledger({ searches: 98 }));
+    mockFindOne.mockResolvedValue(ledger({ searches: 4749 }));
     expect(await confirmDailyOut("daily")).toBe(true);
     expect(mockUpdateOne).toHaveBeenCalledOnce();
     expect(mockUpdateOne.mock.calls[0][1]).toMatchObject({ $inc: { searches: 1 } });
@@ -156,14 +157,21 @@ describe("confirmDailyOut", () => {
     expect(await searchQuotaResetsAt()).not.toBeNull();
   });
 
-  it("still disbelieves one a few searches out", async () => {
-    mockFindOne.mockResolvedValue(ledger({ searches: 96 }));
+  it("still disbelieves one just outside the slack", async () => {
+    // 4,599 searches is 9,198 calls, 302 left — just past the 300-call slack.
+    mockFindOne.mockResolvedValue(ledger({ searches: 4599 }));
     expect(await confirmDailyOut("daily")).toBe(false);
     expect(mockUpdateOne).not.toHaveBeenCalled();
   });
 
+  it("believes one inside the slack", async () => {
+    // 4,600 searches is 9,200 calls, 300 left — right at the slack's edge.
+    mockFindOne.mockResolvedValue(ledger({ searches: 4600 }));
+    expect(await confirmDailyOut("daily")).toBe(true);
+  });
+
   it("never confirms a burst ceiling or an unknown error", async () => {
-    mockFindOne.mockResolvedValue(ledger({ searches: 100 }));
+    mockFindOne.mockResolvedValue(ledger({ searches: 4750 }));
     expect(await confirmDailyOut("burst")).toBe(false);
     expect(await confirmDailyOut(null)).toBe(false);
   });
@@ -176,10 +184,45 @@ describe("confirmDailyOut", () => {
   it("reads the ledger fresh rather than the memoized status", async () => {
     mockFindOne.mockResolvedValue(ledger({ searches: 10 }));
     expect(await searchQuotaResetsAt()).toBeNull();
-    mockFindOne.mockResolvedValue(ledger({ searches: 100 }));
+    mockFindOne.mockResolvedValue(ledger({ searches: 4750 }));
     expect(await confirmDailyOut("daily")).toBe(true);
     // ...and the status memo follows it.
     expect(await searchQuotaResetsAt()).not.toBeNull();
     expect(mockFindOne).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("dayQuota", () => {
+  it("ignores SUGGESTION_DAY_QUOTA and returns the default call quota", () => {
+    process.env.SUGGESTION_DAY_QUOTA = "3000";
+    try {
+      expect(dayQuota()).toBe(9500);
+    } finally {
+      delete process.env.SUGGESTION_DAY_QUOTA;
+    }
+  });
+
+  it("reads YOUTUBE_DAY_CALLS when set", () => {
+    process.env.YOUTUBE_DAY_CALLS = "8000";
+    try {
+      expect(dayQuota()).toBe(8000);
+    } finally {
+      delete process.env.YOUTUBE_DAY_CALLS;
+    }
+  });
+
+  it("ignores a non-numeric or negative override", () => {
+    process.env.YOUTUBE_DAY_CALLS = "abc";
+    try {
+      expect(dayQuota()).toBe(9500);
+    } finally {
+      delete process.env.YOUTUBE_DAY_CALLS;
+    }
+    process.env.YOUTUBE_DAY_CALLS = "-5";
+    try {
+      expect(dayQuota()).toBe(9500);
+    } finally {
+      delete process.env.YOUTUBE_DAY_CALLS;
+    }
   });
 });
