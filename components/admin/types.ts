@@ -206,6 +206,13 @@ export interface RoomRow {
   localeMix?: LocaleCount[];
 }
 
+/** The rooms view's top row; null when an older deploy's response omits it. */
+export interface RightNow {
+  live: number;
+  created: number;
+  sang: number;
+}
+
 /** One raw error occurrence in a room, in chronological order. */
 export interface RoomErrorRow {
   message: string;

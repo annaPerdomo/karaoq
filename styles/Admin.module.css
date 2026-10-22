@@ -274,6 +274,17 @@
   max-width: 1180px;
 }
 
+.rightNowRow {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+.rightNowWarn {
+  color: #fcd34d;
+  font-weight: 700;
+}
+
 .viewHeader {
   display: flex;
   justify-content: space-between;

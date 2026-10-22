@@ -1,8 +1,9 @@
 import * as React from 'react';
 import styles from '../../../styles/Admin.module.css';
-import type { RoomRow } from '../types';
+import type { RightNow, RoomRow } from '../types';
 import { LIVE_EXPLANATION } from '../format';
 import RoomCard from './RoomCard';
+import RightNowRow from './RightNowRow';
 
 const PAGE_SIZE = 25;
 const SEARCH_DEBOUNCE_MS = 300;
@@ -29,6 +30,7 @@ export default function RoomsView({
   // Counted server-side over every room, not over the loaded pages: a room
   // created days ago can be live now, and newest-first would bury it.
   const [liveCount, setLiveCount] = React.useState(0);
+  const [rightNow, setRightNow] = React.useState<RightNow | null>(null);
   const [hasMore, setHasMore] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
   const [failed, setFailed] = React.useState(false);
@@ -61,6 +63,7 @@ export default function RoomsView({
         setRooms((prev) => (replace ? json.rooms : [...prev, ...json.rooms]));
         setHasMore(Boolean(json.hasMore));
         setLiveCount(json.liveCount ?? 0);
+        setRightNow(json.rightNow ?? null);
       } catch {
         if (seq !== requestSeq.current) return;
         setHasMore(false);
@@ -157,6 +160,7 @@ export default function RoomsView({
 
   return (
     <div className={styles.view}>
+      <RightNowRow data={rightNow} />
       <header className={styles.viewHeader}>
         <div>
           <h1 className={styles.viewTitle}>Rooms</h1>
