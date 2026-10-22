@@ -1,14 +1,18 @@
 import { describe, it, expect } from "vitest";
+import en from "../../lib/i18n/en.json";
 import {
   GUIDES,
   GUIDE_SLUGS,
   firstSponsoredPlacement,
+  guideById,
   hasInlinePlacements,
   indices,
   placedItemIndices,
   unplacedItemIndices,
   type Guide,
 } from "../../lib/guides";
+
+const EN_KEYS = new Set(Object.keys(en as Record<string, string>));
 
 // A minimal guide to exercise placement shapes the shipped catalog doesn't
 // have yet — mixed paid/unpaid links, out-of-range keys, nothing placed.
@@ -127,6 +131,34 @@ describe("guide catalog", () => {
       expect(hasInlinePlacements(g)).toBe(
         Object.keys({ ...g.sectionItems, ...g.stepItems }).length > 0
       );
+    }
+  });
+
+  it("has an en.json key for every section, step and FAQ its counts declare", () => {
+    for (const g of GUIDES) {
+      for (const key of ["title", "metaDesc", "h1", "intro", "closing"]) {
+        expect(EN_KEYS.has(`guide.${g.id}.${key}`), `guide.${g.id}.${key}`).toBe(true);
+      }
+      for (const n of indices(g.sectionCount)) {
+        expect(EN_KEYS.has(`guide.${g.id}.sec${n}.title`), `guide.${g.id}.sec${n}.title`).toBe(true);
+        expect(EN_KEYS.has(`guide.${g.id}.sec${n}.body`), `guide.${g.id}.sec${n}.body`).toBe(true);
+      }
+      for (const n of indices(g.stepCount)) {
+        expect(EN_KEYS.has(`guide.${g.id}.step${n}.title`), `guide.${g.id}.step${n}.title`).toBe(true);
+        expect(EN_KEYS.has(`guide.${g.id}.step${n}.body`), `guide.${g.id}.step${n}.body`).toBe(true);
+      }
+      for (const n of indices(g.faqCount)) {
+        expect(EN_KEYS.has(`guide.${g.id}.faq${n}.q`), `guide.${g.id}.faq${n}.q`).toBe(true);
+        expect(EN_KEYS.has(`guide.${g.id}.faq${n}.a`), `guide.${g.id}.faq${n}.a`).toBe(true);
+      }
+    }
+  });
+
+  it("points every related id at a guide that exists", () => {
+    for (const g of GUIDES) {
+      for (const r of g.related) {
+        expect(guideById(r), `${g.id}.related -> ${r}`).toBeDefined();
+      }
     }
   });
 });
