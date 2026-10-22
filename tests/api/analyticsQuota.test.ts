@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, onTestFinished } from "vitest";
 import { NextApiResponse } from "next";
 import { createMockReq } from "../helpers/mockRequest";
 import { fakeCollection, type FakeCollection } from "../helpers/fakeCollection";
@@ -102,6 +102,10 @@ describe("GET /api/analytics/quota", () => {
   });
 
   it("breaks each day's billed searches out per room, heaviest first, cache hits excluded", async () => {
+    // Midday Pacific: in the hour after the midnight reset, `hourAgo` would land on yesterday.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-21T19:00:00Z"));
+    onTestFinished(() => vi.useRealTimers());
     const now = Date.now();
     const hourAgo = new Date(now - 60 * 60 * 1000);
     const nineDaysAgo = new Date(now - 9 * 24 * 60 * 60 * 1000);
