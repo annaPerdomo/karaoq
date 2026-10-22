@@ -27,7 +27,7 @@ import postponeEntry from '../app/queue/postponeEntry';
 import { useRoomTiming } from './hooks/useRoomTiming';
 
 
-const POLL_INTERVAL = 5000;
+const POLL_INTERVAL = 8000;
 const NAME_STORAGE_KEY = 'karaoq_username';
 
 const THEME_CLASS: Record<DisplayTheme, string> = {
@@ -240,7 +240,7 @@ const Sing = (): React.ReactElement => {
     if (!ok) setLastSentEmoji(null);
   }
 
-  // The server decides the slot, and the next poll is up to 5s away — too long
+  // The server decides the slot, and the next poll is a full interval away — too long
   // to leave the card saying "up next".
   async function postpone(entryId: string, after: number | 'end'): Promise<boolean> {
     if (!joinCode) return false;
