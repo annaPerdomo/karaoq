@@ -10,6 +10,8 @@ const mockAggregateToArray = vi.fn();
 const mockAggregate = vi.fn(() => ({ toArray: mockAggregateToArray }));
 const mockCountDocuments = vi.fn();
 const mockDistinct = vi.fn();
+const mockRoomsCountDocuments = vi.fn();
+const mockEventsDistinct = vi.fn();
 
 vi.mock("mongodb", () => ({
   MongoClient: function () {
@@ -19,10 +21,15 @@ vi.mock("mongodb", () => ({
       db: () => ({
         collection: (name: string) =>
           name === "rooms"
-            ? { distinct: mockDistinct, createIndex: vi.fn().mockResolvedValue({}) }
+            ? {
+                distinct: mockDistinct,
+                countDocuments: mockRoomsCountDocuments,
+                createIndex: vi.fn().mockResolvedValue({}),
+              }
             : {
                 aggregate: mockAggregate,
                 countDocuments: mockCountDocuments,
+                distinct: mockEventsDistinct,
                 createIndex: vi.fn().mockResolvedValue({}),
               },
       }),
@@ -76,6 +83,8 @@ beforeEach(() => {
   mockAggregateToArray.mockResolvedValue([]);
   mockCountDocuments.mockResolvedValue(0);
   mockDistinct.mockResolvedValue(["LIVE1", "LIVE2"]);
+  mockRoomsCountDocuments.mockResolvedValue(0);
+  mockEventsDistinct.mockResolvedValue([]);
 });
 
 describe("GET /api/analytics/rooms", () => {
@@ -165,5 +174,52 @@ describe("GET /api/analytics/rooms", () => {
 
     expect(res.getBody().rooms).toHaveLength(25);
     expect(res.getBody().hasMore).toBe(true);
+  });
+
+  describe("rightNow", () => {
+    it("reports live from liveRoomCount, distinct created rooms, and how many of them sang", async () => {
+      mockRoomsCountDocuments.mockResolvedValue(3);
+      mockEventsDistinct
+        .mockResolvedValueOnce(["A", "B"])
+        .mockResolvedValueOnce(["A"]);
+
+      const res = await get();
+
+      expect(res.getBody().rightNow).toEqual({ live: 3, created: 2, sang: 1 });
+    });
+
+    it("reports zero sang without a second lookup when nothing was created", async () => {
+      mockEventsDistinct.mockResolvedValueOnce([]);
+
+      const res = await get();
+
+      expect(res.getBody().rightNow).toEqual({ live: 0, created: 0, sang: 0 });
+      expect(mockEventsDistinct).toHaveBeenCalledTimes(1);
+    });
+
+    it("skips the computation past the first page", async () => {
+      const res = await get({ skip: "25" });
+
+      expect(res.getBody().rightNow).toBeNull();
+      expect(mockEventsDistinct).not.toHaveBeenCalled();
+    });
+
+    it("skips the computation under a search", async () => {
+      const res = await get({ q: "ab" });
+
+      expect(res.getBody().rightNow).toBeNull();
+      expect(mockEventsDistinct).not.toHaveBeenCalled();
+    });
+
+    it("reports null rather than failing the whole list when it errors", async () => {
+      mockEventsDistinct.mockRejectedValueOnce(new Error("down"));
+      const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      const res = await get();
+
+      expect(res.getStatus()).toBe(200);
+      expect(res.getBody().rightNow).toBeNull();
+      spy.mockRestore();
+    });
   });
 });

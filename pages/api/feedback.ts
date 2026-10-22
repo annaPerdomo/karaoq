@@ -59,6 +59,7 @@ export default async function handler(
     ...(feedback.roomId ? { roomId: feedback.roomId } : {}),
     ...(feedback.role ? { role: feedback.role } : {}),
     ...(feedback.page ? { page: feedback.page } : {}),
+    ...(feedback.ref ? { ref: feedback.ref } : {}),
     ...(locale ? { locale } : {}),
     ...(country ? { country } : {}),
     ...(userAgent ? { userAgent } : {}),
