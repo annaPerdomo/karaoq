@@ -830,5 +830,10 @@
   "sing.postpone.eta": "Du wärst in ~{time} dran",
   "sing.postpone.etaLast": "Du wärst als Letzte:r dran, in ~{time}",
   "sing.postpone.confirm": "Song verschieben",
-  "sing.postpone.cancel": "Platz behalten"
+  "sing.postpone.cancel": "Platz behalten",
+  "recap.share": "Rückblick auf heute Abend teilen",
+  "recap.text.one": "Unser Karaoke-Abend: {songs} Songs mit {singers} Sänger 🎤",
+  "recap.text.other": "Unser Karaoke-Abend: {songs} Songs mit {singers} Sängern 🎤",
+  "recap.star": "Star des Abends: {name}.",
+  "recap.copied": "Kopiert — füg es überall ein"
 }

@@ -830,5 +830,10 @@
   "sing.postpone.eta": "You'd be up in ~{time}",
   "sing.postpone.etaLast": "You'd sing last, in ~{time}",
   "sing.postpone.confirm": "Move my song",
-  "sing.postpone.cancel": "Keep my spot"
+  "sing.postpone.cancel": "Keep my spot",
+  "recap.share": "Share tonight's recap",
+  "recap.text.one": "Our karaoke night: {songs} songs with {singers} singer 🎤",
+  "recap.text.other": "Our karaoke night: {songs} songs with {singers} singers 🎤",
+  "recap.star": "Star of the night: {name}.",
+  "recap.copied": "Copied — paste it anywhere"
 }

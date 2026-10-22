@@ -830,5 +830,10 @@
   "sing.postpone.eta": "Te tocaría en ~{time}",
   "sing.postpone.etaLast": "Cantarías al final, en ~{time}",
   "sing.postpone.confirm": "Mover mi canción",
-  "sing.postpone.cancel": "Mantener mi turno"
+  "sing.postpone.cancel": "Mantener mi turno",
+  "recap.share": "Compartir el resumen de esta noche",
+  "recap.text.one": "Nuestra noche de karaoke: {songs} canciones con {singers} cantante 🎤",
+  "recap.text.other": "Nuestra noche de karaoke: {songs} canciones con {singers} cantantes 🎤",
+  "recap.star": "Estrella de la noche: {name}.",
+  "recap.copied": "Copiado — pégalo donde quieras"
 }

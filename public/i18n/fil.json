@@ -830,5 +830,10 @@
   "sing.postpone.eta": "Ikaw na sa ~{time}",
   "sing.postpone.etaLast": "Ikaw ang huli, sa ~{time}",
   "sing.postpone.confirm": "Ilipat ang kanta ko",
-  "sing.postpone.cancel": "Panatilihin ang pwesto ko"
+  "sing.postpone.cancel": "Panatilihin ang pwesto ko",
+  "recap.share": "Ibahagi ang recap ng gabing ito",
+  "recap.text.one": "Ang aming gabi ng karaoke: {songs} kanta kasama ang {singers} mang-aawit 🎤",
+  "recap.text.other": "Ang aming gabi ng karaoke: {songs} kanta kasama ang {singers} mang-aawit 🎤",
+  "recap.star": "Bituin ng gabi: {name}.",
+  "recap.copied": "Kinopya — i-paste kahit saan"
 }

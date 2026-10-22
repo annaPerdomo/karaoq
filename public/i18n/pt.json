@@ -830,5 +830,10 @@
   "sing.postpone.eta": "Você cantaria em ~{time}",
   "sing.postpone.etaLast": "Você cantaria por último, em ~{time}",
   "sing.postpone.confirm": "Mover minha música",
-  "sing.postpone.cancel": "Manter meu lugar"
+  "sing.postpone.cancel": "Manter meu lugar",
+  "recap.share": "Compartilhar o resumo de hoje",
+  "recap.text.one": "Nossa noite de karaokê: {songs} músicas com {singers} cantor 🎤",
+  "recap.text.other": "Nossa noite de karaokê: {songs} músicas com {singers} cantores 🎤",
+  "recap.star": "Estrela da noite: {name}.",
+  "recap.copied": "Copiado — cole onde quiser"
 }

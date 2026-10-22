@@ -1497,6 +1497,8 @@ const Host = ({
           onToggleSearch={() => setSearchOpen(!searchOpen)}
           onCloseSearch={() => setSearchOpen(false)}
           onOpenBoards={() => setSearchOpen(true)}
+          queue={queue}
+          activeVideoIndex={activeIndex}
           upNext={upNext}
           historyItems={historyItems}
           uniqueSingers={uniqueSingers}

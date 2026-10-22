@@ -830,5 +830,10 @@
   "sing.postpone.eta": "Byli byste na řadě za ~{time}",
   "sing.postpone.etaLast": "Zpívali byste poslední, za ~{time}",
   "sing.postpone.confirm": "Přesunout mou píseň",
-  "sing.postpone.cancel": "Nechat místo"
+  "sing.postpone.cancel": "Nechat místo",
+  "recap.share": "Sdílet shrnutí dnešního večera",
+  "recap.text.one": "Náš karaoke večer — písniček: {songs}, zpěváků: {singers} 🎤",
+  "recap.text.other": "Náš karaoke večer — písniček: {songs}, zpěváků: {singers} 🎤",
+  "recap.star": "Hvězda večera: {name}.",
+  "recap.copied": "Zkopírováno — vlož to kamkoli"
 }

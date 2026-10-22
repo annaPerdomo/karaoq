@@ -4,6 +4,7 @@ import styles from "../../styles/Host.module.css";
 import p from "../../styles/DisplayDesigner.module.css";
 import BoardsPanel from "../BoardsPanel";
 import SongSearch from "../SongSearch";
+import RecapShareButton from "../RecapShareButton";
 import { HostConfig, QueueEntry } from "../../pages/api/types";
 import { Boards } from "../../app/queue/useBoards";
 import { useT } from "../../lib/i18n/I18nProvider";
@@ -25,6 +26,8 @@ export function QueueSidebar({
   onToggleSearch,
   onCloseSearch,
   onOpenBoards,
+  queue,
+  activeVideoIndex,
   upNext,
   historyItems,
   uniqueSingers,
@@ -75,6 +78,8 @@ export function QueueSidebar({
   onToggleSearch: () => void;
   onCloseSearch: () => void;
   onOpenBoards: () => void;
+  queue: QueueEntry[];
+  activeVideoIndex: number;
   upNext: QueueEntry[];
   historyItems: QueueEntry[];
   uniqueSingers: number;
@@ -183,6 +188,8 @@ export function QueueSidebar({
           onReplayFromHistory={onReplayFromHistory}
         />
       )}
+
+      <RecapShareButton queue={queue} activeVideoIndex={activeVideoIndex} />
     </>
   );
 

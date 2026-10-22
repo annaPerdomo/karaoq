@@ -830,5 +830,10 @@
   "sing.postpone.eta": "Giliranmu dalam ~{time}",
   "sing.postpone.etaLast": "Kamu terakhir, dalam ~{time}",
   "sing.postpone.confirm": "Pindahkan laguku",
-  "sing.postpone.cancel": "Tetap di sini"
+  "sing.postpone.cancel": "Tetap di sini",
+  "recap.share": "Bagikan rekap malam ini",
+  "recap.text.one": "Malam karaoke kami: {songs} lagu dengan {singers} penyanyi 🎤",
+  "recap.text.other": "Malam karaoke kami: {songs} lagu dengan {singers} penyanyi 🎤",
+  "recap.star": "Bintang malam ini: {name}.",
+  "recap.copied": "Disalin — tempel di mana saja"
 }
