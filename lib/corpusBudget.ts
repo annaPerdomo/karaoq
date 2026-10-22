@@ -13,16 +13,16 @@ const LOCK_ID = "run";
 /** The most searches one night's resolving may buy; not a share of the day. */
 export const SEARCH_PER_DAY = 40;
 
-/** Google's stated search.list quota; the ledger's ceiling. */
-export const SEARCH_DAY_QUOTA = 100;
+/** Google's 10,000 calls/day, less headroom for the sweep/harvest videos.list
+ *  calls the ledger never records; the ledger's ceiling. */
+export const DAY_CALL_QUOTA = 9_500;
 
 /** How far under Google's console the ledger runs by day's end: the sweep's
- *  videos.list (~40 units/run) and searches that reached YouTube but never
- *  billed. YouTube's "per day" refusal has landed at 85 of 100, so it is only
- *  believed inside this margin. */
-export const UNBILLED_SLACK_UNITS = 300;
+ *  videos.list calls and searches that reached YouTube but never billed.
+ *  YouTube's "per day" refusal is only believed inside this margin of calls. */
+export const UNBILLED_SLACK_CALLS = 300;
 
-/** ~835 units for 800 playlistItems.list pages — ~40,000 uploads a day. */
+/** 800 playlistItems.list pages, one call each — ~40,000 uploads a day. */
 export const CHANNEL_PAGES_PER_DAY = 800;
 
 /** A run past midnight bills tomorrow's quota to today; one much earlier
@@ -180,26 +180,26 @@ export async function recordMopUp(at: number, outcome: MopUpOutcome): Promise<vo
   );
 }
 
-// Google bills search.list at 100 and videos.list at 1; each search also spends
-// one unit enriching its results (lib/youtubeSearch). The sweep and harvest
+// search.list and videos.list each cost 1 call; each search also spends one
+// call enriching its results (lib/youtubeSearch). The sweep and harvest
 // videos.list calls are never recorded, so this reads under Google's console.
-export const SEARCH_UNITS = 100;
-export function estimateUnits(spent: DailySpend): number {
-  return spent.searches * (SEARCH_UNITS + 1) + spent.pages + spent.lookups;
+export const SEARCH_CALLS = 2;
+export function estimateCalls(spent: DailySpend): number {
+  return spent.searches * SEARCH_CALLS + spent.pages + spent.lookups;
+}
+
+export function callsLeft(
+  spent: DailySpend,
+  quotaCalls: number = DAY_CALL_QUOTA
+): number {
+  return quotaCalls - estimateCalls(spent);
 }
 
 export function searchesLeft(
   spent: DailySpend,
-  quotaSearches: number = SEARCH_DAY_QUOTA
+  quotaCalls: number = DAY_CALL_QUOTA
 ): number {
-  return Math.max(0, Math.floor(unitsLeft(spent, quotaSearches) / (SEARCH_UNITS + 1)));
-}
-
-export function unitsLeft(
-  spent: DailySpend,
-  quotaSearches: number = SEARCH_DAY_QUOTA
-): number {
-  return quotaSearches * SEARCH_UNITS - estimateUnits(spent);
+  return Math.max(0, Math.floor(callsLeft(spent, quotaCalls) / SEARCH_CALLS));
 }
 
 export function dayKeyBefore(day: string, n: number): string {

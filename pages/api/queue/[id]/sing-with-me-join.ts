@@ -91,7 +91,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return;
     }
 
-    trackEvent(req, "singwithme_joined", {
+    const singwithmeJoinedTracked = trackEvent(req, "singwithme_joined", {
       roomId,
       userName,
       songTitle: post.songTitle,
@@ -102,9 +102,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // join while the post is still unqueued — not just the crossing join —
     // so a post that missed its moment (e.g. the queue was full right then)
     // retries instead of staying dead on the board forever.
-    const queued = await queueSingWithMeIfReady(collection, roomId, postId, req);
+    const { queued, tracked } = await queueSingWithMeIfReady(collection, roomId, postId, req);
 
     res.status(200).json({ code: 200, message: "Joined.", queued });
+    await Promise.all([singwithmeJoinedTracked, ...tracked]);
   } catch (e) {
     console.error(e);
     res.status(500).json({ code: 500, message: "Internal server error." });

@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { ApiError, DEFAULT_AUTO_ADVANCE, DEFAULT_DISPLAY_CONFIG, Room } from "../../types";
-import { trackEvent } from "../../../../lib/analytics";
+import { attributionFromRequest, trackEvent } from "../../../../lib/analytics";
 import { rateLimit } from "../../../../lib/limits";
 import { getRoomsCollection } from "../../../../lib/mongodb";
 import { normalizeRoomId } from "../../../../lib/roomCode";
@@ -122,7 +122,11 @@ export default async function handler(
         // Awaited: the response freezes the serverless instance, and an in-flight insert dies with
         // it. Fire-and-forget was silently losing room_created events, which the whole activation
         // funnel counts from.
-        await trackEvent(req, "room_created", { roomId, fairMode: room.fairMode });
+        await trackEvent(req, "room_created", {
+          roomId,
+          fairMode: room.fairMode,
+          ...attributionFromRequest(req),
+        });
         res.status(201).json(room);
       }
     } else if (req.method === "GET") {

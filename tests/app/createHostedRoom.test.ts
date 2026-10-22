@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createHostedRoom } from "../../app/queue/createHostedRoom";
 import { getLastHostedRoom } from "../../lib/lastRoom";
+import { LOCALE_HEADER } from "../../lib/i18n/activeLocale";
+import { FIRST_TOUCH_KEY } from "../../lib/firstTouch";
 
 beforeEach(() => {
   localStorage.clear();
@@ -39,9 +41,23 @@ describe("createHostedRoom", () => {
     const fetchMock = vi.fn(async () => ({ ok: true, status: 200 }) as Response);
     vi.stubGlobal("fetch", fetchMock);
     await createHostedRoom("MYCODE", { custom: true });
-    expect(fetchMock).toHaveBeenCalledWith(
-      "/api/queue/MYCODE",
-      expect.objectContaining({ headers: { "x-custom-code": "1" } })
+    const [, init] = fetchMock.mock.calls[0];
+    expect((init as RequestInit).headers).toMatchObject({ "x-custom-code": "1" });
+  });
+
+  it("sends the locale header and any stored first-touch attribution", async () => {
+    localStorage.setItem(
+      FIRST_TOUCH_KEY,
+      JSON.stringify({ ref: "reddit", entry: "/room1", at: Date.now() })
     );
+    const fetchMock = vi.fn(async () => ({ ok: true, status: 200 }) as Response);
+    vi.stubGlobal("fetch", fetchMock);
+    await createHostedRoom("MYCODE");
+    const [, init] = fetchMock.mock.calls[0];
+    expect((init as RequestInit).headers).toMatchObject({
+      [LOCALE_HEADER]: expect.any(String),
+      "x-karaoq-ref": "reddit",
+      "x-karaoq-entry": "/room1",
+    });
   });
 });

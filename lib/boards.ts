@@ -14,6 +14,12 @@ export function creditNames(names: string[]): string {
   return `${names.length} singers`;
 }
 
+export interface QueueSingWithMeResult {
+  queued: boolean;
+  // Analytics promises started inside, so the caller can await them after replying.
+  tracked: Promise<void>[];
+}
+
 /** Call after any write that can change joined-vs-minSingers. Re-reads the room (the caller's
  * snapshot predates its own write); the `queued: $ne: true` filter guarantees exactly one caller wins. */
 export async function queueSingWithMeIfReady(
@@ -21,11 +27,12 @@ export async function queueSingWithMeIfReady(
   roomId: string,
   postId: string,
   req: NextApiRequest
-): Promise<boolean> {
+): Promise<QueueSingWithMeResult> {
   const fresh = await collection.findOne({ id: roomId });
   const post = (fresh?.singWithMe ?? []).find((p) => p.id === postId);
-  if (!fresh || !post) return false;
+  if (!fresh || !post) return { queued: false, tracked: [] };
 
+  const tracked: Promise<void>[] = [];
   let queued = post.queued;
   if (
     !post.queued &&
@@ -77,19 +84,23 @@ export async function queueSingWithMeIfReady(
     }
     if (queueResult.matchedCount > 0) {
       queued = true;
-      trackEvent(req, "singwithme_queued", {
-        roomId,
-        songTitle: post.songTitle,
-        videoId: post.videoId,
-      });
+      tracked.push(
+        trackEvent(req, "singwithme_queued", {
+          roomId,
+          songTitle: post.songTitle,
+          videoId: post.videoId,
+        })
+      );
       // No userName: the group credit string would pollute per-singer stats; joins are tracked individually.
-      trackEvent(req, "song_added", {
-        roomId,
-        songTitle: post.songTitle,
-        videoId: post.videoId,
-        via: "singwithme",
-        singers: post.joinedSingers.length,
-      });
+      tracked.push(
+        trackEvent(req, "song_added", {
+          roomId,
+          songTitle: post.songTitle,
+          videoId: post.videoId,
+          via: "singwithme",
+          singers: post.joinedSingers.length,
+        })
+      );
     }
   }
 
@@ -100,5 +111,5 @@ export async function queueSingWithMeIfReady(
     );
   }
 
-  return queued;
+  return { queued, tracked };
 }

@@ -99,8 +99,9 @@ export default async function handler(
       }
     );
 
-    trackEvent(req, "reaction_sent", { roomId: roomId as string, userName: userName!, emoji });
+    const tracked = trackEvent(req, "reaction_sent", { roomId: roomId as string, userName: userName!, emoji });
     res.status(200).json({ reactions: updated });
+    await tracked;
   } catch (e) {
     console.error(e);
     res.status(500).json({ code: 500, message: "Internal server error." });

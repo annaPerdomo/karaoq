@@ -89,13 +89,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       res.status(409).json({ code: 409, message: "Too many active posts." });
       return;
     }
-    trackEvent(req, "singwithme_posted", {
+    const tracked = trackEvent(req, "singwithme_posted", {
       roomId,
       userName: createdBy || undefined,
       songTitle: post.songTitle,
       videoId: post.videoId,
     });
     res.status(200).json({ code: 200, message: "Posted." });
+    await tracked;
   } catch (e) {
     console.error(e);
     res.status(500).json({ code: 500, message: "Internal server error." });

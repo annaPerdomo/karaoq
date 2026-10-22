@@ -23,7 +23,12 @@ const GUIDE_SLUGS = [
   'karaoke-for-bars-and-venues',
   'cheap-home-karaoke-setup',
   'best-youtube-karaoke-channels',
+  'free-karaoke-app-alternatives',
 ];
+
+// Countries that currently clear CHART_MIN_SONGS (lib/songCharts.ts) in the
+// shared Atlas DB, checked 2026-10-22 — rerun that query before extending this.
+const SONG_CHART_PASSING_COUNTRIES = ['us', 'ph', 'ca', 'fr'];
 
 // A page = a path suffix rendered in every locale. '' is the landing root.
 const PAGES = [
@@ -32,6 +37,12 @@ const PAGES = [
     path: `/guide/${slug}`,
     priority: '0.8',
     changefreq: 'monthly',
+  })),
+  { path: '/songs', priority: '0.8', changefreq: 'daily' },
+  ...SONG_CHART_PASSING_COUNTRIES.map((cc) => ({
+    path: `/songs/${cc}`,
+    priority: '0.7',
+    changefreq: 'daily',
   })),
 ];
 

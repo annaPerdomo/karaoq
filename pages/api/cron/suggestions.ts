@@ -9,7 +9,6 @@ import {
   releaseRun,
   remaining,
   searchesLeft,
-  SEARCH_DAY_QUOTA,
   SEARCH_PER_DAY,
   spentToday,
   type DailySpend,
@@ -34,7 +33,7 @@ import {
 import { CORPUS_BUSY_WINDOW_MS } from "../../../lib/liveWindows";
 import { liveRoomCount } from "../../../lib/liveRooms";
 import { quotaResetsAtMs } from "../../../lib/pacificTime";
-import { searchQuotaResetsAt } from "../../../lib/searchQuotaStatus";
+import { dayQuota, searchQuotaResetsAt } from "../../../lib/searchQuotaStatus";
 import { recordDemand } from "../../../lib/songCorpus";
 import { suggestionCatalog } from "../../../lib/suggestionCatalog";
 import { mergeDemand, suggestionDemand } from "../../../lib/suggestionDemand";
@@ -143,7 +142,7 @@ export default async function handler(
   // waste is what everyone has spent, and a quiet day is what makes the mop-up
   // worth running at all.
   const searchBudget = mopUp
-    ? searchesLeft(spent, envCount("SUGGESTION_DAY_QUOTA", SEARCH_DAY_QUOTA))
+    ? searchesLeft(spent, dayQuota())
     : remaining(
         envCount("SUGGESTION_RESOLVE_PER_DAY", SEARCH_PER_DAY),
         spent.cronSearches

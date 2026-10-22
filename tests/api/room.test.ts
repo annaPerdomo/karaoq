@@ -96,6 +96,61 @@ describe("POST /api/queue/[id] - Room creation", () => {
     });
   });
 
+  it("records first-touch attribution on room_created", async () => {
+    mockCollection.findOne.mockResolvedValue(null);
+    mockCollection.insertOne.mockResolvedValue({ insertedId: "x" });
+
+    const req = createMockReq({
+      method: "POST",
+      query: { id: "ABC13" },
+      headers: { "x-karaoq-ref": "Reddit", "x-karaoq-entry": "/ROOM1" },
+    });
+    const res = createRes();
+    await handler(req, res);
+
+    expect(res.getStatus()).toBe(201);
+    const eventDoc = mockCollection.insertOne.mock.calls
+      .map(([doc]) => doc)
+      .find((doc) => doc.type === "room_created");
+    expect(eventDoc).toMatchObject({ ref: "reddit", entry: "/room1" });
+  });
+
+  it("sanitizes a malicious attribution header instead of failing the create", async () => {
+    mockCollection.findOne.mockResolvedValue(null);
+    mockCollection.insertOne.mockResolvedValue({ insertedId: "x" });
+
+    const req = createMockReq({
+      method: "POST",
+      query: { id: "ABC14" },
+      headers: { "x-karaoq-ref": "<script>".padEnd(500, "x") },
+    });
+    const res = createRes();
+    await handler(req, res);
+
+    expect(res.getStatus()).toBe(201);
+    const eventDoc = mockCollection.insertOne.mock.calls
+      .map(([doc]) => doc)
+      .find((doc) => doc.type === "room_created");
+    expect(eventDoc.ref).not.toMatch(/[<>]/);
+    expect(eventDoc.ref.length).toBeLessThanOrEqual(40);
+  });
+
+  it("records no attribution fields with no headers sent", async () => {
+    mockCollection.findOne.mockResolvedValue(null);
+    mockCollection.insertOne.mockResolvedValue({ insertedId: "x" });
+
+    const req = createMockReq({ method: "POST", query: { id: "ABC15" } });
+    const res = createRes();
+    await handler(req, res);
+
+    const eventDoc = mockCollection.insertOne.mock.calls
+      .map(([doc]) => doc)
+      .find((doc) => doc.type === "room_created");
+    expect(eventDoc.ref).toBeUndefined();
+    expect(eventDoc.referrer).toBeUndefined();
+    expect(eventDoc.entry).toBeUndefined();
+  });
+
   it("resets isPlaying when the device that was playing reconnects", async () => {
     const existing: Room = {
       id: "ABC12",

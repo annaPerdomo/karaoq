@@ -10,6 +10,7 @@ import { Analytics } from '@vercel/analytics/react'
 import { I18nProvider, useT } from '../lib/i18n/I18nProvider'
 import { renderWithHeart } from '../lib/i18n/renderWithHeart'
 import { installErrorReporting } from '../lib/errorReporting'
+import { captureFirstTouch } from '../lib/firstTouch'
 import FeedbackTrigger from '../components/feedback/FeedbackTrigger'
 import PwaHead from '../components/PwaHead'
 
@@ -31,6 +32,18 @@ function MyApp({ Component, pageProps }: AppProps) {
   useEffect(() => {
     installErrorReporting();
   }, []);
+  useEffect(() => {
+    captureFirstTouch(window.location.href, document.referrer, Date.now());
+  }, []);
+  useEffect(() => {
+    // Mount only fires on a full load; an in-app <Link ref=...> (e.g. "Host
+    // your own" from /sing) is a client-side route change instead.
+    const onRouteChange = (url: string) => {
+      captureFirstTouch(new URL(url, window.location.origin).href, document.referrer, Date.now());
+    };
+    router.events.on('routeChangeComplete', onRouteChange);
+    return () => router.events.off('routeChangeComplete', onRouteChange);
+  }, [router.events]);
   // Allowlisted rather than excluding app screens one by one: the footer is
   // `position: fixed`, so a screen that isn't listed here only has to exist to
   // get 28px of its bottom row covered — /remote shipped that way, painting over

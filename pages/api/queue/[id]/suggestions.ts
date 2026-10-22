@@ -81,13 +81,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       res.status(409).json({ code: 409, message: "Suggestions board is full." });
       return;
     }
-    trackEvent(req, "song_suggested", {
+    const tracked = trackEvent(req, "song_suggested", {
       roomId,
       userName: suggestion.suggestedBy || undefined,
       songTitle: suggestion.songTitle,
       videoId: suggestion.videoId,
     });
     res.status(200).json({ code: 200, message: "Suggested." });
+    await tracked;
   } catch (e) {
     console.error(e);
     res.status(500).json({ code: 500, message: "Internal server error." });

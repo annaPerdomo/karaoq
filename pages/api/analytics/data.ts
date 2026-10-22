@@ -146,6 +146,7 @@ export default async function handler(
       trendSongsPrevious,
       growthRooms,
       growthSongs,
+      growthSources,
     ] = await Promise.all([
       events.countDocuments({ type: "room_created" }),
 
@@ -873,6 +874,41 @@ export default async function handler(
           { $sort: { _id: 1 } },
         ])
         .toArray(),
+
+      events
+        .aggregate([
+          { $match: { type: "room_created", timestamp: { $gte: weekAgo } } },
+          {
+            $group: {
+              _id: {
+                $ifNull: [
+                  "$ref",
+                  {
+                    $ifNull: [
+                      "$referrer",
+                      {
+                        $cond: [
+                          {
+                            $regexMatch: {
+                              input: { $ifNull: ["$entry", ""] },
+                              regex: "^/(host|sing|remote|display)/",
+                            },
+                          },
+                          "from a room link",
+                          { $cond: [{ $ifNull: ["$entry", false] }, "direct", "untracked"] },
+                        ],
+                      },
+                    ],
+                  },
+                ],
+              },
+              count: { $sum: 1 },
+            },
+          },
+          { $sort: { count: -1 } },
+          { $limit: 10 },
+        ])
+        .toArray(),
     ]);
 
     const sessionStats = sessionData[0] || {
@@ -1136,6 +1172,7 @@ export default async function handler(
         windowDays: GROWTH_WINDOW_DAYS,
         rooms: growthRooms,
         songs: growthSongs,
+        sources: growthSources,
       },
       meta: {
         timezone: tz,

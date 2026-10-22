@@ -43,6 +43,29 @@ function Stage({ needsTap }: { needsTap: boolean }) {
   );
 }
 
+function IdleStage() {
+  const ref = React.useRef<HTMLIFrameElement>(null);
+  return (
+    <DisplayStage
+      loading={false}
+      joinCode="ABCD"
+      origin="https://karaoq.live"
+      currentSong={undefined}
+      isPlaying={false}
+      playsVideoHere
+      videoRef={ref}
+      onIframeLoad={() => {}}
+      needsTap={false}
+      onUnlock={() => {}}
+      autoStartIn={null}
+      autoGapSeconds={10}
+      onStartNow={() => {}}
+      wrapUpIn={null}
+      onPlaybackFailed={() => {}}
+    />
+  );
+}
+
 async function attach() {
   await waitFor(() => expect(raiseError).not.toBeNull());
 }
@@ -76,5 +99,16 @@ describe("DisplayStage", () => {
 
     expect(screen.queryByText(en["display.tapTitle"])).toBeNull();
     expect(screen.getByText(en["player.unplayable"])).toBeInTheDocument();
+  });
+
+  it("shows the host-your-own line while idle", () => {
+    render(<IdleStage />);
+    expect(screen.getByText(en["display.hostOwn"])).toBeInTheDocument();
+  });
+
+  it("does not show the host-your-own line while playing", async () => {
+    render(<Stage needsTap={false} />);
+    await attach();
+    expect(screen.queryByText(en["display.hostOwn"])).toBeNull();
   });
 });

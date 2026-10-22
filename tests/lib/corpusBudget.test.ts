@@ -26,7 +26,7 @@ process.env.MONGODB_DB = "test-db";
 
 import {
   acquireRun,
-  estimateUnits,
+  estimateCalls,
   insideMopUpWindow,
   ledgerDay,
   OUTSIDE_MOP_UP_WINDOW,
@@ -34,6 +34,7 @@ import {
   recordSpend,
   releaseRun,
   remaining,
+  searchesLeft,
   spentRecent,
   LEDGER_KEEP_DAYS,
 } from "../../lib/corpusBudget";
@@ -154,10 +155,22 @@ describe("spentRecent", () => {
   });
 });
 
-describe("estimateUnits", () => {
-  it("bills a search at 100 plus its videos.list enrichment, everything else at 1", () => {
-    expect(estimateUnits({ searches: 2, cronSearches: 1, pages: 30, lookups: 4 })).toBe(236);
-    expect(estimateUnits({ searches: 0, cronSearches: 0, pages: 0, lookups: 0 })).toBe(0);
+describe("estimateCalls", () => {
+  it("bills a search at 2 calls (search.list plus its enrichment), everything else at 1", () => {
+    expect(estimateCalls({ searches: 2, cronSearches: 1, pages: 30, lookups: 4 })).toBe(38);
+    expect(estimateCalls({ searches: 0, cronSearches: 0, pages: 0, lookups: 0 })).toBe(0);
+  });
+});
+
+describe("searchesLeft", () => {
+  it("defaults to the day's call quota of 9,500", () => {
+    expect(searchesLeft({ searches: 0, cronSearches: 0, pages: 0, lookups: 0 })).toBe(4750);
+  });
+
+  it("charges searches at 2 calls and pages/lookups at 1", () => {
+    expect(
+      searchesLeft({ searches: 100, cronSearches: 0, pages: 800, lookups: 50 })
+    ).toBe(Math.floor((9500 - 200 - 800 - 50) / 2));
   });
 });
 
