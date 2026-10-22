@@ -7,7 +7,7 @@ import {
 } from "../../app/queue/useSearchBackNotice";
 import { Room } from "../../pages/api/types";
 
-const STORAGE_KEY = "karaoq_search_quota_out";
+const STORAGE_KEY = "karaoq_search_quota_out_v2";
 
 function roomSnapshot(searchResetsAt?: string): Room {
   return {
@@ -131,6 +131,32 @@ describe("useSearchBackNotice", () => {
 
     expect(result.current.show).toBe(false);
     expect(localStorage.getItem(STORAGE_KEY)).toBe(RESETS_AT);
+  });
+
+  it("drops an outage older than the latest midnight without announcing it", () => {
+    localStorage.setItem(STORAGE_KEY, RESETS_AT);
+    vi.setSystemTime(new Date("2026-08-26T03:00:00Z")); // three days later
+
+    const { result } = renderHook(() => useSearchBackNotice());
+    act(() => {
+      result.current.applyRoom(roomSnapshot());
+    });
+
+    expect(result.current.show).toBe(false);
+    expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
+  });
+
+  it("never announces an outage stored under the old ledger-arithmetic key", () => {
+    localStorage.setItem("karaoq_search_quota_out", RESETS_AT);
+    vi.setSystemTime(new Date("2026-08-23T18:00:00Z")); // next morning
+
+    const { result } = renderHook(() => useSearchBackNotice());
+    act(() => {
+      result.current.applyRoom(roomSnapshot());
+    });
+
+    expect(result.current.show).toBe(false);
+    expect(localStorage.getItem("karaoq_search_quota_out")).toBeNull();
   });
 
   it("hides itself after the linger timeout", () => {

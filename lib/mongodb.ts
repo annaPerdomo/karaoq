@@ -632,6 +632,7 @@ export interface CronStateDoc {
   unloggedSearches?: number;
   pages?: number;
   lookups?: number;
+  dailyOutAt?: Date;
   /** The mop-up's own outcome for that day; see lib/corpusBudget. */
   mopUp?: import("./corpusBudget").MopUpOutcome;
   /** Only a "chart:<cc>" doc carries these; see lib/chartFeed. */

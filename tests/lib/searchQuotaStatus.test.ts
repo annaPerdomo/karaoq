@@ -31,7 +31,12 @@ import {
 } from "../../lib/searchQuotaStatus";
 
 /** Today's ledger doc as the status read sees it (lib/corpusBudget). */
-function ledger(spent: { searches: number; pages?: number; lookups?: number }) {
+function ledger(spent: {
+  searches: number;
+  pages?: number;
+  lookups?: number;
+  dailyOutAt?: Date;
+}) {
   return { _id: "budget:x", cronSearches: 0, pages: 0, lookups: 0, ...spent };
 }
 
@@ -46,8 +51,8 @@ afterEach(() => {
 });
 
 describe("searchQuotaResetsAt", () => {
-  it("returns the reset time once the ledger can't afford another search", async () => {
-    mockFindOne.mockResolvedValue(ledger({ searches: 4750 }));
+  it("returns the reset time once YouTube's daily refusal is confirmed", async () => {
+    mockFindOne.mockResolvedValue(ledger({ searches: 4750, dailyOutAt: new Date() }));
 
     const resetsAt = await searchQuotaResetsAt();
 
@@ -71,21 +76,9 @@ describe("searchQuotaResetsAt", () => {
     expect(filter._id).toMatch(/^budget:\d{4}-\d{2}-\d{2}$/);
   });
 
-  it("counts harvest pages and lookups against the last search", async () => {
-    // 4,684 searches is 9,368 calls; 131 more leaves less than one search's worth.
-    mockFindOne.mockResolvedValue(ledger({ searches: 4684, pages: 126, lookups: 5 }));
-    expect(await searchQuotaResetsAt()).not.toBeNull();
-  });
-
-  it("honours the YOUTUBE_DAY_CALLS override", async () => {
-    // 150 searches is fine under the 9,500 default but out under a 300-call override.
-    process.env.YOUTUBE_DAY_CALLS = "300";
-    try {
-      mockFindOne.mockResolvedValue(ledger({ searches: 150 }));
-      expect(await searchQuotaResetsAt()).not.toBeNull();
-    } finally {
-      delete process.env.YOUTUBE_DAY_CALLS;
-    }
+  it("stays null when the ledger is spent but YouTube never refused", async () => {
+    mockFindOne.mockResolvedValue(ledger({ searches: 4750 }));
+    expect(await searchQuotaResetsAt()).toBeNull();
   });
 
   it("memoizes the read within the cache window", async () => {
@@ -100,7 +93,7 @@ describe("searchQuotaResetsAt", () => {
     vi.useFakeTimers();
     // 23:59:50 Pacific (PDT = UTC-7): quota is out, cache fills.
     vi.setSystemTime(new Date("2026-08-23T06:59:50Z"));
-    mockFindOne.mockResolvedValue(ledger({ searches: 4750 }));
+    mockFindOne.mockResolvedValue(ledger({ searches: 4750, dailyOutAt: new Date() }));
     expect(await searchQuotaResetsAt()).not.toBeNull();
 
     // 00:00:10 Pacific, 20s later — inside the age TTL, so only the day key
@@ -120,7 +113,7 @@ describe("searchQuotaResetsAt", () => {
   it("keeps serving the same-day cached answer through a Mongo blip", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-08-23T04:00:00Z")); // 21:00 Pacific
-    mockFindOne.mockResolvedValue(ledger({ searches: 4750 }));
+    mockFindOne.mockResolvedValue(ledger({ searches: 4750, dailyOutAt: new Date() }));
     expect(await searchQuotaResetsAt()).not.toBeNull();
 
     // Past the TTL but the same evening: the refresh fails, and the stale
@@ -139,8 +132,17 @@ describe("confirmDailyOut", () => {
     expect(await confirmDailyOut("daily")).toBe(false);
   });
 
-  it("confirms one the ledger agrees with", async () => {
+  it("confirms one the ledger agrees with and marks the day out", async () => {
     mockFindOne.mockResolvedValue(ledger({ searches: 4750 }));
+    expect(await confirmDailyOut("daily")).toBe(true);
+    expect(mockUpdateOne).toHaveBeenCalledOnce();
+    expect(mockUpdateOne.mock.calls[0][1]).toMatchObject({
+      $set: { dailyOutAt: expect.any(Date) },
+    });
+  });
+
+  it("marks the day out only once", async () => {
+    mockFindOne.mockResolvedValue(ledger({ searches: 4750, dailyOutAt: new Date() }));
     expect(await confirmDailyOut("daily")).toBe(true);
     expect(mockUpdateOne).not.toHaveBeenCalled();
   });
@@ -150,10 +152,10 @@ describe("confirmDailyOut", () => {
     // videos.list calls and searches that failed after the call are unbilled.
     mockFindOne.mockResolvedValue(ledger({ searches: 4749 }));
     expect(await confirmDailyOut("daily")).toBe(true);
-    expect(mockUpdateOne).toHaveBeenCalledOnce();
+    expect(mockUpdateOne).toHaveBeenCalledTimes(2);
     expect(mockUpdateOne.mock.calls[0][1]).toMatchObject({ $inc: { searches: 1 } });
 
-    // ...so the status memo and the next fresh read both say out.
+    // ...so the status memo says out.
     expect(await searchQuotaResetsAt()).not.toBeNull();
   });
 

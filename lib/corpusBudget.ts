@@ -54,6 +54,9 @@ export interface DailySpend {
   /** videos.list units bought outside the cron — today only the report endpoint.
    *  The sweep and the harvest spend units too and do not bill them here. */
   lookups: number;
+  /** Set once YouTube's daily refusal is confirmed; rooms read only this, since
+   *  the mop-up drains the ledger to zero most nights without Google refusing. */
+  dailyOutAt?: Date;
 }
 
 /** The Pacific day: that is the one YouTube resets the allowance on. Both cron
@@ -87,7 +90,17 @@ export async function spentToday(at: number): Promise<DailySpend> {
     cronSearches: doc?.cronSearches ?? 0,
     pages: doc?.pages ?? 0,
     lookups: doc?.lookups ?? 0,
+    ...(doc?.dailyOutAt ? { dailyOutAt: doc.dailyOutAt } : {}),
   };
+}
+
+export async function markDailyOut(at: number): Promise<void> {
+  const state = await getCronStateCollection();
+  await state.updateOne(
+    { _id: ledgerId(at) },
+    { $set: { dailyOutAt: new Date(at), cursorAt: ledgerExpiryClock(at), updatedAt: new Date(at) } },
+    { upsert: true }
+  );
 }
 
 /** Atomic, so a room searching while the cron resolves can't erase either
@@ -228,6 +241,7 @@ export async function spentRecent(at: number, days: number): Promise<DaySpend[]>
       unloggedSearches: doc?.unloggedSearches,
       pages: doc?.pages ?? 0,
       lookups: doc?.lookups ?? 0,
+      dailyOutAt: doc?.dailyOutAt,
       mopUp: doc?.mopUp,
     };
   });

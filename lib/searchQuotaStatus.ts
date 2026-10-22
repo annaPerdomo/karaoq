@@ -2,6 +2,7 @@ import {
   DAY_CALL_QUOTA,
   UNBILLED_SLACK_CALLS,
   callsLeft,
+  markDailyOut,
   recordSpend,
   searchesLeft,
   spentToday,
@@ -27,7 +28,7 @@ export function resetSearchQuotaStatusCache(): void {
 }
 
 export async function searchQuotaSpent(): Promise<boolean> {
-  const out = searchesLeft(await spentToday(Date.now()), dayQuota()) === 0;
+  const out = Boolean((await spentToday(Date.now())).dailyOutAt);
   cache = { day: pacificDayKey(), out, at: Date.now() };
   return out;
 }
@@ -46,6 +47,7 @@ export async function confirmDailyOut(limit: "burst" | "daily" | null): Promise<
     if (out) {
       const short = searchesLeft(spent, quota);
       if (short > 0) await recordSpend(now, { searches: short, unloggedSearches: short });
+      if (!spent.dailyOutAt) await markDailyOut(now);
     }
     cache = { day: pacificDayKey(), out, at: now };
     return out;

@@ -162,16 +162,13 @@ describe("GET /api/analytics/quota", () => {
       unloggedSearches: 2,
       pages: 0,
       lookups: 0,
+      dailyOutAt: new Date(now),
       mopUp: { at: new Date(now), liveRooms: 0, budget: 30, searched: 30, filled: 1, songs, skipped: null, quotaSpent: false, error: null },
     });
     const twentyDaysAgo = new Date(now - 20 * 24 * 60 * 60 * 1000);
     collectionFor("analytics_events").seed({
       _id: "e1", type: "search_run", roomId: "ABCD", searchCache: "miss", timestamp: twentyDaysAgo,
     });
-
-    // 100 searches is 200 calls; pin the day's call quota there so this day reads as out.
-    process.env.YOUTUBE_DAY_CALLS = "200";
-    onTestFinished(() => delete process.env.YOUTUBE_DAY_CALLS);
 
     const body = (await get()).getBody();
 

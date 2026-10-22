@@ -162,7 +162,10 @@ export default async function handler(
         envCount("SUGGESTION_LIVE_ROOM_WINDOW_MS", CORPUS_BUSY_WINDOW_MS)
       );
 
-  const daySpent = forced ? false : (await searchQuotaResetsAt()) !== null;
+  // The ledger ceiling too: the cron mustn't spend past it before Google refuses.
+  const daySpent = forced
+    ? false
+    : searchesLeft(spent, dayQuota()) === 0 || (await searchQuotaResetsAt()) !== null;
 
   /** Cheap and user-visible first; search is last, since rooms compete for it. */
   let resolvedSongs: ResolvedSong[] = [];

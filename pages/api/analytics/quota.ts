@@ -121,7 +121,8 @@ function billedDay(spend: DaySpend, rooms: DayRoomsWire | undefined): DayBilledW
   return {
     day: spend.day,
     recorded: true,
-    out: searchesLeft(spend, dayQuota()) === 0,
+    // Matches what rooms were told (lib/searchQuotaStatus), not ledger arithmetic.
+    out: Boolean(spend.dailyOutAt),
     rooms: Math.max(0, spend.searches - spend.cronSearches - unlogged),
     nightly: spend.cronSearches - mopUp,
     mopUp,
