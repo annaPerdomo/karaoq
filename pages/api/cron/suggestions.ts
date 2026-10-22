@@ -3,6 +3,7 @@ import {
   acquireRun,
   CHANNEL_PAGES_PER_DAY,
   insideMopUpWindow,
+  OUTSIDE_MOP_UP_WINDOW,
   recordMopUp,
   recordSpend,
   releaseRun,
@@ -38,17 +39,13 @@ import { mergeDemand, suggestionDemand } from "../../../lib/suggestionDemand";
 import { searchDemandScores } from "../../../lib/searchDemandRead";
 import { CLAIM_SCAN_LIMIT, claimBankedVideos } from "../../../lib/corpusClaim";
 
-// vercel.json invokes this three times because a full harvest outlasts the 300s
-// function — a later slot buys clock, not quota (lib/corpusBudget). The run's
-// deadline is held under the ceiling: being killed spends units and writes nothing.
-//
-// The slots sit late in the Pacific evening (04:15/05:15/06:15 UTC ≈
-// 21:15/22:15/23:15 PT) rather than just after the midnight reset, so the corpus
-// spends what the day's rooms left instead of taking its cut before anyone has
-// woken up. Whatever is still unspent by then expires at midnight anyway, which
-// is what makes this the cheap hour to buy in. More than one slot because any of
-// them may find rooms live and defer; the last carries ?mopUp=1, which trades
-// the nightly cap for the day's remainder (see the flag below).
+// vercel.json has four entries because a full harvest outlasts the 300s
+// function — a later slot buys clock, not quota (lib/corpusBudget). The slots
+// sit late in the Pacific evening so the corpus spends what the day's rooms
+// left rather than taking its cut before anyone has woken up; whatever is
+// still unspent then expires at midnight anyway. The 06:15 and 07:15 UTC
+// entries both carry ?mopUp=1 (see the flag below): one lands in the window
+// under PDT, the other under PST, so one of the pair covers each season.
 export const config = { maxDuration: 300 };
 const RUN_BUDGET_MS = 240_000;
 
@@ -110,22 +107,24 @@ export default async function handler(
     : started + RUN_BUDGET_MS;
 
   if (mopUp && !forced && !insideMopUpWindow(started)) {
-    const report = {
-      skipped: "outside mop-up window",
-      slot,
-      resetsInMs: quotaResetsAtMs(new Date(started)) - started,
-    };
+    const resetsInMs = quotaResetsAtMs(new Date(started)) - started;
+    const report = { skipped: OUTSIDE_MOP_UP_WINDOW, slot, resetsInMs };
     console.log("Corpus cron mop-up skipped:", JSON.stringify(report));
-    await recordMopUp(started, {
-      at: new Date(started),
-      liveRooms: 0,
-      budget: 0,
-      searched: 0,
-      filled: 0,
-      skipped: "outside mop-up window",
-      quotaSpent: false,
-      error: null,
-    }).catch(console.warn);
+    // Past midnight Pacific, resetsInMs jumps to nearly a day: that's the
+    // season's dead slot, not tonight's ledger, so it must not stamp the new
+    // day "outside mop-up window" before it has started.
+    if (resetsInMs < 6 * 60 * 60_000) {
+      await recordMopUp(started, {
+        at: new Date(started),
+        liveRooms: 0,
+        budget: 0,
+        searched: 0,
+        filled: 0,
+        skipped: OUTSIDE_MOP_UP_WINDOW,
+        quotaSpent: false,
+        error: null,
+      }).catch(console.warn);
+    }
     res.status(200).json(report);
     return;
   }

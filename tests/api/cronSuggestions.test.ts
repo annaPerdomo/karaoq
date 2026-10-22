@@ -528,6 +528,15 @@ describe("GET /api/cron/suggestions - the mop-up slot", () => {
     });
   });
 
+  it("writes nothing for a ping that lands after midnight Pacific", async () => {
+    fakeClock(quotaResetsAtMs(new Date()) + 53 * 60_000);
+
+    const body = (await request({ slot: "4", mopUp: "1" })).getBody();
+
+    expect(body).toMatchObject({ skipped: "outside mop-up window", slot: "4" });
+    expect(ledger()).toBeNull();
+  });
+
   it("lets a real run inside the window overwrite an earlier outside-window skip", async () => {
     fakeClock(quotaResetsAtMs(new Date()) - 3 * 60 * 60_000);
     await request({ slot: "3", mopUp: "1" });

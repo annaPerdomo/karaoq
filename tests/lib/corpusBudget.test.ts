@@ -29,6 +29,7 @@ import {
   estimateUnits,
   insideMopUpWindow,
   ledgerDay,
+  OUTSIDE_MOP_UP_WINDOW,
   recordMopUp,
   recordSpend,
   releaseRun,
@@ -211,7 +212,7 @@ describe("recordMopUp", () => {
       error: null,
     });
 
-    // GitHub's retry ping landing after Vercel's real run, finding nothing left.
+    // The other mop-up slot landing after the real run, finding nothing left.
     await recordMopUp(at, {
       at: new Date(at),
       liveRooms: 0,
@@ -253,5 +254,155 @@ describe("recordMopUp", () => {
     await recordMopUp(at, { ...run, budget: 7, searched: 0, filled: 0 });
 
     expect(state().get(`budget:${ledgerDay(at)}`).mopUp).toMatchObject({ searched: 3, filled: 1 });
+  });
+
+  it("replaces an earlier out-of-window skip with a later in-window zero outcome", async () => {
+    const at = Date.now();
+    await recordMopUp(at, {
+      at: new Date(at),
+      liveRooms: 0,
+      budget: 0,
+      searched: 0,
+      filled: 0,
+      skipped: OUTSIDE_MOP_UP_WINDOW,
+      quotaSpent: false,
+      error: null,
+    });
+
+    await recordMopUp(at, {
+      at: new Date(at),
+      liveRooms: 0,
+      budget: 0,
+      searched: 0,
+      filled: 0,
+      skipped: null,
+      quotaSpent: false,
+      error: null,
+    });
+
+    expect(state().get(`budget:${ledgerDay(at)}`).mopUp).toMatchObject({
+      searched: 0,
+      filled: 0,
+      skipped: null,
+    });
+  });
+
+  it("replaces an earlier out-of-window skip with a later day's-quota-out outcome", async () => {
+    const at = Date.now();
+    await recordMopUp(at, {
+      at: new Date(at),
+      liveRooms: 0,
+      budget: 0,
+      searched: 0,
+      filled: 0,
+      skipped: OUTSIDE_MOP_UP_WINDOW,
+      quotaSpent: false,
+      error: null,
+    });
+
+    await recordMopUp(at, {
+      at: new Date(at),
+      liveRooms: 0,
+      budget: 0,
+      searched: 0,
+      filled: 0,
+      skipped: "day's quota already out",
+      quotaSpent: true,
+      error: null,
+    });
+
+    expect(state().get(`budget:${ledgerDay(at)}`).mopUp).toMatchObject({
+      skipped: "day's quota already out",
+    });
+  });
+
+  it("never lets an out-of-window skip replace an in-window zero outcome", async () => {
+    const at = Date.now();
+    await recordMopUp(at, {
+      at: new Date(at),
+      liveRooms: 0,
+      budget: 0,
+      searched: 0,
+      filled: 0,
+      skipped: null,
+      quotaSpent: false,
+      error: null,
+    });
+
+    await recordMopUp(at, {
+      at: new Date(at),
+      liveRooms: 0,
+      budget: 0,
+      searched: 0,
+      filled: 0,
+      skipped: OUTSIDE_MOP_UP_WINDOW,
+      quotaSpent: false,
+      error: null,
+    });
+
+    expect(state().get(`budget:${ledgerDay(at)}`).mopUp).toMatchObject({ skipped: null });
+  });
+
+  it("keeps an earlier failure over a later empty run with no error", async () => {
+    const at = Date.now();
+    await recordMopUp(at, {
+      at: new Date(at),
+      liveRooms: 0,
+      budget: 0,
+      searched: 0,
+      filled: 0,
+      skipped: null,
+      quotaSpent: false,
+      error: "fetch failed",
+    });
+
+    await recordMopUp(at, {
+      at: new Date(at),
+      liveRooms: 0,
+      budget: 0,
+      searched: 0,
+      filled: 0,
+      skipped: null,
+      quotaSpent: false,
+      error: null,
+    });
+
+    expect(state().get(`budget:${ledgerDay(at)}`).mopUp).toMatchObject({ error: "fetch failed" });
+  });
+
+  it("leaves a clean searched outcome after an earlier out-of-window skip", async () => {
+    const at = Date.now();
+    await recordMopUp(at, {
+      at: new Date(at),
+      liveRooms: 0,
+      budget: 0,
+      searched: 0,
+      filled: 0,
+      skipped: OUTSIDE_MOP_UP_WINDOW,
+      quotaSpent: false,
+      error: null,
+    });
+
+    await recordMopUp(at, {
+      at: new Date(at),
+      liveRooms: 2,
+      budget: 10,
+      searched: 8,
+      filled: 3,
+      skipped: null,
+      quotaSpent: false,
+      error: null,
+    });
+
+    expect(state().get(`budget:${ledgerDay(at)}`).mopUp).toEqual({
+      at: new Date(at),
+      liveRooms: 2,
+      budget: 10,
+      searched: 8,
+      filled: 3,
+      skipped: null,
+      quotaSpent: false,
+      error: null,
+    });
   });
 });

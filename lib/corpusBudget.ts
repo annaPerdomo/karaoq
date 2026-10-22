@@ -34,6 +34,10 @@ export function insideMopUpWindow(now: number): boolean {
   return untilReset > 0 && untilReset <= MOP_UP_WINDOW_MS;
 }
 
+// Vercel's Hobby cron fires within the hour, not the minute, so DST decides
+// which of vercel.json's two mop-up entries lands outside this window.
+export const OUTSIDE_MOP_UP_WINDOW = "outside mop-up window";
+
 export interface DailySpend {
   /** Every search.list call billed today, the rooms' and the cron's alike —
    *  the only number that says what the day actually cost. */
@@ -142,14 +146,25 @@ export interface MopUpOutcome {
   error: string | null;
 }
 
-/** GitHub retries inside the window, so a second run adds to the first and an
- *  empty one never clobbers it. Runs hold the lease, so the read can't race. */
+// vercel.json can fire two mop-up entries the same Pacific day; this ranks
+// outcomes so a later write never downgrades what the ledger already holds.
+function mopUpRank(outcome: MopUpOutcome): 0 | 1 | 2 {
+  if (outcome.skipped === OUTSIDE_MOP_UP_WINDOW) return 0;
+  if (outcome.searched > 0) return 2;
+  return 1;
+}
+
 export async function recordMopUp(at: number, outcome: MopUpOutcome): Promise<void> {
   const state = await getCronStateCollection();
   const earlier = (await state.findOne({ _id: ledgerId(at) }))?.mopUp;
-  if (earlier && outcome.searched === 0) return;
+  const earlierRank = earlier ? mopUpRank(earlier) : -1;
+  const rank = mopUpRank(outcome);
+  if (earlierRank >= 0 && (rank === 0 || rank < earlierRank)) return;
+  if (earlier && rank === 1 && earlierRank === 1 && earlier.error && !outcome.error) {
+    return;
+  }
   const merged: MopUpOutcome =
-    earlier && earlier.searched > 0
+    earlier && rank === 2 && earlierRank === 2
       ? {
           ...outcome,
           budget: earlier.budget + outcome.budget,
