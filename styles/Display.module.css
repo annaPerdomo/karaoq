@@ -402,6 +402,12 @@
   letter-spacing: calc(1px * var(--tv-scale, 1));
 }
 
+.hostOwnLine {
+  color: var(--text-muted);
+  opacity: 0.65;
+  font-size: 0.85rem;
+}
+
 .readyState {
   flex: 1;
   display: flex;

@@ -842,6 +842,11 @@
   margin-bottom: 1.5rem;
 }
 
+.errorCardLink {
+  display: inline-block;
+  margin-top: 0.75rem;
+}
+
 .mobileDrawer {
   display: none;
 }
@@ -1485,6 +1490,12 @@
   color: #ec4899;
 }
 
+.inlineFooterHost {
+  grid-column: 1 / -1;
+  justify-self: center;
+  text-align: center;
+}
+
 .inlineFooterLegal {
   grid-column: 1;
   justify-self: start;
@@ -1529,6 +1540,11 @@
   .inlineFooterFeedback {
     grid-column: auto;
     justify-self: auto;
+  }
+
+  .inlineFooterHost {
+    flex-basis: 100%;
+    order: -1;
   }
 }
 

@@ -21,6 +21,7 @@ import { getStoredName, setStoredName } from '../lib/username';
 import LanguageSwitcher from './LanguageSwitcher';
 import SingSidebar from './sing/SingSidebar';
 import SingFooter from './sing/SingFooter';
+import SingErrorCard from './sing/SingErrorCard';
 import MobileQueueDrawer from './sing/MobileQueueDrawer';
 import { myTurnState } from './sing/YourTurnCard';
 import postponeEntry from '../app/queue/postponeEntry';
@@ -269,14 +270,11 @@ const Sing = (): React.ReactElement => {
   if (error) {
     return (
       <main className={mainClass}>
-        <div className={styles.errorCard}>
-          <div className={styles.errorIcon}>😕</div>
-          <h2>{t('sing.error.title')}</h2>
-          <p>{error}</p>
-          <button className={styles.btnPink} onClick={() => router.push('/')}>
-            {t('common.goHome')}
-          </button>
-        </div>
+        <SingErrorCard
+          variant="notFound"
+          message={error}
+          onGoHome={() => router.push('/')}
+        />
       </main>
     );
   }
@@ -284,21 +282,14 @@ const Sing = (): React.ReactElement => {
   if (loadError) {
     return (
       <main className={mainClass}>
-        <div className={styles.errorCard}>
-          <div className={styles.errorIcon}>📶</div>
-          <h2>{t('common.connectionErrorTitle')}</h2>
-          <p>{t('common.connectionErrorBody')}</p>
-          <button
-            className={styles.btnPink}
-            onClick={() => {
-              setLoadError(false);
-              setLoading(true);
-              setInitNonce((n) => n + 1);
-            }}
-          >
-            {t('common.retry')}
-          </button>
-        </div>
+        <SingErrorCard
+          variant="connection"
+          onRetry={() => {
+            setLoadError(false);
+            setLoading(true);
+            setInitNonce((n) => n + 1);
+          }}
+        />
       </main>
     );
   }

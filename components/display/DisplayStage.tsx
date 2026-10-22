@@ -128,6 +128,7 @@ export default function DisplayStage({
               return <React.Fragment key={i}>{part}</React.Fragment>;
             })}
           </p>
+          <p className={styles.hostOwnLine}>{t('display.hostOwn')}</p>
         </div>
       )}
 
