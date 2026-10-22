@@ -1,0 +1,18 @@
+[Unit]
+Description=KaraoQ
+After=network.target
+
+[Service]
+Type=simple
+User=karaoq
+WorkingDirectory=/opt/karaoq/current
+ExecStart=/usr/bin/node server.js
+Environment=NODE_ENV=production PORT=3000 HOSTNAME=127.0.0.1
+EnvironmentFile=/etc/karaoq/env
+Restart=always
+RestartSec=2
+MemoryMax=4G
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,11 @@
+tunnel: <TUNNEL_ID>
+credentials-file: /etc/cloudflared/<TUNNEL_ID>.json
+
+ingress:
+  - hostname: www.karaoq.live
+    service: http://127.0.0.1:3000
+  - hostname: karaoq.live
+    service: http://127.0.0.1:3000
+  - hostname: next.karaoq.live
+    service: http://127.0.0.1:3000
+  - service: http_status:404

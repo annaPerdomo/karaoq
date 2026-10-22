@@ -1,0 +1,11 @@
+SHELL=/bin/bash
+PATH=/usr/bin:/bin
+
+# UTC, on the minute. Slots 1/2 keep vercel.json's 15 4 / 15 5. The mopUp=1
+# slots are retimed to land in the last 15 min before Pacific midnight in PDT
+# (06:47) and PST (07:47) — lib/corpusBudget insideMopUpWindow; one of the
+# pair is always outside the window, and no-ops, for the other season.
+15 4 * * * root CRON_SECRET=$(cat /etc/karaoq/cron-secret) bash -c '{ printf "\%s " "$(date -u +\%FT\%TZ)"; curl -sS --max-time 310 -H "Authorization: Bearer $CRON_SECRET" -w " \%{http_code}\n" "http://127.0.0.1:3000/api/cron/suggestions"; } >> /var/log/karaoq/cron.log 2>&1'
+15 5 * * * root CRON_SECRET=$(cat /etc/karaoq/cron-secret) bash -c '{ printf "\%s " "$(date -u +\%FT\%TZ)"; curl -sS --max-time 310 -H "Authorization: Bearer $CRON_SECRET" -w " \%{http_code}\n" "http://127.0.0.1:3000/api/cron/suggestions?slot=2"; } >> /var/log/karaoq/cron.log 2>&1'
+47 6 * * * root CRON_SECRET=$(cat /etc/karaoq/cron-secret) bash -c '{ printf "\%s " "$(date -u +\%FT\%TZ)"; curl -sS --max-time 310 -H "Authorization: Bearer $CRON_SECRET" -w " \%{http_code}\n" "http://127.0.0.1:3000/api/cron/suggestions?slot=3&mopUp=1"; } >> /var/log/karaoq/cron.log 2>&1'
+47 7 * * * root CRON_SECRET=$(cat /etc/karaoq/cron-secret) bash -c '{ printf "\%s " "$(date -u +\%FT\%TZ)"; curl -sS --max-time 310 -H "Authorization: Bearer $CRON_SECRET" -w " \%{http_code}\n" "http://127.0.0.1:3000/api/cron/suggestions?slot=4&mopUp=1"; } >> /var/log/karaoq/cron.log 2>&1'
