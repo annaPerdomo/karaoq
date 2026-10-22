@@ -4,6 +4,7 @@ import { TITLE_SEPARATOR } from "./corpusProposals";
 import type { HarvestedVideo } from "./karaokeChannels";
 import {
   getKaraokeSongsCollection,
+  getKaraokeVideosCollection,
   getSongProposalsCollection,
   type KaraokeSongDoc,
   type SongProposalDoc,
@@ -184,6 +185,99 @@ export function buildSongDeduper(songs: SongIdentitySource[]): SongDeduper {
   };
 }
 
+export type IdentityOverride = { artist: string; title: string };
+
+interface ProposalPromotion {
+  outcome: "promoted" | "duplicate" | "unnamed";
+  songKey?: string;
+  songOp?: AnyBulkWriteOperation<KaraokeSongDoc>;
+  proposalOp: AnyBulkWriteOperation<SongProposalDoc>;
+}
+
+/** Shared by the nightly batch and the admin approve action so the two paths
+ *  can't diverge; `extraSet` merges an admin-only field into the same write. */
+function buildPromotion(
+  p: SongProposalDoc,
+  deduper: SongDeduper,
+  now: Date,
+  identityOverride?: IdentityOverride,
+  extraSet?: Record<string, unknown>
+): ProposalPromotion {
+  const identity = identityOverride ?? pickIdentity(p);
+  if (!identity) {
+    return {
+      outcome: "unnamed",
+      proposalOp: {
+        updateOne: {
+          filter: { _id: p._id },
+          update: { $set: { promoteOutcome: "unnamed", promotedAt: now, ...extraSet } },
+        },
+      },
+    };
+  }
+
+  const match = deduper.find(identity.artist, identity.title);
+  if (match) {
+    return {
+      outcome: "duplicate",
+      songKey: match,
+      proposalOp: {
+        updateOne: {
+          filter: { _id: p._id },
+          update: {
+            $set: {
+              promoteOutcome: "duplicate",
+              promotedAt: now,
+              promotedSongId: match,
+              ...extraSet,
+            },
+          },
+        },
+      },
+    };
+  }
+
+  const key = songKeyFor(identity.artist, identity.title);
+  // Kept in the same deduper so two candidates naming the same song in this
+  // run don't both insert — the second sees the first as a duplicate.
+  deduper.add({ _id: key, title: identity.title, artist: identity.artist, origin: "demand" });
+  return {
+    outcome: "promoted",
+    songKey: key,
+    songOp: {
+      updateOne: {
+        filter: { _id: key },
+        update: {
+          // $setOnInsert only: a race promoting the same proposal twice must
+          // not clobber cuts claim has already started filling.
+          $setOnInsert: {
+            title: identity.title,
+            artist: identity.artist,
+            cuts: [],
+            addCount: 0,
+            addsByCountry: {},
+            // No wantedIn: recordDemand fills both from real search demand,
+            // and absent sorts a brand-new song last for the resolver anyway.
+            demand: 0,
+            origin: "demand",
+            promotedAt: now,
+            proposalId: p._id,
+          },
+        },
+        upsert: true,
+      },
+    },
+    proposalOp: {
+      updateOne: {
+        filter: { _id: p._id },
+        update: {
+          $set: { promoteOutcome: "promoted", promotedAt: now, promotedSongId: key, ...extraSet },
+        },
+      },
+    },
+  };
+}
+
 export interface PromoteReport {
   scanned: number;
   promoted: number;
@@ -224,70 +318,101 @@ export async function promoteDemand(
       break;
     }
 
-    const identity = pickIdentity(p);
-    if (!identity) {
-      report.unnamed += 1;
-      proposalOps.push({
-        updateOne: {
-          filter: { _id: p._id },
-          update: { $set: { promoteOutcome: "unnamed", promotedAt: now } },
-        },
-      });
-      continue;
-    }
-
-    const match = deduper.find(identity.artist, identity.title);
-    if (match) {
-      report.duplicates += 1;
-      proposalOps.push({
-        updateOne: {
-          filter: { _id: p._id },
-          update: {
-            $set: { promoteOutcome: "duplicate", promotedAt: now, promotedSongId: match },
-          },
-        },
-      });
-      continue;
-    }
-
-    const key = songKeyFor(identity.artist, identity.title);
-    // Kept in the same deduper so two candidates naming the same song in this
-    // run don't both insert — the second sees the first as a duplicate.
-    deduper.add({ _id: key, title: identity.title, artist: identity.artist, origin: "demand" });
-    report.promoted += 1;
-    songOps.push({
-      updateOne: {
-        filter: { _id: key },
-        update: {
-          // $setOnInsert only: a race promoting the same proposal twice must
-          // not clobber cuts claim has already started filling.
-          $setOnInsert: {
-            title: identity.title,
-            artist: identity.artist,
-            cuts: [],
-            addCount: 0,
-            addsByCountry: {},
-            // No wantedIn: recordDemand fills both from real search demand,
-            // and absent sorts a brand-new song last for the resolver anyway.
-            demand: 0,
-            origin: "demand",
-            promotedAt: now,
-            proposalId: p._id,
-          },
-        },
-        upsert: true,
-      },
-    });
-    proposalOps.push({
-      updateOne: {
-        filter: { _id: p._id },
-        update: { $set: { promoteOutcome: "promoted", promotedAt: now, promotedSongId: key } },
-      },
-    });
+    const promotion = buildPromotion(p, deduper, now);
+    if (promotion.outcome === "unnamed") report.unnamed += 1;
+    else if (promotion.outcome === "duplicate") report.duplicates += 1;
+    else report.promoted += 1;
+    if (promotion.songOp) songOps.push(promotion.songOp);
+    proposalOps.push(promotion.proposalOp);
   }
 
   if (songOps.length > 0) await songs.bulkWrite(songOps, { ordered: false });
   if (proposalOps.length > 0) await proposals.bulkWrite(proposalOps, { ordered: false });
 
   return { done: !stoppedEarly && report.scanned < PROMOTE_PER_RUN, report };
+}
+
+/** One proposal, written immediately rather than batched; omitting
+ *  `identityOverride` falls back to pickIdentity as the nightly run does. */
+export async function promoteProposal(
+  p: SongProposalDoc,
+  identityOverride?: IdentityOverride,
+  extraSet?: Record<string, unknown>
+): Promise<{ result: "promoted" | "duplicate" | "unnamed"; songId?: string }> {
+  const songs = await getKaraokeSongsCollection();
+  const proposals = await getSongProposalsCollection();
+  const deduper = buildSongDeduper(
+    await songs
+      .find({}, { projection: { title: 1, artist: 1, nativeTitle: 1, nativeArtist: 1, origin: 1 } })
+      .toArray()
+  );
+
+  const promotion = buildPromotion(p, deduper, new Date(), identityOverride, extraSet);
+  if (promotion.songOp) await songs.bulkWrite([promotion.songOp], { ordered: false });
+  await proposals.bulkWrite([promotion.proposalOp], { ordered: false });
+  return { result: promotion.outcome, songId: promotion.songKey };
+}
+
+const MAX_IDENTITY_LEN = 200;
+
+/** Both fields or neither: one given alone is a half-typed form, not an
+ *  override. Each must tokenize to something, so punctuation or whitespace
+ *  alone can't become a song's identity. */
+export function parseIdentityOverride(
+  artist: unknown,
+  title: unknown
+): { ok: true; identity?: IdentityOverride } | { ok: false } {
+  if (artist === undefined && title === undefined) return { ok: true };
+  if (typeof artist !== "string" || typeof title !== "string") return { ok: false };
+
+  const a = artist.trim();
+  const t = title.trim();
+  if (!a || !t || a.length > MAX_IDENTITY_LEN || t.length > MAX_IDENTITY_LEN) {
+    return { ok: false };
+  }
+  if (songTokens(a).length === 0 || songTokens(t).length === 0) return { ok: false };
+  return { ok: true, identity: { artist: a, title: t } };
+}
+
+export async function approveProposal(
+  id: string,
+  identityOverride?: IdentityOverride
+): Promise<{ result: "promoted" | "duplicate" | "unnamed"; songId?: string } | null> {
+  const proposals = await getSongProposalsCollection();
+  const p = await proposals.findOne({ _id: id });
+  if (!p) return null;
+
+  if (p.promoteOutcome === "promoted") {
+    return { result: "promoted", songId: p.promotedSongId };
+  }
+
+  return promoteProposal(p, identityOverride, { status: "approved" });
+}
+
+export async function rejectProposal(
+  id: string
+): Promise<{ result: "rejected"; removedSongId?: string } | null> {
+  const proposals = await getSongProposalsCollection();
+  const p = await proposals.findOne({ _id: id });
+  if (!p) return null;
+
+  // Only the proposal that actually created a song may take it back out —
+  // a proposal that merely matched one (promoteOutcome "duplicate") never owned it.
+  if (p.promoteOutcome === "promoted" && p.promotedSongId) {
+    const songs = await getKaraokeSongsCollection();
+    const song = await songs.findOne({ _id: p.promotedSongId });
+    if (song && song.origin === "demand" && song.proposalId === p._id) {
+      await songs.deleteOne({ _id: song._id });
+      const videos = await getKaraokeVideosCollection();
+      await videos.updateMany({ songKeys: song._id }, { $pull: { songKeys: song._id } });
+      await proposals.updateOne(
+        { _id: id },
+        { $set: { status: "rejected" }, $unset: { promotedSongId: "" } }
+      );
+      return { result: "rejected", removedSongId: song._id };
+    }
+  }
+
+  await proposals.updateOne({ _id: id }, { $set: { status: "rejected" } });
+  return { result: "rejected" };
 }

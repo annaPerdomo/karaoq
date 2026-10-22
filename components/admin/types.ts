@@ -249,6 +249,28 @@ export interface WantedSongsData {
   limit: number;
 }
 
+export interface ProposalRow {
+  id: string;
+  label: string;
+  candidates: { artist: string; title: string }[];
+  picked: { artist: string; title: string } | null;
+  rooms: number;
+  searchRooms: number;
+  countries: string[];
+  addCount: number;
+  searchCount: number;
+  videoIds: string[];
+  qualifies: boolean;
+  promotedSongId?: string;
+  status?: string;
+  updatedAt: string;
+}
+
+export interface ProposalsData {
+  rows: ProposalRow[];
+  thresholds: { minRooms: number; minCountries: number };
+}
+
 /** One failed /api/search attributed to this room. */
 export interface RoomSearchFailRow {
   failReason: string | null;

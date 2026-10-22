@@ -27,10 +27,13 @@ process.env.MONGODB_DB = "test-db";
 import {
   PROMOTE_MIN_COUNTRIES,
   PROMOTE_MIN_ROOMS,
+  approveProposal,
   buildSongDeduper,
+  parseIdentityOverride,
   pickIdentity,
   promoteDemand,
   qualifies,
+  rejectProposal,
 } from "../../lib/corpusPromote";
 import type { SongProposalDoc } from "../../lib/mongodb";
 import { songKeyFor } from "../../lib/songEntry";
@@ -38,6 +41,7 @@ import { suggestionCatalog, type CatalogEntry } from "../../lib/suggestionCatalo
 
 const songs = () => collection("karaoke_songs");
 const proposals = () => collection("song_proposals");
+const videos = () => collection("karaoke_videos");
 
 const FIRST_SEEN = new Date("2026-09-01T00:00:00Z");
 
@@ -283,5 +287,169 @@ describe("promoteDemand", () => {
     expect(done).toBe(false);
     expect(report.scanned).toBe(0);
     expect(songs().all()).toHaveLength(0);
+  });
+});
+
+describe("approveProposal", () => {
+  it("promotes with the picked identity", async () => {
+    proposals().seed(proposal({ rooms: 0, addsByCountry: {} }));
+
+    const outcome = await approveProposal("sig");
+
+    const key = songKeyFor("Mag Dungan Ta", "The Agadiers");
+    expect(outcome).toMatchObject({ result: "promoted", songId: key });
+    expect(songs().get(key)).toMatchObject({ origin: "demand" });
+    expect(proposals().get("sig")).toMatchObject({
+      status: "approved",
+      promoteOutcome: "promoted",
+      promotedSongId: key,
+    });
+  });
+
+  it("uses the override identity instead of pickIdentity", async () => {
+    proposals().seed(proposal({ rooms: 0, addsByCountry: {} }));
+
+    const outcome = await approveProposal("sig", { artist: "Someone Else", title: "Another Title" });
+
+    const key = songKeyFor("Someone Else", "Another Title");
+    expect(outcome).toMatchObject({ result: "promoted", songId: key });
+    expect(songs().get(key)).toMatchObject({
+      title: "Another Title",
+      artist: "Someone Else",
+    });
+  });
+
+  it("returns duplicate and creates nothing for an identity that already exists", async () => {
+    const entry: CatalogEntry = Array.from(suggestionCatalog().values())[0];
+    songs().seed({
+      _id: entry.key,
+      title: entry.title,
+      artist: entry.artist,
+      cuts: [],
+      addCount: 0,
+      addsByCountry: {},
+      demand: 0,
+    });
+    proposals().seed(
+      proposal({ label: `${entry.title} - ${entry.artist}`, rooms: 0, addsByCountry: {} })
+    );
+
+    const outcome = await approveProposal("sig");
+
+    expect(outcome).toMatchObject({ result: "duplicate", songId: entry.key });
+    expect(songs().all()).toHaveLength(1);
+  });
+
+  it("returns null for an unknown id", async () => {
+    expect(await approveProposal("missing")).toBeNull();
+  });
+
+  it("re-approving an already-promoted proposal writes nothing", async () => {
+    const key = songKeyFor("Mag Dungan Ta", "The Agadiers");
+    proposals().seed(
+      proposal({ promoteOutcome: "promoted", promotedSongId: key, status: "approved" })
+    );
+
+    const outcome = await approveProposal("sig");
+
+    expect(outcome).toEqual({ result: "promoted", songId: key });
+    expect(songs().all()).toHaveLength(0);
+  });
+});
+
+describe("rejectProposal", () => {
+  it("deletes a promoted demand song and pulls its key from video songKeys", async () => {
+    proposals().seed(proposal({ rooms: 0, addsByCountry: {} }));
+    const key = songKeyFor("Mag Dungan Ta", "The Agadiers");
+    await approveProposal("sig");
+    videos().seed({ _id: "v1", title: "x", thumbnailUrl: "", songKeys: [key, "other"] } as any);
+
+    const outcome = await rejectProposal("sig");
+
+    expect(outcome).toMatchObject({ result: "rejected", removedSongId: key });
+    expect(songs().get(key)).toBeNull();
+    expect(videos().get("v1")).toMatchObject({ songKeys: ["other"] });
+    expect(proposals().get("sig")).toMatchObject({ status: "rejected" });
+    expect(proposals().get("sig").promotedSongId).toBeUndefined();
+  });
+
+  it("never deletes the song a different proposal owns, even one it matched as a duplicate", async () => {
+    proposals().seed(proposal({ _id: "a", rooms: 0, addsByCountry: {} }));
+    const key = songKeyFor("Mag Dungan Ta", "The Agadiers");
+    await approveProposal("a");
+
+    proposals().seed(
+      proposal({
+        _id: "b",
+        label: "The Agadiers - Mag Dungan Ta",
+        rooms: 0,
+        addsByCountry: {},
+      })
+    );
+    await approveProposal("b");
+    expect(proposals().get("b")).toMatchObject({ promoteOutcome: "duplicate", promotedSongId: key });
+
+    const outcome = await rejectProposal("b");
+
+    expect(outcome).toMatchObject({ result: "rejected" });
+    expect(outcome?.removedSongId).toBeUndefined();
+    expect(songs().get(key)).not.toBeNull();
+  });
+
+  it("deletes nothing when the promoted song is a pack song", async () => {
+    const entry: CatalogEntry = Array.from(suggestionCatalog().values())[0];
+    songs().seed({
+      _id: entry.key,
+      title: entry.title,
+      artist: entry.artist,
+      cuts: [],
+      addCount: 0,
+      addsByCountry: {},
+      demand: 0,
+    });
+    proposals().seed(
+      proposal({ promoteOutcome: "promoted", promotedSongId: entry.key })
+    );
+
+    const outcome = await rejectProposal("sig");
+
+    expect(outcome).toMatchObject({ result: "rejected" });
+    expect(outcome?.removedSongId).toBeUndefined();
+    expect(songs().get(entry.key)).not.toBeNull();
+  });
+
+  it("returns null for an unknown id", async () => {
+    expect(await rejectProposal("missing")).toBeNull();
+  });
+});
+
+describe("parseIdentityOverride", () => {
+  it("accepts neither field as no override", () => {
+    expect(parseIdentityOverride(undefined, undefined)).toEqual({ ok: true });
+  });
+
+  it("accepts a valid pair", () => {
+    expect(parseIdentityOverride("The Cranberries", "Zombie")).toEqual({
+      ok: true,
+      identity: { artist: "The Cranberries", title: "Zombie" },
+    });
+  });
+
+  it("rejects one field given alone", () => {
+    expect(parseIdentityOverride("The Cranberries", undefined).ok).toBe(false);
+    expect(parseIdentityOverride(undefined, "Zombie").ok).toBe(false);
+  });
+
+  it("rejects a non-string field", () => {
+    expect(parseIdentityOverride(123, "Zombie").ok).toBe(false);
+  });
+
+  it("rejects whitespace- or punctuation-only fields", () => {
+    expect(parseIdentityOverride("   ", "Zombie").ok).toBe(false);
+    expect(parseIdentityOverride("---", "Zombie").ok).toBe(false);
+  });
+
+  it("rejects a field over 200 characters", () => {
+    expect(parseIdentityOverride("a".repeat(201), "Zombie").ok).toBe(false);
   });
 });
