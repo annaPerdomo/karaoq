@@ -12,6 +12,7 @@ import {
   type KaraokeSongDoc,
   type SongProposalDoc,
 } from "./mongodb";
+import { isProductionDeploy } from "./platform";
 import { searchCacheKey } from "./searchQuery";
 import { entryForSong, songKeyFor, songSignature } from "./songEntry";
 import type { CatalogEntry } from "./suggestionCatalog";
@@ -871,7 +872,7 @@ async function repairBatch(
 export async function repairDemandIdentities(
   deadline: number
 ): Promise<{ done: boolean; report: RepairReport }> {
-  if (process.env.VERCEL_ENV !== "production") {
+  if (!isProductionDeploy()) {
     return { done: true, report: { ...emptyRepairReport(), skipped: "not production" } };
   }
 

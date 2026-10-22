@@ -31,7 +31,7 @@ export function readCachedCountry(): string | null {
  * 1. `?country=XX` URL param — lets anyone preview another country's
  *    suggestion lists (and makes the modes testable without a VPN).
  * 2. localStorage cache (7 days) — avoids refetching /api/geo every visit.
- * 3. `/api/geo`, which echoes Vercel's x-vercel-ip-country header.
+ * 3. `/api/geo`, which echoes the platform's IP-derived country header.
  *
  * Returns null until resolved, or when the country is unknown (e.g. local
  * dev), in which case callers fall back to the default section ordering.

@@ -2,6 +2,7 @@ import type { NextApiRequest } from "next";
 import type { DisplayConfig, FeedbackKind, HostConfig, QueueEntry, SingWithMePost, SuggestedSong } from "../pages/api/types";
 import { DISPLAY_THEMES as DISPLAY_THEME_LIST, FEEDBACK_KINDS } from "../pages/api/types";
 import { sanitizeRef } from "./firstTouch";
+import { clientIp } from "./platform";
 import { VIDEO_ID_RE } from "./videoLink";
 
 // Server-side caps on anonymous writes: the UI enforces friendlier limits; these stop curl from
@@ -296,12 +297,7 @@ export function __resetRateLimits(): void {
 }
 
 function bucketKey(req: NextApiRequest, scope: string): string {
-  const forwarded = req.headers["x-forwarded-for"];
-  const ip =
-    (typeof forwarded === "string" ? forwarded.split(",")[0].trim() : null) ||
-    req.socket?.remoteAddress ||
-    "unknown";
-  return `${scope}:${ip}`;
+  return `${scope}:${clientIp(req)}`;
 }
 
 // True once per throttled window, for callers that want to *record* being

@@ -6,6 +6,7 @@ import { splitYoutubeSongData } from "./youtubeRetention";
 import type { Locale } from "./i18n/config";
 import { asLocale, LOCALE_HEADER, type LocaleSource } from "./i18n/activeLocale";
 import { sanitizeEntry, sanitizeReferrerHost, sanitizeRef } from "./firstTouch";
+import { requestGeo } from "./platform";
 
 export type EventType =
   | "room_created"
@@ -146,11 +147,7 @@ export function localeFromRequest(req: NextApiRequest): Locale | null {
 /** Exported so a non-analytics write can attribute itself the same way an
  *  event does — one parsing of these headers, or the two drift. */
 export function extractGeo(req: NextApiRequest) {
-  return {
-    country: headerString(req.headers["x-vercel-ip-country"]),
-    region: headerString(req.headers["x-vercel-ip-region"]),
-    city: headerString(req.headers["x-vercel-ip-city"]),
-  };
+  return requestGeo(req);
 }
 
 const FIRST_TOUCH_REF_HEADER = "x-karaoq-ref";

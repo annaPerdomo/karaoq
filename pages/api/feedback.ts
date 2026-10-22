@@ -7,6 +7,7 @@ import {
   rateLimit,
   sanitizeFeedback,
 } from "../../lib/limits";
+import { requestCountry } from "../../lib/platform";
 import type { FeedbackEntry } from "./types";
 
 function headerString(value: string | string[] | undefined): string | undefined {
@@ -45,7 +46,7 @@ export default async function handler(
   }
 
   const locale = localeFromRequest(req);
-  const country = headerString(req.headers["x-vercel-ip-country"]);
+  const country = requestCountry(req);
   const userAgent = headerString(req.headers["user-agent"])?.slice(
     0,
     MAX_STORED_UA_LENGTH

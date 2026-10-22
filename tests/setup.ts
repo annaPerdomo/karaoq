@@ -2,6 +2,10 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
 import { afterEach } from "vitest";
 
+// Most tests predate the Cloudflare path and assume Vercel's request headers;
+// default to that platform so they don't all need to set it themselves.
+process.env.VERCEL ??= "1";
+
 // jsdom in this setup does not provide a working localStorage, so components
 // that read/write it on mount (e.g. saved host/singer names) would throw.
 // Supply a minimal in-memory implementation for all tests.
