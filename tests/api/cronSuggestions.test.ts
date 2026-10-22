@@ -30,6 +30,16 @@ vi.mock("../../lib/suggestionDemand", async (importOriginal) => ({
   suggestionDemand: vi.fn(async () => new Map<string, number>()),
 }));
 
+// Apple's feed is its own step (tests/lib/chartFeed.test.ts); stubbed here so
+// the cron's wiring of it doesn't make a real network call.
+vi.mock("../../lib/chartFeed", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../lib/chartFeed")>()),
+  feedCharts: vi.fn(async () => ({
+    done: true,
+    report: { countries: [], fetched: 0, added: 0, alreadyKnown: 0, errors: [] },
+  })),
+}));
+
 process.env.MONGODB_URI = "mongodb://test";
 process.env.MONGODB_DB = "test-db";
 process.env.YOUTUBE_API_KEY = "test-key";
@@ -736,6 +746,21 @@ describe("GET /api/cron/suggestions - promote", () => {
 
     const mopUpSteps = await run({ slot: "3", mopUp: "1", force: "1" });
     expect(Object.keys(mopUpSteps)).not.toContain("promote");
+  });
+});
+
+describe("GET /api/cron/suggestions - charts", () => {
+  beforeEach(migrationDone);
+
+  it("runs between promote and claim, and stays out of the mop-up slot", async () => {
+    const steps = await run({ search: "0" });
+    const order = Object.keys(steps);
+
+    expect(order.indexOf("charts")).toBeGreaterThan(order.indexOf("promote"));
+    expect(order.indexOf("charts")).toBeLessThan(order.indexOf("claim"));
+
+    const mopUpSteps = await run({ slot: "3", mopUp: "1", force: "1" });
+    expect(Object.keys(mopUpSteps)).not.toContain("charts");
   });
 });
 

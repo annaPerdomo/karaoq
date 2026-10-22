@@ -20,6 +20,7 @@ import {
   CUTS_PER_SONG,
   harvestIntoCorpus,
 } from "../../../lib/corpusHarvest";
+import { feedCharts } from "../../../lib/chartFeed";
 import { migrateToCorpus } from "../../../lib/corpusMigration";
 import { promoteDemand } from "../../../lib/corpusPromote";
 import { proposeUnmappedAdds, PROPOSAL_SCAN_LIMIT } from "../../../lib/corpusProposals";
@@ -235,6 +236,17 @@ export default async function handler(
       floorMs: 5_000,
       run: async (by) => {
         const { done, report } = await promoteDemand(by);
+        return { done, report: { ...report } };
+      },
+    },
+    {
+      // After promote, before claim: a chart song inserted here is one claim
+      // can fill in the same run. Apple's feed, no YouTube units.
+      name: "charts",
+      budgetMs: 30_000,
+      floorMs: 5_000,
+      run: async (by) => {
+        const { done, report } = await feedCharts(by);
         return { done, report: { ...report } };
       },
     },

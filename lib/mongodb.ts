@@ -431,6 +431,8 @@ export interface KaraokeSongDoc {
   promotedAt?: Date;
   /** The song_proposals doc this was promoted from, if origin is "demand". */
   proposalId?: string;
+  /** Countries whose chart named this song; only set when origin is "chart". */
+  chartCountries?: string[];
   /** Set after 3 straight resolve misses on a cutless promoted song, instead
    *  of another backoff. The doc stays, so lib/corpusPromote's dedupe still
    *  blocks it being re-added. */
@@ -632,6 +634,10 @@ export interface CronStateDoc {
   lookups?: number;
   /** The mop-up's own outcome for that day; see lib/corpusBudget. */
   mopUp?: import("./corpusBudget").MopUpOutcome;
+  /** Only a "chart:<cc>" doc carries these; see lib/chartFeed. */
+  fetchedAt?: Date;
+  /** When that country's fetch last failed; cleared on the next success. */
+  failedAt?: Date;
   updatedAt: Date;
 }
 
