@@ -44,9 +44,12 @@ function songQuery(song: KaraokeSongDoc): string {
  *  song nobody has searched for belongs. */
 const RESOLVE_ORDER = { wantedIn: -1, demand: -1 } as const;
 
-/** Absent is eligible, so no backfill onto songs seeded before the field. */
+/** Absent is eligible, so no backfill onto songs seeded before the field.
+ *  retired (lib/songCorpus markResolveMiss) excludes a promoted song that
+ *  gave up after 3 misses. */
 function eligibleNow(now: Date): Filter<KaraokeSongDoc> {
   return {
+    retired: { $ne: true },
     $or: [{ nextResolveAt: { $exists: false } }, { nextResolveAt: { $lte: now } }],
   };
 }
@@ -147,7 +150,7 @@ export async function resolveWantedSongs(
   const songs = await getKaraokeSongsCollection();
   const now = new Date();
   const ready = eligibleNow(now);
-  report.wanted = await songs.countDocuments({ cuts: [] });
+  report.wanted = await songs.countDocuments({ cuts: [], retired: { $ne: true } });
   const wanted = await songs
     .find({ cuts: [], ...ready })
     .sort(RESOLVE_ORDER)

@@ -11,8 +11,8 @@ import { suggestionCatalog } from "./suggestionCatalog";
 // where a person found the cut and queued it, and a search we paid for, which is
 // the only trace a song we could not answer ever leaves.
 //
-// Curation input, never a writer of karaoke_songs — the catalog is what bounds
-// the corpus, so approving a proposal means adding it to a pack.
+// This module only clusters and ranks that evidence; lib/corpusPromote reads its
+// output and is the thing that may turn a proposal into a karaoke_songs doc.
 
 /** Most recently added first, so a run that can't read every unmapped row reads
  *  the rows rooms are singing now. */
@@ -37,7 +37,7 @@ const MAX_EXTRA_TOKENS = 6;
 const MERGE_COVERAGE = 0.8;
 
 /** Spaced only, so "Ben&Ben", "K-Pop" and "Jay-R" keep their punctuation. */
-const TITLE_SEPARATOR = new RegExp("\\s+[-–—|:]\\s+");
+export const TITLE_SEPARATOR = new RegExp("\\s+[-–—|:]\\s+");
 
 // Bracketed groups that only say "this is a karaoke cut" — dropped from the
 // label so the queue reads as song names.

@@ -40,6 +40,7 @@ import { MIGRATION_ID } from "../../lib/corpusMigration";
 import { pacificDayKey, quotaResetsAtMs } from "../../lib/pacificTime";
 import { resetQuotaAlertMemo } from "../../lib/alerts";
 import { resetSearchQuotaStatusCache } from "../../lib/searchQuotaStatus";
+import { songKeyFor } from "../../lib/songEntry";
 import { suggestionCatalog, type CatalogEntry } from "../../lib/suggestionCatalog";
 
 const songs = () => collection("karaoke_songs");
@@ -723,6 +724,21 @@ describe("GET /api/cron/suggestions - the run's clock", () => {
   });
 });
 
+describe("GET /api/cron/suggestions - promote", () => {
+  beforeEach(migrationDone);
+
+  it("runs between propose and claim, and stays out of the mop-up slot", async () => {
+    const steps = await run({ search: "0" });
+    const order = Object.keys(steps);
+
+    expect(order.indexOf("promote")).toBeGreaterThan(order.indexOf("propose"));
+    expect(order.indexOf("promote")).toBeLessThan(order.indexOf("claim"));
+
+    const mopUpSteps = await run({ slot: "3", mopUp: "1", force: "1" });
+    expect(Object.keys(mopUpSteps)).not.toContain("promote");
+  });
+});
+
 describe("GET /api/cron/suggestions - sweep", () => {
   beforeEach(migrationDone);
 
@@ -886,6 +902,31 @@ describe("GET /api/cron/suggestions - sweep", () => {
     expect(songs().get(PLAIN.key).cuts).toEqual([]);
     expect(songs().get(PLAIN.key).topVideoId).toBeUndefined();
     expect(videos().get("claimed").songKeys).toEqual([]);
+  });
+
+  it("checks a promoted song's cuts against its own stored title and artist", async () => {
+    const key = songKeyFor("The Agadiers", "Mag Dungan Ta");
+    songs().seed({
+      _id: key,
+      title: "Mag Dungan Ta",
+      artist: "The Agadiers",
+      cuts: ["claimed"],
+      addCount: 0,
+      addsByCountry: {},
+      demand: 3,
+      origin: "demand",
+    });
+    seedVideo("claimed", STALE_AT, [key]);
+    videos().seed({
+      ...videos().get("claimed"),
+      sources: { adds: { count: 2, byCountry: {}, rooms: ["r1", "r2"], lastAt: STALE_AT } },
+    });
+    api.titles.set("claimed", "Someone Else's Song (Karaoke)");
+
+    const steps = await run({ search: "0" });
+
+    expect(steps.sweep).toMatchObject({ unproven: 1 });
+    expect(songs().get(key).cuts).toEqual([]);
   });
 
   it("leaves a harvested cut alone whatever its title says", async () => {

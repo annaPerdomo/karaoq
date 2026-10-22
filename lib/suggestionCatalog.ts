@@ -9,8 +9,9 @@ import {
 import { buildSearchQuery, searchCacheKey } from "./searchQuery";
 
 // Recognising queries here rather than trusting a client flag is what bounds the
-// corpus: nothing outside this catalog can create a song. Imported rather than
-// fetched from /public, so no network call and no filesystem assumptions.
+// corpus alongside promoted demand (lib/corpusPromote) — those are the only two
+// ways a song gets created. Imported rather than fetched from /public, so no
+// network call and no filesystem assumptions.
 import brPack from "../public/suggestions/br.json";
 import czPack from "../public/suggestions/cz.json";
 import dePack from "../public/suggestions/de.json";

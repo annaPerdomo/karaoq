@@ -21,6 +21,7 @@ import {
   harvestIntoCorpus,
 } from "../../../lib/corpusHarvest";
 import { migrateToCorpus } from "../../../lib/corpusMigration";
+import { promoteDemand } from "../../../lib/corpusPromote";
 import { proposeUnmappedAdds, PROPOSAL_SCAN_LIMIT } from "../../../lib/corpusProposals";
 import { publishCorpus } from "../../../lib/corpusPublish";
 import { type ResolvedSong, resolveWantedSongs } from "../../../lib/corpusResolve";
@@ -223,6 +224,17 @@ export default async function handler(
           by,
           envCount("SUGGESTION_PROPOSAL_SCAN", PROPOSAL_SCAN_LIMIT)
         );
+        return { done, report: { ...report } };
+      },
+    },
+    {
+      // After propose, before claim: a song promoted here is one claim can
+      // fill in the same run. Our own rows, no units.
+      name: "promote",
+      budgetMs: 20_000,
+      floorMs: 5_000,
+      run: async (by) => {
+        const { done, report } = await promoteDemand(by);
         return { done, report: { ...report } };
       },
     },

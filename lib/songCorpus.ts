@@ -7,6 +7,7 @@ import {
   type KaraokeVideoDoc,
 } from "./mongodb";
 import type { SearchResult } from "./searchCache";
+import { entryForSong } from "./songEntry";
 import {
   catalogEntry,
   catalogPackIds,
@@ -45,6 +46,9 @@ export type SongIdentity = Omit<
 >;
 
 export function songIdentityFromCatalog(entry: CatalogEntry): SongIdentity {
+  // entryForSong synthesizes a CatalogEntry for a promoted song too; packIds
+  // only means something for the entry the catalog itself still holds.
+  const fromCatalog = catalogEntry(entry.key) === entry;
   return {
     _id: entry.key,
     title: entry.title,
@@ -53,7 +57,7 @@ export function songIdentityFromCatalog(entry: CatalogEntry): SongIdentity {
     ...(entry.nativeArtist ? { nativeArtist: entry.nativeArtist } : {}),
     // Not [entry.packId]: the catalog dedupes to one entry, but a song curated
     // in both "core" and "cz" belongs to both.
-    packIds: catalogPackIds(entry.key),
+    ...(fromCatalog ? { packIds: catalogPackIds(entry.key) } : {}),
   };
 }
 
@@ -324,8 +328,8 @@ export async function recordHarvestMatches(
   const full: string[] = [];
   let songsFilled = 0;
   for (const songKey of songKeys) {
-    const entry = catalogEntry(songKey);
     const song = stored.get(songKey);
+    const entry = song ? entryForSong(song) : catalogEntry(songKey);
     if (!song && !entry) continue;
 
     const filed = song?.cuts ?? [];
@@ -391,15 +395,30 @@ export const THIN_CUTS = 10;
 
 const RESOLVE_BACKOFF_DAYS = [1, 2, 4, 8, 16, 32];
 
+/** Misses before a promoted song with no cuts is retired rather than backed
+ *  off again. */
+export const RETIRE_AFTER_MISSES = 3;
+
 /** The resolver's queues order on demand and don't write on a miss, so without
  *  this an unresolvable song holds the head of the list and re-buys it forever. */
 export async function markResolveMiss(songKey: string): Promise<void> {
   const songs = await getKaraokeSongsCollection();
   const song = await songs.findOne(
     { _id: songKey },
-    { projection: { resolveMisses: 1 } }
+    { projection: { resolveMisses: 1, origin: 1, cuts: 1 } }
   );
   const misses = (song?.resolveMisses ?? 0) + 1;
+
+  // Demand that never produced a cut is retired rather than scheduled for a
+  // 4th try — see KaraokeSongDoc.retired.
+  if (song?.origin && (song.cuts ?? []).length === 0 && misses >= RETIRE_AFTER_MISSES) {
+    await songs.updateOne(
+      { _id: songKey },
+      { $inc: { resolveMisses: 1 }, $set: { retired: true }, $unset: { nextResolveAt: "" } }
+    );
+    return;
+  }
+
   const days = RESOLVE_BACKOFF_DAYS[Math.min(misses, RESOLVE_BACKOFF_DAYS.length) - 1];
   await songs.updateOne(
     { _id: songKey },
@@ -500,21 +519,35 @@ export async function unfileUnprovenCuts(
       { projection: { songKeys: 1 } }
     )
     .toArray();
+  if (rows.length === 0) return { pulled: 0, unpinned: 0 };
+
+  const songs = await getKaraokeSongsCollection();
+  // One batch read rather than one per row: a promoted song needs its own
+  // identity to be re-checked, since entryForSong can't synthesize one from a
+  // bare key.
+  const keys = new Set<string>();
+  for (const row of rows) for (const key of row.songKeys ?? []) keys.add(key);
+  const identities = await songs.find(
+    { _id: { $in: Array.from(keys) } },
+    { projection: { _id: 1, title: 1, artist: 1, nativeTitle: 1, nativeArtist: 1, origin: 1 } }
+  ).toArray();
+  const songsByKey = new Map(identities.map((s) => [s._id, s]));
 
   const unproven = new Map<string, string[]>();
   for (const row of rows) {
     const title = fresh.get(row._id)?.title;
     if (!title) continue;
     const failed = (row.songKeys ?? []).filter((key) => {
-      const entry = catalogEntry(key);
-      // A song the catalog has since dropped can't be re-checked.
+      const song = songsByKey.get(key);
+      const entry = song ? entryForSong(song) : catalogEntry(key);
+      // A song the catalog has since dropped, with no stored doc to fall
+      // back on, can't be re-checked.
       return entry ? !isCutOf(title, entry) : false;
     });
     if (failed.length > 0) unproven.set(row._id, failed);
   }
   if (unproven.size === 0) return { pulled: 0, unpinned: 0 };
 
-  const songs = await getKaraokeSongsCollection();
   const pullOps: AnyBulkWriteOperation<KaraokeSongDoc>[] = [];
   const unpinOps: AnyBulkWriteOperation<KaraokeSongDoc>[] = [];
   const videoOps: AnyBulkWriteOperation<KaraokeVideoDoc>[] = [];
@@ -586,6 +619,9 @@ export async function recordSearchResults(
   // search.list's videoEmbeddable filter leaks, and the enrich that catches it
   // gives up when videos.list fails — so a search returns what a sweep threw out.
   const blocked = await filterBlockedIds(results.map((row) => row.videoId));
+  // A promoted song has no pack approval behind it, so YouTube's relevance
+  // order alone isn't enough proof — the matcher has to vouch for the title.
+  const entry = song.origin ? entryForSong(song) : undefined;
 
   const cuts = held.filter((id) => alive.has(id));
   // Servable rows only: unnamed rows must not turn a paid search away.
@@ -596,6 +632,7 @@ export async function recordSearchResults(
     if (blocked.has(row.videoId)) continue;
     // Appended: relevance order is YouTube's opinion, the leading cuts are ours.
     if (cuts.indexOf(row.videoId) >= 0) continue;
+    if (entry && !isCutOf(row.title, entry)) continue;
     cuts.push(row.videoId);
     fresh.push(row);
     if (isServable(row)) serving += 1;
@@ -693,8 +730,9 @@ export interface SearchEvidence {
  * Banks what a search already cost us. A live search outside the catalogue is
  * thrown away once search_cache expires, so the next room buys it again.
  *
- * Files no songKeys and creates no song — which is both what keeps the catalogue
- * bounding the corpus, and the shape proposeUnmappedAdds reads for approval.
+ * Files no songKeys and creates no song itself — it only banks the row for
+ * proposeUnmappedAdds to cluster; a song comes later, if at all, from
+ * lib/corpusPromote.
  */
 export function bankSearchEvidence(
   results: SearchResult[],

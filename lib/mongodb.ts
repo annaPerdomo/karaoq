@@ -426,6 +426,15 @@ export interface KaraokeSongDoc {
   resolveMisses?: number;
   /** Backed off until here; absent means eligible. See markResolveMiss. */
   nextResolveAt?: Date;
+  /** Absent means "pack" — seeded from a static suggestion pack. */
+  origin?: "demand" | "chart";
+  promotedAt?: Date;
+  /** The song_proposals doc this was promoted from, if origin is "demand". */
+  proposalId?: string;
+  /** Set after 3 straight resolve misses on a cutless promoted song, instead
+   *  of another backoff. The doc stays, so lib/corpusPromote's dedupe still
+   *  blocks it being re-added. */
+  retired?: boolean;
 }
 
 let karaokeSongIndexesEnsured = false;
@@ -447,10 +456,10 @@ export async function getKaraokeSongsCollection(): Promise<Collection<KaraokeSon
   return db.collection<KaraokeSongDoc>("karaoke_songs");
 }
 
-// A song real rooms are singing that no catalog entry claims. Curation input
-// only: nothing here creates a karaoke_songs doc, because the catalog is what
-// bounds the corpus (lib/suggestionCatalog) — approving one means adding it to
-// a pack and letting the migration seed it.
+// A song real rooms are singing that no catalog entry claims. The corpus is
+// bounded by the catalog plus promoted demand (lib/corpusPromote): a proposal
+// with enough breadth becomes a cutless karaoke_songs doc directly, rather than
+// waiting on a pack edit and a migration.
 const SONG_PROPOSAL_TTL_SECONDS = 90 * 24 * 60 * 60;
 
 export interface SongProposalDoc {
@@ -478,6 +487,12 @@ export interface SongProposalDoc {
   knownArtist?: string;
   /** Only ever set by a person. Absent means nobody has ruled on it yet. */
   status?: "approved" | "rejected";
+  /** Terminal, stamped by lib/corpusPromote on every outcome — including
+   *  "unnamed" — so a row it couldn't use is never rescanned either. */
+  promoteOutcome?: "promoted" | "duplicate" | "unnamed";
+  /** The matched or created song's id; absent when the outcome is "unnamed". */
+  promotedSongId?: string;
+  promotedAt?: Date;
   firstSeenAt: Date;
   /** Re-derived every run, so it also dates the evidence above. */
   updatedAt: Date;

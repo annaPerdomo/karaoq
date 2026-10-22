@@ -98,26 +98,6 @@ function compare(a: unknown, b: unknown): number {
   return (x as any) < (y as any) ? -1 : 1;
 }
 
-/** "$field" reads the doc, { $size: "$field" } counts it, { $ifNull: [a, b] }
- *  defaults it, anything else is a literal. */
-function exprValue(doc: Doc, node: any): any {
-  if (typeof node === "string" && node.charAt(0) === "$") return readPath(doc, node.slice(1));
-  if (node && typeof node === "object" && "$ifNull" in node) {
-    const [held, fallback] = node.$ifNull as [unknown, unknown];
-    const value = exprValue(doc, held);
-    return value === undefined || value === null ? exprValue(doc, fallback) : value;
-  }
-  if (node && typeof node === "object" && "$size" in node) {
-    const held = exprValue(doc, node.$size);
-    // Mongo errors on a $size over a missing field; a guard that means to
-    // tolerate one wraps it in $ifNull, so reaching here with a non-array is
-    // the test's bug and not something to paper over.
-    if (!Array.isArray(held)) throw new Error("$size over a non-array");
-    return held.length;
-  }
-  return node;
-}
-
 function matchesExpr(doc: Doc, expr: Doc): boolean {
   const entries = Object.entries(expr);
   if (entries.length !== 1) throw new Error("fakeCollection supports one $expr operator");
@@ -125,7 +105,9 @@ function matchesExpr(doc: Doc, expr: Doc): boolean {
   if (!Array.isArray(operands) || operands.length !== 2) {
     throw new Error(`fakeCollection supports only two-operand $expr, got ${op}`);
   }
-  const order = compare(exprValue(doc, operands[0]), exprValue(doc, operands[1]));
+  // Shared with the aggregation pipeline below, so a filter and a $project can
+  // use the same operators ($add, $setUnion, $map, …) without a second set.
+  const order = compare(aggValue(doc, operands[0]), aggValue(doc, operands[1]));
   switch (op) {
     case "$eq":
       return order === 0;
@@ -265,6 +247,27 @@ function aggValue(doc: Doc, node: any): any {
       const [held, index] = operand as [unknown, number];
       const list = aggValue(doc, held);
       return Array.isArray(list) ? list[index] : undefined;
+    }
+    case "$add": {
+      const nums = (operand as unknown[]).map((h) => aggValue(doc, h));
+      return nums.reduce((sum: number, n) => sum + (Number(n) || 0), 0);
+    }
+    case "$setUnion": {
+      const arrays = (operand as unknown[]).map((h) => aggValue(doc, h));
+      const set = new Set<unknown>();
+      for (const arr of arrays) {
+        if (!Array.isArray(arr)) throw new Error("$setUnion over a non-array");
+        for (const v of arr) set.add(v);
+      }
+      return Array.from(set);
+    }
+    case "$map": {
+      // "$$this" is read through the normal "$"-prefixed path lookup, bound by
+      // stashing the element at doc.$this for the duration of `in`.
+      const { input, in: inExpr } = operand as { input: unknown; in: unknown };
+      const list = aggValue(doc, input);
+      if (!Array.isArray(list)) throw new Error("$map over a non-array");
+      return list.map((item) => aggValue({ ...doc, $this: item }, inExpr));
     }
     case "$gt":
     case "$gte":

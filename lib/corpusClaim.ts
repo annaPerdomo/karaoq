@@ -1,29 +1,26 @@
 import {
   getKaraokeSongsCollection,
   getKaraokeVideosCollection,
-  type KaraokeSongDoc,
   type KaraokeVideoDoc,
 } from "./mongodb";
 import type { SearchResult } from "./searchCache";
+import { entryForSong } from "./songEntry";
 import { MAX_CUTS, recordHarvestMatches } from "./songCorpus";
-import { catalogEntry } from "./suggestionCatalog";
 import { matchHarvestToCatalog } from "./suggestionMatch";
 import { filterBlockedIds } from "./videoBlocklist";
 import type { HarvestedVideo } from "./karaokeChannels";
-import type { CatalogEntry } from "./suggestionCatalog";
 
-// A song approved into a pack gets an empty karaoke_songs doc, and the resolver
-// buys cuts for it out of the day's hundred — while rows an add or a paid search
-// already banked sit unclaimed a collection away. This runs the harvest matcher
-// over those, so every song it fills is one the resolver no longer has to.
+// A song approved into a pack, or promoted from demand (lib/corpusPromote),
+// gets an empty karaoke_songs doc, and the resolver buys cuts for it out of
+// the day's hundred — while rows an add or a paid search already banked sit
+// unclaimed a collection away. This runs the harvest matcher over those, so
+// every song it fills is one the resolver no longer has to.
 
 /** A guard against an unbounded read; the banked set is far smaller. */
 export const CLAIM_SCAN_LIMIT = 3000;
 
 export interface ClaimStepReport {
   wanted: number;
-  /** Of those, the ones the catalog still describes. */
-  eligible: number;
   scanned: number;
   matched: number;
   songsFilled: number;
@@ -58,7 +55,6 @@ export async function claimBankedVideos(
 ): Promise<{ done: boolean; report: ClaimStepReport }> {
   const report: ClaimStepReport = {
     wanted: 0,
-    eligible: 0,
     scanned: 0,
     matched: 0,
     songsFilled: 0,
@@ -70,16 +66,15 @@ export async function claimBankedVideos(
   // Unordered on purpose: the matcher takes all of them at once, so this is not
   // a queue a ranking could improve.
   const wanted = await songs
-    .find({ cuts: [] }, { projection: { _id: 1 } })
+    .find(
+      { cuts: [], retired: { $ne: true } },
+      { projection: { _id: 1, title: 1, artist: 1, nativeTitle: 1, nativeArtist: 1, origin: 1 } }
+    )
     .toArray();
   report.wanted = wanted.length;
   if (wanted.length === 0) return { done: true, report };
 
-  const entries = wanted
-    .map((song: KaraokeSongDoc) => catalogEntry(song._id))
-    .filter((entry): entry is CatalogEntry => !!entry);
-  report.eligible = entries.length;
-  if (entries.length === 0) return { done: true, report };
+  const entries = wanted.map((song) => entryForSong(song));
 
   const videos = await getKaraokeVideosCollection();
   // Newest first because of the cap: unsorted, the filter's collection scan hands

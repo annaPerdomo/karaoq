@@ -32,6 +32,7 @@ process.env.MONGODB_DB = "test-db";
 import { resolveWantedSongs } from "../../lib/corpusResolve";
 import { mergeDemand } from "../../lib/suggestionDemand";
 import { buildSearchQuery, searchCacheKey } from "../../lib/searchQuery";
+import { markResolveMiss, RETIRE_AFTER_MISSES } from "../../lib/songCorpus";
 
 const songs = () => collection("karaoke_songs");
 
@@ -95,6 +96,38 @@ describe("resolveWantedSongs order", () => {
     await resolveWantedSongs(Date.now() + 10_000, 2);
 
     expect(attempted()).toEqual([asked, unasked]);
+  });
+});
+
+describe("retirement", () => {
+  it("retires a promoted song with no cuts on its 3rd straight miss, instead of backing it off again", async () => {
+    const key = wanted("Demand", "Song", { demand: 3 });
+    songs().seed({ ...songs().get(key), origin: "demand" });
+
+    for (let i = 0; i < RETIRE_AFTER_MISSES; i++) await markResolveMiss(key);
+
+    const song = songs().get(key);
+    expect(song.retired).toBe(true);
+    expect(song.nextResolveAt).toBeUndefined();
+  });
+
+  it("keeps backing off a catalog song's misses rather than retiring it", async () => {
+    const key = wanted("Pack", "Song", { demand: 3 });
+
+    for (let i = 0; i < RETIRE_AFTER_MISSES; i++) await markResolveMiss(key);
+
+    const song = songs().get(key);
+    expect(song.retired).toBeUndefined();
+    expect(song.nextResolveAt).toBeInstanceOf(Date);
+  });
+
+  it("stops the resolver from ever searching a retired song again", async () => {
+    const key = wanted("Demand", "Song", { demand: 99 });
+    songs().seed({ ...songs().get(key), origin: "demand", retired: true });
+
+    await resolveWantedSongs(Date.now() + 10_000, 5);
+
+    expect(attempted()).toEqual([]);
   });
 });
 

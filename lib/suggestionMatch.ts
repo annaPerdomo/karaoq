@@ -7,7 +7,7 @@ import type { HarvestedVideo } from "./karaokeChannels";
 
 // "with"/"without" look like filler but are half of "Without You" — stripping
 // them reduced it to "you", which matched "I Know What You Want".
-const FILLER = new Set([
+export const FILLER = new Set([
   "karaoke",
   "version",
   "versión",
@@ -21,6 +21,8 @@ const FILLER = new Set([
   "an",
   "feat",
   "ft",
+  // Brand names channels title their uploads with, not real song words.
+  "karafun",
 ]);
 
 // An English-only marker rejected every Japanese and Korean upload.
