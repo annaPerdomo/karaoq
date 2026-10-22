@@ -171,12 +171,14 @@ function matchesValue(value: unknown, condition: any): boolean {
   });
 }
 
-/** A path crossing an array reads the field off every element — how Mongo finds
- *  a cache entry by one of the rows it holds. */
+/** A path crossing an array reads the field off every element, as Mongo does
+ *  for a cache entry keyed by one of several rows. Exception: a trailing numeric
+ *  segment is a literal index, so "cuts.0" exists iff the array is non-empty. */
 function readMatchPath(doc: Doc, path: string): unknown {
   return path.split(".").reduce<any>((node, key) => {
     if (node == null) return node;
     if (Array.isArray(node)) {
+      if (/^\d+$/.test(key)) return node[Number(key)];
       const held = node.map((item) => item?.[key]).filter((v) => v !== undefined);
       return held.length > 0 ? held : undefined;
     }

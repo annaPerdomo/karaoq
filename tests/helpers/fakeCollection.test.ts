@@ -43,3 +43,15 @@ describe("fakeCollection $expr", () => {
     expect(rows.map((r) => r._id)).toEqual(["a"]);
   });
 });
+
+describe("fakeCollection numeric array index", () => {
+  it("reads 'field.0' as the literal element, so $exists tells empty from non-empty", async () => {
+    const c = fakeCollection();
+    c.seed({ _id: "has-cuts", cuts: ["v1"] });
+    c.seed({ _id: "no-cuts", cuts: [] });
+
+    const rows = await c.find({ "cuts.0": { $exists: true } }).toArray();
+
+    expect(rows.map((r) => r._id)).toEqual(["has-cuts"]);
+  });
+});

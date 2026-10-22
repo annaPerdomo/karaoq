@@ -6,6 +6,7 @@ import { searchYoutubeApi } from "../../lib/youtubeSearch";
 import { catalogEntry, isCatalogFilters } from "../../lib/suggestionCatalog";
 import { bankSearchEvidence, recordSearchResults } from "../../lib/songCorpus";
 import { readSongCuts } from "../../lib/corpusRead";
+import { findSongForQuery } from "../../lib/corpusLookup";
 import { MAX_ENTRY_ID_LENGTH, markRateLimitNotified, rateLimit } from "../../lib/limits";
 import { normalizeRoomId } from "../../lib/roomCode";
 import {
@@ -266,7 +267,8 @@ export default async function handler(
     // The nightly resolver may already have bought this song's cuts out of a
     // quota that is gone by the time a singer types its name.
     if (isCatalogFilters(duration, sortBy)) {
-      const cuts = await readSongCuts(queryKey);
+      const songId = await findSongForQuery(normalizedQ);
+      const cuts = songId ? await readSongCuts(songId) : null;
       if (cuts) {
         await trackEvent(req, "search_failed", {
           roomId,
