@@ -95,6 +95,25 @@ export function SongStage({
         onOpenSettings={onOpenPlaybackSettings}
       />
     ) : null;
+  const displayNotes = (
+    <>
+      {!displayConnected && (
+        <p className={styles.cohostNote}>
+          {t('host.status.noDisplay')}
+        </p>
+      )}
+      {/* Only offer to (re)open while no display is live — opening a
+          second one on top of a connected display double-plays the song. */}
+      {!displayConnected && (
+        <button
+          className={styles.switchModeLink}
+          onClick={onOpenTvDisplay}
+        >
+          {t('host.status.openDisplay')}
+        </button>
+      )}
+    </>
+  );
   const stageClass = `${styles.songControl} ${countdown ? styles.songControlStaged : ""}`;
   return loading ? (
     <StageLoading />
@@ -135,62 +154,55 @@ export function SongStage({
     ) : tvMode ? (
       /* TV Display mode: status panel; playback runs from the
          transport bar so there's one set of controls. */
-      <div className={stageClass}>
-        {isPlaying && displayPaused ? (
-          <>
-            <div className={styles.readyLabel}>{t('host.status.pausedDisplay')}</div>
-            <p className={styles.controlSinger}>
-              {currentSong.userName}
-            </p>
-            <h2 className={styles.controlSong}>
-              {formatSongTitle(currentSong.songTitle)}
-            </h2>
-            <p className={styles.cohostNote}>
-              {t('host.status.pausedDisplayNote')}
-            </p>
-          </>
-        ) : isPlaying ? (
-          <>
-            <div className={styles.liveIndicator}>
-              <span className={styles.liveDot} />
-              <span>{t('host.status.playingDiffScreen')}</span>
-            </div>
-            <p className={styles.controlSinger}>
-              {currentSong.userName}
-            </p>
-            <h2 className={styles.controlSong}>
-              {formatSongTitle(currentSong.songTitle)}
-            </h2>
-          </>
-        ) : countdown ? (
-          countdown
-        ) : (
-          <>
-            <div className={styles.readyLabel}>{t('host.status.upNext')}</div>
-            <h1 className={styles.controlSinger}>
-              {currentSong.userName}
-            </h1>
-            <p className={styles.controlSong}>
-              {formatSongTitle(currentSong.songTitle)}
-            </p>
-          </>
+      <>
+        <div className={stageClass}>
+          {isPlaying && displayPaused ? (
+            <>
+              <div className={styles.readyLabel}>{t('host.status.pausedDisplay')}</div>
+              <p className={styles.controlSinger}>
+                {currentSong.userName}
+              </p>
+              <h2 className={styles.controlSong}>
+                {formatSongTitle(currentSong.songTitle)}
+              </h2>
+              <p className={styles.cohostNote}>
+                {t('host.status.pausedDisplayNote')}
+              </p>
+            </>
+          ) : isPlaying ? (
+            <>
+              <div className={styles.liveIndicator}>
+                <span className={styles.liveDot} />
+                <span>{t('host.status.playingDiffScreen')}</span>
+              </div>
+              <p className={styles.controlSinger}>
+                {currentSong.userName}
+              </p>
+              <h2 className={styles.controlSong}>
+                {formatSongTitle(currentSong.songTitle)}
+              </h2>
+            </>
+          ) : countdown ? (
+            countdown
+          ) : (
+            <>
+              <div className={styles.readyLabel}>{t('host.status.upNext')}</div>
+              <h1 className={styles.controlSinger}>
+                {currentSong.userName}
+              </h1>
+              <p className={styles.controlSong}>
+                {formatSongTitle(currentSong.songTitle)}
+              </p>
+            </>
+          )}
+          {!countdown && displayNotes}
+        </div>
+        {/* The count-in scene fills its box, so the notes sit below it rather
+            than on top of the crowd. */}
+        {countdown && !displayConnected && (
+          <div className={styles.stageNotes}>{displayNotes}</div>
         )}
-        {!displayConnected && (
-          <p className={styles.cohostNote}>
-            {t('host.status.noDisplay')}
-          </p>
-        )}
-        {/* Only offer to (re)open while no display is live — opening a
-            second one on top of a connected display double-plays the song. */}
-        {!displayConnected && (
-          <button
-            className={styles.switchModeLink}
-            onClick={onOpenTvDisplay}
-          >
-            {t('host.status.openDisplay')}
-          </button>
-        )}
-      </div>
+      </>
     ) : /* All-in-one mode: video plays here. */
     playsVideoHere ? (
       <>
