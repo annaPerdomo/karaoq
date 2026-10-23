@@ -40,3 +40,64 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+  smoke:
+    needs: checks
+    runs-on: ubuntu-latest
+    env:
+      SMOKE_MONGODB_URI: ${{ secrets.SMOKE_MONGODB_URI }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        if: env.SMOKE_MONGODB_URI != ''
+
+      - uses: actions/setup-node@v4
+        if: env.SMOKE_MONGODB_URI != ''
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        if: env.SMOKE_MONGODB_URI != ''
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Chromium
+        if: env.SMOKE_MONGODB_URI != ''
+        run: pnpm exec playwright-core install chromium
+
+      - name: Build
+        if: env.SMOKE_MONGODB_URI != ''
+        env:
+          MONGODB_URI: ${{ env.SMOKE_MONGODB_URI }}
+          MONGODB_DB: karaoq_ci
+        run: pnpm build
+
+      - name: Start server
+        if: env.SMOKE_MONGODB_URI != ''
+        env:
+          MONGODB_URI: ${{ env.SMOKE_MONGODB_URI }}
+          MONGODB_DB: karaoq_ci
+        run: pnpm start -p 3100 &
+
+      - name: Wait for the server
+        if: env.SMOKE_MONGODB_URI != ''
+        run: npx wait-on --timeout 120000 http://127.0.0.1:3100/api/health
+
+      # karaoq_ci starts empty, and the smoke flow has no YouTube key — this
+      # seeds the search_cache entry its query resolves to.
+      - name: Seed the CI database
+        if: env.SMOKE_MONGODB_URI != ''
+        env:
+          MONGODB_URI: ${{ env.SMOKE_MONGODB_URI }}
+          MONGODB_DB: karaoq_ci
+        run: node tests/e2e/seed-ci.mjs
+
+      - name: Smoke test (full)
+        if: env.SMOKE_MONGODB_URI != ''
+        env:
+          SMOKE_MODE: full
+          BASE_URL: http://127.0.0.1:3100
+          MONGODB_URI: ${{ env.SMOKE_MONGODB_URI }}
+          MONGODB_DB: karaoq_ci
+        run: pnpm smoke
