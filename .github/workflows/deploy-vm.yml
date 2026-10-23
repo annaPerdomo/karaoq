@@ -26,6 +26,10 @@ jobs:
     env:
       VM_HOST: ${{ secrets.VM_HOST }}
       TARGET: ${{ github.event_name == 'push' && 'staging' || inputs.target }}
+    outputs:
+      sha: ${{ steps.sha.outputs.sha }}
+      target: ${{ env.TARGET }}
+      skip: ${{ env.deploy_skip }}
     steps:
       - name: Check VM is configured
         run: |
@@ -144,3 +148,25 @@ jobs:
           ssh -i ~/.ssh/id_deploy -o UserKnownHostsFile=~/.ssh/known_hosts \
             "$VM_USER@$VM_HOST" \
             "sudo /usr/local/sbin/karaoq-activate --rollback production"
+
+  tag-release:
+    needs: deploy
+    if: needs.deploy.outputs.skip != 'true' && needs.deploy.outputs.target == 'production'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.deploy.outputs.sha }}
+          fetch-depth: 0
+
+      - name: Tag and publish the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          SHA="${{ needs.deploy.outputs.sha }}"
+          TAG="release-$(date -u +%Y.%m.%d-%H%M)"
+          git tag -a "$TAG" "$SHA" -m "Production release $TAG"
+          git push origin "$TAG"
+          gh release create "$TAG" --target "$SHA" --title "$TAG" --generate-notes
