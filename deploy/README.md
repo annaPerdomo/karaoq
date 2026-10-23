@@ -118,8 +118,10 @@ sudo /usr/local/sbin/karaoq-activate <release-tarball> <git-sha>
 
 `karaoq-activate` extracts the release to a timestamped directory under
 `/opt/karaoq/releases/`, atomically re-points `/opt/karaoq/current`, restarts
-the service, and polls both `/` and `/api/geo` on `127.0.0.1:3000` for up to
-30s. If that doesn't come up healthy, it re-points back to the previous
+the service, and polls both `/` and `/api/health` on `127.0.0.1:3000` for up
+to 60s — `/api/health` checks Mongo too (catches a bad `MONGODB_URI`), and
+the longer window keeps a short Atlas blip from rolling back an otherwise-good
+release. If that doesn't come up healthy, it re-points back to the previous
 release, restarts, and exits 1 — so the workflow fails loudly instead of
 leaving the VM on a broken build. It keeps the newest 5 releases, never
 deleting the one it just activated or the one it was on before.
@@ -147,7 +149,7 @@ Until cutover, Cloudflare's DNS for `karaoq.live`/`www` points at Vercel
 (DNS-only, not proxied) and Vercel keeps serving production. To cut over to
 the VM:
 
-1. Confirm the VM is healthy: `curl https://next.karaoq.live/api/geo` (the
+1. Confirm the VM is healthy: `curl https://next.karaoq.live/api/health` (the
    tunnel's third ingress hostname, usable for a side-by-side check before
    touching the live records).
 2. Install the corpus cron now, not before: `sudo cp deploy/crontab
