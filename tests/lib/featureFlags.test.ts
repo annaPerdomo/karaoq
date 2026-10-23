@@ -133,4 +133,27 @@ describe("isFlagEnabled", () => {
     toArrayMock.mockReturnValue(new Promise(() => {}));
     await expect(isFlagEnabled("songs_pages")).resolves.toBe(true);
   });
+
+  it("refreshes on read via performance.now() when a frozen instance's timer never fires", async () => {
+    let perfNow = 1_000;
+    const nowSpy = vi.spyOn(performance, "now").mockImplementation(() => perfNow);
+
+    try {
+      toArrayMock.mockResolvedValue([{ _id: "corpus_cron", enabled: false }]);
+      expect(await isFlagEnabled("corpus_cron")).toBe(false);
+      expect(findMock).toHaveBeenCalledTimes(1);
+
+      // No timer (real or fake) ever fires — perf time alone jumps past the
+      // 60s window, as it would on an instance frozen between requests.
+      perfNow += 61_000;
+      toArrayMock.mockResolvedValue([{ _id: "corpus_cron", enabled: true }]);
+      expect(await isFlagEnabled("corpus_cron")).toBe(false);
+
+      await new Promise((resolve) => setImmediate(resolve));
+      expect(findMock).toHaveBeenCalledTimes(2);
+      expect(await isFlagEnabled("corpus_cron")).toBe(true);
+    } finally {
+      nowSpy.mockRestore();
+    }
+  });
 });

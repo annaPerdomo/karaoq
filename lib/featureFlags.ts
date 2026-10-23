@@ -16,6 +16,9 @@ let cached: Map<FlagName, boolean> | null = null;
 let pending: Promise<Map<FlagName, boolean>> | null = null;
 let refreshDue = true;
 let refreshTimer: ReturnType<typeof setTimeout> | null = null;
+// Backstop for a frozen serverless instance whose scheduled refreshTimer
+// never gets to run; performance.now() is also unaffected by Date mocks.
+let nextRefreshAtPerf = 0;
 
 async function readFlags(): Promise<Map<FlagName, boolean>> {
   const collection = await getFeatureFlagsCollection();
@@ -30,6 +33,7 @@ async function readFlags(): Promise<Map<FlagName, boolean>> {
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error("timeout")), ms);
+    timer.unref?.();
     promise.then(
       (value) => {
         clearTimeout(timer);
@@ -48,6 +52,8 @@ function scheduleRefresh(ms: number): void {
   refreshTimer = setTimeout(() => {
     refreshDue = true;
   }, ms);
+  refreshTimer.unref?.();
+  nextRefreshAtPerf = performance.now() + ms;
 }
 
 // Shared by every caller, so concurrent calls trigger one find({}), not one
@@ -75,7 +81,7 @@ function startRefresh(): Promise<Map<FlagName, boolean>> {
 
 export async function isFlagEnabled(name: FlagName): Promise<boolean> {
   if (cached !== null) {
-    if (refreshDue) startRefresh();
+    if (refreshDue || performance.now() >= nextRefreshAtPerf) startRefresh();
     return cached.has(name) ? (cached.get(name) as boolean) : FLAG_DEFAULTS[name];
   }
 
@@ -94,6 +100,7 @@ export function invalidateFlagCache(): void {
   cached = null;
   pending = null;
   refreshDue = true;
+  nextRefreshAtPerf = 0;
   if (refreshTimer) {
     clearTimeout(refreshTimer);
     refreshTimer = null;
