@@ -1,0 +1,7 @@
+[Unit]
+Description=Notify on failure of %i
+
+[Service]
+Type=oneshot
+EnvironmentFile=-/etc/karaoq/ops.env
+ExecStart=/opt/karaoq/deploy/ops/notify.sh %i

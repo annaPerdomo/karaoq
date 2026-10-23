@@ -1,0 +1,8 @@
+[Unit]
+Description=KaraoQ Mongo backup to R2
+OnFailure=karaoq-notify@%n.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/karaoq/backup.env
+ExecStart=/opt/karaoq/deploy/backup/mongo-backup.sh

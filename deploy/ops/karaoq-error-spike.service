@@ -1,0 +1,8 @@
+[Unit]
+Description=KaraoQ health check / error-spike alert
+OnFailure=karaoq-notify@%n.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=-/etc/karaoq/ops.env
+ExecStart=/opt/karaoq/deploy/ops/error-spike.sh
