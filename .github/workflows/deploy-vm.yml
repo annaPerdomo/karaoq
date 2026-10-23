@@ -1,4 +1,4 @@
-name: Deploy to VM (manual)
+name: Deploy to VM
 on:
   workflow_dispatch:
     inputs:
@@ -6,48 +6,80 @@ on:
         description: "Git ref to build and deploy"
         default: "main"
         required: true
+      target:
+        description: "Which service to deploy"
+        type: choice
+        options: [staging, production]
+        default: "staging"
+        required: true
+  push:
+    branches:
+      - staging
+
+concurrency:
+  group: deploy-vm-${{ github.event_name == 'push' && 'staging' || inputs.target }}
+  cancel-in-progress: false
 
 jobs:
   deploy:
     runs-on: ubuntu-24.04-arm
+    env:
+      VM_HOST: ${{ secrets.VM_HOST }}
+      TARGET: ${{ github.event_name == 'push' && 'staging' || inputs.target }}
     steps:
+      - name: Check VM is configured
+        run: |
+          if [ -z "$VM_HOST" ]; then
+            echo "VM_HOST secret is not set yet — skipping deploy." >&2
+            echo "deploy_skip=true" >> "$GITHUB_ENV"
+          fi
+
       - uses: actions/checkout@v4
+        if: env.deploy_skip != 'true'
         with:
-          ref: ${{ inputs.ref }}
+          ref: ${{ inputs.ref || github.ref }}
 
       - name: Resolve sha
         id: sha
+        if: env.deploy_skip != 'true'
         run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - uses: pnpm/action-setup@v4
+        if: env.deploy_skip != 'true'
 
       - uses: actions/setup-node@v4
+        if: env.deploy_skip != 'true'
         with:
           node-version: 22
           cache: pnpm
 
       - name: Install dependencies
+        if: env.deploy_skip != 'true'
         run: pnpm install --frozen-lockfile
 
       - name: Test
+        if: env.deploy_skip != 'true'
         run: pnpm exec vitest run
 
       - name: Build
+        if: env.deploy_skip != 'true'
         env:
-          MONGODB_URI: ${{ secrets.MONGODB_URI }}
-          MONGODB_DB: ${{ secrets.MONGODB_DB }}
+          MONGODB_URI: ${{ env.TARGET == 'staging' && secrets.STAGING_MONGODB_URI || secrets.MONGODB_URI }}
+          MONGODB_DB: ${{ env.TARGET == 'staging' && secrets.STAGING_MONGODB_DB || secrets.MONGODB_DB }}
           # Opts this build out of Vercel Analytics (pages/_app.tsx). No
           # other NEXT_PUBLIC_* vars exist in the codebase today.
           NEXT_PUBLIC_KARAOQ_SELF_HOST: "1"
         run: pnpm build
 
       - name: Assemble standalone bundle
+        if: env.deploy_skip != 'true'
         run: |
           cp -r .next/static .next/standalone/.next/static
           cp -r public .next/standalone/public
           tar -czf release.tar.gz -C .next/standalone .
 
       - name: Set up SSH
+        if: env.deploy_skip != 'true'
         env:
           VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
           VM_KNOWN_HOSTS: ${{ secrets.VM_KNOWN_HOSTS }}
@@ -57,9 +89,9 @@ jobs:
           printf '%s\n' "$VM_KNOWN_HOSTS" > ~/.ssh/known_hosts
 
       - name: Ship release to the VM
+        if: env.deploy_skip != 'true'
         env:
           VM_USER: ${{ secrets.VM_USER }}
-          VM_HOST: ${{ secrets.VM_HOST }}
           SHA: ${{ steps.sha.outputs.sha }}
         run: |
           scp -i ~/.ssh/id_deploy -o UserKnownHostsFile=~/.ssh/known_hosts \
@@ -67,11 +99,48 @@ jobs:
             "$VM_USER@$VM_HOST:/tmp/karaoq-$SHA.tar.gz"
 
       - name: Activate
+        if: env.deploy_skip != 'true'
         env:
           VM_USER: ${{ secrets.VM_USER }}
-          VM_HOST: ${{ secrets.VM_HOST }}
           SHA: ${{ steps.sha.outputs.sha }}
         run: |
           ssh -i ~/.ssh/id_deploy -o UserKnownHostsFile=~/.ssh/known_hosts \
             "$VM_USER@$VM_HOST" \
-            "sudo /usr/local/sbin/karaoq-activate /tmp/karaoq-$SHA.tar.gz $SHA && rm -f /tmp/karaoq-$SHA.tar.gz"
+            "sudo /usr/local/sbin/karaoq-activate /tmp/karaoq-$SHA.tar.gz $SHA --target $TARGET && rm -f /tmp/karaoq-$SHA.tar.gz"
+
+      - name: Install Chromium
+        if: env.deploy_skip != 'true'
+        run: pnpm exec playwright-core install chromium
+
+
+      # www/apex karaoq.live DNS still points at Vercel until cutover
+      # (deploy/README.md), so this reaches the VM directly instead.
+      - name: Open SSH tunnel to the VM
+        if: env.deploy_skip != 'true' && env.TARGET == 'production'
+        env:
+          VM_USER: ${{ secrets.VM_USER }}
+        run: |
+          ssh -i ~/.ssh/id_deploy -o UserKnownHostsFile=~/.ssh/known_hosts \
+            -f -N -L 18080:127.0.0.1:3000 "$VM_USER@$VM_HOST"
+          sleep 2
+
+      - name: Smoke test (readonly)
+        id: smoke
+        if: env.deploy_skip != 'true'
+        env:
+          SMOKE_MODE: readonly
+          BASE_URL: ${{ env.TARGET == 'production' && 'http://127.0.0.1:18080' || 'https://next.karaoq.live' }}
+        run: pnpm smoke
+
+      - name: Close SSH tunnel to the VM
+        if: always() && env.deploy_skip != 'true' && env.TARGET == 'production'
+        run: pkill -f '18080:127.0.0.1:3000' || true
+
+      - name: Roll back production on failed smoke
+        if: failure() && steps.smoke.conclusion == 'failure' && env.TARGET == 'production'
+        env:
+          VM_USER: ${{ secrets.VM_USER }}
+        run: |
+          ssh -i ~/.ssh/id_deploy -o UserKnownHostsFile=~/.ssh/known_hosts \
+            "$VM_USER@$VM_HOST" \
+            "sudo /usr/local/sbin/karaoq-activate --rollback production"

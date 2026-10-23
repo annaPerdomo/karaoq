@@ -1,0 +1,19 @@
+[Unit]
+Description=KaraoQ (staging)
+After=network.target
+
+[Service]
+Type=simple
+User=karaoq-staging
+WorkingDirectory=/opt/karaoq-staging/current
+ExecStart=/usr/bin/node server.js
+Environment=NODE_ENV=production KARAOQ_ENV=staging PORT=3001 HOSTNAME=127.0.0.1
+EnvironmentFile=/etc/karaoq/staging.env
+EnvironmentFile=-/opt/karaoq-staging/current/release.env
+Restart=always
+RestartSec=2
+MemoryMax=4G
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

@@ -126,6 +126,58 @@ release, restarts, and exits 1 — so the workflow fails loudly instead of
 leaving the VM on a broken build. It keeps the newest 5 releases, never
 deleting the one it just activated or the one it was on before.
 
+`karaoq-activate` also takes a `--target production|staging` flag (default
+`production`), which picks the release/current dirs, systemd service and
+port it operates on — see "Staging" below. The deploy workflow runs the
+smoke suite (readonly mode, `tests/e2e/smoke.mjs`) against whichever target
+it just activated; on a failed smoke test against production it rolls back
+automatically via `karaoq-activate --rollback production`.
+
+## Staging
+
+A second copy of the app on the same VM, serving `next.karaoq.live`, kept
+fully isolated from production data and quota:
+
+- its own system user, `karaoq-staging`, distinct from `karaoq` — same
+  no-login setup as production's user, below, but a separate home so a bug
+  in staging's release can't touch `/opt/karaoq`'s files
+- its own Atlas cluster (a second free M0, separate from production's and
+  from the shared dev cluster in `docs/engineering/environments.md`), with
+  its own connection credentials — staging must never share a database with
+  prod or with local dev
+- its own YouTube Data API key, from its own GCP project — staging traffic
+  must never spend production's or dev's daily quota
+- `KARAOQ_ENV=staging` (not `production`), so `isProductionDeploy()`
+  (`lib/platform.ts`) reads it correctly
+
+`/opt/karaoq-staging` (releases + current symlink, root-owned except
+`.next`, same as production — `karaoq-activate` handles this), and
+`karaoq-staging.service` (port 3001, env file `/etc/karaoq/staging.env`).
+
+```
+sudo useradd --system --home /opt/karaoq-staging --shell /usr/sbin/nologin karaoq-staging
+sudo mkdir -p /opt/karaoq-staging/releases
+sudo chown root:root /opt/karaoq-staging /opt/karaoq-staging/releases
+
+sudo $EDITOR /etc/karaoq/staging.env
+# KARAOQ_ENV=staging
+# MONGODB_URI=...   (staging's own Atlas cluster, not prod's or dev's)
+# MONGODB_DB=...
+# YOUTUBE_API_KEY=...   (staging's own GCP project/key)
+# ANALYTICS_SECRET=...
+sudo chmod 600 /etc/karaoq/staging.env
+
+sudo cp deploy/karaoq-staging.service /etc/systemd/system/karaoq-staging.service
+sudo systemctl daemon-reload
+sudo systemctl enable karaoq-staging
+```
+
+Deploy to it via the "Deploy to VM" workflow's `target: staging` input (the
+default), or by pushing to the `staging` branch — that build step uses the
+`STAGING_MONGODB_URI`/`STAGING_MONGODB_DB` GitHub secrets, not production's.
+Production deploys stay `workflow_dispatch`-only, with `target: production`
+chosen explicitly.
+
 ## Roll back by hand
 
 ```
@@ -135,6 +187,9 @@ sudo mv -T /opt/karaoq/current.tmp /opt/karaoq/current
 sudo systemctl restart karaoq
 ```
 
+Or `sudo karaoq-activate --rollback production` (or `staging`), which does
+the same thing and health-checks the result before returning.
+
 ## Logs
 
 ```
@@ -143,15 +198,75 @@ journalctl -u cloudflared -f   # tunnel
 tail -f /var/log/karaoq/cron.log
 ```
 
+## Backups
+
+The free Atlas tier has no built-in backups, so `deploy/backup/mongo-backup.sh`
+dumps `karaoq` to a gzip archive and uploads it to a Cloudflare R2 bucket
+daily via `karaoq-backup.timer`. Both the backup and restore scripts pass
+the Mongo URI to `mongodump`/`mongorestore` via a `--config` YAML file they
+write to a 600 temp file, not argv, so a connection string with embedded
+credentials never shows up in `ps` output.
+
+```
+# mongodb-database-tools (arm64)
+curl -fsSL https://pgp.mongodb.com/server-8.0.asc | sudo gpg -o /usr/share/keyrings/mongodb-server-8.0.gpg --dearmor
+echo "deb [signed-by=/usr/share/keyrings/mongodb-server-8.0.gpg arch=arm64] https://repo.mongodb.org/apt/ubuntu noble/mongodb-org/8.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-8.0.list
+sudo apt-get update && sudo apt-get install -y mongodb-database-tools
+
+# AWS CLI v2 (no arm64 .deb on Ubuntu 24.04 — install the official zip)
+curl "https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip" -o awscliv2.zip
+unzip awscliv2.zip && sudo ./aws/install
+rm -rf awscliv2.zip aws
+
+sudo $EDITOR /etc/karaoq/backup.env
+# BACKUP_MONGODB_URI=...   (read-only Atlas user is enough)
+# R2_ACCOUNT_ID=...
+# R2_BUCKET=...            (a bucket dedicated to these backups)
+# AWS_ACCESS_KEY_ID=...    (an R2 API token scoped to that one bucket)
+# AWS_SECRET_ACCESS_KEY=...
+# RETENTION_DAYS=30        (optional, this is the default; must be a positive integer)
+sudo chmod 600 /etc/karaoq/backup.env
+
+sudo mkdir -p /opt/karaoq/deploy/backup
+sudo install -D -m 755 deploy/backup/mongo-backup.sh /opt/karaoq/deploy/backup/mongo-backup.sh
+sudo install -D -m 755 deploy/backup/restore.sh /opt/karaoq/deploy/backup/restore.sh
+sudo cp deploy/backup/karaoq-backup.service /etc/systemd/system/
+sudo cp deploy/backup/karaoq-backup.timer /etc/systemd/system/
+sudo cp deploy/ops/karaoq-notify@.service /etc/systemd/system/   # OnFailure target, shared with error-spike
+sudo systemctl daemon-reload
+sudo systemctl enable --now karaoq-backup.timer
+```
+
+`mongo-backup.sh` deletes objects under `mongo/` older than `RETENTION_DAYS`
+itself (never the object it just uploaded); an R2 bucket lifecycle rule
+(Settings → Object lifecycle rules → expire objects after N days) does the
+same thing server-side and is the preferred way to do it — set one up and
+the script's own deletion loop becomes a redundant backstop.
+`karaoq-backup.service` has `OnFailure=karaoq-notify@%n.service` (see
+"Monitoring" in `docs/runbooks/monitoring.md`), so a failed backup pages the
+same way a health-check spike does.
+
+Restore with:
+
+```
+RESTORE_MONGODB_URI='mongodb+srv://...' /opt/karaoq/deploy/backup/restore.sh <object-key> <target-db>
+```
+
+(or `RESTORE_MONGODB_URI_FILE=<path to a 600 file holding the URI>` instead
+of the env var — either way, the URI never goes in argv). Lists available
+keys: `aws s3 ls --endpoint-url https://$R2_ACCOUNT_ID.r2.cloudflarestorage.com s3://$R2_BUCKET/mongo/`.
+It refuses `target-db=karaoq` unless `--i-mean-production` is also passed.
+
 ## DNS cutover
 
 Until cutover, Cloudflare's DNS for `karaoq.live`/`www` points at Vercel
 (DNS-only, not proxied) and Vercel keeps serving production. To cut over to
 the VM:
 
-1. Confirm the VM is healthy: `curl https://next.karaoq.live/api/health` (the
-   tunnel's third ingress hostname, usable for a side-by-side check before
-   touching the live records).
+1. Confirm the VM's production service is healthy: SSH in and
+   `curl http://127.0.0.1:3000/api/health` directly (`next.karaoq.live` now
+   routes to staging on port 3001, so it no longer side-by-side-checks
+   production).
 2. Install the corpus cron now, not before: `sudo cp deploy/crontab
    /etc/cron.d/karaoq`. Remove the `crons` array from `vercel.json` in the
    same change (Vercel Hobby's cron would otherwise keep firing the same

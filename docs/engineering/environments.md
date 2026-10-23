@@ -14,6 +14,17 @@ sets this for every build), `VERCEL_ENV=preview`. Today these share the same
 `MONGODB_DB=karaoq` as prod — see `shared_prod_dev_db` in project notes — so
 `lib/dbGuard.ts`'s warning doesn't fire here (`NODE_ENV` is `production`).
 
+## Staging (VM)
+
+`next.karaoq.live`, the `karaoq-staging` systemd service on the same VM as
+prod (see "Staging" in `deploy/README.md`). `NODE_ENV=production`,
+`KARAOQ_ENV=staging` — `isProductionDeploy()` only matches
+`KARAOQ_ENV=production`, so staging reads as non-production. It uses its
+**own** Atlas cluster and **own** YouTube API key/GCP project — never
+production's, never the shared dev cluster below, never `MONGODB_DB=karaoq`.
+Load-testing it (`load/k6-rooms.js`) must not run until that cluster exists;
+see `docs/runbooks/load-testing.md`.
+
 ## Dev / local
 
 `next dev`, `NODE_ENV=development`. Should point `MONGODB_DB` at a separate
@@ -35,3 +46,7 @@ for good.
 5. CI/test runs that hit a real server should also point at `karaoq_dev`, not
    `karaoq` — `tests/` normally mocks `lib/mongodb.ts` entirely, so this only
    matters for a manual or integration run against a live database.
+6. ci.yml's `smoke` job builds and runs the app against `SMOKE_MONGODB_URI`
+   (database `karaoq_ci`) and is skipped until that secret is set — point it
+   at the same free cluster as `karaoq_dev`, in a separate database so the
+   smoke suite's `QA`-prefixed rooms never land in `karaoq_dev`.

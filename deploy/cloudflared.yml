@@ -7,5 +7,5 @@ ingress:
   - hostname: karaoq.live
     service: http://127.0.0.1:3000
   - hostname: next.karaoq.live
-    service: http://127.0.0.1:3000
+    service: http://127.0.0.1:3001
   - service: http_status:404
