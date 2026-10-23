@@ -3239,6 +3239,31 @@ html[data-tv] .spToggleRow:focus {
     -webkit-overflow-scrolling: touch;
   }
 
+  /* The document scrolls, not .content: iOS Safari clips position: fixed
+     descendants (transport bar, sheet, search overlay) to an overflow scroller's box. */
+  .main:not(.mainCustomizing) {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+
+    @supports (min-height: 100dvh) {
+      min-height: 100dvh;
+    }
+  }
+
+  .main:not(.mainCustomizing) > .content {
+    flex: 1 0 auto;
+    overflow: visible;
+  }
+
+  .main:not(.mainCustomizing) > .header {
+    position: sticky;
+    top: 0;
+    z-index: 160;
+    background: linear-gradient(rgba(255, 255, 255, 0.025), rgba(255, 255, 255, 0.025)),
+      var(--bg-primary);
+  }
+
   .playerArea,
   .controlPanel {
     flex: none;
@@ -3268,6 +3293,17 @@ html[data-tv] .spToggleRow:focus {
     right: 0;
     bottom: 0;
     z-index: 150;
+  }
+
+  /* The playback sheet lives inside the bar, so the bar must clear the sticky header while it's open. */
+  .main:not(.mainCustomizing) .transport:has(.sheetOverlay) {
+    z-index: 170;
+  }
+
+  @supports not selector(:has(*)) {
+    .main:not(.mainCustomizing) .transport {
+      z-index: 170;
+    }
   }
 
   .main:not(.mainCustomizing):has(.transport:not(.transportEmptyMobile)) {
