@@ -17,6 +17,7 @@ import { QueueEstimate } from "../../lib/queueTime";
 export function QueueSidebar({
   remote,
   roomEmpty,
+  stageOffersAdd,
   sidebarCollapsed,
   onExpandSidebar,
   onCollapseSidebar,
@@ -69,6 +70,8 @@ export function QueueSidebar({
 }: {
   remote: boolean;
   roomEmpty: boolean;
+  /** EmptyStage shows its own Add; phones hide this one. */
+  stageOffersAdd: boolean;
   sidebarCollapsed: boolean;
   onExpandSidebar: () => void;
   onCollapseSidebar: () => void;
@@ -158,7 +161,7 @@ export function QueueSidebar({
       </div>
 
       <button
-        className={`${styles.addSongBtn} ${searchOpen ? styles.addSongBtnActive : ""}`}
+        className={`${styles.addSongBtn} ${searchOpen ? styles.addSongBtnActive : ""} ${stageOffersAdd ? styles.addSongBtnStageDup : ""}`}
         onClick={onToggleSearch}
       >
         {Icons.plus} {t('host.sidebar.addSong')}

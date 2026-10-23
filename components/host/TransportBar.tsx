@@ -19,7 +19,7 @@ import { PlaybackModeSheet } from "./PlaybackModeSheet";
 // own screen, play/pause stays there.
 export function TransportBar({
   roomId,
-  roomEmpty,
+  hideOnPhone,
   currentSong,
   isPlaying,
   tvMode,
@@ -46,7 +46,7 @@ export function TransportBar({
   onNext,
 }: {
   roomId?: string;
-  roomEmpty: boolean;
+  hideOnPhone: boolean;
   currentSong: QueueEntry | undefined;
   isPlaying: boolean;
   tvMode: boolean;
@@ -104,7 +104,7 @@ export function TransportBar({
   const playClass = `${styles.tBtn} ${styles.tPlay} ${autoOn ? styles.tPlayAuto : ""}`;
   return (
     <div
-      className={`${styles.transport} ${roomEmpty ? styles.transportEmptyMobile : ""}`}
+      className={`${styles.transport} ${hideOnPhone ? styles.transportEmptyMobile : ""}`}
     >
       <div className={styles.transportMain}>
         <div className={styles.transportInfo}>

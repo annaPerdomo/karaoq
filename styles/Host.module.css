@@ -2307,6 +2307,12 @@
   box-shadow: none;
 }
 
+@media (max-width: 768px) {
+  .addSongBtnStageDup {
+    display: none;
+  }
+}
+
 .sidebarBottom {
   margin-top: auto;
   display: flex;
@@ -2680,14 +2686,14 @@
    the transport bar and the queue below, so the mic gives way first. */
 @media (max-width: 768px) {
   .stageSpot {
-    --mic-h: clamp(130px, 30vh, 250px);
+    --mic-h: clamp(110px, 20vh, 170px);
     margin-bottom: calc(var(--mic-h) * 0.28 + 0.5rem);
   }
 }
 
 /* A short window has to fit the whole invitation without scrolling, and the
    mic is what gives way. .emptyState scrolls if this isn't enough. */
-@media (max-height: 700px) {
+@media (max-height: 700px) and (min-width: 769px) {
   .stageSpot {
     --mic-h: clamp(130px, 26vh, 220px);
   }
@@ -3066,7 +3072,7 @@ html[data-tv] .transportHeart {
     display: none;
   }
 
-  .transport.transportEmptyMobile {
+  .main:not(.mainCustomizing) .transport.transportEmptyMobile {
     display: none;
   }
 

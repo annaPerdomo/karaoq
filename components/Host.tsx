@@ -1240,7 +1240,8 @@ const Host = ({
   const transportBar = (
     <TransportBar
       roomId={joinCode}
-      roomEmpty={roomEmpty}
+      // Deliberate: History covers replay for hosts; co-hosts keep the bar for Previous.
+      hideOnPhone={roomEmpty || (!remote && !currentSong)}
       currentSong={currentSong}
       isPlaying={isPlaying}
       tvMode={tvMode}
@@ -1485,6 +1486,7 @@ const Host = ({
         <QueueSidebar
           remote={remote}
           roomEmpty={roomEmpty}
+          stageOffersAdd={!remote && !loading && !currentSong}
           sidebarCollapsed={sidebarCollapsed}
           onExpandSidebar={() => setSidebarCollapsed(false)}
           onCollapseSidebar={() => setSidebarCollapsed(true)}
