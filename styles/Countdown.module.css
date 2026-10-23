@@ -453,22 +453,67 @@ html[data-tv] .cheer {
   --ring-size: 150px;
 }
 
-@media (max-width: 640px) {
+/* Must match Host.module.css's phone breakpoint, where .songControlStaged has a fixed height. */
+@media (max-width: 768px) {
   .stageMain {
     --up-next-top: 22%;
     --stage-pad: 1rem;
+    /* An auto track grows to the nowrap name, so the ellipsis never shows. */
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .stageMainCounting {
-    --up-next-top: 16%;
+    --up-next-top: 6%;
   }
 
   .stack {
     gap: 1rem;
+    max-width: 100%;
+  }
+
+  .upNext {
+    max-width: 100%;
+  }
+
+  .stageCount {
+    flex-direction: row;
+    gap: 1rem;
+  }
+
+  .stageCount .caption {
+    display: none;
   }
 
   .stageCount .ring {
-    --ring-size: 110px;
+    --ring-size: 92px;
+  }
+
+  /* The padding keeps the glow inside overflow's clip box, which cuts it square. */
+  .upNextSinger {
+    max-width: calc(100% + 2em);
+    padding: 0.5em 1em;
+    margin: -0.5em -1em;
+    font-size: 2.2rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .upNextSong {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+  }
+
+  .cheer {
+    font-size: 1.9rem;
+  }
+}
+
+@media (max-width: 380px) {
+  .stageCount .modePillGap {
+    display: none;
   }
 }
 

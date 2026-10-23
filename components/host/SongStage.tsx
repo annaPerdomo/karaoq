@@ -114,43 +114,49 @@ export function SongStage({
       )}
     </>
   );
-  const stageClass = `${styles.songControl} ${countdown ? styles.songControlStaged : ""}`;
+  // Shown whenever the bar has no playback button, which is what the note
+  // explains. A here-mode co-host has Play while stopped (so the note would
+  // contradict it) but not Pause once a song runs, and an empty middle slot with
+  // no explanation reads as a bug.
+  const cohostNote = (isPlaying ? !cohostControlsLive : !cohostCanPlay) ? (
+    <p className={styles.cohostNote}>{t('host.cohost.playbackNote')}</p>
+  ) : null;
+  // Must mirror AutoStartPanel's showCount.
+  const counting = autoStartIn !== null || (!!onOpenPlaybackSettings && autoEnabled);
+  const stageClass = `${styles.songControl} ${countdown ? styles.songControlStaged : ""} ${countdown && counting ? styles.songControlCounting : ""}`;
   return loading ? (
     <StageLoading />
   ) : currentSong ? (
     remote ? (
       /* Co-host mode: status only, no player or audio. */
-      <div className={stageClass}>
-        {isPlaying && displayPaused ? (
-          <div className={styles.readyLabel}>{t('host.status.pausedDisplay')}</div>
-        ) : isPlaying ? (
-          <div className={styles.liveIndicator}>
-            <span className={styles.liveDot} />
-            <span>{t('host.status.nowPlaying')}</span>
-          </div>
-        ) : countdown ? (
-          countdown
-        ) : (
-          <div className={styles.readyLabel}>{t('host.status.upNext')}</div>
+      <>
+        <div className={stageClass}>
+          {isPlaying && displayPaused ? (
+            <div className={styles.readyLabel}>{t('host.status.pausedDisplay')}</div>
+          ) : isPlaying ? (
+            <div className={styles.liveIndicator}>
+              <span className={styles.liveDot} />
+              <span>{t('host.status.nowPlaying')}</span>
+            </div>
+          ) : countdown ? (
+            countdown
+          ) : (
+            <div className={styles.readyLabel}>{t('host.status.upNext')}</div>
+          )}
+          {!countdown && (
+            <>
+              <h1 className={styles.controlSinger}>{currentSong.userName}</h1>
+              <p className={styles.controlSong}>
+                {formatSongTitle(currentSong.songTitle)}
+              </p>
+            </>
+          )}
+          {!countdown && cohostNote}
+        </div>
+        {countdown && cohostNote && (
+          <div className={styles.stageNotes}>{cohostNote}</div>
         )}
-        {!countdown && (
-          <>
-            <h1 className={styles.controlSinger}>{currentSong.userName}</h1>
-            <p className={styles.controlSong}>
-              {formatSongTitle(currentSong.songTitle)}
-            </p>
-          </>
-        )}
-        {/* Shown whenever the bar has no playback button, which is what the note
-            explains. A here-mode co-host has Play while stopped (so the note
-            would contradict it) but not Pause once a song runs, and an empty
-            middle slot with no explanation reads as a bug. */}
-        {(isPlaying ? !cohostControlsLive : !cohostCanPlay) && (
-          <p className={styles.cohostNote}>
-            {t('host.cohost.playbackNote')}
-          </p>
-        )}
-      </div>
+      </>
     ) : tvMode ? (
       /* TV Display mode: status panel; playback runs from the
          transport bar so there's one set of controls. */

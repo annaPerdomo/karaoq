@@ -2017,13 +2017,16 @@
     overflow-y: auto;
   }
 
-  /* The scene's rows are percentages: a content-sized box clips the ring under the transport bar.
-     480px fits Up Next, the ring and the mode pill. */
+  /* The scene's rows are percentages, so it needs a definite height. */
   .songControlStaged {
     flex: none;
-    height: clamp(480px, 60vh, 520px);
+    height: 15rem;
     padding: 0;
     overflow: hidden;
+  }
+
+  .songControlCounting {
+    height: 17.5rem;
   }
 
   .controlSinger {
@@ -2036,6 +2039,14 @@
 
   .switchModeLink {
     margin-top: 0.75rem;
+  }
+
+  .stageNotes {
+    padding: 0.6rem 1rem 0.4rem;
+  }
+
+  .stageNotes .cohostNote {
+    margin-top: 0;
   }
 
   .emptyState {
