@@ -37,16 +37,22 @@ export function AutoStartPanel({
 }): React.ReactElement {
   const { t } = useT();
   const cheer = CHEER_KEYS[Math.max(0, songsSung - 1) % CHEER_KEYS.length];
-  const reveal = showCheer ? cheerRevealSeconds(gapSeconds, secondsLeft !== null) : 0.2;
+  // Latched per cheer key: showCheer drops when Host's window closes, which must not
+  // cut a late-mounted cheer or restart the light. A skip moves the key and ends it.
+  const [celebratedKey, setCelebratedKey] = React.useState(showCheer ? cheer : null);
+  if (showCheer && celebratedKey !== cheer) setCelebratedKey(cheer);
+  const celebrating = celebratedKey === cheer;
+  const reveal =
+    celebratedKey !== null ? cheerRevealSeconds(gapSeconds, secondsLeft !== null) : 0.2;
   // A timer, not only the CSS fade: a TV runs no animations, so a cheer left to
   // fade itself out would sit on Up Next until the song started.
-  const [handedOver, setHandedOver] = React.useState(!showCheer);
+  const [handedOver, setHandedOver] = React.useState(!celebrating);
   // A ref, never a dependency: the gap is live behind this panel's own pill, and
   // as a dep a mid-countdown change would replay a cheer that already finished.
   const revealRef = React.useRef(reveal);
   revealRef.current = reveal;
   React.useEffect(() => {
-    if (!showCheer) {
+    if (!celebrating) {
       setHandedOver(true);
       return;
     }
@@ -54,8 +60,8 @@ export function AutoStartPanel({
     const holdMs = (revealRef.current + (calmMotion() ? 0 : CHEER_FADE_SECONDS)) * 1000;
     const timer = setTimeout(() => setHandedOver(true), holdMs);
     return () => clearTimeout(timer);
-  }, [showCheer, cheer]);
-  const cheering = showCheer && !handedOver;
+  }, [celebrating, cheer]);
+  const cheering = celebrating && !handedOver;
   // A TV compositor keeps the cheer's pixels after the node goes; dirtying the
   // stage layer for a frame forces the repaint. Belt to the CSS braces.
   const stageRef = React.useRef<HTMLDivElement>(null);
@@ -82,7 +88,7 @@ export function AutoStartPanel({
   const showCount = secondsLeft !== null || showPill;
   return (
     <>
-      <StageScene celebrate={showCheer} />
+      <StageScene celebrate={celebrating} />
       <div className={styles.panel}>
         <div
           ref={stageRef}
@@ -94,7 +100,7 @@ export function AutoStartPanel({
           }
         >
           <div
-            className={`${styles.spot} ${showCheer ? "" : styles.spotStill}`}
+            className={`${styles.spot} ${celebratedKey !== null ? "" : styles.spotStill}`}
             aria-hidden="true"
           />
           {cheering && (

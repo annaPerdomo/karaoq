@@ -28,6 +28,7 @@ import cancelAutoStart from "../app/queue/cancelAutoStart";
 import postVideoEnded from "../app/queue/postVideoEnded";
 import { useAutoStart } from "./hooks/useAutoStart";
 import { useAutoArm } from "./hooks/useAutoArm";
+import { useEndedCheer } from "./hooks/useEndedCheer";
 import {
   autoStartEpoch,
   playerCurrentTime,
@@ -132,12 +133,7 @@ const Host = ({
   const [autoAdvance, setAutoAdvanceState] = React.useState<AutoAdvance>(AUTO_ADVANCE_OFF);
   const [autoStartAt, setAutoStartAt] = React.useState<number | null>(null);
   const [endedEntryId, setEndedEntryId] = React.useState<string | null>(null);
-  // The marker as it stood at page load is never cheered: a reload or a co-host
-  // joining mid-wait must not replay it. Forgotten once the room moves off it.
-  const preEndedRef = React.useRef<string | null | undefined>(undefined);
-  React.useEffect(() => {
-    if (endedEntryId !== preEndedRef.current) preEndedRef.current = null;
-  }, [endedEntryId]);
+  const { cheerEntryId, preEndedRef } = useEndedCheer(endedEntryId);
   const [playbackSheetOpen, setPlaybackSheetOpen] = React.useState(false);
   const [songLimit, setSongLimitState] = React.useState<number | null>(null);
   const songLimitRef = React.useRef<number | null>(null);
@@ -1403,9 +1399,8 @@ const Host = ({
             currentSong={currentSong}
             songsSung={historyItems.length}
             showCheer={
-              endedEntryId !== null &&
-              endedEntryId !== preEndedRef.current &&
-              historyItems[historyItems.length - 1]?.id === endedEntryId
+              cheerEntryId !== null &&
+              historyItems[historyItems.length - 1]?.id === cheerEntryId
             }
             lastSinger={historyItems[historyItems.length - 1]?.userName}
             remote={remote}
