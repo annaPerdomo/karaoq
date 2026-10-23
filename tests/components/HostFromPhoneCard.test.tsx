@@ -16,7 +16,7 @@ describe("HostFromPhoneCard", () => {
     const onHide = vi.fn();
     render(<HostFromPhoneCard origin="https://karaoq.live" joinCode="ABCDE" onHide={onHide} />);
 
-    expect(qrValues.at(-1)).toBe("https://karaoq.live/host/ABCDE");
+    expect(qrValues.at(-1)).toBe("https://karaoq.live/host/ABCDE?via=tv");
     expect(screen.queryByText("ABCDE")).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: /hide/i }));

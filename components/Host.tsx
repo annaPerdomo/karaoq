@@ -29,6 +29,7 @@ import postVideoEnded from "../app/queue/postVideoEnded";
 import { useAutoStart } from "./hooks/useAutoStart";
 import { useAutoArm } from "./hooks/useAutoArm";
 import { useEndedCheer } from "./hooks/useEndedCheer";
+import { useHostJoinedFromTv } from "./host/hooks/useHostJoinedFromTv";
 import {
   autoStartEpoch,
   playerCurrentTime,
@@ -109,6 +110,7 @@ const Host = ({
   const joinCode = normalizeRoomId(router.query.joinCode) as string | undefined;
   // Analytics "Open as admin" — skips session tracking so an operator isn't counted.
   const adminPeek = router.query.admin === "1";
+  useHostJoinedFromTv(joinCode, remote);
 
   const [queue, setQueue] = React.useState<QueueEntry[]>([]);
   const boards = useBoards(joinCode);

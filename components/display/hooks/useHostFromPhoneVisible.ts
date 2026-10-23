@@ -6,7 +6,7 @@ const HIDDEN_KEY = 'karaoq_tv_host_hidden';
 
 export function useHostFromPhoneVisible(
   joinCode: string | undefined,
-  opts: { editing: boolean; playing: boolean }
+  opts: { editing: boolean; playing: boolean; hostJoined: boolean }
 ): { show: boolean; hide: () => void } {
   const [startedHere, setStartedHere] = React.useState(false);
   const [hidden, setHidden] = React.useState(false);
@@ -30,6 +30,7 @@ export function useHostFromPhoneVisible(
   const show = shouldShowHostFromPhone({
     startedHere,
     hidden,
+    hostJoined: opts.hostJoined,
     editing: opts.editing,
     playing: opts.playing,
   });

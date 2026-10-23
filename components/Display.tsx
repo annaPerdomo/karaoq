@@ -61,6 +61,7 @@ const Display = (): React.ReactElement => {
   const [singWithMe, setSingWithMe] = React.useState<SingWithMePost[]>([]);
   const [suggestions, setSuggestions] = React.useState<SuggestedSong[]>([]);
   const [boardsOn, setBoardsOn] = React.useState(true);
+  const [hostJoined, setHostJoined] = React.useState(false);
   const [activeIndex, setActiveIndex] = React.useState(0);
   const [isPlaying, setIsPlaying] = React.useState(false);
   const timing = useRoomTiming({
@@ -214,6 +215,7 @@ const Display = (): React.ReactElement => {
     setAutoAdvance(normalizeAutoAdvance(room.autoAdvance));
     setSongLimit(normalizeSongLimit(room.songLimitSeconds));
     setAutoStartAt(autoStartEpoch(room.autoStartAt));
+    setHostJoined(!!room.hostJoinedAt);
     processReactions(room.reactions, animateReactions);
   }
 
@@ -232,7 +234,7 @@ const Display = (): React.ReactElement => {
   });
 
   useDisplayRemoteNav(pageRef, isTvDevice(), edit);
-  const hostFromPhone = useHostFromPhoneVisible(joinCode, { editing: edit.editing, playing: isPlaying });
+  const hostFromPhone = useHostFromPhoneVisible(joinCode, { editing: edit.editing, playing: isPlaying, hostJoined });
 
   React.useEffect(() => {
     if (!joinCode) return;

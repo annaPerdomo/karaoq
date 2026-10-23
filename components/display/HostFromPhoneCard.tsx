@@ -3,6 +3,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import styles from '../../styles/Display.module.css';
 import { useT } from '../../lib/i18n/I18nProvider';
 import { SITE_URL } from '../../lib/i18n/config';
+import { HOST_FROM_TV_PARAM } from '../../lib/shouldShowHostFromPhone';
 
 export default function HostFromPhoneCard({
   origin,
@@ -14,7 +15,7 @@ export default function HostFromPhoneCard({
   onHide: () => void;
 }) {
   const { t } = useT();
-  const hostUrl = `${origin || SITE_URL}/host/${joinCode}`;
+  const hostUrl = `${origin || SITE_URL}/host/${joinCode}?via=${HOST_FROM_TV_PARAM}`;
 
   return (
     <div className={styles.hostFromPhoneCard}>

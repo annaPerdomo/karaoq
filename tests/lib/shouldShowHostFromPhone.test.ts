@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { shouldShowHostFromPhone } from "../../lib/shouldShowHostFromPhone";
 
-const BASE = { startedHere: true, hidden: false, editing: false, playing: false };
+const BASE = { startedHere: true, hidden: false, hostJoined: false, editing: false, playing: false };
 
 describe("shouldShowHostFromPhone", () => {
   it("shows when every condition holds", () => {
@@ -14,6 +14,10 @@ describe("shouldShowHostFromPhone", () => {
 
   it("hides when dismissed", () => {
     expect(shouldShowHostFromPhone({ ...BASE, hidden: true })).toBe(false);
+  });
+
+  it("hides once a host has joined from the QR", () => {
+    expect(shouldShowHostFromPhone({ ...BASE, hostJoined: true })).toBe(false);
   });
 
   it("hides while customizing", () => {

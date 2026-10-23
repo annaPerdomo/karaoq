@@ -346,6 +346,8 @@ export interface Room {
   /** The entry whose natural end last advanced the room; the cheer is for it.
    * Cleared by every play, stop and skip. */
   endedEntryId?: string;
+  /** A phone opened the host link from the TV's QR; the TV then hides it. */
+  hostJoinedAt?: Date;
   createdAt?: Date;
   /** Bumped on every write; drives the TTL index. */
   lastActivity?: Date;
