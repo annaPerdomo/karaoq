@@ -1,4 +1,5 @@
 import { NextApiRequest, NextApiResponse } from "next";
+import { isFlagEnabled } from "../../../lib/featureFlags";
 import {
   acquireRun,
   CHANNEL_PAGES_PER_DAY,
@@ -98,6 +99,12 @@ export default async function handler(
 
   // `?force=1` is for running it by hand; it also bypasses the mop-up window.
   const forced = req.query.force === "1";
+
+  if (!(await isFlagEnabled("corpus_cron"))) {
+    console.log("Corpus cron skipped: corpus_cron flag off", { slot, mopUp });
+    res.status(200).json({ skipped: "flag" });
+    return;
+  }
 
   const started = Date.now();
   // Vercel only promises a cron within its hour, so this one can start at 23:59.

@@ -1,6 +1,7 @@
 import { MongoClient, type Collection, type Db } from "mongodb";
 import type { FeedbackEntry, Room } from "../pages/api/types";
 import type { EventType } from "./analytics";
+import { databaseRoleWarning } from "./dbGuard";
 import { YOUTUBE_DATA_MAX_AGE_DAYS } from "./youtubeRetention";
 
 // Reuse one connected client per serverless instance instead of opening and
@@ -8,6 +9,7 @@ import { YOUTUBE_DATA_MAX_AGE_DAYS } from "./youtubeRetention";
 // globalThis so dev-mode module reloads don't leak connections.
 const globalForMongo = globalThis as unknown as {
   _karaoqMongoClient?: Promise<MongoClient>;
+  _karaoqDbRoleWarned?: boolean;
 };
 
 async function connectClient(): Promise<MongoClient> {
@@ -17,6 +19,11 @@ async function connectClient(): Promise<MongoClient> {
 }
 
 export function getMongoClient(): Promise<MongoClient> {
+  if (!globalForMongo._karaoqDbRoleWarned) {
+    globalForMongo._karaoqDbRoleWarned = true;
+    const warning = databaseRoleWarning();
+    if (warning) console.warn(warning);
+  }
   if (!globalForMongo._karaoqMongoClient) {
     globalForMongo._karaoqMongoClient = connectClient().catch((e) => {
       // Drop the failed promise so the next request retries the connection.
@@ -713,6 +720,21 @@ export async function getOpsAlertsCollection(): Promise<Collection<OpsAlertDoc>>
       });
   }
   return db.collection<OpsAlertDoc>("ops_alerts");
+}
+
+export interface FeatureFlagDoc {
+  _id: string;
+  enabled: boolean;
+  updatedAt: Date;
+  note?: string;
+}
+
+export async function getFeatureFlagsCollection(): Promise<
+  Collection<FeatureFlagDoc>
+> {
+  const client = await getMongoClient();
+  const db = client.db(process.env.MONGODB_DB);
+  return db.collection<FeatureFlagDoc>("feature_flags");
 }
 
 let feedbackIndexesEnsured = false;

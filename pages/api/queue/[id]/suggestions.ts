@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { trackEvent } from "../../../../lib/analytics";
+import { isFlagEnabled } from "../../../../lib/featureFlags";
 import {
   MAX_SUGGESTIONS,
   isValidSuggestedSong,
@@ -14,6 +15,11 @@ import type { SuggestedSong } from "../../types";
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") {
     res.status(405).json({ code: 405, message: "Method not allowed." });
+    return;
+  }
+
+  if (!(await isFlagEnabled("boards_posting"))) {
+    res.status(503).json({ code: 503, message: "Temporarily unavailable." });
     return;
   }
 
