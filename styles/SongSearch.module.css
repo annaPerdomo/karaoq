@@ -1244,20 +1244,6 @@
   line-height: 1.4;
 }
 
-.modalOtherVersions {
-  display: block;
-  margin: 0 auto 0.4rem;
-  padding: 0.25rem 0.5rem;
-  background: none;
-  border: none;
-  color: #a78bfa;
-  font-size: 0.8rem;
-  font-weight: 600;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  cursor: pointer;
-}
-
 .modalAs {
   font-size: 0.8rem;
   color: var(--text-muted);

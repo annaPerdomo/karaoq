@@ -13,8 +13,7 @@ interface SongRowProps {
   song: SongSuggestion;
   /** Position shown at the left: chart rank on a hot shelf, else list order. */
   number: number;
-  /** The cut a tap opens; without one the row shows a placeholder and a tap
-   *  falls back to the cuts search. */
+  /** The song's best cut, for its thumbnail; a placeholder without one. */
   preview?: CutPreview;
   isNew?: boolean;
   climb?: number;

@@ -88,7 +88,7 @@ const snap = (id: string, keys: string[], extra: Record<string, unknown> = {}) =
 
 describe("hotPlans", () => {
   it("leads with the country's own chart, its climbs and new entries", () => {
-    const [main] = hotPlans(
+    const main = hotPlans(
       [
         {
           _id: "us",
@@ -119,25 +119,24 @@ describe("hotPlans", () => {
   });
 
   it("stands in the language's charts for a country without its own", () => {
-    const [main] = hotPlans([snap("de", ["d"]), snap("us", ["u"])], "CH", "de", NOW);
+    const main = hotPlans([snap("de", ["d"]), snap("us", ["u"])], "CH", "de", NOW);
     expect(main[0]).toMatchObject({ scope: "language", language: "de" });
     expect(main[0].ranked.map((r) => r.key)).toEqual(["d"]);
   });
 
-  it("adds a shelf for a chosen language that isn't the country's own", () => {
-    const shelves = hotPlans([snap("us", ["u"]), snap("mx", ["m"]), snap("es", ["e"])], "US", "es", NOW);
-    expect(shelves).toHaveLength(2);
-    expect(shelves[1][0]).toMatchObject({ scope: "language", language: "es" });
-    expect(shelves[1][0].ranked.map((r) => r.key).sort()).toEqual(["e", "m"]);
+  it("never lets the UI language outrank the country it's visited from", () => {
+    const plans = hotPlans([snap("mx", ["m"]), snap("es", ["e"]), snap("us", ["u"])], "MX", "en", NOW);
+    expect(plans.map((p) => p.scope)).toEqual(["country", "language", "world"]);
+    expect(plans[1].language).toBe("es");
   });
 
   it("uses the chosen language when the country is unknown", () => {
-    const [main] = hotPlans([snap("us", ["u"]), snap("de", ["d"])], null, "en", NOW);
+    const main = hotPlans([snap("us", ["u"]), snap("de", ["d"])], null, "en", NOW);
     expect(main[0]).toMatchObject({ scope: "language", language: "en" });
   });
 
   it("pools every chart by points for the worldwide plan", () => {
-    const [main] = hotPlans([snap("us", ["a", "b"]), snap("gb", ["b"])], "LK", null, NOW);
+    const main = hotPlans([snap("us", ["a", "b"]), snap("gb", ["b"])], "LK", null, NOW);
     const world = main[main.length - 1];
     expect(world.scope).toBe("world");
     expect(world.ranked.map((r) => r.key)).toEqual(["b", "a"]);
@@ -317,7 +316,7 @@ describe("computeShelves", () => {
 describe("getShelves", () => {
   it("serves a fresh cached copy without recomputing", async () => {
     const cached = [{ id: "hot", scope: "country", country: "US", language: null, songs: [] }];
-    cache().seed({ _id: "c1", key: "shelves:v2:US:-", shelves: cached, computedAt: new Date() });
+    cache().seed({ _id: "c1", key: "shelves:v3:US:-", shelves: cached, computedAt: new Date() });
     expect(await getShelves("US")).toEqual(cached);
   });
 
@@ -327,7 +326,7 @@ describe("getShelves", () => {
     snapshots().seed({ _id: "us", fetchedAt: NOW, ranks: [{ key: "a", rank: 1 }] });
     cache().seed({
       _id: "c1",
-      key: "shelves:v2:US:-",
+      key: "shelves:v3:US:-",
       shelves: [{ id: "rooms", scope: "world", country: null, language: null, songs: [] }],
       computedAt: new Date(Date.now() - 20 * 60 * 1000),
     });
@@ -342,7 +341,7 @@ describe("getShelves", () => {
     snapshots().seed({ _id: "us", fetchedAt: NOW, ranks: [{ key: "a", rank: 1 }] });
     cache().seed({
       _id: "c1",
-      key: "shelves:v2:US:-",
+      key: "shelves:v3:US:-",
       shelves: [],
       computedAt: new Date(Date.now() - 4 * 60 * 60 * 1000),
     });

@@ -2,9 +2,9 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { previewsFor } from "../../../lib/cutPick";
 import { categorySongKeys } from "../../../lib/suggestionCatalog";
 
-// Thumbnails and ready-to-add cuts for one browse category's songs, so a tap
-// opens the preview straight away. Keyed by category, never by free-form song
-// lists, so the CDN holds one entry per category.
+// Thumbnails for one browse category's rows, from each song's best corpus cut.
+// Keyed by category, never by free-form song lists, so the CDN holds one entry
+// per category.
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "GET") {
     res.status(405).json({ code: 405, message: "Method not allowed." });
@@ -23,7 +23,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     res.status(200).json({ previews });
   } catch (e) {
     console.error("Previews endpoint error:", e);
-    // Rows without previews still work — a tap falls back to the cuts search.
+    // Rows without previews still work, just with a placeholder thumbnail.
     res.status(200).json({ previews: {} });
   }
 }

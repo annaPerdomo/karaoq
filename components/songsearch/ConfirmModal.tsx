@@ -14,8 +14,6 @@ interface ConfirmModalProps {
   adding: boolean;
   onConfirm: () => void;
   onCancel: () => void;
-  /** Opened from a shelf card on that song's top cut: offers the rest. */
-  onOtherVersions?: () => void;
 }
 
 const ConfirmModal: React.FC<ConfirmModalProps> = ({
@@ -27,7 +25,6 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
   adding,
   onConfirm,
   onCancel,
-  onOtherVersions,
 }) => {
   const { t } = useT();
 
@@ -61,11 +58,6 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
           )}
         </div>
         <p className={styles.modalSong}>{song.title}</p>
-        {onOtherVersions && (
-          <button type="button" className={styles.modalOtherVersions} onClick={onOtherVersions}>
-            {t('search.confirm.otherVersions')}
-          </button>
-        )}
         {!pickMode && (
           <p className={styles.modalAs}>
             {t('search.confirm.addingAs').split(/(\{name\})/).map((part, i) =>

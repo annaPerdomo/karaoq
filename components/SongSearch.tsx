@@ -1,7 +1,7 @@
 import * as React from 'react';
 
 import styles from '../styles/SongSearch.module.css';
-import { YoutubeResult, toYoutubeResult } from '../app/queue/searchYoutube';
+import { YoutubeResult } from '../app/queue/searchYoutube';
 import { QueueEntry } from '../pages/api/types';
 import useCountry from '../app/queue/useCountry';
 import SearchResults from './search/SearchResults';
@@ -14,9 +14,7 @@ import ConfirmModal from './songsearch/ConfirmModal';
 import { useSongSearchState } from './songsearch/hooks/useSongSearchState';
 import { useDiscoveryBrowse } from './songsearch/hooks/useDiscoveryBrowse';
 import { useSongAddFlow } from './songsearch/hooks/useSongAddFlow';
-import type { CutPreview, IdeaShelf, ShelfSong } from '../lib/shelfTypes';
-import type { SongSuggestion } from '../app/queue/songSuggestions';
-import { ideaKey } from '../app/queue/fetchPreviews';
+import type { IdeaShelf, ShelfSong } from '../lib/shelfTypes';
 
 interface SongSearchProps {
   roomId: string;
@@ -96,8 +94,6 @@ const SongSearch: React.FC<SongSearchProps> = ({
     selectedLang,
     shelves,
     activePreviews,
-    previewFor,
-    trackIdeaPick,
     searchSuggestion,
     showSongCuts,
     trackShelfPick,
@@ -123,7 +119,6 @@ const SongSearch: React.FC<SongSearchProps> = ({
     addError,
     adding,
     confirmSong,
-    confirmOrigin,
     previewPlaying,
     canAdd,
     addSong,
@@ -131,7 +126,7 @@ const SongSearch: React.FC<SongSearchProps> = ({
     handlePick,
     closeConfirm,
     playPreview,
-  } = useSongAddFlow<SongSuggestion>({
+  } = useSongAddFlow({
     roomId,
     userName,
     requireName,
@@ -143,40 +138,12 @@ const SongSearch: React.FC<SongSearchProps> = ({
     fromCorpus: resultsFromCorpus,
   });
 
-  // An idea with a ready cut skips the results list: the cut opens ready to add.
-  function openIdea(song: SongSuggestion, key: string, cut: CutPreview) {
-    openConfirm(
-      toYoutubeResult({
-        title: cut.videoTitle,
-        thumbnailUrl: cut.thumbnailUrl,
-        videoId: cut.videoId,
-        durationSeconds: cut.durationSeconds,
-      }),
-      false,
-      { suggestionKey: key, fromCorpus: true, song }
-    );
-  }
-
+  // Every idea opens on its versions, served from the corpus with the "Most
+  // sung" one pinned first. A shelf song passes its own key, which needn't
+  // match what its displayed name would re-key to.
   function handleShelfPick(song: ShelfSong, shelf: IdeaShelf) {
     trackShelfPick(song, shelf);
-    openIdea(song, song.key, song);
-  }
-
-  function handleIdeaPick(song: SongSuggestion, sectionId: string, categoryId: string) {
-    const cut = previewFor(song, categoryId);
-    if (!cut) {
-      searchSuggestion(song, sectionId, categoryId);
-      return;
-    }
-    trackIdeaPick(song, sectionId, categoryId);
-    openIdea(song, ideaKey(song), cut);
-  }
-
-  function handleOtherVersions() {
-    if (!confirmOrigin) return;
-    const { song, suggestionKey } = confirmOrigin;
-    closeConfirm();
-    showSongCuts(song, suggestionKey);
+    showSongCuts(song, song.key);
   }
 
   return (
@@ -260,7 +227,7 @@ const SongSearch: React.FC<SongSearchProps> = ({
           onExpandCategory={handleExpandCategory}
           selectedLang={selectedLang}
           onSelectedLangChange={handleSelectedLangChange}
-          onSongSelect={handleIdeaPick}
+          onSongSelect={searchSuggestion}
           onSurpriseMe={handleSurpriseMe}
           belowSearch={belowSearch}
         />
@@ -276,7 +243,6 @@ const SongSearch: React.FC<SongSearchProps> = ({
           adding={adding}
           onConfirm={() => (onPick ? handlePick(confirmSong) : addSong(confirmSong))}
           onCancel={closeConfirm}
-          onOtherVersions={confirmOrigin ? handleOtherVersions : undefined}
         />
       )}
     </div>

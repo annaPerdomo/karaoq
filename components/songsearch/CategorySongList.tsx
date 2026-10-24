@@ -16,7 +16,7 @@ interface CategorySongListProps {
   visible: SongSuggestion[];
   hasMore: boolean;
   expanded: boolean;
-  /** Ready-to-add cuts by ideaKey; a song missing here searches on tap. */
+  /** Thumbnails by ideaKey; a song missing here shows a placeholder. */
   previews: Record<string, CutPreview>;
   onBack: () => void;
   onExpand: () => void;

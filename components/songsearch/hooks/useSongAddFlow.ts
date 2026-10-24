@@ -5,14 +5,6 @@ import { YoutubeResult } from '../../../app/queue/searchYoutube';
 import postEntryToQueue from '../../../app/queue/postEntryToQueue';
 import { QueueEntry } from '../../../pages/api/types';
 
-/** Where a confirm opened from when it wasn't a search result — a shelf card —
- *  so the add carries that card's song rather than the last search's. */
-export interface ConfirmOrigin<S = unknown> {
-  suggestionKey: string;
-  fromCorpus: boolean;
-  song: S;
-}
-
 interface UseSongAddFlowArgs {
   roomId: string;
   userName: string;
@@ -32,7 +24,7 @@ interface UseSongAddFlowArgs {
 
 // Owns the preview/confirm modal and the add-to-queue (or pick-and-return)
 // flow it leads to.
-export function useSongAddFlow<S = unknown>({
+export function useSongAddFlow({
   roomId,
   userName,
   requireName,
@@ -49,7 +41,6 @@ export function useSongAddFlow<S = unknown>({
   // two fresh-uuid entries — the same song queued twice.
   const [adding, setAdding] = React.useState(false);
   const [confirmSong, setConfirmSong] = React.useState<YoutubeResult | null>(null);
-  const [confirmOrigin, setConfirmOrigin] = React.useState<ConfirmOrigin<S> | null>(null);
   const [previewPlaying, setPreviewPlaying] = React.useState(false);
 
   async function addSong(song: YoutubeResult) {
@@ -75,8 +66,8 @@ export function useSongAddFlow<S = unknown>({
         roomId,
         entry,
         via,
-        (confirmOrigin ? confirmOrigin.suggestionKey : suggestionKey) ?? undefined,
-        (confirmOrigin ? confirmOrigin.fromCorpus : fromCorpus) ?? undefined
+        suggestionKey ?? undefined,
+        fromCorpus ?? undefined
       );
     } catch {
       ok = false;
@@ -87,14 +78,12 @@ export function useSongAddFlow<S = unknown>({
       onSongAdded(entry);
       resetSearch();
       setConfirmSong(null);
-      setConfirmOrigin(null);
-      setAddError(null);
+        setAddError(null);
       setJustAdded(entry.songTitle);
       setTimeout(() => setJustAdded(null), 3000);
     } else {
       setConfirmSong(null);
-      setConfirmOrigin(null);
-      setAddError(song.title);
+        setAddError(song.title);
       setTimeout(() => setAddError(null), 4000);
     }
   }
@@ -102,10 +91,9 @@ export function useSongAddFlow<S = unknown>({
   // Open the preview/confirm modal for a search result. `autoplay` starts the
   // video straight away (when the user tapped the thumbnail to preview) vs.
   // showing the thumbnail first (when they tapped "+").
-  function openConfirm(song: YoutubeResult, autoplay: boolean, origin?: ConfirmOrigin<S>) {
+  function openConfirm(song: YoutubeResult, autoplay: boolean) {
     setPreviewPlaying(autoplay);
     setConfirmSong(song);
-    setConfirmOrigin(origin ?? null);
   }
 
   // In picker mode, hand the chosen song back to the caller and reset search.
@@ -113,12 +101,10 @@ export function useSongAddFlow<S = unknown>({
     onPick?.(song);
     resetSearch();
     setConfirmSong(null);
-    setConfirmOrigin(null);
   }
 
   function closeConfirm() {
     setConfirmSong(null);
-    setConfirmOrigin(null);
   }
 
   function playPreview() {
@@ -132,7 +118,6 @@ export function useSongAddFlow<S = unknown>({
     addError,
     adding,
     confirmSong,
-    confirmOrigin,
     previewPlaying,
     canAdd,
     addSong,

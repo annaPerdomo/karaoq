@@ -10,8 +10,8 @@ import {
 } from "./mongodb";
 import type { IdeaShelf, ShelfScope, ShelfSong } from "./shelfTypes";
 
-// The idea shelves: what's charting where the singer is (or in the language
-// they chose), and what KaraoQ rooms have actually been queuing. Both are built
+// The idea shelves: what's charting where the singer is (or in their
+// language), and what KaraoQ rooms have actually been queuing. Both are built
 // only from songs the corpus can serve this second — a tap opens a cut with no
 // search behind it.
 
@@ -96,44 +96,34 @@ export interface ShelfPlan {
 }
 
 /**
- * Hot shelves to try, each a list of plans narrowest first: the country's own
- * chart, then its language's charts, then everything. A chosen language that
- * isn't the country's own gets a second shelf of just that language.
+ * Hot plans narrowest first: the country's own chart, then the charts of its
+ * language, then everything. The UI language only stands in when the country
+ * is unknown — someone in Mexico with an English browser still wants Mexico.
  */
 export function hotPlans(
   snaps: ChartSnapshotDoc[],
   country: string | null,
   language: string | null,
   now: Date
-): ShelfPlan[][] {
-  const languagePlan = (lang: string): ShelfPlan | null => {
-    const pool = snaps.filter((s) => chartLanguage(s._id) === lang);
-    if (pool.length === 0) return null;
-    return {
+): ShelfPlan[] {
+  const plans: ShelfPlan[] = [];
+  const own = country ? snaps.find((s) => s._id === country.toLowerCase()) : undefined;
+  if (own) {
+    plans.push({ scope: "country", country: country!.toUpperCase(), language: null, ranked: rankChart(own, now) });
+  }
+  const lang = country ? chartLanguage(country) : language;
+  const pool = lang ? snaps.filter((s) => chartLanguage(s._id) === lang) : [];
+  // A pool of just the country's own chart would only repeat it.
+  if (pool.length > 0 && !(own && pool.length === 1)) {
+    plans.push({
       scope: "language",
       country: null,
       language: lang,
       ranked: pool.length === 1 ? rankChart(pool[0], now) : poolCharts(pool),
-    };
-  };
-  const own = country ? snaps.find((s) => s._id === country.toLowerCase()) : undefined;
-  const home = country ? chartLanguage(country) : null;
-  const lang = language ?? home;
-
-  const main: ShelfPlan[] = [];
-  if (own) {
-    main.push({ scope: "country", country: country!.toUpperCase(), language: null, ranked: rankChart(own, now) });
+    });
   }
-  const wider = home ? languagePlan(home) : lang ? languagePlan(lang) : null;
-  if (wider && wider.ranked.length > (main[0]?.ranked.length ?? 0)) main.push(wider);
-  main.push({ scope: "world", country: null, language: null, ranked: poolCharts(snaps) });
-
-  const shelves = [main];
-  if (language && home && language !== home) {
-    const chosen = languagePlan(language);
-    if (chosen) shelves.push([chosen]);
-  }
-  return shelves;
+  plans.push({ scope: "world", country: null, language: null, ranked: poolCharts(snaps) });
+  return plans;
 }
 
 export interface RoomAdd {
@@ -169,7 +159,7 @@ export function roomPlans(
     const cc = country.toUpperCase();
     plans.push({ scope: "country", country: cc, language: null, ranked: tallyRooms(adds.filter((a) => a.country === cc)) });
   }
-  const lang = language ?? (country ? chartLanguage(country) : null);
+  const lang = country ? chartLanguage(country) : language;
   if (lang) {
     plans.push({
       scope: "language",
@@ -331,9 +321,7 @@ export async function computeShelves(
     shelves.push({ id, scope, country: cc, language: lang, songs: best.songs });
   };
 
-  for (const plans of hotPlans(charts, country, language, now)) {
-    await place("hot", plans, MIN_HOT_VIEWS);
-  }
+  await place("hot", hotPlans(charts, country, language, now), MIN_HOT_VIEWS);
   // The rooms shelf is for what the charts don't already say.
   await place("rooms", roomPlans(adds, country, language), 0);
   return shelves;
@@ -345,14 +333,16 @@ export async function getShelves(
   country: string | null,
   language: string | null = null
 ): Promise<IdeaShelf[]> {
-  const key = `shelves:v2:${country ?? "world"}:${language ?? "-"}`;
+  // The language only matters when the country is unknown (hotPlans).
+  const lang = country ? null : language;
+  const key = `shelves:v3:${country ?? "world"}:${lang ?? "-"}`;
   const cache = await getSuggestionCacheCollection();
   const hit = await cache.findOne({ key });
   if (hit?.shelves && Date.now() - hit.computedAt.getTime() < shelvesFreshFor(hit.shelves)) {
     return hit.shelves;
   }
   try {
-    const shelves = await computeShelves(country, language);
+    const shelves = await computeShelves(country, lang);
     await cache
       .updateOne({ key }, { $set: { key, shelves, computedAt: new Date() } }, { upsert: true })
       .catch(() => {});

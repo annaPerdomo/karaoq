@@ -13,7 +13,7 @@ import {
 } from '../../../app/queue/songSuggestions';
 import fetchRegionalPack from '../../../app/queue/regionalPack';
 import fetchShelves from '../../../app/queue/fetchShelves';
-import fetchPreviews, { ideaKey } from '../../../app/queue/fetchPreviews';
+import fetchPreviews from '../../../app/queue/fetchPreviews';
 import type { CutPreview, IdeaShelf, ShelfSong } from '../../../lib/shelfTypes';
 import { SearchFilters } from '../../../app/queue/searchYoutube';
 import { HOT_TAB, LANG_IDS } from '../constants';
@@ -116,7 +116,7 @@ export function useDiscoveryBrowse({
     return () => controller.abort();
   }, [country, locale]);
 
-  // Thumbnails and ready cuts for the open category, fetched once per category.
+  // Thumbnails for the open category's rows, fetched once per category.
   React.useEffect(() => {
     if (!activeCategory || previews[activeCategory]) return;
     const controller = new AbortController();
@@ -166,25 +166,8 @@ export function useDiscoveryBrowse({
     showSongCuts(song);
   }
 
-  /** The cut a category row opens straight to, when its category has one. */
-  function previewFor(song: SongSuggestion, categoryId: string): CutPreview | undefined {
-    return previews[categoryId]?.[ideaKey(song)];
-  }
-
-  /** A row with a ready cut opens it in the caller's confirm modal, so only the
-   *  funnel event happens here — the same song_pick a searched tap records. */
-  function trackIdeaPick(song: SongSuggestion, sectionId: string, categoryId: string) {
-    trackFirstSearch();
-    trackSuggestion('song_pick', {
-      sectionId,
-      categoryId,
-      songTitle: song.title,
-      songArtist: song.artist,
-    });
-  }
-
-  /** A shelf tap opens its cut straight away (the caller's confirm modal), so
-   *  only the funnel event happens here. */
+  /** A shelf tap's funnel event; the caller opens the song's versions with the
+   *  shelf's own key (showSongCuts). */
   function trackShelfPick(song: ShelfSong, shelf: IdeaShelf) {
     trackFirstSearch();
     trackSuggestion('shelf', {
@@ -243,8 +226,6 @@ export function useDiscoveryBrowse({
     selectedLang,
     shelves,
     activePreviews,
-    previewFor,
-    trackIdeaPick,
     searchSuggestion,
     showSongCuts,
     trackShelfPick,
