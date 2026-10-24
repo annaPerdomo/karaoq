@@ -1,14 +1,12 @@
 import * as React from 'react';
 
 import styles from '../../styles/SongSearch.module.css';
-import {
-  SongCategory,
-  SongSuggestion,
-  displaySongTitle,
-  displaySongArtist,
-} from '../../app/queue/songSuggestions';
+import { SongCategory, SongSuggestion } from '../../app/queue/songSuggestions';
+import { ideaKey } from '../../app/queue/fetchPreviews';
+import type { CutPreview } from '../../lib/shelfTypes';
 import { useT } from '../../lib/i18n/I18nProvider';
 import { labelWithFallback } from './labelWithFallback';
+import SongRow from './SongRow';
 
 interface CategorySongListProps {
   category: SongCategory;
@@ -18,6 +16,8 @@ interface CategorySongListProps {
   visible: SongSuggestion[];
   hasMore: boolean;
   expanded: boolean;
+  /** Ready-to-add cuts by ideaKey; a song missing here searches on tap. */
+  previews: Record<string, CutPreview>;
   onBack: () => void;
   onExpand: () => void;
   onSongSelect: (song: SongSuggestion) => void;
@@ -29,6 +29,7 @@ const CategorySongList: React.FC<CategorySongListProps> = ({
   visible,
   hasMore,
   expanded,
+  previews,
   onBack,
   onExpand,
   onSongSelect,
@@ -50,15 +51,13 @@ const CategorySongList: React.FC<CategorySongListProps> = ({
       </div>
       <div className={styles.songPanel}>
         {visible.map((song, i) => (
-          <button
+          <SongRow
             key={`${song.artist}-${song.title}`}
-            className={`${styles.songRow} ${i % 2 === 1 ? styles.songRowAlt : ''}`}
-            onClick={() => onSongSelect(song)}
-          >
-            <span className={styles.songNum}>{i + 1}</span>
-            <span className={styles.songRowTitle}>{displaySongTitle(song)}</span>
-            <span className={styles.songRowArtist}>{displaySongArtist(song)}</span>
-          </button>
+            song={song}
+            number={i + 1}
+            preview={previews[ideaKey(song)]}
+            onSelect={() => onSongSelect(song)}
+          />
         ))}
         {hasMore && !expanded && (
           <button

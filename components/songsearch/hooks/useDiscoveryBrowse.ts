@@ -13,12 +13,15 @@ import {
 } from '../../../app/queue/songSuggestions';
 import fetchRegionalPack from '../../../app/queue/regionalPack';
 import fetchShelves from '../../../app/queue/fetchShelves';
-import type { IdeaShelf, ShelfSong } from '../../../lib/shelfTypes';
+import fetchPreviews, { ideaKey } from '../../../app/queue/fetchPreviews';
+import type { CutPreview, IdeaShelf, ShelfSong } from '../../../lib/shelfTypes';
 import { SearchFilters } from '../../../app/queue/searchYoutube';
-import { LANG_IDS } from '../constants';
+import { HOT_TAB, LANG_IDS } from '../constants';
 
 interface UseDiscoveryBrowseArgs {
   country: string | null;
+  /** The UI language, so the shelves can follow a language the singer chose. */
+  locale: string;
   roomId: string;
   filters: SearchFilters;
   karaokeMode: boolean;
@@ -37,6 +40,7 @@ interface UseDiscoveryBrowseArgs {
 // feeds a pick back into the search box.
 export function useDiscoveryBrowse({
   country,
+  locale,
   roomId,
   filters,
   karaokeMode,
@@ -51,6 +55,7 @@ export function useDiscoveryBrowse({
   const [langPacks, setLangPacks] = React.useState<SongSection[]>([]);
   const [selectedLang, setSelectedLang] = React.useState<string | null>(null);
   const [shelves, setShelves] = React.useState<IdeaShelf[]>([]);
+  const [previews, setPreviews] = React.useState<Record<string, Record<string, CutPreview>>>({});
   const userPickedTabRef = React.useRef(false);
 
   // Localize the discovery sections: reorder by country and, where a curated
@@ -72,13 +77,18 @@ export function useDiscoveryBrowse({
     };
   }, [country]);
 
-  // Follow the country's preferred first tab until the user picks one.
+  // Open on the shelves when there are any, else the country's preferred first
+  // tab — until the user picks one.
   React.useEffect(() => {
     if (userPickedTabRef.current) return;
+    if (shelves.length > 0) {
+      setActiveTab(HOT_TAB);
+      return;
+    }
     const first = orderedSections[0];
     if (!first) return;
     setActiveTab(LANG_IDS.includes(first.id) ? 'language' : first.id);
-  }, [orderedSections]);
+  }, [orderedSections, shelves.length]);
 
   // Every language pack is available to everyone under the Language tab —
   // geo only decides which one gets promoted to its own first tab. Packs are
@@ -100,11 +110,25 @@ export function useDiscoveryBrowse({
 
   React.useEffect(() => {
     const controller = new AbortController();
-    fetchShelves(country, controller.signal).then((loaded) => {
+    fetchShelves(country, locale, controller.signal).then((loaded) => {
       if (!controller.signal.aborted) setShelves(loaded);
     });
     return () => controller.abort();
-  }, [country]);
+  }, [country, locale]);
+
+  // Thumbnails and ready cuts for the open category, fetched once per category.
+  React.useEffect(() => {
+    if (!activeCategory || previews[activeCategory]) return;
+    const controller = new AbortController();
+    fetchPreviews(activeCategory, controller.signal).then((loaded) => {
+      if (!controller.signal.aborted) {
+        setPreviews((held) => ({ ...held, [activeCategory]: loaded }));
+      }
+    });
+    return () => controller.abort();
+  }, [activeCategory, previews]);
+
+  const activePreviews = (activeCategory && previews[activeCategory]) || {};
 
   function trackSuggestion(
     source: 'random' | 'song_pick' | 'genre_chip' | 'shelf',
@@ -140,6 +164,23 @@ export function useDiscoveryBrowse({
       songArtist: song.artist,
     });
     showSongCuts(song);
+  }
+
+  /** The cut a category row opens straight to, when its category has one. */
+  function previewFor(song: SongSuggestion, categoryId: string): CutPreview | undefined {
+    return previews[categoryId]?.[ideaKey(song)];
+  }
+
+  /** A row with a ready cut opens it in the caller's confirm modal, so only the
+   *  funnel event happens here — the same song_pick a searched tap records. */
+  function trackIdeaPick(song: SongSuggestion, sectionId: string, categoryId: string) {
+    trackFirstSearch();
+    trackSuggestion('song_pick', {
+      sectionId,
+      categoryId,
+      songTitle: song.title,
+      songArtist: song.artist,
+    });
   }
 
   /** A shelf tap opens its cut straight away (the caller's confirm modal), so
@@ -201,6 +242,9 @@ export function useDiscoveryBrowse({
     langPacks,
     selectedLang,
     shelves,
+    activePreviews,
+    previewFor,
+    trackIdeaPick,
     searchSuggestion,
     showSongCuts,
     trackShelfPick,

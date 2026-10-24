@@ -19,6 +19,7 @@ function setup() {
   return renderHook(() =>
     useDiscoveryBrowse({
       country: null,
+      locale: "en",
       roomId: "ROOM1",
       filters: FILTERS,
       karaokeMode: true,
@@ -72,6 +73,8 @@ describe("useDiscoveryBrowse — which taps reach for the corpus", () => {
 describe("useDiscoveryBrowse — idea shelves", () => {
   const shelf = {
     id: "hot" as const,
+    scope: "country" as const,
+    language: null,
     country: "US",
     songs: [
       {
@@ -100,6 +103,7 @@ describe("useDiscoveryBrowse — idea shelves", () => {
     const { result } = renderHook(() =>
       useDiscoveryBrowse({
         country: "US",
+        locale: "es",
         roomId: "ROOM1",
         filters: FILTERS,
         karaokeMode: true,
@@ -110,7 +114,9 @@ describe("useDiscoveryBrowse — idea shelves", () => {
     );
 
     await waitFor(() => expect(result.current.shelves).toEqual([shelf]));
-    expect(String((fetch as any).mock.calls[0][0])).toBe("/api/suggestions/shelves?c=US");
+    expect(String((fetch as any).mock.calls[0][0])).toBe("/api/suggestions/shelves?l=es&c=US");
+    // Opens on the shelves until the singer picks a tab.
+    expect(result.current.activeTab).toBe("hot");
   });
 
   it("records a shelf pick without running a search", async () => {
@@ -146,5 +152,39 @@ describe("useDiscoveryBrowse — idea shelves", () => {
     // The shelf's own key, not one re-derived from the displayed name.
     expect(runSearch.mock.calls[0][3]).toBe("tate mcrae housewife karaoke");
     expect(posted("/api/analytics/suggestion")).toEqual([]);
+  });
+});
+
+describe("useDiscoveryBrowse — category previews", () => {
+  const category = SONG_SECTIONS[0].categories[0];
+  const song = category.songs[0];
+
+  it("fetches the open category's cuts once and hands a row its cut", async () => {
+    const { ideaKey } = await import("../../app/queue/fetchPreviews");
+    const cut = { videoId: "v1", videoTitle: "Song (Karaoke)", thumbnailUrl: "t.jpg" };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => ({
+        ok: true,
+        json: async () =>
+          String(url).indexOf("/previews") >= 0
+            ? { previews: { [ideaKey(song)]: cut } }
+            : { shelves: [] },
+      }))
+    );
+    const { result } = setup();
+
+    await act(async () => {
+      result.current.handleCategorySelect(category, SONG_SECTIONS[0].id);
+    });
+
+    await waitFor(() => expect(result.current.previewFor(song, category.id)).toEqual(cut));
+    const previewCalls = (fetch as any).mock.calls.filter(([u]: [string]) =>
+      String(u).indexOf("/previews") >= 0
+    );
+    expect(previewCalls).toHaveLength(1);
+    expect(String(previewCalls[0][0])).toBe(
+      `/api/suggestions/previews?category=${encodeURIComponent(category.id)}`
+    );
   });
 });

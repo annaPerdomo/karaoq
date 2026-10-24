@@ -900,30 +900,40 @@
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  padding: 1.2rem 0.5rem;
-  background: rgba(255, 255, 255, 0.04);
+  padding: 1.1rem 0.5rem;
+  background: linear-gradient(160deg, rgba(255, 45, 120, 0.1), rgba(155, 29, 255, 0.06));
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 14px;
   cursor: pointer;
-  transition: all 0.15s ease;
-  color: rgba(255, 255, 255, 0.7);
+  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, color 0.15s ease;
+  color: rgba(255, 255, 255, 0.8);
   text-align: center;
-  min-height: 88px;
+  min-height: 92px;
 }
 
-.categoryCard:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.12);
+.categoryCard:hover,
+.categoryCard:focus-visible {
+  background: linear-gradient(160deg, rgba(255, 45, 120, 0.18), rgba(155, 29, 255, 0.12));
+  border-color: rgba(255, 45, 120, 0.35);
+  box-shadow: 0 6px 20px rgba(255, 45, 120, 0.15);
   color: var(--text-primary);
+  outline: none;
 }
 
 .categoryEmoji {
-  font-size: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.07);
+  font-size: 1.3rem;
 }
 
 .categoryName {
-  font-size: 0.72rem;
-  font-weight: 600;
+  font-size: 0.76rem;
+  font-weight: 650;
   line-height: 1.2;
 }
 
@@ -1037,62 +1047,6 @@
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.06);
   background: rgba(255, 45, 120, 0.04);
-}
-
-/* ─── Song rows ─── */
-.songRow {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  width: 100%;
-  padding: 0.7rem 1rem;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  text-align: left;
-  color: var(--text-primary);
-  transition: background 0.12s ease;
-}
-
-.songRowAlt {
-  background: rgba(255, 255, 255, 0.02);
-}
-
-.songRow:hover {
-  background: rgba(255, 255, 255, 0.06);
-}
-
-.songNum {
-  font-size: 0.72rem;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.25);
-  width: 1.25rem;
-  text-align: right;
-  flex-shrink: 0;
-  font-family: var(--font-mono);
-}
-
-.songRowTitle {
-  flex: 1;
-  font-size: 0.82rem;
-  font-weight: 500;
-  color: var(--text-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  min-width: 0;
-}
-
-.songRowArtist {
-  font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.35);
-  white-space: nowrap;
-  flex-shrink: 0;
-  /* Bilingual artist strings (native + romanization) can get long; keep the
-     title at least half the row and ellipsize the artist instead. */
-  max-width: 45%;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .showMoreBtn {

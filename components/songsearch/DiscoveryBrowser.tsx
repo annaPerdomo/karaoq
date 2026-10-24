@@ -12,8 +12,9 @@ import { buildDiscoveryData } from './discoveryData';
 import CategoryGrid from './CategoryGrid';
 import CategorySongList from './CategorySongList';
 import LanguagePicker from './LanguagePicker';
-import IdeaShelves from './IdeaShelves';
-import type { IdeaShelf, ShelfSong } from '../../lib/shelfTypes';
+import { HOT_TAB } from './constants';
+import HotTab from './HotTab';
+import type { CutPreview, IdeaShelf, ShelfSong } from '../../lib/shelfTypes';
 
 interface DiscoveryBrowserProps {
   orderedSections: SongSection[];
@@ -21,6 +22,8 @@ interface DiscoveryBrowserProps {
   regionalSection: SongSection | null;
   shelves: IdeaShelf[];
   onShelfPick: (song: ShelfSong, shelf: IdeaShelf) => void;
+  /** Ready cuts for the open category's songs (useDiscoveryBrowse). */
+  previews: Record<string, CutPreview>;
   activeTab: string;
   onTabSelect: (tabId: string) => void;
   activeCategory: string | null;
@@ -32,12 +35,7 @@ interface DiscoveryBrowserProps {
   onExpandCategory: () => void;
   selectedLang: string | null;
   onSelectedLangChange: (langId: string) => void;
-  onSongSelect: (
-    song: SongSuggestion,
-    sectionId: string,
-    categoryId: string,
-    source: 'song_pick'
-  ) => void;
+  onSongSelect: (song: SongSuggestion, sectionId: string, categoryId: string) => void;
   onSurpriseMe: () => void;
   /**
    * Rendered at the top of the scrollable browse area (above the "Song ideas"
@@ -53,6 +51,7 @@ const DiscoveryBrowser: React.FC<DiscoveryBrowserProps> = ({
   regionalSection,
   shelves,
   onShelfPick,
+  previews,
   activeTab,
   onTabSelect,
   activeCategory,
@@ -72,6 +71,7 @@ const DiscoveryBrowser: React.FC<DiscoveryBrowserProps> = ({
     TAB_DEFS,
     langSections,
     isLangTab,
+    isHotTab,
     currentSection,
     currentLang,
     allVisibleCats,
@@ -89,6 +89,8 @@ const DiscoveryBrowser: React.FC<DiscoveryBrowserProps> = ({
     expandedCategory,
     selectedLang,
     languageTabLabel: t('search.tab.language'),
+    hotTabLabel: t('search.tab.hot'),
+    hasShelves: shelves.length > 0,
   });
 
   return (
@@ -105,7 +107,6 @@ const DiscoveryBrowser: React.FC<DiscoveryBrowserProps> = ({
           </span>
         </div>
       )}
-      {!expandedData && <IdeaShelves shelves={shelves} onSelect={onShelfPick} />}
       {expandedData ? (
         <CategorySongList
           category={expandedData}
@@ -113,15 +114,11 @@ const DiscoveryBrowser: React.FC<DiscoveryBrowserProps> = ({
           visible={visible}
           hasMore={hasMore}
           expanded={expandedCategory}
+          previews={previews}
           onBack={onCategoryBack}
           onExpand={onExpandCategory}
           onSongSelect={(song) =>
-            onSongSelect(
-              song,
-              parentSection?.id ?? activeTab,
-              activeCategory as string,
-              'song_pick'
-            )
+            onSongSelect(song, parentSection?.id ?? activeTab, activeCategory as string)
           }
         />
       ) : (
@@ -133,12 +130,16 @@ const DiscoveryBrowser: React.FC<DiscoveryBrowserProps> = ({
                 className={`${styles.tabBtn} ${activeTab === s.id ? styles.tabBtnActive : ''}`}
                 onClick={() => onTabSelect(s.id)}
               >
-                {s.id === 'language' ? s.label : labelWithFallback(t, `section.${s.id}`, s.label)}
+                {s.id === 'language' || s.id === HOT_TAB
+                  ? s.label
+                  : labelWithFallback(t, `section.${s.id}`, s.label)}
               </button>
             ))}
           </div>
 
-          {isLangTab ? (
+          {isHotTab ? (
+            <HotTab shelves={shelves} onSelect={onShelfPick} />
+          ) : isLangTab ? (
             <>
               <LanguagePicker
                 langSections={langSections}

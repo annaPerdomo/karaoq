@@ -3,7 +3,7 @@ import {
   SongCategory,
   SongSection,
 } from '../../app/queue/songSuggestions';
-import { LANG_IDS, INITIAL_CATEGORY_SONGS } from './constants';
+import { HOT_TAB, LANG_IDS, INITIAL_CATEGORY_SONGS } from './constants';
 
 interface BuildDiscoveryDataArgs {
   orderedSections: SongSection[];
@@ -15,6 +15,10 @@ interface BuildDiscoveryDataArgs {
   selectedLang: string | null;
   /** Pre-translated label for the synthetic "Language" tab. */
   languageTabLabel: string;
+  /** Pre-translated label for the synthetic "Hot" tab; the tab exists only
+   *  when there are shelves to put in it. */
+  hotTabLabel: string;
+  hasShelves: boolean;
 }
 
 // Pure derivation of the browse view's tabs/categories/expanded-song-list
@@ -28,9 +32,12 @@ export function buildDiscoveryData({
   expandedCategory,
   selectedLang,
   languageTabLabel,
+  hotTabLabel,
+  hasShelves,
 }: BuildDiscoveryDataArgs) {
   const nonLangSections = orderedSections.filter((s) => !LANG_IDS.includes(s.id));
   const TAB_DEFS = [
+    ...(hasShelves ? [{ id: HOT_TAB, label: hotTabLabel, categories: [] as SongCategory[] }] : []),
     ...nonLangSections,
     { id: 'language', label: languageTabLabel, categories: [] as SongCategory[] },
   ];
@@ -40,8 +47,9 @@ export function buildDiscoveryData({
     ...langPacks.filter((p) => p.id !== regionalSection?.id),
   ];
   const isLangTab = activeTab === 'language';
+  const isHotTab = hasShelves && activeTab === HOT_TAB;
 
-  const currentSection = isLangTab
+  const currentSection = isLangTab || isHotTab
     ? null
     : nonLangSections.find((s) => s.id === activeTab) ?? nonLangSections[0];
   const currentLang = langSections.find((s) => s.id === selectedLang) ?? langSections[0];
@@ -67,6 +75,7 @@ export function buildDiscoveryData({
     TAB_DEFS,
     langSections,
     isLangTab,
+    isHotTab,
     currentSection,
     currentLang,
     allVisibleCats,

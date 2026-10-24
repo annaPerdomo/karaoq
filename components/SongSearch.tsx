@@ -14,7 +14,9 @@ import ConfirmModal from './songsearch/ConfirmModal';
 import { useSongSearchState } from './songsearch/hooks/useSongSearchState';
 import { useDiscoveryBrowse } from './songsearch/hooks/useDiscoveryBrowse';
 import { useSongAddFlow } from './songsearch/hooks/useSongAddFlow';
-import type { IdeaShelf, ShelfSong } from '../lib/shelfTypes';
+import type { CutPreview, IdeaShelf, ShelfSong } from '../lib/shelfTypes';
+import type { SongSuggestion } from '../app/queue/songSuggestions';
+import { ideaKey } from '../app/queue/fetchPreviews';
 
 interface SongSearchProps {
   roomId: string;
@@ -56,7 +58,7 @@ const SongSearch: React.FC<SongSearchProps> = ({
   belowSearch,
 }) => {
   const country = useCountry();
-  const { t } = useT();
+  const { t, locale } = useT();
 
   const {
     query,
@@ -93,6 +95,9 @@ const SongSearch: React.FC<SongSearchProps> = ({
     langPacks,
     selectedLang,
     shelves,
+    activePreviews,
+    previewFor,
+    trackIdeaPick,
     searchSuggestion,
     showSongCuts,
     trackShelfPick,
@@ -104,6 +109,7 @@ const SongSearch: React.FC<SongSearchProps> = ({
     handleExpandCategory,
   } = useDiscoveryBrowse({
     country,
+    locale,
     roomId,
     filters,
     karaokeMode,
@@ -125,7 +131,7 @@ const SongSearch: React.FC<SongSearchProps> = ({
     handlePick,
     closeConfirm,
     playPreview,
-  } = useSongAddFlow<ShelfSong>({
+  } = useSongAddFlow<SongSuggestion>({
     roomId,
     userName,
     requireName,
@@ -137,19 +143,33 @@ const SongSearch: React.FC<SongSearchProps> = ({
     fromCorpus: resultsFromCorpus,
   });
 
-  // A shelf card skips the results list: its top cut opens ready to add.
-  function handleShelfPick(song: ShelfSong, shelf: IdeaShelf) {
-    trackShelfPick(song, shelf);
+  // An idea with a ready cut skips the results list: the cut opens ready to add.
+  function openIdea(song: SongSuggestion, key: string, cut: CutPreview) {
     openConfirm(
       toYoutubeResult({
-        title: song.videoTitle,
-        thumbnailUrl: song.thumbnailUrl,
-        videoId: song.videoId,
-        durationSeconds: song.durationSeconds,
+        title: cut.videoTitle,
+        thumbnailUrl: cut.thumbnailUrl,
+        videoId: cut.videoId,
+        durationSeconds: cut.durationSeconds,
       }),
       false,
-      { suggestionKey: song.key, fromCorpus: true, song }
+      { suggestionKey: key, fromCorpus: true, song }
     );
+  }
+
+  function handleShelfPick(song: ShelfSong, shelf: IdeaShelf) {
+    trackShelfPick(song, shelf);
+    openIdea(song, song.key, song);
+  }
+
+  function handleIdeaPick(song: SongSuggestion, sectionId: string, categoryId: string) {
+    const cut = previewFor(song, categoryId);
+    if (!cut) {
+      searchSuggestion(song, sectionId, categoryId);
+      return;
+    }
+    trackIdeaPick(song, sectionId, categoryId);
+    openIdea(song, ideaKey(song), cut);
   }
 
   function handleOtherVersions() {
@@ -230,6 +250,7 @@ const SongSearch: React.FC<SongSearchProps> = ({
           regionalSection={regionalSection}
           shelves={shelves}
           onShelfPick={handleShelfPick}
+          previews={activePreviews}
           activeTab={activeTab}
           onTabSelect={handleTabSelect}
           activeCategory={activeCategory}
@@ -239,7 +260,7 @@ const SongSearch: React.FC<SongSearchProps> = ({
           onExpandCategory={handleExpandCategory}
           selectedLang={selectedLang}
           onSelectedLangChange={handleSelectedLangChange}
-          onSongSelect={searchSuggestion}
+          onSongSelect={handleIdeaPick}
           onSurpriseMe={handleSurpriseMe}
           belowSearch={belowSearch}
         />
