@@ -256,7 +256,7 @@ export default async function handler(
       // After promote, before claim: a chart song inserted here is one claim
       // can fill in the same run. Apple's feed, no YouTube units.
       name: "charts",
-      budgetMs: 30_000,
+      budgetMs: 60_000,
       floorMs: 5_000,
       run: async (by) => {
         const { done, report } = await feedCharts(by);

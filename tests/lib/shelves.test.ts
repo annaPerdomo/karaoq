@@ -25,14 +25,15 @@ process.env.MONGODB_URI = "mongodb://test";
 process.env.MONGODB_DB = "test-db";
 
 import {
-  MIN_COUNTRY_ROOM_SONGS,
+  MIN_HOT_VIEWS,
+  chartLanguage,
   computeShelves,
   getShelves,
-  isSingAlong,
-  rankHot,
-  rankRooms,
+  hotPlans,
+  roomPlans,
   type RoomAdd,
 } from "../../lib/shelves";
+import { isSingAlong } from "../../lib/cutPick";
 
 const songs = () => collection("karaoke_songs");
 const videos = () => collection("karaoke_videos");
@@ -60,21 +61,34 @@ function seedSong(key: string, cuts: string[], extra: Record<string, unknown> = 
   });
 }
 
-function seedVideo(id: string, servable = true, title = `Video ${id} karaoke`) {
+function seedVideo(
+  id: string,
+  servable = true,
+  title = `Video ${id} karaoke`,
+  viewCount = MIN_HOT_VIEWS
+) {
   videos().seed({
     _id: id,
     title,
     ...(servable ? { thumbnailUrl: `https://i.ytimg.com/vi/${id}/mq.jpg` } : {}),
     durationSeconds: 200,
+    viewCount,
     sources: {},
     firstSeenAt: NOW,
     refreshedAt: NOW,
   });
 }
 
-describe("rankHot", () => {
-  it("uses the country's own chart with climbs and new entries", () => {
-    const { country, ranked } = rankHot(
+const snap = (id: string, keys: string[], extra: Record<string, unknown> = {}) => ({
+  _id: id,
+  fetchedAt: NOW,
+  ranks: keys.map((key, i) => ({ key, rank: i + 1 })),
+  ...extra,
+});
+
+describe("hotPlans", () => {
+  it("leads with the country's own chart, its climbs and new entries", () => {
+    const [main] = hotPlans(
       [
         {
           _id: "us",
@@ -92,32 +106,54 @@ describe("rankHot", () => {
         },
       ],
       "us",
+      null,
       NOW
     );
-    expect(country).toBe("US");
-    expect(ranked).toEqual([
+    expect(main[0]).toMatchObject({ scope: "country", country: "US" });
+    expect(main[0].ranked).toEqual([
       { key: "a", rank: 1, isNew: true },
       { key: "b", rank: 2, climb: 3 },
       { key: "c", rank: 3, climb: -2 },
     ]);
+    expect(main[main.length - 1].scope).toBe("world");
   });
 
-  it("pools every chart by points for a country without one", () => {
-    const { country, ranked } = rankHot(
-      [
-        { _id: "us", fetchedAt: NOW, ranks: [{ key: "a", rank: 1 }, { key: "b", rank: 2 }] },
-        { _id: "gb", fetchedAt: NOW, ranks: [{ key: "b", rank: 1 }] },
-      ],
-      "LK",
-      NOW
-    );
-    expect(country).toBeNull();
-    expect(ranked.map((r) => r.key)).toEqual(["b", "a"]);
-    expect(ranked[0].rank).toBe(1);
+  it("stands in the language's charts for a country without its own", () => {
+    const [main] = hotPlans([snap("de", ["d"]), snap("us", ["u"])], "CH", "de", NOW);
+    expect(main[0]).toMatchObject({ scope: "language", language: "de" });
+    expect(main[0].ranked.map((r) => r.key)).toEqual(["d"]);
+  });
+
+  it("adds a shelf for a chosen language that isn't the country's own", () => {
+    const shelves = hotPlans([snap("us", ["u"]), snap("mx", ["m"]), snap("es", ["e"])], "US", "es", NOW);
+    expect(shelves).toHaveLength(2);
+    expect(shelves[1][0]).toMatchObject({ scope: "language", language: "es" });
+    expect(shelves[1][0].ranked.map((r) => r.key).sort()).toEqual(["e", "m"]);
+  });
+
+  it("uses the chosen language when the country is unknown", () => {
+    const [main] = hotPlans([snap("us", ["u"]), snap("de", ["d"])], null, "en", NOW);
+    expect(main[0]).toMatchObject({ scope: "language", language: "en" });
+  });
+
+  it("pools every chart by points for the worldwide plan", () => {
+    const [main] = hotPlans([snap("us", ["a", "b"]), snap("gb", ["b"])], "LK", null, NOW);
+    const world = main[main.length - 1];
+    expect(world.scope).toBe("world");
+    expect(world.ranked.map((r) => r.key)).toEqual(["b", "a"]);
   });
 });
 
-describe("rankRooms", () => {
+describe("chartLanguage", () => {
+  it("maps charts to UI locales, and the rest by hand", () => {
+    expect(chartLanguage("mx")).toBe("es");
+    expect(chartLanguage("BR")).toBe("pt");
+    expect(chartLanguage("tw")).toBe("zh");
+    expect(chartLanguage("gb")).toBe("en");
+  });
+});
+
+describe("roomPlans", () => {
   const add = (songKey: string, roomId: string, country = "US"): RoomAdd => ({
     songKey,
     roomId,
@@ -125,38 +161,32 @@ describe("rankRooms", () => {
   });
 
   it("ranks by distinct rooms and drops a song only one room sang", () => {
-    const { ranked } = rankRooms(
+    const plans = roomPlans(
       [
         add("solo", "r1"), add("solo", "r1"), add("solo", "r1"),
         add("pair", "r1"), add("pair", "r2"),
         add("trio", "r1"), add("trio", "r2"), add("trio", "r3"),
       ],
+      null,
       null
     );
-    expect(ranked).toEqual([
+    expect(plans).toHaveLength(1);
+    expect(plans[0].ranked).toEqual([
       { key: "trio", rooms: 3 },
       { key: "pair", rooms: 2 },
     ]);
   });
 
-  it("falls back to worldwide when the country is too thin", () => {
-    const { country, ranked } = rankRooms(
-      [add("x", "r1", "DE"), add("x", "r2", "DE"), add("y", "r3", "US"), add("y", "r4", "US")],
-      "de"
+  it("offers country, then language, then every room", () => {
+    const plans = roomPlans(
+      [add("x", "r1", "MX"), add("x", "r2", "ES"), add("y", "r3", "US"), add("y", "r4", "US")],
+      "mx",
+      null
     );
-    expect(country).toBeNull();
-    expect(ranked.map((r) => r.key).sort()).toEqual(["x", "y"]);
-  });
-
-  it("keeps a country shelf once it has enough songs of its own", () => {
-    const adds: RoomAdd[] = [];
-    for (let i = 0; i < MIN_COUNTRY_ROOM_SONGS; i++) {
-      adds.push(add(`s${i}`, "r1", "PH"), add(`s${i}`, "r2", "PH"));
-    }
-    adds.push(add("elsewhere", "r8", "US"), add("elsewhere", "r9", "US"));
-    const { country, ranked } = rankRooms(adds, "ph");
-    expect(country).toBe("PH");
-    expect(ranked.map((r) => r.key)).not.toContain("elsewhere");
+    expect(plans.map((p) => p.scope)).toEqual(["country", "language", "world"]);
+    expect(plans[0].ranked).toEqual([]);
+    expect(plans[1].ranked.map((r) => r.key)).toEqual(["x"]);
+    expect(plans[2].ranked.map((r) => r.key).sort()).toEqual(["x", "y"]);
   });
 });
 
@@ -181,7 +211,7 @@ describe("computeShelves", () => {
       ],
     });
 
-    const shelves = await computeShelves("US", NOW);
+    const shelves = await computeShelves("US", null, NOW);
     expect(shelves).toHaveLength(1);
     expect(shelves[0]).toMatchObject({ id: "hot", country: "US" });
     expect(shelves[0].songs).toEqual([
@@ -219,9 +249,10 @@ describe("computeShelves", () => {
       songData().seed({ _id: `e${i}`, dataId: `e${i}`, type: "song_added", country: "US", ...row })
     );
 
-    const shelves = await computeShelves("US", NOW);
+    const shelves = await computeShelves("US", null, NOW);
     const rooms = shelves.find((s) => s.id === "rooms")!;
-    expect(rooms.country).toBeNull();
+    // Thin everywhere, so the narrowest plan keeps it.
+    expect(rooms).toMatchObject({ scope: "country", country: "US" });
     expect(rooms.songs.map((s) => [s.key, s.rooms])).toEqual([["staple", 2]]);
   });
 
@@ -241,22 +272,52 @@ describe("computeShelves", () => {
       ranks: ["inst", "onlyinst", "swapped", "named"].map((key, i) => ({ key, rank: i + 1 })),
     });
 
-    const [hot] = await computeShelves("US", NOW);
+    const [hot] = await computeShelves("US", null, NOW);
     expect(hot.songs.map((s) => [s.key, s.videoId])).toEqual([
       ["inst", "i2"],
       ["named", "n1"],
     ]);
   });
 
+  it("lets the public vet a chart hit: too few karaoke views, offensive titles and the cut chosen", async () => {
+    seedSong("proven", ["p1", "p2"]);
+    seedVideo("p1", true, "Proven (Karaoke)", 6000);
+    seedVideo("p2", true, "Proven (Karaoke Version)", 90000);
+    seedSong("unsung", ["u1"]);
+    seedVideo("u1", true, "Unsung (Karaoke)", MIN_HOT_VIEWS - 1);
+    seedSong("censored", ["c1"], { title: "I'M DAT N***A" });
+    seedVideo("c1");
+    snapshots().seed(snap("us", ["unsung", "censored", "proven"]));
+
+    const [hot] = await computeShelves("US", null, NOW);
+    expect(hot.songs.map((s) => [s.key, s.videoId, s.rank])).toEqual([["proven", "p2", 1]]);
+  });
+
+  it("widens a too-thin country chart to the language's charts", async () => {
+    seedSong("own", ["o1"]);
+    seedVideo("o1");
+    snapshots().seed(snap("cz", ["own"]));
+    const keys = Array.from({ length: 8 }, (_, i) => `en${i}`);
+    keys.forEach((key, i) => {
+      seedSong(key, [`v${i}`]);
+      seedVideo(`v${i}`);
+    });
+    snapshots().seed(snap("us", keys));
+
+    const [hot] = await computeShelves("CZ", "en", NOW);
+    expect(hot).toMatchObject({ scope: "world" });
+    expect(hot.songs).toHaveLength(9);
+  });
+
   it("returns no shelves when nothing is charted or queued", async () => {
-    expect(await computeShelves("US", NOW)).toEqual([]);
+    expect(await computeShelves("US", null, NOW)).toEqual([]);
   });
 });
 
 describe("getShelves", () => {
   it("serves a fresh cached copy without recomputing", async () => {
-    const cached = [{ id: "hot", country: "US", songs: [] }];
-    cache().seed({ _id: "c1", key: "shelves:v1:US", shelves: cached, computedAt: new Date() });
+    const cached = [{ id: "hot", scope: "country", country: "US", language: null, songs: [] }];
+    cache().seed({ _id: "c1", key: "shelves:v2:US:-", shelves: cached, computedAt: new Date() });
     expect(await getShelves("US")).toEqual(cached);
   });
 
@@ -266,8 +327,8 @@ describe("getShelves", () => {
     snapshots().seed({ _id: "us", fetchedAt: NOW, ranks: [{ key: "a", rank: 1 }] });
     cache().seed({
       _id: "c1",
-      key: "shelves:v1:US",
-      shelves: [{ id: "rooms", country: null, songs: [] }],
+      key: "shelves:v2:US:-",
+      shelves: [{ id: "rooms", scope: "world", country: null, language: null, songs: [] }],
       computedAt: new Date(Date.now() - 20 * 60 * 1000),
     });
 
@@ -281,7 +342,7 @@ describe("getShelves", () => {
     snapshots().seed({ _id: "us", fetchedAt: NOW, ranks: [{ key: "a", rank: 1 }] });
     cache().seed({
       _id: "c1",
-      key: "shelves:v1:US",
+      key: "shelves:v2:US:-",
       shelves: [],
       computedAt: new Date(Date.now() - 4 * 60 * 60 * 1000),
     });

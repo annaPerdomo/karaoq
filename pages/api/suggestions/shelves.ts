@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from "next";
+import { isLocale } from "../../../lib/i18n/config";
 import { SHELF_REFRESH_MS, getShelves, shelvesFreshFor } from "../../../lib/shelves";
 
 const REGIONS = new Intl.DisplayNames(["en"], { type: "region", fallback: "none" });
@@ -15,17 +16,18 @@ function realCountry(param: unknown): string | null {
   }
 }
 
-// The idea shelves for one country (lib/shelves). Identical for every caller
-// in that country, so the CDN serves nearly every request.
+// The idea shelves for one country and UI language (lib/shelves). Identical
+// for every caller with that pair, so the CDN serves nearly every request.
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "GET") {
     res.status(405).json({ code: 405, message: "Method not allowed." });
     return;
   }
   const country = realCountry(req.query.c);
+  const language = typeof req.query.l === "string" && isLocale(req.query.l) ? req.query.l : null;
 
   try {
-    const shelves = await getShelves(country);
+    const shelves = await getShelves(country, language);
     res.setHeader(
       "Cache-Control",
       shelvesFreshFor(shelves) === SHELF_REFRESH_MS

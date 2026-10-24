@@ -38,7 +38,7 @@ describe("GET /api/suggestions/shelves", () => {
 
     await handler(createMockReq({ method: "GET", query: { c: "us" } }), res);
 
-    expect(getShelves).toHaveBeenCalledWith("US");
+    expect(getShelves).toHaveBeenCalledWith("US", null);
     expect(res.getBody()).toEqual({ shelves: [{ id: "hot", country: "US", songs: [] }] });
     expect(res.getHeader("Cache-Control")).toContain("s-maxage=3600");
   });
@@ -47,7 +47,14 @@ describe("GET /api/suggestions/shelves", () => {
     getShelves.mockResolvedValue([]);
     await handler(createMockReq({ method: "GET", query: { c: "usa" } }), createRes());
     await handler(createMockReq({ method: "GET", query: { c: "AA" } }), createRes());
-    expect(getShelves.mock.calls).toEqual([[null], [null]]);
+    expect(getShelves.mock.calls).toEqual([[null, null], [null, null]]);
+  });
+
+  it("passes a supported UI language through and drops an unknown one", async () => {
+    getShelves.mockResolvedValue([]);
+    await handler(createMockReq({ method: "GET", query: { c: "US", l: "es" } }), createRes());
+    await handler(createMockReq({ method: "GET", query: { c: "US", l: "xx" } }), createRes());
+    expect(getShelves.mock.calls).toEqual([["US", "es"], ["US", null]]);
   });
 
   it("caches briefly while there is no hot shelf yet", async () => {

@@ -15,6 +15,7 @@ import { songKeyFor } from "./songEntry";
 export const CHART_COUNTRIES = [
   "us", "gb", "ph", "de", "es", "mx", "tw", "my",
   "nz", "au", "ca", "fr", "it", "br", "id", "jp",
+  "kr", "in", "cz", "co", "ar", "cl", "pe", "pt",
 ] as const;
 export const CHART_SIZE = 50;
 /** Daily, so the hot shelf moves with the charts. Under 24h so a cron slot that
@@ -22,7 +23,7 @@ export const CHART_SIZE = 50;
 export const CHART_REFRESH_HOURS = 20;
 /** Only the first two cron slots run this step (the mop-up slots run resolve
  *  alone), so two runs must cover every country. */
-export const CHART_COUNTRIES_PER_RUN = 8;
+export const CHART_COUNTRIES_PER_RUN = Math.ceil(CHART_COUNTRIES.length / 2);
 export const CHART_NEW_SONGS_PER_RUN = 100;
 
 export interface ChartSong {
@@ -47,6 +48,8 @@ export function chartUrl(country: string): string {
 
 const MAX_FETCH_TIMEOUT_MS = 15_000;
 const MIN_FETCH_TIMEOUT_MS = 1_000;
+const RETRY_PAUSE_MS = 1_500;
+const RETRY_TIMEOUT_MS = 8_000;
 
 export async function fetchChart(
   country: string,
@@ -114,9 +117,10 @@ export interface ChartReport {
 
 const CHART_STATE_PREFIX = "chart:";
 const HOUR_MS = 60 * 60 * 1000;
-const DAY_MS = 24 * HOUR_MS;
 const CHART_REFRESH_MS = CHART_REFRESH_HOURS * HOUR_MS;
-const FAILED_RETRY_MS = DAY_MS;
+/** Apple's feed times out and 502s in bursts that clear within minutes, so a
+ *  failed country gets the night's second slot rather than waiting a day. */
+const FAILED_RETRY_MS = 30 * 60 * 1000;
 
 /** Set ahead, as every other cron_state writer does, so the doc survives the
  *  whole refresh window before the TTL (lib/mongodb) takes it. */
@@ -239,7 +243,14 @@ export async function feedCharts(
     report.countries.push(cc);
     let chart: ChartSong[];
     try {
-      chart = await fetchChart(cc, fetchImpl, timeoutMs);
+      chart = await fetchChart(cc, fetchImpl, timeoutMs).catch(async (first) => {
+        // Apple's feed fails in bursts that usually clear within a second or
+        // two; one more try saves the country a wait for the next slot.
+        const retryMs = Math.min(RETRY_TIMEOUT_MS, deadline - Date.now() - RETRY_PAUSE_MS);
+        if (retryMs < MIN_FETCH_TIMEOUT_MS) throw first;
+        await new Promise((resolve) => setTimeout(resolve, RETRY_PAUSE_MS));
+        return fetchChart(cc, fetchImpl, retryMs);
+      });
     } catch (e: any) {
       report.errors.push({ country: cc, message: e?.message ?? "fetch failed" });
       await state

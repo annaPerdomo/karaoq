@@ -228,7 +228,7 @@ describe("feedCharts", () => {
     expect(next.report.fetched).toBe(CHART_COUNTRIES_PER_RUN);
   });
 
-  it("reports a failed country without stopping the others, and skips it on a retry within a day", async () => {
+  it("reports a failed country without stopping the others, and retries it after half an hour", async () => {
     const first = new Date("2026-10-01T00:00:00Z");
     const fetchImpl = stubFetch({
       us: new Error("network down"),
@@ -244,25 +244,38 @@ describe("feedCharts", () => {
     expect(cronState().get("chart:us").failedAt).toEqual(first);
     expect(cronState().get("chart:gb").fetchedAt).toBeInstanceOf(Date);
 
-    const twelveHoursLater = new Date(first.getTime() + 12 * 60 * 60 * 1000);
+    const tenMinutesLater = new Date(first.getTime() + 10 * 60 * 1000);
     const retryFetch = stubFetch({
       es: chartResponse([]),
       mx: chartResponse([]),
       tw: chartResponse([]),
       my: chartResponse([]),
     });
-    const retry = await feedCharts(soon(), twelveHoursLater, retryFetch);
+    const retry = await feedCharts(soon(), tenMinutesLater, retryFetch);
     expect(retry.report.countries).not.toContain("us");
 
-    const twoDaysLater = new Date(first.getTime() + 2 * 24 * 60 * 60 * 1000);
+    const anHourLater = new Date(first.getTime() + 60 * 60 * 1000);
     const laterFetch = stubFetch({
       us: chartResponse([]),
       es: chartResponse([]),
       mx: chartResponse([]),
       tw: chartResponse([]),
     });
-    const later = await feedCharts(soon(), twoDaysLater, laterFetch);
+    const later = await feedCharts(soon(), anHourLater, laterFetch);
     expect(later.report.countries).toContain("us");
+  });
+
+  it("retries a country once when Apple's first answer fails", async () => {
+    let calls = 0;
+    const fetchImpl = vi.fn(async (url: string) => {
+      if (url.indexOf("/us/") >= 0 && calls++ === 0) throw new Error("timeout");
+      return chartResponse(url.indexOf("/us/") >= 0 ? [{ name: "New Hit", artistName: "New Artist" }] : []);
+    }) as unknown as typeof fetch;
+
+    const { report } = await feedCharts(soon(), new Date("2026-10-01T00:00:00Z"), fetchImpl);
+
+    expect(report.errors).toEqual([]);
+    expect(report.added).toBe(1);
   });
 
   it("caps new song inserts at CHART_NEW_SONGS_PER_RUN and leaves the cut-off country due", async () => {

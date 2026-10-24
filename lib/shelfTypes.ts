@@ -1,20 +1,22 @@
-// Shared by the shelves endpoint and the browser, so no Mongo imports here.
+// Shared by the suggestion endpoints and the browser, so no Mongo imports here.
 
-export type ShelfId = "hot" | "rooms";
+/** The karaoke video an idea opens on — enough to show it and add it with no
+ *  search behind the tap. */
+export interface CutPreview {
+  videoId: string;
+  videoTitle: string;
+  thumbnailUrl: string;
+  durationSeconds?: number;
+}
 
-export interface ShelfSong {
-  /** karaoke_songs._id — the suggestionKey an add from this card carries. */
+export interface ShelfSong extends CutPreview {
+  /** karaoke_songs._id — the suggestionKey an add from this row carries. */
   key: string;
   title: string;
   artist: string;
   nativeTitle?: string;
   nativeArtist?: string;
-  /** The cut a tap opens: the "Most sung" pick when there is one. */
-  videoId: string;
-  videoTitle: string;
-  thumbnailUrl: string;
-  durationSeconds?: number;
-  /** Chart position, hot shelf only. */
+  /** Position on the shelf's chart, hot shelves only. */
   rank?: number;
   /** Places climbed since the previous chart; negative is a fall. */
   climb?: number;
@@ -24,9 +26,18 @@ export interface ShelfSong {
   rooms?: number;
 }
 
+export type ShelfId = "hot" | "rooms";
+
+/** How far the shelf had to widen to find enough songs. */
+export type ShelfScope = "country" | "language" | "world";
+
 export interface IdeaShelf {
   id: ShelfId;
-  /** Uppercase country code the shelf is about; null means worldwide. */
+  scope: ShelfScope;
+  /** Uppercase country code, when scope is "country". */
   country: string | null;
+  /** Language code (a UI locale, or e.g. "zh" for a chart with no UI locale),
+   *  when scope is "language". */
+  language: string | null;
   songs: ShelfSong[];
 }

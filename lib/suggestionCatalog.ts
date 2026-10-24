@@ -117,6 +117,27 @@ export function catalogPackIds(key: string): string[] {
   return packsByKey!.get(key) ?? [];
 }
 
+let keysByCategory: Map<string, string[]> | null = null;
+
+/** The song keys a browse category lists, in its order; null for an id the
+ *  browse view doesn't offer. Category ids are unique across packs
+ *  (tests/lib/countryModes). */
+export function categorySongKeys(categoryId: string): string[] | null {
+  if (!keysByCategory) {
+    keysByCategory = new Map();
+    const sections = SONG_SECTIONS.concat(Object.keys(PACK_SECTIONS).map((id) => PACK_SECTIONS[id]));
+    for (const section of sections) {
+      for (const category of section.categories) {
+        keysByCategory.set(
+          category.id,
+          category.songs.map((song) => searchCacheKey(buildSearchQuery(buildSongQuery(song), true)))
+        );
+      }
+    }
+  }
+  return keysByCategory.get(categoryId) ?? null;
+}
+
 /** The default combination the catalog is keyed for. */
 export function isCatalogFilters(duration: string, sortBy: string): boolean {
   return duration === CATALOG_DURATION && sortBy === CATALOG_SORT;
