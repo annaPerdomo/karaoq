@@ -26,7 +26,7 @@ describe("idea shelves preview", () => {
       out(`${shelf.id.toUpperCase()} (${shelf.scope}: ${shelf.country ?? shelf.language ?? "world"}) ${shelf.songs.length} songs`);
       for (const s of shelf.songs) {
         const tag = s.isNew ? " NEW" : s.climb ? ` ▲${s.climb}` : s.rooms ? ` ${s.rooms} rooms` : "";
-        out(`  ${s.rank ?? "-"} ${s.title} — ${s.artist}${tag}   [${s.videoTitle}]`);
+        out(`  ${s.rank ?? "-"} ${s.title} — ${s.artist}${tag}`);
       }
     }
   }, 120_000);

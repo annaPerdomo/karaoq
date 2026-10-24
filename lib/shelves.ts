@@ -1,5 +1,5 @@
 import { CHART_SIZE } from "./chartFeed";
-import { pickCuts } from "./cutPick";
+import { singAlongViews } from "./cutPick";
 import { localeForCountry } from "./i18n/config";
 import {
   getChartSnapshotsCollection,
@@ -12,8 +12,8 @@ import type { IdeaShelf, ShelfScope, ShelfSong } from "./shelfTypes";
 
 // The idea shelves: what's charting where the singer is (or in their
 // language), and what KaraoQ rooms have actually been queuing. Both are built
-// only from songs the corpus can serve this second — a tap opens a cut with no
-// search behind it.
+// only from songs the corpus can serve this second — a tap opens the song's
+// versions with no search behind it.
 
 export const SHELF_SIZE = 20;
 export const ROOMS_WINDOW_DAYS = 14;
@@ -211,7 +211,6 @@ export async function hydrateShelf(
           nativeTitle: 1,
           nativeArtist: 1,
           cuts: 1,
-          topVideoId: 1,
           origin: 1,
         },
       }
@@ -224,22 +223,20 @@ export async function hydrateShelf(
       (d.origin !== "demand" || trustedArtists.has(artistKey(d.artist ?? "")))
   );
   const byKey = new Map(shown.map((d) => [d._id, d]));
-  const cuts = await pickCuts(shown);
+  const views = await singAlongViews(shown);
 
   const out: ShelfSong[] = [];
   for (const c of candidates) {
     if (out.length >= SHELF_SIZE) break;
     const doc = byKey.get(c.key);
-    const cut = cuts.get(c.key);
-    if (!doc || !cut || cut.bestViews < minViews) continue;
-    const { bestViews: _views, ...preview } = cut;
+    const best = views.get(c.key);
+    if (!doc || best === undefined || best < minViews) continue;
     out.push({
       key: doc._id,
       title: doc.title,
       artist: doc.artist,
       ...(doc.nativeTitle ? { nativeTitle: doc.nativeTitle } : {}),
       ...(doc.nativeArtist ? { nativeArtist: doc.nativeArtist } : {}),
-      ...preview,
       ...(c.rank !== undefined ? { rank: c.rank } : {}),
       ...(c.climb !== undefined ? { climb: c.climb } : {}),
       ...(c.isNew ? { isNew: true } : {}),

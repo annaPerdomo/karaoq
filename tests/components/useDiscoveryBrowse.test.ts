@@ -155,36 +155,3 @@ describe("useDiscoveryBrowse — idea shelves", () => {
   });
 });
 
-describe("useDiscoveryBrowse — category previews", () => {
-  const category = SONG_SECTIONS[0].categories[0];
-  const song = category.songs[0];
-
-  it("fetches the open category's thumbnails once", async () => {
-    const { ideaKey } = await import("../../app/queue/fetchPreviews");
-    const cut = { videoId: "v1", videoTitle: "Song (Karaoke)", thumbnailUrl: "t.jpg" };
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (url: string) => ({
-        ok: true,
-        json: async () =>
-          String(url).indexOf("/previews") >= 0
-            ? { previews: { [ideaKey(song)]: cut } }
-            : { shelves: [] },
-      }))
-    );
-    const { result } = setup();
-
-    await act(async () => {
-      result.current.handleCategorySelect(category, SONG_SECTIONS[0].id);
-    });
-
-    await waitFor(() => expect(result.current.activePreviews[ideaKey(song)]).toEqual(cut));
-    const previewCalls = (fetch as any).mock.calls.filter(([u]: [string]) =>
-      String(u).indexOf("/previews") >= 0
-    );
-    expect(previewCalls).toHaveLength(1);
-    expect(String(previewCalls[0][0])).toBe(
-      `/api/suggestions/previews?category=${encodeURIComponent(category.id)}`
-    );
-  });
-});

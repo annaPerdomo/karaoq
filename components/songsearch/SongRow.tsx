@@ -6,15 +6,12 @@ import {
   displaySongArtist,
   displaySongTitle,
 } from '../../app/queue/songSuggestions';
-import type { CutPreview } from '../../lib/shelfTypes';
 import { useT } from '../../lib/i18n/I18nProvider';
 
 interface SongRowProps {
   song: SongSuggestion;
   /** Position shown at the left: chart rank on a hot shelf, else list order. */
   number: number;
-  /** The song's best cut, for its thumbnail; a placeholder without one. */
-  preview?: CutPreview;
   isNew?: boolean;
   climb?: number;
   rooms?: number;
@@ -36,7 +33,6 @@ function Badge({ isNew, climb, rooms }: Pick<SongRowProps, 'isNew' | 'climb' | '
 const SongRow: React.FC<SongRowProps> = ({
   song,
   number,
-  preview,
   isNew,
   climb,
   rooms,
@@ -48,14 +44,6 @@ const SongRow: React.FC<SongRowProps> = ({
   return (
     <button type="button" className={styles.row} onClick={onSelect}>
       <span className={styles.num}>{number}</span>
-      <span className={styles.thumbWrap}>
-        {preview ? (
-          // eslint-disable-next-line @next/next/no-img-element -- external YouTube thumbnail; Next optimization adds cost/latency without benefit
-          <img src={preview.thumbnailUrl} alt="" className={styles.thumb} loading="lazy" />
-        ) : (
-          <span className={styles.thumbEmpty} aria-hidden="true">♪</span>
-        )}
-      </span>
       <span className={styles.text}>
         <span className={styles.title}>{title}</span>
         <span className={styles.artist}>{artist}</span>

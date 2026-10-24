@@ -1,15 +1,6 @@
 // Shared by the suggestion endpoints and the browser, so no Mongo imports here.
 
-/** The karaoke video an idea opens on — enough to show it and add it with no
- *  search behind the tap. */
-export interface CutPreview {
-  videoId: string;
-  videoTitle: string;
-  thumbnailUrl: string;
-  durationSeconds?: number;
-}
-
-export interface ShelfSong extends CutPreview {
+export interface ShelfSong {
   /** karaoke_songs._id — the suggestionKey an add from this row carries. */
   key: string;
   title: string;

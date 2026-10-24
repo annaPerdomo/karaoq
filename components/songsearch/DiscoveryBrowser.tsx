@@ -14,7 +14,7 @@ import CategorySongList from './CategorySongList';
 import LanguagePicker from './LanguagePicker';
 import { HOT_TAB } from './constants';
 import HotTab from './HotTab';
-import type { CutPreview, IdeaShelf, ShelfSong } from '../../lib/shelfTypes';
+import type { IdeaShelf, ShelfSong } from '../../lib/shelfTypes';
 
 interface DiscoveryBrowserProps {
   orderedSections: SongSection[];
@@ -22,8 +22,6 @@ interface DiscoveryBrowserProps {
   regionalSection: SongSection | null;
   shelves: IdeaShelf[];
   onShelfPick: (song: ShelfSong, shelf: IdeaShelf) => void;
-  /** Ready cuts for the open category's songs (useDiscoveryBrowse). */
-  previews: Record<string, CutPreview>;
   activeTab: string;
   onTabSelect: (tabId: string) => void;
   activeCategory: string | null;
@@ -51,7 +49,6 @@ const DiscoveryBrowser: React.FC<DiscoveryBrowserProps> = ({
   regionalSection,
   shelves,
   onShelfPick,
-  previews,
   activeTab,
   onTabSelect,
   activeCategory,
@@ -114,7 +111,6 @@ const DiscoveryBrowser: React.FC<DiscoveryBrowserProps> = ({
           visible={visible}
           hasMore={hasMore}
           expanded={expandedCategory}
-          previews={previews}
           onBack={onCategoryBack}
           onExpand={onExpandCategory}
           onSongSelect={(song) =>

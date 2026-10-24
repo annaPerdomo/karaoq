@@ -1,12 +1,8 @@
-import {
-  getKaraokeSongsCollection,
-  getKaraokeVideosCollection,
-  type KaraokeSongDoc,
-} from "./mongodb";
-import type { CutPreview } from "./shelfTypes";
+import { getKaraokeVideosCollection, type KaraokeSongDoc } from "./mongodb";
 
-// Which of a song's corpus cuts an idea opens on. Every YouTube-derived field
-// is read from karaoke_videos here, at request time (lib/corpusRead).
+// Whether a song has a karaoke version people actually sing along to. Every
+// YouTube-derived field is read from karaoke_videos here, at request time
+// (lib/corpusRead), and only a count leaves this file.
 
 const QUERY_TIMEOUT_MS = 5000;
 
@@ -21,31 +17,22 @@ export function isSingAlong(videoTitle: string): boolean {
   return SINGALONG.test(videoTitle) || !NO_LYRICS.test(videoTitle);
 }
 
-export type PickableSong = Pick<KaraokeSongDoc, "_id" | "cuts" | "topVideoId">;
-
-export interface PickedCut extends CutPreview {
-  /** The most-viewed sing-along cut's count: how many people already sing it. */
-  bestViews: number;
-}
+export type PickableSong = Pick<KaraokeSongDoc, "_id" | "cuts">;
 
 /**
- * The cut rooms converged on ("Most sung") when it's a sing-along one, else
- * the most-viewed sing-along cut — the public has already vetted it. Songs with
- * no servable sing-along cut are absent from the result.
+ * Each song's most-viewed servable sing-along cut's view count — how many
+ * people already sing it. A song with no such cut is absent from the result.
  */
-export async function pickCuts(songs: PickableSong[]): Promise<Map<string, PickedCut>> {
+export async function singAlongViews(songs: PickableSong[]): Promise<Map<string, number>> {
   const ids = Array.from(new Set(songs.flatMap((s) => s.cuts ?? [])));
-  const picked = new Map<string, PickedCut>();
-  if (ids.length === 0) return picked;
+  const views = new Map<string, number>();
+  if (ids.length === 0) return views;
 
   const videos = await getKaraokeVideosCollection();
   const rows = new Map(
     (
       await videos
-        .find(
-          { _id: { $in: ids } },
-          { projection: { title: 1, thumbnailUrl: 1, durationSeconds: 1, viewCount: 1 } }
-        )
+        .find({ _id: { $in: ids } }, { projection: { title: 1, thumbnailUrl: 1, viewCount: 1 } })
         .maxTimeMS(QUERY_TIMEOUT_MS)
         .toArray()
     ).map((row) => [row._id, row])
@@ -53,42 +40,11 @@ export async function pickCuts(songs: PickableSong[]): Promise<Map<string, Picke
 
   for (const song of songs) {
     // A blank thumbnail is a row only an add wrote — not ours to serve (corpusRead).
-    const singable = (song.cuts ?? [])
+    const counts = (song.cuts ?? [])
       .map((id) => rows.get(id))
-      .filter((row): row is NonNullable<typeof row> =>
-        !!row?.thumbnailUrl && isSingAlong(row.title ?? "")
-      );
-    if (singable.length === 0) continue;
-    const byViews = singable.slice().sort((a, b) => (b.viewCount ?? 0) - (a.viewCount ?? 0));
-    const chosen = singable.find((row) => row._id === song.topVideoId) ?? byViews[0];
-    picked.set(song._id, {
-      videoId: chosen._id,
-      videoTitle: chosen.title,
-      thumbnailUrl: chosen.thumbnailUrl,
-      ...(chosen.durationSeconds !== undefined
-        ? { durationSeconds: chosen.durationSeconds }
-        : {}),
-      bestViews: byViews[0].viewCount ?? 0,
-    });
+      .filter((row) => !!row?.thumbnailUrl && isSingAlong(row.title ?? ""))
+      .map((row) => row!.viewCount ?? 0);
+    if (counts.length > 0) views.set(song._id, Math.max(...counts));
   }
-  return picked;
-}
-
-/** Previews for songs by key, for lists whose names we already have. */
-export async function previewsFor(keys: string[]): Promise<Record<string, CutPreview>> {
-  if (keys.length === 0) return {};
-  const songs = await getKaraokeSongsCollection();
-  const docs = await songs
-    .find(
-      { _id: { $in: keys }, retired: { $ne: true } },
-      { projection: { cuts: 1, topVideoId: 1 } }
-    )
-    .maxTimeMS(QUERY_TIMEOUT_MS)
-    .toArray();
-  const picked = await pickCuts(docs);
-  const out: Record<string, CutPreview> = {};
-  picked.forEach(({ bestViews: _views, ...preview }, key) => {
-    out[key] = preview;
-  });
-  return out;
+  return views;
 }

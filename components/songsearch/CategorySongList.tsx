@@ -2,8 +2,6 @@ import * as React from 'react';
 
 import styles from '../../styles/SongSearch.module.css';
 import { SongCategory, SongSuggestion } from '../../app/queue/songSuggestions';
-import { ideaKey } from '../../app/queue/fetchPreviews';
-import type { CutPreview } from '../../lib/shelfTypes';
 import { useT } from '../../lib/i18n/I18nProvider';
 import { labelWithFallback } from './labelWithFallback';
 import SongRow from './SongRow';
@@ -16,8 +14,6 @@ interface CategorySongListProps {
   visible: SongSuggestion[];
   hasMore: boolean;
   expanded: boolean;
-  /** Thumbnails by ideaKey; a song missing here shows a placeholder. */
-  previews: Record<string, CutPreview>;
   onBack: () => void;
   onExpand: () => void;
   onSongSelect: (song: SongSuggestion) => void;
@@ -29,7 +25,6 @@ const CategorySongList: React.FC<CategorySongListProps> = ({
   visible,
   hasMore,
   expanded,
-  previews,
   onBack,
   onExpand,
   onSongSelect,
@@ -55,7 +50,6 @@ const CategorySongList: React.FC<CategorySongListProps> = ({
             key={`${song.artist}-${song.title}`}
             song={song}
             number={i + 1}
-            preview={previews[ideaKey(song)]}
             onSelect={() => onSongSelect(song)}
           />
         ))}

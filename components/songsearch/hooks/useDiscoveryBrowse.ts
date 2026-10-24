@@ -13,8 +13,7 @@ import {
 } from '../../../app/queue/songSuggestions';
 import fetchRegionalPack from '../../../app/queue/regionalPack';
 import fetchShelves from '../../../app/queue/fetchShelves';
-import fetchPreviews from '../../../app/queue/fetchPreviews';
-import type { CutPreview, IdeaShelf, ShelfSong } from '../../../lib/shelfTypes';
+import type { IdeaShelf, ShelfSong } from '../../../lib/shelfTypes';
 import { SearchFilters } from '../../../app/queue/searchYoutube';
 import { HOT_TAB, LANG_IDS } from '../constants';
 
@@ -55,7 +54,6 @@ export function useDiscoveryBrowse({
   const [langPacks, setLangPacks] = React.useState<SongSection[]>([]);
   const [selectedLang, setSelectedLang] = React.useState<string | null>(null);
   const [shelves, setShelves] = React.useState<IdeaShelf[]>([]);
-  const [previews, setPreviews] = React.useState<Record<string, Record<string, CutPreview>>>({});
   const userPickedTabRef = React.useRef(false);
 
   // Localize the discovery sections: reorder by country and, where a curated
@@ -115,20 +113,6 @@ export function useDiscoveryBrowse({
     });
     return () => controller.abort();
   }, [country, locale]);
-
-  // Thumbnails for the open category's rows, fetched once per category.
-  React.useEffect(() => {
-    if (!activeCategory || previews[activeCategory]) return;
-    const controller = new AbortController();
-    fetchPreviews(activeCategory, controller.signal).then((loaded) => {
-      if (!controller.signal.aborted) {
-        setPreviews((held) => ({ ...held, [activeCategory]: loaded }));
-      }
-    });
-    return () => controller.abort();
-  }, [activeCategory, previews]);
-
-  const activePreviews = (activeCategory && previews[activeCategory]) || {};
 
   function trackSuggestion(
     source: 'random' | 'song_pick' | 'genre_chip' | 'shelf',
@@ -225,7 +209,6 @@ export function useDiscoveryBrowse({
     langPacks,
     selectedLang,
     shelves,
-    activePreviews,
     searchSuggestion,
     showSongCuts,
     trackShelfPick,

@@ -106,9 +106,8 @@ export async function getSearchCacheCollection(): Promise<Collection<SearchCache
 }
 
 // Cached idea shelves (lib/shelves), refreshed lazily (first request after the
-// doc goes stale recomputes it). The shelves carry hydrated video fields, so
-// this TTL must stay well inside YouTube's 30-day retention rule; it also lets
-// unused country keys disappear.
+// doc goes stale recomputes it). Song names and keys only, no YouTube fields;
+// the TTL just lets unused country keys disappear.
 const SUGGESTION_CACHE_TTL_SECONDS = 7 * 24 * 60 * 60;
 
 export interface SuggestionCacheDoc {

@@ -55,7 +55,6 @@ function ShelfSection({ shelf, onSelect }: { shelf: IdeaShelf; onSelect: HotTabP
             key={song.key}
             song={song}
             number={song.rank ?? i + 1}
-            preview={song}
             isNew={song.isNew}
             climb={song.climb}
             rooms={song.rooms}

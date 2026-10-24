@@ -190,7 +190,7 @@ describe("roomPlans", () => {
 });
 
 describe("computeShelves", () => {
-  it("serves only songs with a servable cut, preferring the Most sung one", async () => {
+  it("serves only songs with a servable sing-along cut", async () => {
     seedSong("a", ["a1", "a2"], { topVideoId: "a2" });
     seedSong("b", ["b1"]);
     seedSong("c", []);
@@ -213,18 +213,8 @@ describe("computeShelves", () => {
     const shelves = await computeShelves("US", null, NOW);
     expect(shelves).toHaveLength(1);
     expect(shelves[0]).toMatchObject({ id: "hot", country: "US" });
-    expect(shelves[0].songs).toEqual([
-      {
-        key: "a",
-        title: "Title a",
-        artist: "Artist a",
-        videoId: "a2",
-        videoTitle: "Video a2 karaoke",
-        thumbnailUrl: "https://i.ytimg.com/vi/a2/mq.jpg",
-        durationSeconds: 200,
-        rank: 1,
-      },
-    ]);
+    // Names and keys only: no YouTube field rides along into the cache.
+    expect(shelves[0].songs).toEqual([{ key: "a", title: "Title a", artist: "Artist a", rank: 1 }]);
   });
 
   it("builds the rooms shelf from recent adds, minus what the hot shelf shows", async () => {
@@ -272,13 +262,10 @@ describe("computeShelves", () => {
     });
 
     const [hot] = await computeShelves("US", null, NOW);
-    expect(hot.songs.map((s) => [s.key, s.videoId])).toEqual([
-      ["inst", "i2"],
-      ["named", "n1"],
-    ]);
+    expect(hot.songs.map((s) => s.key)).toEqual(["inst", "named"]);
   });
 
-  it("lets the public vet a chart hit: too few karaoke views, offensive titles and the cut chosen", async () => {
+  it("lets the public vet a chart hit: too few karaoke views and offensive titles are dropped", async () => {
     seedSong("proven", ["p1", "p2"]);
     seedVideo("p1", true, "Proven (Karaoke)", 6000);
     seedVideo("p2", true, "Proven (Karaoke Version)", 90000);
@@ -289,7 +276,7 @@ describe("computeShelves", () => {
     snapshots().seed(snap("us", ["unsung", "censored", "proven"]));
 
     const [hot] = await computeShelves("US", null, NOW);
-    expect(hot.songs.map((s) => [s.key, s.videoId, s.rank])).toEqual([["proven", "p2", 1]]);
+    expect(hot.songs.map((s) => [s.key, s.rank])).toEqual([["proven", 1]]);
   });
 
   it("widens a too-thin country chart to the language's charts", async () => {
