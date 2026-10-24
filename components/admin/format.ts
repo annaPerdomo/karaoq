@@ -16,6 +16,7 @@ export const SOURCE_LABELS: Record<string, string> = {
 export const SECTION_LABELS: Record<string, string> = {
   hot: '🔥 Hot shelf',
   rooms: '🎤 Rooms shelf',
+  world: '🌍 World charts',
   genre: 'Genre',
   'voice-type': 'Voice type',
   spanish: 'Spanish',

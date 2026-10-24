@@ -26,8 +26,10 @@ process.env.MONGODB_DB = "test-db";
 
 import {
   MIN_HOT_VIEWS,
+  MIN_SHELF_SONGS,
   chartLanguage,
   computeShelves,
+  computeWorldCharts,
   getShelves,
   hotPlans,
   roomPlans,
@@ -344,5 +346,25 @@ describe("isSingAlong", () => {
     expect(isSingAlong("Song | Karaoke Instrumental")).toBe(true);
     expect(isSingAlong("Song (Lyrics)")).toBe(true);
     expect(isSingAlong("Song - Artist")).toBe(true);
+  });
+});
+
+describe("computeWorldCharts", () => {
+  it("offers each country's own chart, and only charts deep enough to browse", async () => {
+    const deep = Array.from({ length: MIN_SHELF_SONGS }, (_, i) => `jp${i}`);
+    deep.forEach((key, i) => {
+      seedSong(key, [`j${i}`]);
+      seedVideo(`j${i}`);
+    });
+    seedSong("thin", ["t1"]);
+    seedVideo("t1");
+    snapshots().seed(snap("jp", deep));
+    snapshots().seed(snap("in", ["thin"]));
+
+    const charts = await computeWorldCharts(NOW);
+    expect(charts.map((c) => [c.id, c.scope, c.country, c.songs.length])).toEqual([
+      ["world", "country", "JP", MIN_SHELF_SONGS],
+    ]);
+    expect(charts[0].songs[0]).toMatchObject({ key: "jp0", rank: 1 });
   });
 });

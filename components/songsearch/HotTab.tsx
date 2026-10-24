@@ -5,10 +5,13 @@ import ssStyles from '../../styles/SongSearch.module.css';
 import type { IdeaShelf, ShelfSong } from '../../lib/shelfTypes';
 import { useT } from '../../lib/i18n/I18nProvider';
 import SongRow from './SongRow';
+import WorldCharts from './WorldCharts';
 import { INITIAL_CATEGORY_SONGS } from './constants';
 
 interface HotTabProps {
   shelves: IdeaShelf[];
+  /** The singer's country, so Charts around the world opens somewhere else. */
+  home: string | null;
   onSelect: (song: ShelfSong, shelf: IdeaShelf) => void;
 }
 
@@ -20,7 +23,7 @@ function displayName(code: string, type: 'region' | 'language', locale: string):
   }
 }
 
-const SHELF_EMOJI: Record<IdeaShelf['id'], string> = { hot: '🔥', rooms: '🎤' };
+const SHELF_EMOJI: Record<IdeaShelf['id'], string> = { hot: '🔥', rooms: '🎤', world: '🌍' };
 
 function useShelfTitle(shelf: IdeaShelf): string {
   const { t, locale } = useT();
@@ -71,7 +74,7 @@ function ShelfSection({ shelf, onSelect }: { shelf: IdeaShelf; onSelect: HotTabP
   );
 }
 
-const HotTab: React.FC<HotTabProps> = ({ shelves, onSelect }) => (
+const HotTab: React.FC<HotTabProps> = ({ shelves, home, onSelect }) => (
   <div className={styles.shelves}>
     {shelves.map((shelf) => (
       <ShelfSection
@@ -80,6 +83,7 @@ const HotTab: React.FC<HotTabProps> = ({ shelves, onSelect }) => (
         onSelect={onSelect}
       />
     ))}
+    <WorldCharts home={home} onSelect={onSelect} />
   </div>
 );
 

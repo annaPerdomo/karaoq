@@ -7,6 +7,7 @@ import {
   getSuggestionCacheCollection,
   getYoutubeSongDataCollection,
   type ChartSnapshotDoc,
+  type KaraokeSongDoc,
 } from "./mongodb";
 import type { IdeaShelf, ShelfScope, ShelfSong } from "./shelfTypes";
 
@@ -189,21 +190,24 @@ export async function readTrustedArtists(): Promise<Set<string>> {
   return new Set(rows.map((r) => artistKey(r.artist ?? "")));
 }
 
-/** Walks `ranked` in order, keeping only songs that pass every quality gate,
- *  until full. */
-export async function hydrateShelf(
-  ranked: Ranked[],
-  skip: Set<string>,
-  trustedArtists: Set<string>,
-  minViews: number
-): Promise<ShelfSong[]> {
-  const candidates = ranked.filter((r) => !skip.has(r.key)).slice(0, SHELF_SIZE * 3);
-  if (candidates.length === 0) return [];
+interface ShowableSong {
+  doc: Pick<KaraokeSongDoc, "_id" | "title" | "artist" | "nativeTitle" | "nativeArtist">;
+  /** The best sing-along cut's views — absent means no such cut. */
+  views?: number;
+}
 
+/** Songs a shelf may name, by key, with their sing-along view counts. One
+ *  read for any number of shelves. */
+export async function loadShowable(
+  keys: string[],
+  trustedArtists: Set<string>
+): Promise<Map<string, ShowableSong>> {
+  const out = new Map<string, ShowableSong>();
+  if (keys.length === 0) return out;
   const songs = await getKaraokeSongsCollection();
   const docs = await songs
     .find(
-      { _id: { $in: candidates.map((c) => c.key) }, retired: { $ne: true } },
+      { _id: { $in: keys }, retired: { $ne: true } },
       {
         projection: {
           title: 1,
@@ -222,15 +226,25 @@ export async function hydrateShelf(
       !UNSHOWABLE.test(`${d.title} ${d.artist}`) &&
       (d.origin !== "demand" || trustedArtists.has(artistKey(d.artist ?? "")))
   );
-  const byKey = new Map(shown.map((d) => [d._id, d]));
   const views = await singAlongViews(shown);
+  for (const doc of shown) out.set(doc._id, { doc, views: views.get(doc._id) });
+  return out;
+}
 
+/** Walks `ranked` in order, keeping songs that pass every quality gate, until full. */
+export function assembleShelf(
+  ranked: Ranked[],
+  skip: Set<string>,
+  showable: Map<string, ShowableSong>,
+  minViews: number
+): ShelfSong[] {
   const out: ShelfSong[] = [];
-  for (const c of candidates) {
+  for (const c of ranked) {
     if (out.length >= SHELF_SIZE) break;
-    const doc = byKey.get(c.key);
-    const best = views.get(c.key);
-    if (!doc || best === undefined || best < minViews) continue;
+    if (skip.has(c.key)) continue;
+    const song = showable.get(c.key);
+    if (!song || song.views === undefined || song.views < minViews) continue;
+    const { doc } = song;
     out.push({
       key: doc._id,
       title: doc.title,
@@ -250,6 +264,17 @@ export async function hydrateShelf(
     });
   }
   return out;
+}
+
+export async function hydrateShelf(
+  ranked: Ranked[],
+  skip: Set<string>,
+  trustedArtists: Set<string>,
+  minViews: number
+): Promise<ShelfSong[]> {
+  const candidates = ranked.filter((r) => !skip.has(r.key)).slice(0, SHELF_SIZE * 3);
+  const showable = await loadShowable(candidates.map((c) => c.key), trustedArtists);
+  return assembleShelf(candidates, skip, showable, minViews);
 }
 
 /** The window's adds mapped onto corpus songs; an add no song claims is dropped. */
@@ -346,6 +371,48 @@ export async function getShelves(
     return shelves;
   } catch (e) {
     // A stale shelf beats an empty one while the database is struggling.
+    if (hit?.shelves) return hit.shelves;
+    throw e;
+  }
+}
+
+/** Every charted country's own chart that has enough singable songs to browse,
+ *  for "Charts around the world". Charts never widen here: a Japan pick shows
+ *  Japan or isn't offered. */
+export async function computeWorldCharts(now: Date = new Date()): Promise<IdeaShelf[]> {
+  const snapshots = await getChartSnapshotsCollection();
+  const [charts, trusted] = await Promise.all([
+    snapshots.find({}).maxTimeMS(QUERY_TIMEOUT_MS).toArray(),
+    readTrustedArtists(),
+  ]);
+  const keys = Array.from(new Set(charts.flatMap((snap) => snap.ranks.map((r) => r.key))));
+  const showable = await loadShowable(keys, trusted);
+  return charts
+    .map((snap) => ({
+      id: "world" as const,
+      scope: "country" as const,
+      country: snap._id.toUpperCase(),
+      language: null,
+      songs: assembleShelf(rankChart(snap, now), new Set(), showable, MIN_HOT_VIEWS),
+    }))
+    .filter((shelf) => shelf.songs.length >= MIN_SHELF_SONGS)
+    .sort((a, b) => (a.country < b.country ? -1 : 1));
+}
+
+export async function getWorldCharts(): Promise<IdeaShelf[]> {
+  const key = "world:v1";
+  const cache = await getSuggestionCacheCollection();
+  const hit = await cache.findOne({ key });
+  if (hit?.shelves && Date.now() - hit.computedAt.getTime() < SHELF_REFRESH_MS) {
+    return hit.shelves;
+  }
+  try {
+    const shelves = await computeWorldCharts();
+    await cache
+      .updateOne({ key }, { $set: { key, shelves, computedAt: new Date() } }, { upsert: true })
+      .catch(() => {});
+    return shelves;
+  } catch (e) {
     if (hit?.shelves) return hit.shelves;
     throw e;
   }

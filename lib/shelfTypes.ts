@@ -17,7 +17,8 @@ export interface ShelfSong {
   rooms?: number;
 }
 
-export type ShelfId = "hot" | "rooms";
+/** "world" is one country's chart picked from Charts around the world. */
+export type ShelfId = "hot" | "rooms" | "world";
 
 /** How far the shelf had to widen to find enough songs. */
 export type ShelfScope = "country" | "language" | "world";

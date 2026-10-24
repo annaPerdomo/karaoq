@@ -21,6 +21,8 @@ interface DiscoveryBrowserProps {
   langPacks: SongSection[];
   regionalSection: SongSection | null;
   shelves: IdeaShelf[];
+  /** The singer's country (useCountry), for Charts around the world. */
+  country: string | null;
   onShelfPick: (song: ShelfSong, shelf: IdeaShelf) => void;
   activeTab: string;
   onTabSelect: (tabId: string) => void;
@@ -48,6 +50,7 @@ const DiscoveryBrowser: React.FC<DiscoveryBrowserProps> = ({
   langPacks,
   regionalSection,
   shelves,
+  country,
   onShelfPick,
   activeTab,
   onTabSelect,
@@ -134,7 +137,7 @@ const DiscoveryBrowser: React.FC<DiscoveryBrowserProps> = ({
           </div>
 
           {isHotTab ? (
-            <HotTab shelves={shelves} onSelect={onShelfPick} />
+            <HotTab shelves={shelves} home={country} onSelect={onShelfPick} />
           ) : isLangTab ? (
             <>
               <LanguagePicker
