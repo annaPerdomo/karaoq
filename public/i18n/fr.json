@@ -871,10 +871,5 @@
   "sing.postpone.eta": "Vous passeriez dans ~{time}",
   "sing.postpone.etaLast": "Vous passeriez en dernier, dans ~{time}",
   "sing.postpone.confirm": "Déplacer ma chanson",
-  "sing.postpone.cancel": "Garder ma place",
-  "recap.share": "Partager le récap de ce soir",
-  "recap.text.one": "Notre soirée karaoké : {songs} chansons avec {singers} chanteur 🎤",
-  "recap.text.other": "Notre soirée karaoké : {songs} chansons avec {singers} chanteurs 🎤",
-  "recap.star": "Star de la soirée : {name}.",
-  "recap.copied": "Copié — collez-le n'importe où"
+  "sing.postpone.cancel": "Garder ma place"
 }

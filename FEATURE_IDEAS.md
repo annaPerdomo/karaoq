@@ -108,6 +108,12 @@ performance, singer count, "night MVP". Data already lives in `queue`/history +
 reactions + analytics. This is the growth loop: the recap gets posted to the
 group chat, and every recap is a karaoq ad with a "host your own night" CTA.
 
+A first cut (Oct 2026) shared plain text plus a `/?ref=recap` link to the landing
+page; removed because the link showed nothing about the night and the button was
+easy to miss. A real version needs: a per-room recap page the link opens (stats
+worth looking at), a way to know the night is over (no reliable end signal
+today), and access for singers as well as the host.
+
 ---
 
 ## 4. Venue / organizer platform (the sellable layer)

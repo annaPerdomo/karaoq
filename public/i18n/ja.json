@@ -871,10 +871,5 @@
   "sing.postpone.eta": "約{time}後にあなたの番",
   "sing.postpone.etaLast": "最後の番、約{time}後",
   "sing.postpone.confirm": "順番を変える",
-  "sing.postpone.cancel": "このままにする",
-  "recap.share": "今夜のまとめをシェア",
-  "recap.text.one": "今夜のカラオケ：{songs}曲、{singers}人の参加者 🎤",
-  "recap.text.other": "今夜のカラオケ：{songs}曲、{singers}人の参加者 🎤",
-  "recap.star": "今夜のスター：{name}さん。",
-  "recap.copied": "コピーしました — どこにでも貼り付けてください"
+  "sing.postpone.cancel": "このままにする"
 }

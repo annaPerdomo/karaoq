@@ -373,7 +373,7 @@ const Sing = (): React.ReactElement => {
             />
           )}
 
-          {joinCode && <SingFooter roomId={joinCode} queue={queue} activeVideoIndex={activeIndex} />}
+          {joinCode && <SingFooter roomId={joinCode} />}
         </div>
 
         <SingSidebar {...queueView} />

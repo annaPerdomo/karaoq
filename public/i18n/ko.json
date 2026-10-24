@@ -871,10 +871,5 @@
   "sing.postpone.eta": "약 {time} 후 내 차례",
   "sing.postpone.etaLast": "맨 마지막, 약 {time} 후",
   "sing.postpone.confirm": "내 곡 옮기기",
-  "sing.postpone.cancel": "자리 유지",
-  "recap.share": "오늘 밤 요약 공유하기",
-  "recap.text.one": "오늘의 노래방: {songs}곡, {singers}명의 참가자 🎤",
-  "recap.text.other": "오늘의 노래방: {songs}곡, {singers}명의 참가자 🎤",
-  "recap.star": "오늘 밤의 스타: {name}님.",
-  "recap.copied": "복사했어요 — 어디든 붙여넣으세요"
+  "sing.postpone.cancel": "자리 유지"
 }
