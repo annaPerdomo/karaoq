@@ -91,7 +91,6 @@ const SongSearch: React.FC<SongSearchProps> = ({
     expandedCategory,
     regionalSection,
     langPacks,
-    selectedLang,
     shelves,
     searchSuggestion,
     showSongCuts,
@@ -99,7 +98,6 @@ const SongSearch: React.FC<SongSearchProps> = ({
     handleSurpriseMe,
     handleTabSelect,
     handleCategorySelect,
-    handleSelectedLangChange,
     handleCategoryBack,
     handleExpandCategory,
   } = useDiscoveryBrowse({
@@ -224,8 +222,6 @@ const SongSearch: React.FC<SongSearchProps> = ({
           onCategoryBack={handleCategoryBack}
           expandedCategory={expandedCategory}
           onExpandCategory={handleExpandCategory}
-          selectedLang={selectedLang}
-          onSelectedLangChange={handleSelectedLangChange}
           onSongSelect={searchSuggestion}
           onSurpriseMe={handleSurpriseMe}
           belowSearch={belowSearch}

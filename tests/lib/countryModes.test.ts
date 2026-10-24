@@ -151,3 +151,13 @@ describe("regional pack files", () => {
     }
   });
 });
+
+describe("World tab places", () => {
+  it("every language list has a place to live under", async () => {
+    const { SECTION_COUNTRY } = await import("../../components/songsearch/constants");
+    const ids = SONG_SECTIONS.filter((s) => ["spanish", "kpop", "japanese"].includes(s.id))
+      .map((s) => s.id)
+      .concat(LANGUAGE_PACKS.map((p) => loadPack(p.packId).id));
+    for (const id of ids) expect(SECTION_COUNTRY[id], id).toMatch(/^[A-Z]{2}$/);
+  });
+});

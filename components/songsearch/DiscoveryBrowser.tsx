@@ -11,8 +11,8 @@ import { labelWithFallback } from './labelWithFallback';
 import { buildDiscoveryData } from './discoveryData';
 import CategoryGrid from './CategoryGrid';
 import CategorySongList from './CategorySongList';
-import LanguagePicker from './LanguagePicker';
-import { HOT_TAB } from './constants';
+import WorldTab from './WorldTab';
+import { HOT_TAB, WORLD_TAB } from './constants';
 import HotTab from './HotTab';
 import type { IdeaShelf, ShelfSong } from '../../lib/shelfTypes';
 
@@ -21,7 +21,7 @@ interface DiscoveryBrowserProps {
   langPacks: SongSection[];
   regionalSection: SongSection | null;
   shelves: IdeaShelf[];
-  /** The singer's country (useCountry), for Charts around the world. */
+  /** The singer's country (useCountry), which the World tab opens away from. */
   country: string | null;
   onShelfPick: (song: ShelfSong, shelf: IdeaShelf) => void;
   activeTab: string;
@@ -33,8 +33,6 @@ interface DiscoveryBrowserProps {
   onCategoryBack: () => void;
   expandedCategory: boolean;
   onExpandCategory: () => void;
-  selectedLang: string | null;
-  onSelectedLangChange: (langId: string) => void;
   onSongSelect: (song: SongSuggestion, sectionId: string, categoryId: string) => void;
   onSurpriseMe: () => void;
   /**
@@ -59,8 +57,6 @@ const DiscoveryBrowser: React.FC<DiscoveryBrowserProps> = ({
   onCategoryBack,
   expandedCategory,
   onExpandCategory,
-  selectedLang,
-  onSelectedLangChange,
   onSongSelect,
   onSurpriseMe,
   belowSearch,
@@ -69,11 +65,10 @@ const DiscoveryBrowser: React.FC<DiscoveryBrowserProps> = ({
 
   const {
     TAB_DEFS,
-    langSections,
-    isLangTab,
+    worldSections,
+    isWorldTab,
     isHotTab,
     currentSection,
-    currentLang,
     allVisibleCats,
     expandedData,
     parentSection,
@@ -87,8 +82,7 @@ const DiscoveryBrowser: React.FC<DiscoveryBrowserProps> = ({
     activeTab,
     activeCategory,
     expandedCategory,
-    selectedLang,
-    languageTabLabel: t('search.tab.language'),
+    worldTabLabel: t('search.tab.world'),
     hotTabLabel: t('search.tab.hot'),
     hasShelves: shelves.length > 0,
   });
@@ -129,7 +123,7 @@ const DiscoveryBrowser: React.FC<DiscoveryBrowserProps> = ({
                 className={`${styles.tabBtn} ${activeTab === s.id ? styles.tabBtnActive : ''}`}
                 onClick={() => onTabSelect(s.id)}
               >
-                {s.id === 'language' || s.id === HOT_TAB
+                {s.id === WORLD_TAB || s.id === HOT_TAB
                   ? s.label
                   : labelWithFallback(t, `section.${s.id}`, s.label)}
               </button>
@@ -137,19 +131,14 @@ const DiscoveryBrowser: React.FC<DiscoveryBrowserProps> = ({
           </div>
 
           {isHotTab ? (
-            <HotTab shelves={shelves} home={country} onSelect={onShelfPick} />
-          ) : isLangTab ? (
-            <>
-              <LanguagePicker
-                langSections={langSections}
-                currentLangId={currentLang?.id}
-                onChange={onSelectedLangChange}
-              />
-              <CategoryGrid
-                categories={currentLang?.categories ?? []}
-                onSelect={(cat) => onCategorySelect(cat, currentLang!.id)}
-              />
-            </>
+            <HotTab shelves={shelves} onSelect={onShelfPick} />
+          ) : isWorldTab ? (
+            <WorldTab
+              home={country}
+              sections={worldSections}
+              onSongSelect={onShelfPick}
+              onCategorySelect={(cat, sectionId) => onCategorySelect(cat, sectionId)}
+            />
           ) : (
             <CategoryGrid
               categories={allVisibleCats}

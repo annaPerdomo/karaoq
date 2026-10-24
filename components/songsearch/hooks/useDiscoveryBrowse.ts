@@ -15,7 +15,7 @@ import fetchRegionalPack from '../../../app/queue/regionalPack';
 import fetchShelves from '../../../app/queue/fetchShelves';
 import type { IdeaShelf, ShelfSong } from '../../../lib/shelfTypes';
 import { SearchFilters } from '../../../app/queue/searchYoutube';
-import { HOT_TAB, LANG_IDS } from '../constants';
+import { HOT_TAB, LANG_IDS, WORLD_TAB } from '../constants';
 
 interface UseDiscoveryBrowseArgs {
   country: string | null;
@@ -52,7 +52,6 @@ export function useDiscoveryBrowse({
   const [expandedCategory, setExpandedCategory] = React.useState(false);
   const [regionalSection, setRegionalSection] = React.useState<SongSection | null>(null);
   const [langPacks, setLangPacks] = React.useState<SongSection[]>([]);
-  const [selectedLang, setSelectedLang] = React.useState<string | null>(null);
   const [shelves, setShelves] = React.useState<IdeaShelf[]>([]);
   const userPickedTabRef = React.useRef(false);
 
@@ -85,14 +84,14 @@ export function useDiscoveryBrowse({
     }
     const first = orderedSections[0];
     if (!first) return;
-    setActiveTab(LANG_IDS.includes(first.id) ? 'language' : first.id);
+    setActiveTab(LANG_IDS.includes(first.id) ? WORLD_TAB : first.id);
   }, [orderedSections, shelves.length]);
 
-  // Every language pack is available to everyone under the Language tab —
-  // geo only decides which one gets promoted to its own first tab. Packs are
+  // Every language pack is available to everyone under the World tab — geo
+  // only decides which one gets promoted to its own first tab. Packs are
   // lazy-loaded (CDN-cached JSON) the first time the tab opens.
   React.useEffect(() => {
-    if (activeTab !== 'language' || langPacks.length > 0) return;
+    if (activeTab !== WORLD_TAB || langPacks.length > 0) return;
     let cancelled = false;
     Promise.all(LANGUAGE_PACKS.map((p) => fetchRegionalPack(p.packId))).then(
       (sections) => {
@@ -186,12 +185,6 @@ export function useDiscoveryBrowse({
     }
   }
 
-  function handleSelectedLangChange(langId: string) {
-    setSelectedLang(langId);
-    setActiveCategory(null);
-    setExpandedCategory(false);
-  }
-
   function handleCategoryBack() {
     setActiveCategory(null);
   }
@@ -207,7 +200,6 @@ export function useDiscoveryBrowse({
     expandedCategory,
     regionalSection,
     langPacks,
-    selectedLang,
     shelves,
     searchSuggestion,
     showSongCuts,
@@ -215,7 +207,6 @@ export function useDiscoveryBrowse({
     handleSurpriseMe,
     handleTabSelect,
     handleCategorySelect,
-    handleSelectedLangChange,
     handleCategoryBack,
     handleExpandCategory,
   };
