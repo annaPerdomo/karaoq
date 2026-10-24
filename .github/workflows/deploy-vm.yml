@@ -49,6 +49,8 @@ jobs:
         run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
         if: env.deploy_skip != 'true'
 
       - uses: actions/setup-node@v4
