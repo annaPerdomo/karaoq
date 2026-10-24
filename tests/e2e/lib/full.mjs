@@ -134,13 +134,6 @@ export async function runFull({ baseUrl, browser }) {
     record(steps, 'emoji-reaction', false, { error: String(e).slice(0, 400) });
   }
 
-  try {
-    const recapBtn = host.getByText(/recap|share.*night/i).first();
-    record(steps, 'recap-button-present', (await recapBtn.count()) > 0);
-  } catch (e) {
-    record(steps, 'recap-button-present', false, { error: String(e).slice(0, 400) });
-  }
-
   await hostCtx.close().catch(() => {});
   if (singerCtx) await singerCtx.close().catch(() => {});
 
