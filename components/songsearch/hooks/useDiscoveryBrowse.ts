@@ -12,13 +12,14 @@ import {
   SongSection,
 } from '../../../app/queue/songSuggestions';
 import fetchRegionalPack from '../../../app/queue/regionalPack';
+import fetchShelves from '../../../app/queue/fetchShelves';
+import type { IdeaShelf, ShelfSong } from '../../../lib/shelfTypes';
 import { SearchFilters } from '../../../app/queue/searchYoutube';
 import { LANG_IDS } from '../constants';
 
 interface UseDiscoveryBrowseArgs {
   country: string | null;
   roomId: string;
-  t: (key: string, vars?: Record<string, string | number>) => string;
   filters: SearchFilters;
   karaokeMode: boolean;
   setQuery: (query: string) => void;
@@ -26,18 +27,17 @@ interface UseDiscoveryBrowseArgs {
     rawQuery: string,
     activeFilters: SearchFilters,
     karaoke: boolean,
-    fromSuggestion?: boolean
+    fromSuggestion?: boolean | string
   ) => void;
   trackFirstSearch: () => void;
 }
 
 // Owns the "Song ideas" browse view: geo-ordered sections/tabs, lazy-loaded
-// language packs, trending songs, and the category/song selection that feeds
-// a pick back into the search box.
+// language packs, the hot/rooms shelves, and the category/song selection that
+// feeds a pick back into the search box.
 export function useDiscoveryBrowse({
   country,
   roomId,
-  t,
   filters,
   karaokeMode,
   setQuery,
@@ -50,7 +50,7 @@ export function useDiscoveryBrowse({
   const [regionalSection, setRegionalSection] = React.useState<SongSection | null>(null);
   const [langPacks, setLangPacks] = React.useState<SongSection[]>([]);
   const [selectedLang, setSelectedLang] = React.useState<string | null>(null);
-  const [trendingSongs, setTrendingSongs] = React.useState<SongSuggestion[]>([]);
+  const [shelves, setShelves] = React.useState<IdeaShelf[]>([]);
   const userPickedTabRef = React.useRef(false);
 
   // Localize the discovery sections: reorder by country and, where a curated
@@ -98,35 +98,16 @@ export function useDiscoveryBrowse({
     };
   }, [activeTab, langPacks.length]);
 
-  // "Trending on karaoq" — most-added songs from our own analytics.
   React.useEffect(() => {
     const controller = new AbortController();
-    const qs = country ? `?c=${country}` : '';
-    fetch(`/api/suggestions/trending${qs}`, { signal: controller.signal })
-      .then((res) => res.json())
-      .then((data: { items?: { title: string; artist: string }[] }) => {
-        if (Array.isArray(data.items)) {
-          setTrendingSongs(
-            data.items.map((s) => ({ title: s.title, artist: s.artist ?? '' }))
-          );
-        }
-      })
-      .catch(() => {});
+    fetchShelves(country, controller.signal).then((loaded) => {
+      if (!controller.signal.aborted) setShelves(loaded);
+    });
     return () => controller.abort();
   }, [country]);
 
-  const trendingCategory: SongCategory | null =
-    trendingSongs.length > 0
-      ? {
-          id: 'trending',
-          name: t('category.trending'),
-          emoji: '📈',
-          songs: trendingSongs,
-        }
-      : null;
-
   function trackSuggestion(
-    source: 'random' | 'song_pick' | 'genre_chip' | 'trending',
+    source: 'random' | 'song_pick' | 'genre_chip' | 'shelf',
     extra?: { sectionId?: string; categoryId?: string; songTitle?: string; songArtist?: string }
   ) {
     fetch('/api/analytics/suggestion', {
@@ -136,27 +117,41 @@ export function useDiscoveryBrowse({
     }).catch(() => {});
   }
 
-  function searchSuggestion(
-    song: SongSuggestion,
-    sectionId?: string,
-    categoryId?: string,
-    source: 'song_pick' | 'trending' | 'random' = 'song_pick'
-  ) {
+  // Every idea is a corpus song, so the search serves its cuts. A shelf song
+  // passes its key: the corpus _id, not necessarily what its name re-keys to.
+  function showSongCuts(song: SongSuggestion, songKey?: string) {
     trackFirstSearch();
     const q = buildSongQuery(song);
     setQuery(q);
     setActiveCategory(null);
+    runSearch(q, filters, karaokeMode, songKey ?? true);
+  }
 
+  function searchSuggestion(
+    song: SongSuggestion,
+    sectionId?: string,
+    categoryId?: string,
+    source: 'song_pick' | 'random' = 'song_pick'
+  ) {
     trackSuggestion(source, {
       sectionId,
       categoryId,
       songTitle: song.title,
       songArtist: song.artist,
     });
+    showSongCuts(song);
+  }
 
-    // Catalogued picks only: a trending row is a cleaned video title with no
-    // artist, so it keys to nothing the catalog holds.
-    runSearch(q, filters, karaokeMode, source !== 'trending');
+  /** A shelf tap opens its cut straight away (the caller's confirm modal), so
+   *  only the funnel event happens here. */
+  function trackShelfPick(song: ShelfSong, shelf: IdeaShelf) {
+    trackFirstSearch();
+    trackSuggestion('shelf', {
+      sectionId: shelf.id,
+      categoryId: shelf.country ?? 'world',
+      songTitle: song.title,
+      songArtist: song.artist,
+    });
   }
 
   function handleSurpriseMe() {
@@ -205,8 +200,10 @@ export function useDiscoveryBrowse({
     regionalSection,
     langPacks,
     selectedLang,
-    trendingCategory,
+    shelves,
     searchSuggestion,
+    showSongCuts,
+    trackShelfPick,
     handleSurpriseMe,
     handleTabSelect,
     handleCategorySelect,

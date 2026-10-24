@@ -13,7 +13,6 @@ interface BuildDiscoveryDataArgs {
   activeCategory: string | null;
   expandedCategory: boolean;
   selectedLang: string | null;
-  trendingCategory: SongCategory | null;
   /** Pre-translated label for the synthetic "Language" tab. */
   languageTabLabel: string;
 }
@@ -28,7 +27,6 @@ export function buildDiscoveryData({
   activeCategory,
   expandedCategory,
   selectedLang,
-  trendingCategory,
   languageTabLabel,
 }: BuildDiscoveryDataArgs) {
   const nonLangSections = orderedSections.filter((s) => !LANG_IDS.includes(s.id));
@@ -48,18 +46,11 @@ export function buildDiscoveryData({
     : nonLangSections.find((s) => s.id === activeTab) ?? nonLangSections[0];
   const currentLang = langSections.find((s) => s.id === selectedLang) ?? langSections[0];
 
-  const firstTabId = nonLangSections[0]?.id;
-  const baseCats = isLangTab
+  const allVisibleCats = isLangTab
     ? langSections.flatMap((s) => s.categories)
     : currentSection?.categories ?? [];
-  // Trending sits at the end of the first tab's grid.
-  const allVisibleCats =
-    trendingCategory && !isLangTab && currentSection?.id === firstTabId
-      ? [...baseCats, trendingCategory]
-      : baseCats;
 
   const allCategories = [
-    ...(trendingCategory ? [trendingCategory] : []),
     ...(regionalSection?.categories ?? []),
     ...langPacks.flatMap((p) => p.categories),
     ...ALL_CATEGORIES,

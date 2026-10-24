@@ -1,7 +1,7 @@
 import * as React from 'react';
 
 import styles from '../styles/SongSearch.module.css';
-import { YoutubeResult } from '../app/queue/searchYoutube';
+import { YoutubeResult, toYoutubeResult } from '../app/queue/searchYoutube';
 import { QueueEntry } from '../pages/api/types';
 import useCountry from '../app/queue/useCountry';
 import SearchResults from './search/SearchResults';
@@ -14,6 +14,7 @@ import ConfirmModal from './songsearch/ConfirmModal';
 import { useSongSearchState } from './songsearch/hooks/useSongSearchState';
 import { useDiscoveryBrowse } from './songsearch/hooks/useDiscoveryBrowse';
 import { useSongAddFlow } from './songsearch/hooks/useSongAddFlow';
+import type { IdeaShelf, ShelfSong } from '../lib/shelfTypes';
 
 interface SongSearchProps {
   roomId: string;
@@ -91,8 +92,10 @@ const SongSearch: React.FC<SongSearchProps> = ({
     regionalSection,
     langPacks,
     selectedLang,
-    trendingCategory,
+    shelves,
     searchSuggestion,
+    showSongCuts,
+    trackShelfPick,
     handleSurpriseMe,
     handleTabSelect,
     handleCategorySelect,
@@ -102,7 +105,6 @@ const SongSearch: React.FC<SongSearchProps> = ({
   } = useDiscoveryBrowse({
     country,
     roomId,
-    t,
     filters,
     karaokeMode,
     setQuery,
@@ -115,6 +117,7 @@ const SongSearch: React.FC<SongSearchProps> = ({
     addError,
     adding,
     confirmSong,
+    confirmOrigin,
     previewPlaying,
     canAdd,
     addSong,
@@ -122,7 +125,7 @@ const SongSearch: React.FC<SongSearchProps> = ({
     handlePick,
     closeConfirm,
     playPreview,
-  } = useSongAddFlow({
+  } = useSongAddFlow<ShelfSong>({
     roomId,
     userName,
     requireName,
@@ -133,6 +136,28 @@ const SongSearch: React.FC<SongSearchProps> = ({
     suggestionKey: resultsSuggestionKey,
     fromCorpus: resultsFromCorpus,
   });
+
+  // A shelf card skips the results list: its top cut opens ready to add.
+  function handleShelfPick(song: ShelfSong, shelf: IdeaShelf) {
+    trackShelfPick(song, shelf);
+    openConfirm(
+      toYoutubeResult({
+        title: song.videoTitle,
+        thumbnailUrl: song.thumbnailUrl,
+        videoId: song.videoId,
+        durationSeconds: song.durationSeconds,
+      }),
+      false,
+      { suggestionKey: song.key, fromCorpus: true, song }
+    );
+  }
+
+  function handleOtherVersions() {
+    if (!confirmOrigin) return;
+    const { song, suggestionKey } = confirmOrigin;
+    closeConfirm();
+    showSongCuts(song, suggestionKey);
+  }
 
   return (
     <div className={styles.container}>
@@ -203,7 +228,8 @@ const SongSearch: React.FC<SongSearchProps> = ({
           orderedSections={orderedSections}
           langPacks={langPacks}
           regionalSection={regionalSection}
-          trendingCategory={trendingCategory}
+          shelves={shelves}
+          onShelfPick={handleShelfPick}
           activeTab={activeTab}
           onTabSelect={handleTabSelect}
           activeCategory={activeCategory}
@@ -229,6 +255,7 @@ const SongSearch: React.FC<SongSearchProps> = ({
           adding={adding}
           onConfirm={() => (onPick ? handlePick(confirmSong) : addSong(confirmSong))}
           onCancel={closeConfirm}
+          onOtherVersions={confirmOrigin ? handleOtherVersions : undefined}
         />
       )}
     </div>

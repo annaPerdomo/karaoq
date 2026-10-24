@@ -114,7 +114,9 @@ export function useSongSearchState({ roomId, role }: UseSongSearchStateArgs) {
     rawQuery: string,
     activeFilters: SearchFilters,
     karaoke: boolean,
-    fromSuggestion = false
+    /** true derives the song's key from the query; a string is the key itself,
+     *  for a song (a shelf card) whose key needn't match its displayed name. */
+    fromSuggestion: boolean | string = false
   ) {
     clearTimeout(debounceRef.current);
     abortRef.current?.abort();
@@ -128,9 +130,12 @@ export function useSongSearchState({ roomId, role }: UseSongSearchStateArgs) {
     setSearchedQuery(query);
     // Keyed as the server keys the catalog, so the two agree without the client
     // naming the song. Always the karaoke form: those are the only keys held.
-    const suggestionKey = fromSuggestion
-      ? searchCacheKey(buildSearchQuery(rawQuery, true))
-      : null;
+    const suggestionKey =
+      typeof fromSuggestion === 'string'
+        ? fromSuggestion
+        : fromSuggestion
+          ? searchCacheKey(buildSearchQuery(rawQuery, true))
+          : null;
     // Mirrors isCatalogFilters (lib/suggestionCatalog): cuts are the unfiltered
     // answer. Karaoke mode is excluded — song ideas are karaoke ideas either way.
     const resolvable =

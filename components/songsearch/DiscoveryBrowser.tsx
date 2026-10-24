@@ -12,12 +12,15 @@ import { buildDiscoveryData } from './discoveryData';
 import CategoryGrid from './CategoryGrid';
 import CategorySongList from './CategorySongList';
 import LanguagePicker from './LanguagePicker';
+import IdeaShelves from './IdeaShelves';
+import type { IdeaShelf, ShelfSong } from '../../lib/shelfTypes';
 
 interface DiscoveryBrowserProps {
   orderedSections: SongSection[];
   langPacks: SongSection[];
   regionalSection: SongSection | null;
-  trendingCategory: SongCategory | null;
+  shelves: IdeaShelf[];
+  onShelfPick: (song: ShelfSong, shelf: IdeaShelf) => void;
   activeTab: string;
   onTabSelect: (tabId: string) => void;
   activeCategory: string | null;
@@ -33,7 +36,7 @@ interface DiscoveryBrowserProps {
     song: SongSuggestion,
     sectionId: string,
     categoryId: string,
-    source: 'song_pick' | 'trending'
+    source: 'song_pick'
   ) => void;
   onSurpriseMe: () => void;
   /**
@@ -48,7 +51,8 @@ const DiscoveryBrowser: React.FC<DiscoveryBrowserProps> = ({
   orderedSections,
   langPacks,
   regionalSection,
-  trendingCategory,
+  shelves,
+  onShelfPick,
   activeTab,
   onTabSelect,
   activeCategory,
@@ -84,7 +88,6 @@ const DiscoveryBrowser: React.FC<DiscoveryBrowserProps> = ({
     activeCategory,
     expandedCategory,
     selectedLang,
-    trendingCategory,
     languageTabLabel: t('search.tab.language'),
   });
 
@@ -102,6 +105,7 @@ const DiscoveryBrowser: React.FC<DiscoveryBrowserProps> = ({
           </span>
         </div>
       )}
+      {!expandedData && <IdeaShelves shelves={shelves} onSelect={onShelfPick} />}
       {expandedData ? (
         <CategorySongList
           category={expandedData}
@@ -116,7 +120,7 @@ const DiscoveryBrowser: React.FC<DiscoveryBrowserProps> = ({
               song,
               parentSection?.id ?? activeTab,
               activeCategory as string,
-              activeCategory === 'trending' ? 'trending' : 'song_pick'
+              'song_pick'
             )
           }
         />
