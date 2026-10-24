@@ -26,16 +26,19 @@ process.env.MONGODB_DB = "test-db";
 
 import {
   CHART_COUNTRIES,
+  CHART_COUNTRIES_PER_RUN,
   CHART_NEW_SONGS_PER_RUN,
   cleanChartArtist,
   cleanChartTitle,
   ChartFeedError,
   feedCharts,
   fetchChart,
+  nextSnapshot,
 } from "../../lib/chartFeed";
 
 const songs = () => collection("karaoke_songs");
 const cronState = () => collection("cron_state");
+const snapshots = () => collection("chart_snapshots");
 
 beforeEach(() => {
   collections.forEach((c) => c.clear());
@@ -54,7 +57,8 @@ function chartResponse(results: { name: string; artistName: string }[], ok = tru
 function stubFetch(byCountry: Record<string, ReturnType<typeof chartResponse> | Error>) {
   return vi.fn(async (url: string) => {
     const country = CHART_COUNTRIES.find((cc) => url.indexOf(`/${cc}/`) >= 0)!;
-    const res = byCountry[country];
+    // A country the test doesn't name charts nothing.
+    const res = byCountry[country] ?? chartResponse([]);
     if (res instanceof Error) throw res;
     return res;
   }) as unknown as typeof fetch;
@@ -207,27 +211,21 @@ describe("feedCharts", () => {
     expect(inserted.chartCountries).toEqual(["us", "gb"]);
   });
 
-  it("fetches nothing for a country within 7 days, and refetches after 8", async () => {
+  it("fetches nothing for a country within 20 hours, and refetches after a day", async () => {
     const first = new Date("2026-10-01T00:00:00Z");
     for (const cc of CHART_COUNTRIES) {
       cronState().seed({ _id: `chart:${cc}`, fetchedAt: first, cursorAt: first, updatedAt: first });
     }
 
-    const sixDaysLater = new Date(first.getTime() + 6 * 24 * 60 * 60 * 1000);
+    const nineteenHoursLater = new Date(first.getTime() + 19 * 60 * 60 * 1000);
     const fetchImpl = stubFetch({});
-    const soonSix = await feedCharts(soon(), sixDaysLater, fetchImpl);
-    expect(soonSix.report.fetched).toBe(0);
+    const early = await feedCharts(soon(), nineteenHoursLater, fetchImpl);
+    expect(early.report.fetched).toBe(0);
     expect(fetchImpl).not.toHaveBeenCalled();
 
-    const eightDaysLater = new Date(first.getTime() + 8 * 24 * 60 * 60 * 1000);
-    const fetchImpl2 = stubFetch({
-      us: chartResponse([]),
-      gb: chartResponse([]),
-      ph: chartResponse([]),
-      de: chartResponse([]),
-    });
-    const eight = await feedCharts(soon(), eightDaysLater, fetchImpl2);
-    expect(eight.report.fetched).toBe(4);
+    const dayLater = new Date(first.getTime() + 24 * 60 * 60 * 1000);
+    const next = await feedCharts(soon(), dayLater, stubFetch({}));
+    expect(next.report.fetched).toBe(CHART_COUNTRIES_PER_RUN);
   });
 
   it("reports a failed country without stopping the others, and skips it on a retry within a day", async () => {
@@ -242,7 +240,7 @@ describe("feedCharts", () => {
     const { report } = await feedCharts(soon(), first, fetchImpl);
 
     expect(report.errors).toEqual([{ country: "us", message: "network down" }]);
-    expect(report.fetched).toBe(3);
+    expect(report.fetched).toBe(CHART_COUNTRIES_PER_RUN - 1);
     expect(cronState().get("chart:us").failedAt).toEqual(first);
     expect(cronState().get("chart:gb").fetchedAt).toBeInstanceOf(Date);
 
@@ -298,5 +296,89 @@ describe("feedCharts", () => {
 
     expect(cronState().get("chart:us")).toBeNull();
     expect(cronState().get("chart:gb")).toBeNull();
+  });
+});
+
+describe("chart snapshots", () => {
+  const day1 = new Date("2026-10-01T00:00:00Z");
+  const day2 = new Date("2026-10-02T00:00:00Z");
+
+  it("ranks pack and chart songs alike, keeping each song's best rank", async () => {
+    songs().seed({
+      _id: "pack-song",
+      title: "Shape of You",
+      artist: "Ed Sheeran",
+      cuts: ["v1"],
+      addCount: 0,
+      addsByCountry: {},
+      demand: 0,
+    });
+    await feedCharts(
+      soon(),
+      day1,
+      stubFetch({
+        us: chartResponse([
+          { name: "New Hit", artistName: "New Artist" },
+          { name: "Shape of You", artistName: "Ed Sheeran" },
+          { name: "New Hit (feat. Someone)", artistName: "New Artist" },
+        ]),
+      })
+    );
+
+    const snap = snapshots().get("us");
+    expect(snap.ranks).toEqual([
+      { key: "new artist new hit karaoke", rank: 1 },
+      { key: "pack-song", rank: 2 },
+    ]);
+    expect(snap.fetchedAt).toEqual(day1);
+    expect(snap.prevRanks).toBeUndefined();
+  });
+
+  it("writes no snapshot for a country whose song write failed", async () => {
+    vi.spyOn(songs(), "bulkWrite").mockRejectedValueOnce(new Error("boom"));
+    await feedCharts(
+      soon(),
+      day1,
+      stubFetch({ us: chartResponse([{ name: "New Hit", artistName: "New Artist" }]) })
+    );
+    expect(snapshots().get("us")).toBeNull();
+  });
+
+  it("rolls the previous day's chart into prevRanks and dates a new entry", () => {
+    const first = nextSnapshot("us", [{ key: "a", rank: 1 }, { key: "b", rank: 2 }], undefined, day1);
+    expect(first.ranks).toEqual([{ key: "a", rank: 1 }, { key: "b", rank: 2 }]);
+
+    const second = nextSnapshot("us", [{ key: "b", rank: 1 }, { key: "c", rank: 2 }], first, day2);
+    expect(second.prevRanks).toEqual(first.ranks);
+    expect(second.prevFetchedAt).toEqual(day1);
+    expect(second.ranks).toEqual([
+      { key: "b", rank: 1 },
+      { key: "c", rank: 2, since: day2 },
+    ]);
+  });
+
+  it("keeps a song's since date while it stays on the chart", () => {
+    const withNew = nextSnapshot(
+      "us",
+      [{ key: "c", rank: 2 }],
+      { _id: "us", ranks: [{ key: "x", rank: 1 }], fetchedAt: day1 },
+      day2
+    );
+    const day3 = new Date("2026-10-03T00:00:00Z");
+    const later = nextSnapshot("us", [{ key: "c", rank: 1 }], withNew, day3);
+    expect(later.ranks).toEqual([{ key: "c", rank: 1, since: day2 }]);
+  });
+
+  it("keeps the older prevRanks on a same-window refetch rather than comparing a chart to itself", () => {
+    const first = nextSnapshot("us", [{ key: "a", rank: 1 }], undefined, day1);
+    const second = nextSnapshot("us", [{ key: "a", rank: 2 }], first, day2);
+    const refetch = nextSnapshot(
+      "us",
+      [{ key: "a", rank: 3 }],
+      second,
+      new Date(day2.getTime() + 60 * 60 * 1000)
+    );
+    expect(refetch.prevRanks).toEqual(first.ranks);
+    expect(refetch.prevFetchedAt).toEqual(day1);
   });
 });

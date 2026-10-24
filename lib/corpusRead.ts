@@ -83,3 +83,18 @@ export async function readSongCuts(
     return null;
   }
 }
+
+/** Shelves serve chart and promoted songs too, so a key outside the static
+ *  catalog can still name a song. False, never a throw: it only gates attribution. */
+export async function isCorpusSong(songKey: string): Promise<boolean> {
+  try {
+    const songs = await getKaraokeSongsCollection();
+    const song = await songs.findOne(
+      { _id: songKey, retired: { $ne: true } },
+      { projection: { _id: 1 } }
+    );
+    return !!song;
+  } catch {
+    return false;
+  }
+}

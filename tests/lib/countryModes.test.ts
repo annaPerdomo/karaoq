@@ -8,7 +8,6 @@ import {
   orderSections,
   type SongSection,
 } from "../../app/queue/songSuggestions";
-import { cleanSongTitle } from "../../pages/api/suggestions/trending";
 
 const SECTION_IDS = SONG_SECTIONS.map((s) => s.id);
 const PACKS_DIR = path.join(__dirname, "../../public/suggestions");
@@ -148,26 +147,7 @@ describe("regional pack files", () => {
       expect(builtinSectionIds.has(pack.id)).toBe(false);
       for (const cat of pack.categories) {
         expect(builtinCatIds.has(cat.id), `${packId}/${cat.id}`).toBe(false);
-        expect(cat.id).not.toBe("trending");
       }
     }
-  });
-});
-
-describe("cleanSongTitle", () => {
-  it("strips karaoke-video noise", () => {
-    expect(cleanSongTitle("Queen - Bohemian Rhapsody (Karaoke Version)")).toBe(
-      "Queen - Bohemian Rhapsody"
-    );
-    expect(cleanSongTitle("Africa - Toto [Karaoke with Lyrics HD]")).toBe(
-      "Africa - Toto"
-    );
-    expect(cleanSongTitle("Dancing Queen karaoke")).toBe("Dancing Queen");
-  });
-
-  it("leaves clean titles alone", () => {
-    expect(cleanSongTitle("Mr. Brightside - The Killers")).toBe(
-      "Mr. Brightside - The Killers"
-    );
   });
 });
