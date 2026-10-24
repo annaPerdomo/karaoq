@@ -23,3 +23,24 @@ export const SORT_OPTIONS: { value: SortOrder; tKey: string }[] = [
 export const LANG_IDS = ['spanish', 'kpop', 'japanese'];
 
 export const INITIAL_CATEGORY_SONGS = 8;
+
+/** The synthetic first tab holding the hot/rooms shelves (lib/shelves). */
+export const HOT_TAB = 'hot';
+
+/** The synthetic tab that pairs each place's live chart with its classics. */
+export const WORLD_TAB = 'world';
+
+/** Which chart each language list's place is. Every list the World tab
+ *  offers needs one, or it would never be offered (tests/lib/countryModes). */
+export const SECTION_COUNTRY: Record<string, string> = {
+  spanish: 'MX',
+  kpop: 'KR',
+  japanese: 'JP',
+  brasil: 'BR',
+  cesko: 'CZ',
+  deutsch: 'DE',
+  francais: 'FR',
+  indonesia: 'ID',
+  bollywood: 'IN',
+  opm: 'PH',
+};

@@ -20,6 +20,7 @@ import {
   harvestIntoCorpus,
 } from "../../../lib/corpusHarvest";
 import { feedCharts } from "../../../lib/chartFeed";
+import { rematchMissedSongs } from "../../../lib/corpusRematch";
 import { migrateToCorpus } from "../../../lib/corpusMigration";
 import { promoteDemand, repairDemandIdentities } from "../../../lib/corpusPromote";
 import { proposeUnmappedAdds, PROPOSAL_SCAN_LIMIT } from "../../../lib/corpusProposals";
@@ -256,10 +257,21 @@ export default async function handler(
       // After promote, before claim: a chart song inserted here is one claim
       // can fill in the same run. Apple's feed, no YouTube units.
       name: "charts",
-      budgetMs: 30_000,
+      budgetMs: 60_000,
       floorMs: 5_000,
       run: async (by) => {
         const { done, report } = await feedCharts(by);
+        return { done, report: { ...report } };
+      },
+    },
+    {
+      // Guarded one-off: songs the old matcher missed get retried by the
+      // resolver below instead of sitting out their backoff. Our own rows.
+      name: "rematch",
+      budgetMs: 10_000,
+      floorMs: 0,
+      run: async () => {
+        const { done, report } = await rematchMissedSongs();
         return { done, report: { ...report } };
       },
     },

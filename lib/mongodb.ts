@@ -2,6 +2,7 @@ import { MongoClient, type Collection, type Db } from "mongodb";
 import type { FeedbackEntry, Room } from "../pages/api/types";
 import type { EventType } from "./analytics";
 import { YOUTUBE_DATA_MAX_AGE_DAYS } from "./youtubeRetention";
+import type { IdeaShelf } from "./shelfTypes";
 
 // Reuse one connected client per serverless instance instead of opening and
 // closing a fresh TCP+TLS connection on every request/tracked event. Stored on
@@ -104,14 +105,14 @@ export async function getSearchCacheCollection(): Promise<Collection<SearchCache
   return db.collection<SearchCacheDoc>("search_cache");
 }
 
-// Cached "trending on karaoq" aggregates, refreshed lazily (first request
-// after the doc goes stale recomputes it). TTL is a safety net well past the
-// 24h refresh window so unused country keys eventually disappear.
+// Cached idea shelves (lib/shelves), refreshed lazily (first request after the
+// doc goes stale recomputes it). Song names and keys only, no YouTube fields;
+// the TTL just lets unused country keys disappear.
 const SUGGESTION_CACHE_TTL_SECONDS = 7 * 24 * 60 * 60;
 
 export interface SuggestionCacheDoc {
   key: string;
-  items: { title: string; artist: string; count: number }[];
+  shelves: IdeaShelf[];
   computedAt: Date;
 }
 
@@ -666,6 +667,50 @@ export async function getCronStateCollection(): Promise<Collection<CronStateDoc>
       });
   }
   return db.collection<CronStateDoc>("cron_state");
+}
+
+// One doc per charted country: the latest Apple chart mapped onto
+// karaoke_songs ids, plus the fetch before it so a shelf can show movement.
+// Chart names are Apple's, not YouTube's, but a dead feed must not keep
+// passing week-old charts off as "right now" — hence the TTL.
+const CHART_SNAPSHOT_TTL_SECONDS = 14 * 24 * 60 * 60;
+
+export interface ChartRank {
+  /** karaoke_songs._id */
+  key: string;
+  rank: number;
+  /** When this song (re)entered this country's chart; absent when it was
+   *  already there on the first snapshot, so launch day doesn't mark all 50 new. */
+  since?: Date;
+}
+
+export interface ChartSnapshotDoc {
+  /** Lowercase country code, as CHART_COUNTRIES spells it. */
+  _id: string;
+  ranks: ChartRank[];
+  /** The previous day's chart; absent until a second fetch lands. */
+  prevRanks?: ChartRank[];
+  fetchedAt: Date;
+  /** When prevRanks was fetched — a same-day refetch keeps it rather than
+   *  comparing a chart against itself. */
+  prevFetchedAt?: Date;
+}
+
+let chartSnapshotIndexesEnsured = false;
+
+export async function getChartSnapshotsCollection(): Promise<Collection<ChartSnapshotDoc>> {
+  const client = await getMongoClient();
+  const db = client.db(process.env.MONGODB_DB);
+  if (!chartSnapshotIndexesEnsured) {
+    chartSnapshotIndexesEnsured = true;
+    db.collection("chart_snapshots")
+      .createIndex({ fetchedAt: 1 }, { expireAfterSeconds: CHART_SNAPSHOT_TTL_SECONDS })
+      .catch((e) => {
+        console.error("chart_snapshots index creation failed:", e);
+        chartSnapshotIndexesEnsured = false;
+      });
+  }
+  return db.collection<ChartSnapshotDoc>("chart_snapshots");
 }
 
 // The pre-corpus harvest cursors; cron_state holds the live ones.

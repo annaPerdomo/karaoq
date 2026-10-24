@@ -8,7 +8,6 @@ import {
   orderSections,
   type SongSection,
 } from "../../app/queue/songSuggestions";
-import { cleanSongTitle } from "../../pages/api/suggestions/trending";
 
 const SECTION_IDS = SONG_SECTIONS.map((s) => s.id);
 const PACKS_DIR = path.join(__dirname, "../../public/suggestions");
@@ -148,26 +147,17 @@ describe("regional pack files", () => {
       expect(builtinSectionIds.has(pack.id)).toBe(false);
       for (const cat of pack.categories) {
         expect(builtinCatIds.has(cat.id), `${packId}/${cat.id}`).toBe(false);
-        expect(cat.id).not.toBe("trending");
       }
     }
   });
 });
 
-describe("cleanSongTitle", () => {
-  it("strips karaoke-video noise", () => {
-    expect(cleanSongTitle("Queen - Bohemian Rhapsody (Karaoke Version)")).toBe(
-      "Queen - Bohemian Rhapsody"
-    );
-    expect(cleanSongTitle("Africa - Toto [Karaoke with Lyrics HD]")).toBe(
-      "Africa - Toto"
-    );
-    expect(cleanSongTitle("Dancing Queen karaoke")).toBe("Dancing Queen");
-  });
-
-  it("leaves clean titles alone", () => {
-    expect(cleanSongTitle("Mr. Brightside - The Killers")).toBe(
-      "Mr. Brightside - The Killers"
-    );
+describe("World tab places", () => {
+  it("every language list has a place to live under", async () => {
+    const { SECTION_COUNTRY } = await import("../../components/songsearch/constants");
+    const ids = SONG_SECTIONS.filter((s) => ["spanish", "kpop", "japanese"].includes(s.id))
+      .map((s) => s.id)
+      .concat(LANGUAGE_PACKS.map((p) => loadPack(p.packId).id));
+    for (const id of ids) expect(SECTION_COUNTRY[id], id).toMatch(/^[A-Z]{2}$/);
   });
 });

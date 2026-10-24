@@ -19,8 +19,8 @@ function setup() {
   return renderHook(() =>
     useDiscoveryBrowse({
       country: null,
+      locale: "en",
       roomId: "ROOM1",
-      t: (key: string) => key,
       filters: FILTERS,
       karaokeMode: true,
       setQuery,
@@ -58,24 +58,6 @@ describe("useDiscoveryBrowse — which taps reach for the corpus", () => {
     expect(askedTheCorpus()).toBe(true);
   });
 
-  it("sends a trending row straight to the search it always ran", async () => {
-    // A trending row is a cleaned video title with no artist, so it keys to
-    // nothing the catalog holds — asking is a guaranteed 404 on every tap.
-    const { result } = setup();
-
-    await act(async () => {
-      result.current.searchSuggestion(
-        { title: "Dancing Queen", artist: "" },
-        undefined,
-        "trending",
-        "trending"
-      );
-    });
-
-    await waitFor(() => expect(runSearch).toHaveBeenCalled());
-    expect(askedTheCorpus()).toBe(false);
-  });
-
   it("names the song behind a surprise pick, which comes off the catalog", async () => {
     const { result } = setup();
 
@@ -87,3 +69,89 @@ describe("useDiscoveryBrowse — which taps reach for the corpus", () => {
     expect(askedTheCorpus()).toBe(true);
   });
 });
+
+describe("useDiscoveryBrowse — idea shelves", () => {
+  const shelf = {
+    id: "hot" as const,
+    scope: "country" as const,
+    language: null,
+    country: "US",
+    songs: [
+      {
+        key: "tate mcrae housewife karaoke",
+        title: "Housewife",
+        artist: "Tate McRae",
+        videoId: "v1",
+        videoTitle: "Housewife (Karaoke)",
+        thumbnailUrl: "https://i.ytimg.com/vi/v1/mq.jpg",
+        rank: 1,
+      },
+    ],
+  };
+
+  function posted(url: string): any[] {
+    return (fetch as unknown as ReturnType<typeof vi.fn>).mock.calls
+      .filter(([u]) => String(u).indexOf(url) === 0)
+      .map(([, init]) => (init?.body ? JSON.parse(init.body) : null));
+  }
+
+  it("loads the shelves for the singer's country", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({ ok: true, json: async () => ({ shelves: [shelf] }) }))
+    );
+    const { result } = renderHook(() =>
+      useDiscoveryBrowse({
+        country: "US",
+        locale: "es",
+        roomId: "ROOM1",
+        filters: FILTERS,
+        karaokeMode: true,
+        setQuery,
+        runSearch,
+        trackFirstSearch,
+      })
+    );
+
+    await waitFor(() => expect(result.current.shelves).toEqual([shelf]));
+    expect(String((fetch as any).mock.calls[0][0])).toBe("/api/suggestions/shelves?l=es&c=US");
+    // Opens on the shelves until the singer picks a tab.
+    expect(result.current.activeTab).toBe("hot");
+  });
+
+  it("records a shelf pick without running a search", async () => {
+    const { result } = setup();
+
+    await act(async () => {
+      result.current.trackShelfPick(shelf.songs[0], shelf);
+    });
+
+    expect(runSearch).not.toHaveBeenCalled();
+    expect(trackFirstSearch).toHaveBeenCalled();
+    expect(posted("/api/analytics/suggestion")).toEqual([
+      {
+        roomId: "ROOM1",
+        suggestionSource: "shelf",
+        sectionId: "hot",
+        categoryId: "US",
+        songTitle: "Housewife",
+        songArtist: "Tate McRae",
+      },
+    ]);
+  });
+
+  it("opens a shelf song's other versions from the corpus without a second tap event", async () => {
+    const { result } = setup();
+
+    await act(async () => {
+      result.current.showSongCuts(shelf.songs[0], shelf.songs[0].key);
+    });
+
+    await waitFor(() => expect(runSearch).toHaveBeenCalled());
+    expect(setQuery).toHaveBeenCalledWith("Tate McRae Housewife");
+    // The shelf's own key, not one re-derived from the displayed name.
+    expect(runSearch.mock.calls[0][3]).toBe("tate mcrae housewife karaoke");
+    expect(posted("/api/analytics/suggestion")).toEqual([]);
+  });
+});
+

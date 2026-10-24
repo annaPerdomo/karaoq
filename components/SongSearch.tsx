@@ -14,6 +14,7 @@ import ConfirmModal from './songsearch/ConfirmModal';
 import { useSongSearchState } from './songsearch/hooks/useSongSearchState';
 import { useDiscoveryBrowse } from './songsearch/hooks/useDiscoveryBrowse';
 import { useSongAddFlow } from './songsearch/hooks/useSongAddFlow';
+import type { IdeaShelf, ShelfSong } from '../lib/shelfTypes';
 
 interface SongSearchProps {
   roomId: string;
@@ -55,7 +56,7 @@ const SongSearch: React.FC<SongSearchProps> = ({
   belowSearch,
 }) => {
   const country = useCountry();
-  const { t } = useT();
+  const { t, locale } = useT();
 
   const {
     query,
@@ -90,19 +91,19 @@ const SongSearch: React.FC<SongSearchProps> = ({
     expandedCategory,
     regionalSection,
     langPacks,
-    selectedLang,
-    trendingCategory,
+    shelves,
     searchSuggestion,
+    showSongCuts,
+    trackShelfPick,
     handleSurpriseMe,
     handleTabSelect,
     handleCategorySelect,
-    handleSelectedLangChange,
     handleCategoryBack,
     handleExpandCategory,
   } = useDiscoveryBrowse({
     country,
+    locale,
     roomId,
-    t,
     filters,
     karaokeMode,
     setQuery,
@@ -133,6 +134,14 @@ const SongSearch: React.FC<SongSearchProps> = ({
     suggestionKey: resultsSuggestionKey,
     fromCorpus: resultsFromCorpus,
   });
+
+  // Every idea opens on its versions, served from the corpus with the "Most
+  // sung" one pinned first. A shelf song passes its own key, which needn't
+  // match what its displayed name would re-key to.
+  function handleShelfPick(song: ShelfSong, shelf: IdeaShelf) {
+    trackShelfPick(song, shelf);
+    showSongCuts(song, song.key);
+  }
 
   return (
     <div className={styles.container}>
@@ -203,7 +212,9 @@ const SongSearch: React.FC<SongSearchProps> = ({
           orderedSections={orderedSections}
           langPacks={langPacks}
           regionalSection={regionalSection}
-          trendingCategory={trendingCategory}
+          shelves={shelves}
+          country={country}
+          onShelfPick={handleShelfPick}
           activeTab={activeTab}
           onTabSelect={handleTabSelect}
           activeCategory={activeCategory}
@@ -211,8 +222,6 @@ const SongSearch: React.FC<SongSearchProps> = ({
           onCategoryBack={handleCategoryBack}
           expandedCategory={expandedCategory}
           onExpandCategory={handleExpandCategory}
-          selectedLang={selectedLang}
-          onSelectedLangChange={handleSelectedLangChange}
           onSongSelect={searchSuggestion}
           onSurpriseMe={handleSurpriseMe}
           belowSearch={belowSearch}

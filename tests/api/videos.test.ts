@@ -27,6 +27,13 @@ vi.mock("../../lib/songCorpus", () => ({
   recordAdd: (...args: unknown[]) => recordAddMock(...args),
 }));
 
+// The shared mock collection answers every findOne with the room, which would
+// make any key look like a corpus song.
+const corpusSongs = new Set<string>();
+vi.mock("../../lib/corpusRead", () => ({
+  isCorpusSong: async (key: string) => corpusSongs.has(key),
+}));
+
 process.env.MONGODB_URI = "mongodb://test";
 process.env.MONGODB_DB = "test-db";
 
@@ -566,6 +573,20 @@ describe("POST /api/queue/[id]/videos - Add song to queue", () => {
     it("ignores the flag on an add with no catalog key", async () => {
       expect(await addWith({ fromCorpus: true })).toBeUndefined();
       expect(await addWith({ suggestionKey: "not a song", fromCorpus: true })).toBeUndefined();
+    });
+
+    it("keeps a shelf song's key when the corpus holds it outside the catalog", async () => {
+      corpusSongs.add("tate mcrae housewife karaoke");
+      try {
+        expect(
+          await addWith({ suggestionKey: "tate mcrae housewife karaoke", fromCorpus: true })
+        ).toBe(true);
+        expect(mockCollection.insertOne.mock.calls[0][0].suggestionKey).toBe(
+          "tate mcrae housewife karaoke"
+        );
+      } finally {
+        corpusSongs.clear();
+      }
     });
 
     it("leaves a non-boolean flag absent rather than coercing it", async () => {

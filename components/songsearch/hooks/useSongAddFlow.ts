@@ -78,12 +78,12 @@ export function useSongAddFlow({
       onSongAdded(entry);
       resetSearch();
       setConfirmSong(null);
-      setAddError(null);
+        setAddError(null);
       setJustAdded(entry.songTitle);
       setTimeout(() => setJustAdded(null), 3000);
     } else {
       setConfirmSong(null);
-      setAddError(song.title);
+        setAddError(song.title);
       setTimeout(() => setAddError(null), 4000);
     }
   }

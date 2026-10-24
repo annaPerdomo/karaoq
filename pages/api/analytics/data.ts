@@ -360,7 +360,14 @@ export default async function handler(
 
       events
         .aggregate([
-          { $match: { type: "suggestion_used", categoryId: { $exists: true, $ne: null } } },
+          // A shelf pick's categoryId is a country code, not a category.
+          {
+            $match: {
+              type: "suggestion_used",
+              categoryId: { $exists: true, $ne: null },
+              suggestionSource: { $ne: "shelf" },
+            },
+          },
           { $group: { _id: "$categoryId", count: { $sum: 1 } } },
           { $sort: { count: -1 } },
           { $limit: 20 },
@@ -370,7 +377,13 @@ export default async function handler(
       // Older events stored the artist in userName before songArtist existed, hence the $ifNull.
       events
         .aggregate([
-          { $match: { type: "suggestion_used", suggestionSource: "song_pick", songTitle: { $exists: true } } },
+          {
+            $match: {
+              type: "suggestion_used",
+              suggestionSource: { $in: ["song_pick", "shelf"] },
+              songTitle: { $exists: true },
+            },
+          },
           {
             $group: {
               _id: {

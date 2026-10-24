@@ -3,7 +3,7 @@ import {
   SongCategory,
   SongSection,
 } from '../../app/queue/songSuggestions';
-import { LANG_IDS, INITIAL_CATEGORY_SONGS } from './constants';
+import { HOT_TAB, LANG_IDS, INITIAL_CATEGORY_SONGS, WORLD_TAB } from './constants';
 
 interface BuildDiscoveryDataArgs {
   orderedSections: SongSection[];
@@ -12,10 +12,12 @@ interface BuildDiscoveryDataArgs {
   activeTab: string;
   activeCategory: string | null;
   expandedCategory: boolean;
-  selectedLang: string | null;
-  trendingCategory: SongCategory | null;
-  /** Pre-translated label for the synthetic "Language" tab. */
-  languageTabLabel: string;
+  /** Pre-translated label for the synthetic "World" tab. */
+  worldTabLabel: string;
+  /** Pre-translated label for the synthetic "Hot" tab; the tab exists only
+   *  when there are shelves to put in it. */
+  hotTabLabel: string;
+  hasShelves: boolean;
 }
 
 // Pure derivation of the browse view's tabs/categories/expanded-song-list
@@ -27,39 +29,35 @@ export function buildDiscoveryData({
   activeTab,
   activeCategory,
   expandedCategory,
-  selectedLang,
-  trendingCategory,
-  languageTabLabel,
+  worldTabLabel,
+  hotTabLabel,
+  hasShelves,
 }: BuildDiscoveryDataArgs) {
   const nonLangSections = orderedSections.filter((s) => !LANG_IDS.includes(s.id));
   const TAB_DEFS = [
+    ...(hasShelves ? [{ id: HOT_TAB, label: hotTabLabel, categories: [] as SongCategory[] }] : []),
     ...nonLangSections,
-    { id: 'language', label: languageTabLabel, categories: [] as SongCategory[] },
+    { id: WORLD_TAB, label: worldTabLabel, categories: [] as SongCategory[] },
   ];
-  const langSections = [
+  // Every language list, the country's promoted pack included: its own tab
+  // stays, and its place in the World tab shows it beside the chart.
+  const worldSections = [
     ...orderedSections.filter((s) => LANG_IDS.includes(s.id)),
-    // Skip the pack already promoted to its own tab for this country.
-    ...langPacks.filter((p) => p.id !== regionalSection?.id),
+    ...langPacks,
+    ...(regionalSection && !langPacks.some((p) => p.id === regionalSection.id)
+      ? [regionalSection]
+      : []),
   ];
-  const isLangTab = activeTab === 'language';
+  const isWorldTab = activeTab === WORLD_TAB;
+  const isHotTab = hasShelves && activeTab === HOT_TAB;
 
-  const currentSection = isLangTab
+  const currentSection = isWorldTab || isHotTab
     ? null
     : nonLangSections.find((s) => s.id === activeTab) ?? nonLangSections[0];
-  const currentLang = langSections.find((s) => s.id === selectedLang) ?? langSections[0];
 
-  const firstTabId = nonLangSections[0]?.id;
-  const baseCats = isLangTab
-    ? langSections.flatMap((s) => s.categories)
-    : currentSection?.categories ?? [];
-  // Trending sits at the end of the first tab's grid.
-  const allVisibleCats =
-    trendingCategory && !isLangTab && currentSection?.id === firstTabId
-      ? [...baseCats, trendingCategory]
-      : baseCats;
+  const allVisibleCats = currentSection?.categories ?? [];
 
   const allCategories = [
-    ...(trendingCategory ? [trendingCategory] : []),
     ...(regionalSection?.categories ?? []),
     ...langPacks.flatMap((p) => p.categories),
     ...ALL_CATEGORIES,
@@ -74,10 +72,10 @@ export function buildDiscoveryData({
 
   return {
     TAB_DEFS,
-    langSections,
-    isLangTab,
+    worldSections,
+    isWorldTab,
+    isHotTab,
     currentSection,
-    currentLang,
     allVisibleCats,
     expandedData,
     parentSection,

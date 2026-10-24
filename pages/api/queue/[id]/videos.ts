@@ -16,6 +16,7 @@ import {
 import { getRoomsCollection } from "../../../../lib/mongodb";
 import { normalizeRoomId } from "../../../../lib/roomCode";
 import { recordAdd } from "../../../../lib/songCorpus";
+import { isCorpusSong } from "../../../../lib/corpusRead";
 import { normalizeAutoAdvance } from "../../types";
 import { catalogEntry } from "../../../../lib/suggestionCatalog";
 
@@ -69,14 +70,19 @@ export default async function handler(
   // Only the search box posts here — board claims and Sing-with-me have their
   // own endpoints — so an unrecognized or absent value is "search", not spoofable.
   const via = body.via === "paste" ? "paste" : "search";
-  // This votes on what a suggestion resolves to for every room, so an
-  // unrecognised key is dropped rather than rejected — the add still succeeds.
-  const suggestionKey =
+  // An unrecognised key is dropped rather than rejected — the add still
+  // succeeds. A corpus song outside the static catalog (a chart or promoted song
+  // off a shelf) keeps its key for attribution; recordAdd re-checks the catalog
+  // before letting a key vote on what a suggestion resolves to.
+  const claimedKey =
     typeof body.suggestionKey === "string" &&
     body.suggestionKey.length > 0 &&
-    body.suggestionKey.length <= MAX_TITLE_LENGTH &&
-    catalogEntry(body.suggestionKey)
+    body.suggestionKey.length <= MAX_TITLE_LENGTH
       ? body.suggestionKey
+      : undefined;
+  const suggestionKey =
+    claimedKey && (catalogEntry(claimedKey) || (await isCorpusSong(claimedKey)))
+      ? claimedKey
       : undefined;
   // Only beside a key it belongs to, and never coerced: on its own the flag
   // would claim a free-text search came from the corpus.

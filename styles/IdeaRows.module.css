@@ -1,0 +1,123 @@
+/* ─── Song ideas rows: one row style for every list in the browse view — the
+   Hot tab's shelves and every category (components/songsearch/SongRow.tsx).
+   They sit inside SongSearch.module.css's .songPanel. ─── */
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  width: 100%;
+  padding: 0.55rem 0.85rem;
+  background: transparent;
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  cursor: pointer;
+  text-align: left;
+  color: var(--text-primary);
+  transition: background 0.12s ease;
+}
+
+.row:first-child {
+  border-top: none;
+}
+
+.row:hover,
+.row:focus-visible {
+  background: rgba(255, 45, 120, 0.08);
+  outline: none;
+}
+
+.row:focus-visible {
+  box-shadow: inset 0 0 0 2px rgba(255, 45, 120, 0.6);
+}
+
+.num {
+  width: 1.4rem;
+  flex-shrink: 0;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.title {
+  font-size: 0.86rem;
+  font-weight: 600;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.artist {
+  font-size: 0.74rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.badgeNew,
+.badgeClimb,
+.badgeRooms {
+  flex-shrink: 0;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  padding: 0.18rem 0.45rem;
+  border-radius: 999px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.badgeNew {
+  background: linear-gradient(135deg, #ff2d78, #9b1dff);
+  color: #fff;
+}
+
+.badgeClimb {
+  background: rgba(16, 185, 129, 0.18);
+  color: #34d399;
+}
+
+.badgeRooms {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-secondary);
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+/* ─── Hot tab: one titled list per shelf ─── */
+.shelves {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.shelfHead {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  margin-bottom: 0.55rem;
+}
+
+.shelfTitle {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.shelfSub {
+  font-size: 0.74rem;
+  color: var(--text-secondary);
+}

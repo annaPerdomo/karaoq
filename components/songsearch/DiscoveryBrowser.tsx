@@ -11,13 +11,19 @@ import { labelWithFallback } from './labelWithFallback';
 import { buildDiscoveryData } from './discoveryData';
 import CategoryGrid from './CategoryGrid';
 import CategorySongList from './CategorySongList';
-import LanguagePicker from './LanguagePicker';
+import WorldTab from './WorldTab';
+import { HOT_TAB, WORLD_TAB } from './constants';
+import HotTab from './HotTab';
+import type { IdeaShelf, ShelfSong } from '../../lib/shelfTypes';
 
 interface DiscoveryBrowserProps {
   orderedSections: SongSection[];
   langPacks: SongSection[];
   regionalSection: SongSection | null;
-  trendingCategory: SongCategory | null;
+  shelves: IdeaShelf[];
+  /** The singer's country (useCountry), which the World tab opens away from. */
+  country: string | null;
+  onShelfPick: (song: ShelfSong, shelf: IdeaShelf) => void;
   activeTab: string;
   onTabSelect: (tabId: string) => void;
   activeCategory: string | null;
@@ -27,14 +33,7 @@ interface DiscoveryBrowserProps {
   onCategoryBack: () => void;
   expandedCategory: boolean;
   onExpandCategory: () => void;
-  selectedLang: string | null;
-  onSelectedLangChange: (langId: string) => void;
-  onSongSelect: (
-    song: SongSuggestion,
-    sectionId: string,
-    categoryId: string,
-    source: 'song_pick' | 'trending'
-  ) => void;
+  onSongSelect: (song: SongSuggestion, sectionId: string, categoryId: string) => void;
   onSurpriseMe: () => void;
   /**
    * Rendered at the top of the scrollable browse area (above the "Song ideas"
@@ -48,7 +47,9 @@ const DiscoveryBrowser: React.FC<DiscoveryBrowserProps> = ({
   orderedSections,
   langPacks,
   regionalSection,
-  trendingCategory,
+  shelves,
+  country,
+  onShelfPick,
   activeTab,
   onTabSelect,
   activeCategory,
@@ -56,8 +57,6 @@ const DiscoveryBrowser: React.FC<DiscoveryBrowserProps> = ({
   onCategoryBack,
   expandedCategory,
   onExpandCategory,
-  selectedLang,
-  onSelectedLangChange,
   onSongSelect,
   onSurpriseMe,
   belowSearch,
@@ -66,10 +65,10 @@ const DiscoveryBrowser: React.FC<DiscoveryBrowserProps> = ({
 
   const {
     TAB_DEFS,
-    langSections,
-    isLangTab,
+    worldSections,
+    isWorldTab,
+    isHotTab,
     currentSection,
-    currentLang,
     allVisibleCats,
     expandedData,
     parentSection,
@@ -83,9 +82,9 @@ const DiscoveryBrowser: React.FC<DiscoveryBrowserProps> = ({
     activeTab,
     activeCategory,
     expandedCategory,
-    selectedLang,
-    trendingCategory,
-    languageTabLabel: t('search.tab.language'),
+    worldTabLabel: t('search.tab.world'),
+    hotTabLabel: t('search.tab.hot'),
+    hasShelves: shelves.length > 0,
   });
 
   return (
@@ -112,12 +111,7 @@ const DiscoveryBrowser: React.FC<DiscoveryBrowserProps> = ({
           onBack={onCategoryBack}
           onExpand={onExpandCategory}
           onSongSelect={(song) =>
-            onSongSelect(
-              song,
-              parentSection?.id ?? activeTab,
-              activeCategory as string,
-              activeCategory === 'trending' ? 'trending' : 'song_pick'
-            )
+            onSongSelect(song, parentSection?.id ?? activeTab, activeCategory as string)
           }
         />
       ) : (
@@ -129,23 +123,22 @@ const DiscoveryBrowser: React.FC<DiscoveryBrowserProps> = ({
                 className={`${styles.tabBtn} ${activeTab === s.id ? styles.tabBtnActive : ''}`}
                 onClick={() => onTabSelect(s.id)}
               >
-                {s.id === 'language' ? s.label : labelWithFallback(t, `section.${s.id}`, s.label)}
+                {s.id === WORLD_TAB || s.id === HOT_TAB
+                  ? s.label
+                  : labelWithFallback(t, `section.${s.id}`, s.label)}
               </button>
             ))}
           </div>
 
-          {isLangTab ? (
-            <>
-              <LanguagePicker
-                langSections={langSections}
-                currentLangId={currentLang?.id}
-                onChange={onSelectedLangChange}
-              />
-              <CategoryGrid
-                categories={currentLang?.categories ?? []}
-                onSelect={(cat) => onCategorySelect(cat, currentLang!.id)}
-              />
-            </>
+          {isHotTab ? (
+            <HotTab shelves={shelves} onSelect={onShelfPick} />
+          ) : isWorldTab ? (
+            <WorldTab
+              home={country}
+              sections={worldSections}
+              onSongSelect={onShelfPick}
+              onCategorySelect={(cat, sectionId) => onCategorySelect(cat, sectionId)}
+            />
           ) : (
             <CategoryGrid
               categories={allVisibleCats}

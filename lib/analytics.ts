@@ -8,6 +8,11 @@ import { asLocale, LOCALE_HEADER, type LocaleSource } from "./i18n/activeLocale"
 import { sanitizeEntry, sanitizeReferrerHost, sanitizeRef } from "./firstTouch";
 import { requestGeo } from "./platform";
 
+/** What the browser may send. "trending" was the shelf the idea shelves
+ *  replaced; it survives in the type only for the events already stored. */
+export const SUGGESTION_SOURCES = ["random", "song_pick", "genre_chip", "shelf"] as const;
+export type SuggestionSource = (typeof SUGGESTION_SOURCES)[number] | "trending";
+
 export type EventType =
   | "room_created"
   | "song_added"
@@ -46,7 +51,7 @@ export interface AnalyticsEvent {
   emoji?: string;
   role?: "host" | "singer" | "display";
   userAgent?: string;
-  suggestionSource?: "random" | "song_pick" | "genre_chip" | "trending";
+  suggestionSource?: SuggestionSource;
   sectionId?: string;
   categoryId?: string;
   // Our own key, not a YouTube field, so it doesn't expire at 30 days.

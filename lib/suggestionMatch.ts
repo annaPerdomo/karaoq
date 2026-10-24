@@ -1,4 +1,5 @@
 import { searchCacheKey } from "./searchQuery";
+import { firstCreditedArtist } from "./chartCredit";
 import type { CatalogEntry } from "./suggestionCatalog";
 import type { HarvestedVideo } from "./karaokeChannels";
 
@@ -27,7 +28,30 @@ export const FILLER = new Set([
 
 // An English-only marker rejected every Japanese and Korean upload.
 const KARAOKE_MARKER =
-  /karaoke|karaokê|instrumental|backing track|playback|sing[- ]?along|off\s*vocal|mr\s*removed|カラオケ|オフボーカル|노래방|반주|엠[아]?르|伴奏|卡拉|कराओके/i;
+  /karaoke|karaokê|instrumental|backing track|playback|sing[- ]?along|off\s*vocal|mr\s*removed|\bktv\b|カラオケ|オフボーカル|노래방|반주|엠[아]?르|伴奏|伴唱|卡拉|कराओके/i;
+
+// YouTube's API returns titles HTML-escaped ("&#39;DESERVE&#39;"); the browser
+// decodes them (lib/decodeHtml) but the server matches on the raw string.
+const ENTITY = /&(#\d+|#x[0-9a-f]+|amp|quot|apos|lt|gt);/gi;
+const NAMED: Record<string, string> = { amp: "&", quot: '"', apos: "'", lt: "<", gt: ">" };
+
+export function decodeEntities(text: string): string {
+  return text.replace(ENTITY, (whole, code: string) => {
+    const lower = code.toLowerCase();
+    if (lower[0] !== "#") return NAMED[lower] ?? whole;
+    const n = lower[1] === "x" ? parseInt(lower.slice(2), 16) : parseInt(lower.slice(1), 10);
+    return Number.isFinite(n) ? String.fromCharCode(n) : whole;
+  });
+}
+
+// Chinese, Japanese and Korean titles carry no spaces between words, so an
+// upload's "晴天-周杰倫" or "【晴天】周杰倫KTV" never splits into the words a
+// catalog entry holds. Those scripts' words are matched inside the title instead.
+const CJK = new RegExp("[\\u3040-\\u30ff\\u3400-\\u9fff\\uac00-\\ud7af\\uf900-\\ufaff]");
+
+/** A run-together phrase ("babymonster") is only trusted this long — a short
+ *  one turns up inside unrelated words. */
+const MIN_COMPACT = 5;
 
 // Hashtags mark a short or promo; the rest mark a reel rather than one song.
 const NOT_A_TRACK =
@@ -52,7 +76,7 @@ function uniqueForms(romanised: string, native?: string): string[][] {
 }
 
 function tokens(text: string): string[] {
-  return searchCacheKey(text)
+  return searchCacheKey(decodeEntities(text))
     .split(" ")
     .filter((t) => t.length > 0 && !FILLER.has(t));
 }
@@ -63,9 +87,25 @@ export function songTokens(text: string): string[] {
   return tokens(text);
 }
 
+interface Haystack {
+  bag: Set<string>;
+  /** The title's words run together, for scripts and spellings without spaces. */
+  compact: string;
+}
+
+function haystackOf(videoTokens: string[]): Haystack {
+  return { bag: new Set(videoTokens), compact: videoTokens.join("") };
+}
+
 /** Order-free: channels put the artist first, last, or in a suffix. */
-function covers(haystack: Set<string>, needle: string[]): boolean {
-  return needle.length > 0 && needle.every((t) => haystack.has(t));
+function covers(hay: Haystack, needle: string[]): boolean {
+  if (needle.length === 0) return false;
+  if (needle.every((t) => hay.bag.has(t) || (CJK.test(t) && hay.compact.indexOf(t) >= 0))) {
+    return true;
+  }
+  // "BABY MONSTER" for BABYMONSTER, "back number" run into one word.
+  const joined = needle.join("");
+  return joined.length >= MIN_COMPACT && hay.compact.indexOf(joined) >= 0;
 }
 
 export interface MatchedVideo extends HarvestedVideo {
@@ -79,12 +119,21 @@ interface Variant {
   artist: string[];
 }
 
+/** The full credit, plus its lead act when the credit names several: uploads
+ *  of "Victor Mendivil, Natanael Cano & Ovi" mostly name only Victor Mendivil. */
+function artistForms(entry: CatalogEntry): string[][] {
+  const forms = uniqueForms(entry.artist, entry.nativeArtist);
+  const lead = tokens(firstCreditedArtist(entry.artist));
+  if (lead.length > 0 && !forms.some((f) => f.join(" ") === lead.join(" "))) forms.push(lead);
+  return forms;
+}
+
 function variantsOf(entries: CatalogEntry[]): Variant[] {
   return entries
     .flatMap((entry) => {
       // A Japanese upload may be all native, all romanised, or one of each.
       const titles = uniqueForms(entry.title, entry.nativeTitle);
-      const artists = uniqueForms(entry.artist, entry.nativeArtist);
+      const artists = artistForms(entry);
       return titles.flatMap((title) =>
         artists.map((artist) => ({ entry, title, artist }))
       );
@@ -99,17 +148,19 @@ function variantsOf(entries: CatalogEntry[]): Variant[] {
 }
 
 /** A bare title match puts every cover of "September" under Earth, Wind & Fire. */
-function variantCovers(bag: Set<string>, v: Variant): boolean {
-  return covers(bag, v.title) && covers(bag, v.artist);
+function variantCovers(hay: Haystack, v: Variant): boolean {
+  return covers(hay, v.title) && covers(hay, v.artist);
 }
 
 /** Exported: a client-supplied videoId is a claim, and anything storing one
  *  against a catalog key has to prove the pairing. */
 export function isCutOf(title: string, entry: CatalogEntry): boolean {
-  if (!isKaraokeTrack(title)) return false;
-  const bag = new Set(tokens(title));
-  if (bag.size === 0) return false;
-  return variantsOf([entry]).some((v) => variantCovers(bag, v));
+  const decoded = decodeEntities(title);
+  if (!isKaraokeTrack(decoded)) return false;
+  const videoTokens = tokens(decoded);
+  if (videoTokens.length === 0) return false;
+  const hay = haystackOf(videoTokens);
+  return variantsOf([entry]).some((v) => variantCovers(hay, v));
 }
 
 export function matchHarvestToCatalog(
@@ -141,17 +192,18 @@ export function matchHarvestToCatalog(
   });
 
   for (const video of videos) {
-    if (!isKaraokeTrack(video.title)) continue;
+    if (!isKaraokeTrack(decodeEntities(video.title))) continue;
     const videoTokens = tokens(video.title);
     if (videoTokens.length === 0) continue;
-    const bag = new Set(videoTokens);
+    const hay = haystackOf(videoTokens);
+    const bag = hay.bag;
 
     // One row per (video, song): a bilingual entry has a variant under each of
     // two pivots, and an upload titled in both would file twice.
     const filed = new Set<string>();
     for (const token of Array.from(bag)) {
       for (const w of index.get(token) ?? []) {
-        if (filed.has(w.entry.key) || !variantCovers(bag, w)) continue;
+        if (filed.has(w.entry.key) || !variantCovers(hay, w)) continue;
         filed.add(w.entry.key);
         const rows = matches.get(w.entry.key) ?? [];
         rows.push({
