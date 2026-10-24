@@ -1,5 +1,6 @@
 import type { AnyBulkWriteOperation } from "mongodb";
 
+import { firstCreditedArtist } from "./chartCredit";
 import { buildSongDeduper } from "./corpusPromote";
 import {
   CRON_STATE_TTL_SECONDS,
@@ -98,14 +99,7 @@ export function cleanChartArtist(artist: string): string {
   return artist.replace(FEATURING_SUFFIX, "").trim();
 }
 
-const FIRST_CREDIT_SEPARATOR = /\s&\s|,\s|\sx\s/i;
-
-/** Only for matching against a pack entry keyed on one name — never what gets
- *  inserted. Exported for corpusPromote's evidence scoring, which credits the
- *  same first-named act. */
-export function firstCreditedArtist(artist: string): string {
-  return artist.split(FIRST_CREDIT_SEPARATOR)[0].trim();
-}
+export { firstCreditedArtist };
 
 export interface ChartReport {
   countries: string[];

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 
-import { isCutOf, matchHarvestToCatalog } from "../../lib/suggestionMatch";
+import { decodeEntities, isCutOf, matchHarvestToCatalog } from "../../lib/suggestionMatch";
 import type { CatalogEntry } from "../../lib/suggestionCatalog";
 
 function entry(title: string, artist: string): CatalogEntry {
@@ -275,5 +275,45 @@ describe("isCutOf", () => {
   it("rejects a compilation that happens to name the song", () => {
     expect(isCutOf("ABBA Dancing Queen and more — Karaoke Medley", DANCING_QUEEN))
       .toBe(false);
+  });
+});
+
+// The chart feed's real misses (Oct 2026): group credits, CJK titles without
+// spaces, run-together names and HTML-escaped titles.
+describe("isCutOf — chart songs", () => {
+  const MIRA = entry("Mira Como Vengo", "Victor Mendivil, Natanael Cano & Ovi");
+  const SUNNY = entry("晴天", "周杰倫");
+  const DESERVE = entry("DESERVE", "BABYMONSTER");
+
+  it("accepts an upload naming only the lead act of a group credit", () => {
+    expect(isCutOf("Victor Mendivil - Mira Como Vengo (Karaoke)", MIRA)).toBe(true);
+  });
+
+  it("still wants the lead act, not any act on the credit", () => {
+    expect(isCutOf("Ovi - Mira Como Vengo (Karaoke)", MIRA)).toBe(false);
+  });
+
+  it("finds CJK words in a title written without spaces", () => {
+    expect(isCutOf("晴天-周杰倫KTV", SUNNY)).toBe(true);
+    expect(isCutOf("【KTV】周杰倫《晴天》伴奏", SUNNY)).toBe(true);
+  });
+
+  it("still refuses a different CJK song by the same artist", () => {
+    expect(isCutOf("稻香-周杰倫KTV", SUNNY)).toBe(false);
+  });
+
+  it("reads a name the upload splits, and an HTML-escaped title", () => {
+    expect(isCutOf("BABY MONSTER - &#39;DESERVE&#39; (Karaoke Version)", DESERVE)).toBe(true);
+  });
+
+  it("doesn't trust a short run-together fragment", () => {
+    expect(isCutOf("Lies karaoke - Dabba", entry("Lies", "ABBA"))).toBe(false);
+  });
+});
+
+describe("decodeEntities", () => {
+  it("decodes the escapes YouTube titles carry", () => {
+    expect(decodeEntities("Don&#39;t &amp; &quot;Stop&quot; &#x27;Me&#x27;")).toBe(`Don't & "Stop" 'Me'`);
+    expect(decodeEntities("&unknown; stays")).toBe("&unknown; stays");
   });
 });
