@@ -11,8 +11,7 @@ import { labelWithFallback } from './labelWithFallback';
 import { buildDiscoveryData } from './discoveryData';
 import CategoryGrid from './CategoryGrid';
 import CategorySongList from './CategorySongList';
-import WorldTab from './WorldTab';
-import { HOT_TAB, WORLD_TAB } from './constants';
+import { HOT_TAB } from './constants';
 import HotTab from './HotTab';
 import type { IdeaShelf, ShelfSong } from '../../lib/shelfTypes';
 
@@ -21,8 +20,10 @@ interface DiscoveryBrowserProps {
   langPacks: SongSection[];
   regionalSection: SongSection | null;
   shelves: IdeaShelf[];
-  /** The singer's country (useCountry), which the World tab opens away from. */
+  /** The singer's country (useCountry), where the Hot tab opens. */
   country: string | null;
+  /** Fetches the language lists the first time the Hot tab looks elsewhere. */
+  onLeaveHome: () => void;
   onShelfPick: (song: ShelfSong, shelf: IdeaShelf) => void;
   activeTab: string;
   onTabSelect: (tabId: string) => void;
@@ -49,6 +50,7 @@ const DiscoveryBrowser: React.FC<DiscoveryBrowserProps> = ({
   regionalSection,
   shelves,
   country,
+  onLeaveHome,
   onShelfPick,
   activeTab,
   onTabSelect,
@@ -65,8 +67,7 @@ const DiscoveryBrowser: React.FC<DiscoveryBrowserProps> = ({
 
   const {
     TAB_DEFS,
-    worldSections,
-    isWorldTab,
+    placeSections,
     isHotTab,
     currentSection,
     allVisibleCats,
@@ -82,9 +83,7 @@ const DiscoveryBrowser: React.FC<DiscoveryBrowserProps> = ({
     activeTab,
     activeCategory,
     expandedCategory,
-    worldTabLabel: t('search.tab.world'),
     hotTabLabel: t('search.tab.hot'),
-    hasShelves: shelves.length > 0,
   });
 
   return (
@@ -123,7 +122,7 @@ const DiscoveryBrowser: React.FC<DiscoveryBrowserProps> = ({
                 className={`${styles.tabBtn} ${activeTab === s.id ? styles.tabBtnActive : ''}`}
                 onClick={() => onTabSelect(s.id)}
               >
-                {s.id === WORLD_TAB || s.id === HOT_TAB
+                {s.id === HOT_TAB
                   ? s.label
                   : labelWithFallback(t, `section.${s.id}`, s.label)}
               </button>
@@ -131,11 +130,11 @@ const DiscoveryBrowser: React.FC<DiscoveryBrowserProps> = ({
           </div>
 
           {isHotTab ? (
-            <HotTab shelves={shelves} onSelect={onShelfPick} />
-          ) : isWorldTab ? (
-            <WorldTab
+            <HotTab
+              shelves={shelves}
               home={country}
-              sections={worldSections}
+              sections={placeSections}
+              onLeaveHome={onLeaveHome}
               onSongSelect={onShelfPick}
               onCategorySelect={(cat, sectionId) => onCategorySelect(cat, sectionId)}
             />

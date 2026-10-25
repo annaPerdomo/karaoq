@@ -1,6 +1,7 @@
 import type { AnyBulkWriteOperation } from "mongodb";
 
 import { firstCreditedArtist } from "./chartCredit";
+import { CHART_COUNTRIES } from "./chartCountries";
 import { buildSongDeduper } from "./corpusPromote";
 import {
   CRON_STATE_TTL_SECONDS,
@@ -13,11 +14,7 @@ import {
 } from "./mongodb";
 import { songKeyFor } from "./songEntry";
 
-export const CHART_COUNTRIES = [
-  "us", "gb", "ph", "de", "es", "mx", "tw", "my",
-  "nz", "au", "ca", "fr", "it", "br", "id", "jp",
-  "kr", "in", "cz", "co", "ar", "cl", "pe", "pt",
-] as const;
+export { CHART_COUNTRIES };
 export const CHART_SIZE = 50;
 /** Daily, so the hot shelf moves with the charts. Under 24h so a cron slot that
  *  fires a few minutes early still finds yesterday's country due. */

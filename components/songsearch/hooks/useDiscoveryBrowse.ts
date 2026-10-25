@@ -15,7 +15,7 @@ import fetchRegionalPack from '../../../app/queue/regionalPack';
 import fetchShelves from '../../../app/queue/fetchShelves';
 import type { IdeaShelf, ShelfSong } from '../../../lib/shelfTypes';
 import { SearchFilters } from '../../../app/queue/searchYoutube';
-import { HOT_TAB, LANG_IDS, WORLD_TAB } from '../constants';
+import { HOT_TAB } from '../constants';
 
 interface UseDiscoveryBrowseArgs {
   country: string | null;
@@ -47,13 +47,12 @@ export function useDiscoveryBrowse({
   runSearch,
   trackFirstSearch,
 }: UseDiscoveryBrowseArgs) {
-  const [activeTab, setActiveTab] = React.useState(SONG_SECTIONS[0].id);
+  const [activeTab, setActiveTab] = React.useState(HOT_TAB);
   const [activeCategory, setActiveCategory] = React.useState<string | null>(null);
   const [expandedCategory, setExpandedCategory] = React.useState(false);
   const [regionalSection, setRegionalSection] = React.useState<SongSection | null>(null);
   const [langPacks, setLangPacks] = React.useState<SongSection[]>([]);
   const [shelves, setShelves] = React.useState<IdeaShelf[]>([]);
-  const userPickedTabRef = React.useRef(false);
 
   // Localize the discovery sections: reorder by country and, where a curated
   // regional pack exists, splice it in as the first tab.
@@ -74,36 +73,22 @@ export function useDiscoveryBrowse({
     };
   }, [country]);
 
-  // Open on the shelves when there are any, else the country's preferred first
-  // tab — until the user picks one.
-  React.useEffect(() => {
-    if (userPickedTabRef.current) return;
-    if (shelves.length > 0) {
-      setActiveTab(HOT_TAB);
-      return;
-    }
-    const first = orderedSections[0];
-    if (!first) return;
-    setActiveTab(LANG_IDS.includes(first.id) ? WORLD_TAB : first.id);
-  }, [orderedSections, shelves.length]);
 
-  // Every language pack is available to everyone under the World tab — geo
-  // only decides which one gets promoted to its own first tab. Packs are
-  // lazy-loaded (CDN-cached JSON) the first time the tab opens.
-  React.useEffect(() => {
-    if (activeTab !== WORLD_TAB || langPacks.length > 0) return;
-    let cancelled = false;
-    Promise.all(LANGUAGE_PACKS.map((p) => fetchRegionalPack(p.packId))).then(
-      (sections) => {
-        if (cancelled) return;
-        const loaded = sections.filter((s): s is SongSection => Boolean(s));
-        if (loaded.length > 0) setLangPacks(loaded);
-      }
-    );
-    return () => {
-      cancelled = true;
-    };
-  }, [activeTab, langPacks.length]);
+
+  // Every language pack is available to everyone as its place's classics in
+  // the Hot tab — geo only decides which one gets promoted to its own first
+  // tab. Packs are lazy-loaded (CDN-cached JSON) the first time the singer
+  // looks beyond their own place.
+  const packsRequestedRef = React.useRef(false);
+  function ensureLangPacks() {
+    if (packsRequestedRef.current) return;
+    packsRequestedRef.current = true;
+    Promise.all(LANGUAGE_PACKS.map((p) => fetchRegionalPack(p.packId))).then((sections) => {
+      const loaded = sections.filter((s): s is SongSection => Boolean(s));
+      if (loaded.length > 0) setLangPacks(loaded);
+      else packsRequestedRef.current = false;
+    });
+  }
 
   React.useEffect(() => {
     const controller = new AbortController();
@@ -171,7 +156,6 @@ export function useDiscoveryBrowse({
   }
 
   function handleTabSelect(tabId: string) {
-    userPickedTabRef.current = true;
     setActiveTab(tabId);
     setActiveCategory(null);
     setExpandedCategory(false);
@@ -201,6 +185,7 @@ export function useDiscoveryBrowse({
     regionalSection,
     langPacks,
     shelves,
+    ensureLangPacks,
     searchSuggestion,
     showSongCuts,
     trackShelfPick,

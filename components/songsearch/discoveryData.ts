@@ -3,7 +3,7 @@ import {
   SongCategory,
   SongSection,
 } from '../../app/queue/songSuggestions';
-import { HOT_TAB, LANG_IDS, INITIAL_CATEGORY_SONGS, WORLD_TAB } from './constants';
+import { HOT_TAB, LANG_IDS, INITIAL_CATEGORY_SONGS } from './constants';
 
 interface BuildDiscoveryDataArgs {
   orderedSections: SongSection[];
@@ -12,12 +12,9 @@ interface BuildDiscoveryDataArgs {
   activeTab: string;
   activeCategory: string | null;
   expandedCategory: boolean;
-  /** Pre-translated label for the synthetic "World" tab. */
-  worldTabLabel: string;
-  /** Pre-translated label for the synthetic "Hot" tab; the tab exists only
-   *  when there are shelves to put in it. */
+  /** Pre-translated label for the synthetic "Hot" tab. Always offered: its
+   *  place picker is the only way to the language lists' classics. */
   hotTabLabel: string;
-  hasShelves: boolean;
 }
 
 // Pure derivation of the browse view's tabs/categories/expanded-song-list
@@ -29,29 +26,25 @@ export function buildDiscoveryData({
   activeTab,
   activeCategory,
   expandedCategory,
-  worldTabLabel,
   hotTabLabel,
-  hasShelves,
 }: BuildDiscoveryDataArgs) {
   const nonLangSections = orderedSections.filter((s) => !LANG_IDS.includes(s.id));
   const TAB_DEFS = [
-    ...(hasShelves ? [{ id: HOT_TAB, label: hotTabLabel, categories: [] as SongCategory[] }] : []),
+    { id: HOT_TAB, label: hotTabLabel, categories: [] as SongCategory[] },
     ...nonLangSections,
-    { id: WORLD_TAB, label: worldTabLabel, categories: [] as SongCategory[] },
   ];
   // Every language list, the country's promoted pack included: its own tab
-  // stays, and its place in the World tab shows it beside the chart.
-  const worldSections = [
+  // stays, and the Hot tab shows it as its place's classics.
+  const placeSections = [
     ...orderedSections.filter((s) => LANG_IDS.includes(s.id)),
     ...langPacks,
     ...(regionalSection && !langPacks.some((p) => p.id === regionalSection.id)
       ? [regionalSection]
       : []),
   ];
-  const isWorldTab = activeTab === WORLD_TAB;
-  const isHotTab = hasShelves && activeTab === HOT_TAB;
+  const isHotTab = activeTab === HOT_TAB;
 
-  const currentSection = isWorldTab || isHotTab
+  const currentSection = isHotTab
     ? null
     : nonLangSections.find((s) => s.id === activeTab) ?? nonLangSections[0];
 
@@ -72,8 +65,7 @@ export function buildDiscoveryData({
 
   return {
     TAB_DEFS,
-    worldSections,
-    isWorldTab,
+    placeSections,
     isHotTab,
     currentSection,
     allVisibleCats,

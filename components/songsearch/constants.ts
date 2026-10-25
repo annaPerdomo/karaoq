@@ -27,11 +27,9 @@ export const INITIAL_CATEGORY_SONGS = 8;
 /** The synthetic first tab holding the hot/rooms shelves (lib/shelves). */
 export const HOT_TAB = 'hot';
 
-/** The synthetic tab that pairs each place's live chart with its classics. */
-export const WORLD_TAB = 'world';
-
-/** Which chart each language list's place is. Every list the World tab
- *  offers needs one, or it would never be offered (tests/lib/countryModes). */
+/** Which place each language list's classics belong to in the Hot tab's
+ *  picker. Every list needs one, or it would be unreachable
+ *  (tests/lib/countryModes). */
 export const SECTION_COUNTRY: Record<string, string> = {
   spanish: 'MX',
   kpop: 'KR',

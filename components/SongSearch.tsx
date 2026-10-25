@@ -92,6 +92,7 @@ const SongSearch: React.FC<SongSearchProps> = ({
     regionalSection,
     langPacks,
     shelves,
+    ensureLangPacks,
     searchSuggestion,
     showSongCuts,
     trackShelfPick,
@@ -214,6 +215,7 @@ const SongSearch: React.FC<SongSearchProps> = ({
           regionalSection={regionalSection}
           shelves={shelves}
           country={country}
+          onLeaveHome={ensureLangPacks}
           onShelfPick={handleShelfPick}
           activeTab={activeTab}
           onTabSelect={handleTabSelect}
