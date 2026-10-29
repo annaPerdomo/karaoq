@@ -85,14 +85,18 @@ const SongSearch: React.FC<SongSearchProps> = ({
   } = useSongSearchState({ roomId, role });
 
   const {
-    orderedSections,
     activeTab,
     activeCategory,
     expandedCategory,
-    regionalSection,
-    langPacks,
+    allSections,
+    lists,
+    place,
+    places,
+    atHome,
+    chart,
+    chartLoading,
+    pickPlace,
     shelves,
-    ensureLangPacks,
     searchSuggestion,
     showSongCuts,
     trackShelfPick,
@@ -210,12 +214,16 @@ const SongSearch: React.FC<SongSearchProps> = ({
 
       {!hasSearched && results.length === 0 && !justAdded && (
         <DiscoveryBrowser
-          orderedSections={orderedSections}
-          langPacks={langPacks}
-          regionalSection={regionalSection}
+          allSections={allSections}
+          lists={lists}
+          place={place}
+          places={places}
+          home={country}
+          atHome={atHome}
           shelves={shelves}
-          country={country}
-          onLeaveHome={ensureLangPacks}
+          chart={chart}
+          chartLoading={chartLoading}
+          onPlaceChange={pickPlace}
           onShelfPick={handleShelfPick}
           activeTab={activeTab}
           onTabSelect={handleTabSelect}

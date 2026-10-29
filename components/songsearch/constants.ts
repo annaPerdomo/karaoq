@@ -26,19 +26,3 @@ export const INITIAL_CATEGORY_SONGS = 8;
 
 /** The synthetic first tab holding the hot/rooms shelves (lib/shelves). */
 export const HOT_TAB = 'hot';
-
-/** Which place each language list's classics belong to in the Hot tab's
- *  picker. Every list needs one, or it would be unreachable
- *  (tests/lib/countryModes). */
-export const SECTION_COUNTRY: Record<string, string> = {
-  spanish: 'MX',
-  kpop: 'KR',
-  japanese: 'JP',
-  brasil: 'BR',
-  cesko: 'CZ',
-  deutsch: 'DE',
-  francais: 'FR',
-  indonesia: 'ID',
-  bollywood: 'IN',
-  opm: 'PH',
-};

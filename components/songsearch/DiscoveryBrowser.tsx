@@ -1,29 +1,39 @@
 import * as React from 'react';
 
 import styles from '../../styles/SongSearch.module.css';
-import {
-  SongCategory,
-  SongSection,
-  SongSuggestion,
-} from '../../app/queue/songSuggestions';
+import { SongCategory, SongSection, SongSuggestion } from '../../app/queue/songSuggestions';
+import type { IdeaShelf, ShelfSong } from '../../lib/shelfTypes';
 import { useT } from '../../lib/i18n/I18nProvider';
-import { labelWithFallback } from './labelWithFallback';
 import { buildDiscoveryData } from './discoveryData';
-import CategoryGrid from './CategoryGrid';
+import CategoryGroups from './CategoryGroups';
 import CategorySongList from './CategorySongList';
 import { HOT_TAB } from './constants';
 import HotTab from './HotTab';
-import type { IdeaShelf, ShelfSong } from '../../lib/shelfTypes';
+import PlacePicker from './PlacePicker';
+import type { PlaceLists } from './placeLists';
+
+/** Every tab follows the place: Hot shows its chart, the others its lists. */
+const TABS: { id: string; labelKey: string }[] = [
+  { id: HOT_TAB, labelKey: 'search.tab.hot' },
+  { id: 'genre', labelKey: 'section.genre' },
+  { id: 'voice-type', labelKey: 'section.voice-type' },
+];
 
 interface DiscoveryBrowserProps {
-  orderedSections: SongSection[];
-  langPacks: SongSection[];
-  regionalSection: SongSection | null;
+  allSections: SongSection[];
+  lists: PlaceLists;
+  /** The place every tab follows ("" = the singer's own, unknown place). */
+  place: string;
+  places: string[];
+  /** The singer's country (useCountry). */
+  home: string | null;
+  atHome: boolean;
+  /** The singer's own shelves; shown while they're at home. */
   shelves: IdeaShelf[];
-  /** The singer's country (useCountry), where the Hot tab opens. */
-  country: string | null;
-  /** Fetches the language lists the first time the Hot tab looks elsewhere. */
-  onLeaveHome: () => void;
+  /** The picked place's chart, when they're looking elsewhere. */
+  chart: IdeaShelf | null;
+  chartLoading: boolean;
+  onPlaceChange: (place: string) => void;
   onShelfPick: (song: ShelfSong, shelf: IdeaShelf) => void;
   activeTab: string;
   onTabSelect: (tabId: string) => void;
@@ -45,12 +55,16 @@ interface DiscoveryBrowserProps {
 }
 
 const DiscoveryBrowser: React.FC<DiscoveryBrowserProps> = ({
-  orderedSections,
-  langPacks,
-  regionalSection,
+  allSections,
+  lists,
+  place,
+  places,
+  home,
+  atHome,
   shelves,
-  country,
-  onLeaveHome,
+  chart,
+  chartLoading,
+  onPlaceChange,
   onShelfPick,
   activeTab,
   onTabSelect,
@@ -64,26 +78,10 @@ const DiscoveryBrowser: React.FC<DiscoveryBrowserProps> = ({
   belowSearch,
 }) => {
   const { t } = useT();
-
-  const {
-    TAB_DEFS,
-    placeSections,
-    isHotTab,
-    currentSection,
-    allVisibleCats,
-    expandedData,
-    parentSection,
-    songs,
-    visible,
-    hasMore,
-  } = buildDiscoveryData({
-    orderedSections,
-    langPacks,
-    regionalSection,
-    activeTab,
+  const { expandedData, parentSection, songs, visible, hasMore } = buildDiscoveryData({
+    allSections,
     activeCategory,
     expandedCategory,
-    hotTabLabel: t('search.tab.hot'),
   });
 
   return (
@@ -92,14 +90,6 @@ const DiscoveryBrowser: React.FC<DiscoveryBrowserProps> = ({
           idea tabs scroll together instead of the board pinning itself
           above a separately-scrolling ideas list. */}
       {!expandedData && belowSearch}
-      {!expandedData && (
-        <div className={styles.discoveryHeading}>
-          <span className={styles.discoveryTitle}>{t('search.ideas.title')}</span>
-          <span className={styles.discoverySub}>
-            {t('search.ideas.sub')}
-          </span>
-        </div>
-      )}
       {expandedData ? (
         <CategorySongList
           category={expandedData}
@@ -115,33 +105,38 @@ const DiscoveryBrowser: React.FC<DiscoveryBrowserProps> = ({
         />
       ) : (
         <>
+          <PlacePicker
+            places={places}
+            value={place}
+            home={home}
+            onChange={onPlaceChange}
+            title={<span className={styles.discoveryTitle}>{t('search.ideas.title')}</span>}
+            sub={<span className={styles.discoverySub}>{t('search.ideas.sub')}</span>}
+          />
           <div className={styles.tabBar}>
-            {TAB_DEFS.map((s) => (
+            {TABS.map((tab) => (
               <button
-                key={s.id}
-                className={`${styles.tabBtn} ${activeTab === s.id ? styles.tabBtnActive : ''}`}
-                onClick={() => onTabSelect(s.id)}
+                key={tab.id}
+                className={`${styles.tabBtn} ${activeTab === tab.id ? styles.tabBtnActive : ''}`}
+                onClick={() => onTabSelect(tab.id)}
               >
-                {s.id === HOT_TAB
-                  ? s.label
-                  : labelWithFallback(t, `section.${s.id}`, s.label)}
+                {t(tab.labelKey)}
               </button>
             ))}
           </div>
 
-          {isHotTab ? (
+          {activeTab === HOT_TAB ? (
             <HotTab
-              shelves={shelves}
-              home={country}
-              sections={placeSections}
-              onLeaveHome={onLeaveHome}
+              shelves={atHome ? shelves : chart ? [chart] : []}
+              loading={!atHome && chartLoading}
               onSongSelect={onShelfPick}
-              onCategorySelect={(cat, sectionId) => onCategorySelect(cat, sectionId)}
             />
           ) : (
-            <CategoryGrid
-              categories={allVisibleCats}
-              onSelect={(cat) => onCategorySelect(cat, currentSection?.id)}
+            <CategoryGroups
+              groups={activeTab === 'voice-type' ? lists.voice : lists.genres}
+              place={place}
+              sections={allSections}
+              onSelect={(cat, sectionId) => onCategorySelect(cat, sectionId)}
             />
           )}
 

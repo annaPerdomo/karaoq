@@ -1,6 +1,6 @@
 import { CHART_SIZE } from "./chartFeed";
 import { singAlongViews } from "./cutPick";
-import { localeForCountry } from "./i18n/config";
+import { placeLanguage } from "./placeLanguage";
 import {
   getChartSnapshotsCollection,
   getKaraokeSongsCollection,
@@ -38,13 +38,7 @@ const QUERY_TIMEOUT_MS = 5000;
 /** Censored or slur titles — a chart can carry them, a bar's TV shouldn't. */
 const UNSHOWABLE = /\*|\bn[i1]gg|\bf[a@]gg/i;
 
-/** Charts whose language has no UI locale (lib/i18n/config maps the rest). */
-const CHART_LANGUAGE: Record<string, string> = { tw: "zh", th: "th", in: "hi" };
-
-export function chartLanguage(country: string): string {
-  const cc = country.toLowerCase();
-  return CHART_LANGUAGE[cc] ?? localeForCountry(cc) ?? "en";
-}
+export const chartLanguage = placeLanguage;
 
 export function shelvesFreshFor(shelves: IdeaShelf[]): number {
   return shelves.some((s) => s.id === "hot") ? SHELF_REFRESH_MS : SHELF_RETRY_MS;

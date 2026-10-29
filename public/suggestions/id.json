@@ -82,6 +82,86 @@
         { "title": "Madu dan Racun", "artist": "Arie Wibowo" },
         { "title": "Hati Yang Luka", "artist": "Betharia Sonata" }
       ]
+    },
+    {
+      "id": "id-voice-easy",
+      "name": "Easy to Sing",
+      "emoji": "😌",
+      "voice": "easy",
+      "songs": [
+        { "title": "Kemesraan", "artist": "Iwan Fals" },
+        { "title": "Kolam Susu", "artist": "Koes Plus" },
+        { "title": "Bujangan", "artist": "Koes Plus" },
+        { "title": "Sayang", "artist": "Via Vallen" },
+        { "title": "Ojo Dibandingke", "artist": "Farel Prayoga" },
+        { "title": "Begadang", "artist": "Rhoma Irama" },
+        { "title": "Kopi Dangdut", "artist": "Fahmi Shahab" },
+        { "title": "Pamer Bojo", "artist": "Didi Kempot" },
+        { "title": "Jangan Menyerah", "artist": "D'Masiv" },
+        { "title": "Rungkad", "artist": "Happy Asmara" },
+        { "title": "Gemu Fa Mi Re", "artist": "Nyong Franco" },
+        { "title": "Ada Apa Denganmu", "artist": "Peterpan" }
+      ]
+    },
+    {
+      "id": "id-voice-low",
+      "name": "Low & Deep",
+      "emoji": "🫧",
+      "voice": "low",
+      "songs": [
+        { "title": "Bento", "artist": "Iwan Fals" },
+        { "title": "Yang Terlupakan", "artist": "Iwan Fals" },
+        { "title": "Berita Kepada Kawan", "artist": "Ebiet G. Ade" },
+        { "title": "Separuh Aku", "artist": "Noah" },
+        { "title": "Mungkin Nanti", "artist": "Peterpan" },
+        { "title": "To the Bone", "artist": "Pamungkas" },
+        { "title": "Monokrom", "artist": "Tulus" },
+        { "title": "Hati-Hati di Jalan", "artist": "Tulus" },
+        { "title": "Kangen", "artist": "Dewa 19" },
+        { "title": "Sephia", "artist": "Sheila on 7" },
+        { "title": "Bertaut", "artist": "Nadin Amizah" },
+        { "title": "Seperti Yang Kau Minta", "artist": "Chrisye" }
+      ]
+    },
+    {
+      "id": "id-voice-mid",
+      "name": "Mid Range",
+      "emoji": "🎶",
+      "voice": "mid",
+      "songs": [
+        { "title": "Dan", "artist": "Sheila on 7" },
+        { "title": "Kisah Cintaku", "artist": "Chrisye" },
+        { "title": "Januari", "artist": "Glenn Fredly" },
+        { "title": "Asal Kau Bahagia", "artist": "Armada" },
+        { "title": "Mantan Terindah", "artist": "Kahitna" },
+        { "title": "Hal Hebat", "artist": "Govinda" },
+        { "title": "Komang", "artist": "Raim Laode" },
+        { "title": "Akad", "artist": "Payung Teduh" },
+        { "title": "Pelangi di Matamu", "artist": "Jamrud" },
+        { "title": "Kemarin", "artist": "Seventeen" },
+        { "title": "Teman Hidup", "artist": "Tulus" },
+        { "title": "Dia", "artist": "Anji" }
+      ]
+    },
+    {
+      "id": "id-voice-high",
+      "name": "High & Powerful",
+      "emoji": "🌟",
+      "voice": "high",
+      "songs": [
+        { "title": "Pesan Terakhir", "artist": "Lyodra" },
+        { "title": "Tak Ingin Usai", "artist": "Keisya Levronka" },
+        { "title": "Sisa Rasa", "artist": "Mahalini" },
+        { "title": "Aku Yang Tersakiti", "artist": "Judika" },
+        { "title": "Kenangan Terindah", "artist": "Samsons" },
+        { "title": "Cinta Sejati", "artist": "Bunga Citra Lestari" },
+        { "title": "Sempurna", "artist": "Andra and the Backbone" },
+        { "title": "Matahariku", "artist": "Agnes Monica" },
+        { "title": "Tetap Dalam Jiwa", "artist": "Isyana Sarasvati" },
+        { "title": "Pupus", "artist": "Dewa 19" },
+        { "title": "Kehilangan", "artist": "Firman" },
+        { "title": "Hati Yang Kau Sakiti", "artist": "Rossa" }
+      ]
     }
   ]
 }

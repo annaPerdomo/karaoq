@@ -84,6 +84,86 @@
         { "title": "Verdamp lang her", "artist": "BAP" },
         { "title": "Viva Colonia", "artist": "Höhner" }
       ]
+    },
+    {
+      "id": "de-voice-easy",
+      "name": "Easy to Sing",
+      "emoji": "😌",
+      "voice": "easy",
+      "songs": [
+        { "title": "99 Luftballons", "artist": "Nena" },
+        { "title": "Layla", "artist": "DJ Robin & Schürze" },
+        { "title": "Ein Stern (der deinen Namen trägt)", "artist": "DJ Ötzi & Nik P." },
+        { "title": "Anton aus Tirol", "artist": "DJ Ötzi" },
+        { "title": "Viva Colonia", "artist": "Höhner" },
+        { "title": "Ein bisschen Frieden", "artist": "Nicole" },
+        { "title": "Da Da Da", "artist": "Trio" },
+        { "title": "Ich will Spaß", "artist": "Markus" },
+        { "title": "Cordula Grün", "artist": "Die Draufgänger" },
+        { "title": "Marmor, Stein und Eisen bricht", "artist": "Drafi Deutscher" },
+        { "title": "Schatzi schenk mir ein Foto", "artist": "Mickie Krause" },
+        { "title": "Bruttosozialprodukt", "artist": "Geier Sturzflug" }
+      ]
+    },
+    {
+      "id": "de-voice-low",
+      "name": "Low & Deep",
+      "emoji": "🫧",
+      "voice": "low",
+      "songs": [
+        { "title": "Über den Wolken", "artist": "Reinhard Mey" },
+        { "title": "Sonderzug nach Pankow", "artist": "Udo Lindenberg" },
+        { "title": "Cello", "artist": "Udo Lindenberg & Clueso" },
+        { "title": "Der Kommissar", "artist": "Falco" },
+        { "title": "Du hast", "artist": "Rammstein" },
+        { "title": "Haus am See", "artist": "Peter Fox" },
+        { "title": "Für mich soll's rote Rosen regnen", "artist": "Hildegard Knef" },
+        { "title": "Lili Marleen", "artist": "Marlene Dietrich" },
+        { "title": "Die immer lacht", "artist": "Stereoact & Kerstin Ott" },
+        { "title": "Alt wie ein Baum", "artist": "Puhdys" },
+        { "title": "Ein Kompliment", "artist": "Sportfreunde Stiller" },
+        { "title": "Wahnsinn", "artist": "Wolfgang Petry" }
+      ]
+    },
+    {
+      "id": "de-voice-mid",
+      "name": "Mid Range",
+      "emoji": "🎶",
+      "voice": "mid",
+      "songs": [
+        { "title": "Atemlos durch die Nacht", "artist": "Helene Fischer" },
+        { "title": "Lieblingsmensch", "artist": "Namika" },
+        { "title": "Chöre", "artist": "Mark Forster" },
+        { "title": "80 Millionen", "artist": "Max Giesinger" },
+        { "title": "Tage wie diese", "artist": "Die Toten Hosen" },
+        { "title": "Westerland", "artist": "Die Ärzte" },
+        { "title": "Ich war noch niemals in New York", "artist": "Udo Jürgens" },
+        { "title": "Verdammt ich lieb dich", "artist": "Matthias Reim" },
+        { "title": "Irgendwie, irgendwo, irgendwann", "artist": "Nena" },
+        { "title": "Applaus, Applaus", "artist": "Sportfreunde Stiller" },
+        { "title": "Musik sein", "artist": "Wincent Weiss" },
+        { "title": "Skandal im Sperrbezirk", "artist": "Spider Murphy Gang" }
+      ]
+    },
+    {
+      "id": "de-voice-high",
+      "name": "High & Powerful",
+      "emoji": "🌟",
+      "voice": "high",
+      "songs": [
+        { "title": "Durch den Monsun", "artist": "Tokio Hotel" },
+        { "title": "Ein Hoch auf uns", "artist": "Andreas Bourani" },
+        { "title": "Ohne dich (schlaf ich heut Nacht nicht ein)", "artist": "Münchener Freiheit" },
+        { "title": "Herzbeben", "artist": "Helene Fischer" },
+        { "title": "Halt dich an mir fest", "artist": "Revolverheld" },
+        { "title": "Dieser Weg", "artist": "Xavier Naidoo" },
+        { "title": "Über sieben Brücken musst du gehn", "artist": "Peter Maffay" },
+        { "title": "Major Tom (völlig losgelöst)", "artist": "Peter Schilling" },
+        { "title": "Ich liebe das Leben", "artist": "Vicky Leandros" },
+        { "title": "Symphonie", "artist": "Silbermond" },
+        { "title": "Jenseits von Eden", "artist": "Nino de Angelo" },
+        { "title": "Perfekte Welle", "artist": "Juli" }
+      ]
     }
   ]
 }

@@ -55,6 +55,86 @@
         { "title": "Basique", "artist": "Orelsan" },
         { "title": "La Grenade", "artist": "Clara Luciani" }
       ]
+    },
+    {
+      "id": "fr-voice-easy",
+      "name": "Easy to Sing",
+      "emoji": "😌",
+      "voice": "easy",
+      "songs": [
+        { "title": "La Vie en rose", "artist": "Édith Piaf" },
+        { "title": "Les Champs-Élysées", "artist": "Joe Dassin" },
+        { "title": "Alors on danse", "artist": "Stromae" },
+        { "title": "Joe le taxi", "artist": "Vanessa Paradis" },
+        { "title": "Tous les garçons et les filles", "artist": "Françoise Hardy" },
+        { "title": "Ça (c'est vraiment toi)", "artist": "Téléphone" },
+        { "title": "Djadja", "artist": "Aya Nakamura" },
+        { "title": "Alexandrie Alexandra", "artist": "Claude François" },
+        { "title": "Tout oublier", "artist": "Angèle" },
+        { "title": "Les Démons de minuit", "artist": "Images" },
+        { "title": "Pour un flirt", "artist": "Michel Delpech" },
+        { "title": "Color Gitano", "artist": "Kendji Girac" }
+      ]
+    },
+    {
+      "id": "fr-voice-low",
+      "name": "Low & Deep",
+      "emoji": "🫧",
+      "voice": "low",
+      "songs": [
+        { "title": "Ne me quitte pas", "artist": "Jacques Brel" },
+        { "title": "Mistral gagnant", "artist": "Renaud" },
+        { "title": "L'été indien", "artist": "Joe Dassin" },
+        { "title": "La Javanaise", "artist": "Serge Gainsbourg" },
+        { "title": "Le Sud", "artist": "Nino Ferrer" },
+        { "title": "Formidable", "artist": "Stromae" },
+        { "title": "La Grenade", "artist": "Clara Luciani" },
+        { "title": "Le vent nous portera", "artist": "Noir Désir" },
+        { "title": "Les Copains d'abord", "artist": "Georges Brassens" },
+        { "title": "Je l'aime à mourir", "artist": "Francis Cabrel" },
+        { "title": "Foule sentimentale", "artist": "Alain Souchon" },
+        { "title": "La Bohème", "artist": "Charles Aznavour" }
+      ]
+    },
+    {
+      "id": "fr-voice-mid",
+      "name": "Mid Range",
+      "emoji": "🎶",
+      "voice": "mid",
+      "songs": [
+        { "title": "Comme d'habitude", "artist": "Claude François" },
+        { "title": "Emmenez-moi", "artist": "Charles Aznavour" },
+        { "title": "Et si tu n'existais pas", "artist": "Joe Dassin" },
+        { "title": "Je veux", "artist": "Zaz" },
+        { "title": "Papaoutai", "artist": "Stromae" },
+        { "title": "Andalouse", "artist": "Kendji Girac" },
+        { "title": "Je m'en vais", "artist": "Vianney" },
+        { "title": "L'Aventurier", "artist": "Indochine" },
+        { "title": "J'ai demandé à la lune", "artist": "Indochine" },
+        { "title": "Ella, elle l'a", "artist": "France Gall" },
+        { "title": "Résiste", "artist": "France Gall" },
+        { "title": "Balance ton quoi", "artist": "Angèle" }
+      ]
+    },
+    {
+      "id": "fr-voice-high",
+      "name": "High & Powerful",
+      "emoji": "🌟",
+      "voice": "high",
+      "songs": [
+        { "title": "Pour que tu m'aimes encore", "artist": "Céline Dion" },
+        { "title": "S'il suffisait d'aimer", "artist": "Céline Dion" },
+        { "title": "L'Hymne à l'amour", "artist": "Édith Piaf" },
+        { "title": "Lettre à France", "artist": "Michel Polnareff" },
+        { "title": "Les Lacs du Connemara", "artist": "Michel Sardou" },
+        { "title": "Le Temps des cathédrales", "artist": "Bruno Pelletier" },
+        { "title": "Envole-moi", "artist": "Jean-Jacques Goldman" },
+        { "title": "SOS d'un terrien en détresse", "artist": "Daniel Balavoine" },
+        { "title": "Je te promets", "artist": "Johnny Hallyday" },
+        { "title": "Ma Philosophie", "artist": "Amel Bent" },
+        { "title": "Dernière danse", "artist": "Indila" },
+        { "title": "Je vole", "artist": "Louane" }
+      ]
     }
   ]
 }

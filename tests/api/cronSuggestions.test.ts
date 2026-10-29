@@ -40,6 +40,12 @@ vi.mock("../../lib/chartFeed", async (importOriginal) => ({
   })),
 }));
 
+// The real catalog is ~1,100 songs; seeding it here would bury every resolver
+// test's handful. lib/catalogSync has its own tests.
+vi.mock("../../lib/catalogSync", () => ({
+  syncCatalog: async () => ({ done: true, report: { catalog: 0, seeded: 0 } }),
+}));
+
 process.env.MONGODB_URI = "mongodb://test";
 process.env.MONGODB_DB = "test-db";
 process.env.YOUTUBE_API_KEY = "test-key";

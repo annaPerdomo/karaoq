@@ -62,8 +62,14 @@ export interface CatalogEntry {
 export const CATALOG_DURATION = "any";
 export const CATALOG_SORT = "relevance";
 
-function entriesFrom(section: SongSection, packId: string): CatalogEntry[] {
-  return section.categories.flatMap((category) =>
+function entriesFrom(
+  section: SongSection,
+  packId: string,
+  voiceLists: boolean
+): CatalogEntry[] {
+  return section.categories
+    .filter((category) => !!category.voice === voiceLists)
+    .flatMap((category) =>
     category.songs.map((song: SongSuggestion) => {
       const query = buildSearchQuery(buildSongQuery(song), true);
       return {
@@ -84,12 +90,15 @@ let cached: Map<string, CatalogEntry> | null = null;
 let packsByKey: Map<string, string[]> | null = null;
 
 function build(): void {
-  const entries = [
-    ...SONG_SECTIONS.flatMap((s) => entriesFrom(s, "core")),
+  const listed = (voiceLists: boolean) => [
+    ...SONG_SECTIONS.flatMap((s) => entriesFrom(s, "core", voiceLists)),
     ...Object.entries(PACK_SECTIONS).flatMap(([packId, section]) =>
-      entriesFrom(section, packId)
+      entriesFrom(section, packId, voiceLists)
     ),
   ];
+  // Voice lists first, so the dedupe below keeps a song's genre listing as its
+  // identity: a voice list is a second way to the same song.
+  const entries = listed(true).concat(listed(false));
   // Before the dedupe below, which reduces a song in two packs to the later one.
   packsByKey = new Map();
   for (const e of entries) {

@@ -82,6 +82,86 @@
         { "title": "Zingaat", "artist": "Ajay-Atul", "nativeTitle": "झिंगाट", "nativeArtist": "अजय-अतुल" },
         { "title": "Gal Mitthi Mitthi", "artist": "Tochi Raina", "nativeTitle": "गल मिट्ठी मिट्ठी", "nativeArtist": "टोची रैना" }
       ]
+    },
+    {
+      "id": "in-voice-easy",
+      "name": "Easy to Sing",
+      "emoji": "😌",
+      "voice": "easy",
+      "songs": [
+        { "title": "Papa Kehte Hain", "artist": "Udit Narayan", "nativeTitle": "पापा कहते हैं", "nativeArtist": "उदित नारायण" },
+        { "title": "Kala Chashma", "artist": "Amar Arshi, Badshah & Neha Kakkar", "nativeTitle": "काला चश्मा", "nativeArtist": "अमर अर्शी, बादशाह & नेहा कक्कड़" },
+        { "title": "London Thumakda", "artist": "Labh Janjua, Sonu Kakkar & Neha Kakkar", "nativeTitle": "लंदन ठुमकदा", "nativeArtist": "लाभ जंजुआ, सोनू कक्कड़ & नेहा कक्कड़" },
+        { "title": "Mera Joota Hai Japani", "artist": "Mukesh", "nativeTitle": "मेरा जूता है जापानी", "nativeArtist": "मुकेश" },
+        { "title": "Yeh Dosti", "artist": "Kishore Kumar & Manna Dey", "nativeTitle": "ये दोस्ती", "nativeArtist": "किशोर कुमार & मन्ना डे" },
+        { "title": "Zoobi Doobi", "artist": "Sonu Nigam & Shreya Ghoshal", "nativeTitle": "ज़ूबी डूबी", "nativeArtist": "सोनू निगम & श्रेया घोषाल" },
+        { "title": "Aal Izz Well", "artist": "Sonu Nigam, Swanand Kirkire & Shaan", "nativeTitle": "ऑल इज़ वेल", "nativeArtist": "सोनू निगम, स्वानंद किरकिरे & शान" },
+        { "title": "Tera Yaar Hoon Main", "artist": "Arijit Singh", "nativeTitle": "तेरा यार हूँ मैं", "nativeArtist": "अरिजीत सिंह" },
+        { "title": "Ek Ladki Bheegi Bhaagi Si", "artist": "Kishore Kumar", "nativeTitle": "एक लड़की भीगी भागी सी", "nativeArtist": "किशोर कुमार" },
+        { "title": "Dil Chahta Hai", "artist": "Shankar Mahadevan", "nativeTitle": "दिल चाहता है", "nativeArtist": "शंकर महादेवन" },
+        { "title": "Pyar Hua Ikrar Hua Hai", "artist": "Lata Mangeshkar & Manna Dey", "nativeTitle": "प्यार हुआ इकरार हुआ है", "nativeArtist": "लता मंगेशकर & मन्ना डे" },
+        { "title": "Gori Tera Gaon Bada Pyara", "artist": "K. J. Yesudas", "nativeTitle": "गोरी तेरा गाँव बड़ा प्यारा", "nativeArtist": "के. जे. येसुदास" }
+      ]
+    },
+    {
+      "id": "in-voice-low",
+      "name": "Low & Deep",
+      "emoji": "🫧",
+      "voice": "low",
+      "songs": [
+        { "title": "Kabhi Kabhie Mere Dil Mein", "artist": "Mukesh", "nativeTitle": "कभी कभी मेरे दिल में", "nativeArtist": "मुकेश" },
+        { "title": "Main Pal Do Pal Ka Shayar Hoon", "artist": "Mukesh", "nativeTitle": "मैं पल दो पल का शायर हूँ", "nativeArtist": "मुकेश" },
+        { "title": "Kahin Door Jab Din Dhal Jaaye", "artist": "Mukesh", "nativeTitle": "कहीं दूर जब दिन ढल जाए", "nativeArtist": "मुकेश" },
+        { "title": "Tum Itna Jo Muskura Rahe Ho", "artist": "Jagjit Singh", "nativeTitle": "तुम इतना जो मुस्कुरा रहे हो", "nativeArtist": "जगजीत सिंह" },
+        { "title": "Hothon Se Chhoo Lo Tum", "artist": "Jagjit Singh", "nativeTitle": "होठों से छू लो तुम", "nativeArtist": "जगजीत सिंह" },
+        { "title": "Chingari Koi Bhadke", "artist": "Kishore Kumar", "nativeTitle": "चिंगारी कोई भड़के", "nativeArtist": "किशोर कुमार" },
+        { "title": "Yeh Shaam Mastani", "artist": "Kishore Kumar", "nativeTitle": "ये शाम मस्तानी", "nativeArtist": "किशोर कुमार" },
+        { "title": "Tujh Mein Rab Dikhta Hai", "artist": "Roop Kumar Rathod", "nativeTitle": "तुझ में रब दिखता है", "nativeArtist": "रूप कुमार राठौड़" },
+        { "title": "Rang Barse", "artist": "Amitabh Bachchan", "nativeTitle": "रंग बरसे", "nativeArtist": "अमिताभ बच्चन" },
+        { "title": "Hari Om Hari", "artist": "Usha Uthup", "nativeTitle": "हरि ओम हरि", "nativeArtist": "उषा उथुप" },
+        { "title": "Kabira", "artist": "Tochi Raina & Rekha Bhardwaj", "nativeTitle": "कबीरा", "nativeArtist": "टोची रैना & रेखा भारद्वाज" },
+        { "title": "Sasural Genda Phool", "artist": "Rekha Bhardwaj", "nativeTitle": "ससुराल गेंदा फूल", "nativeArtist": "रेखा भारद्वाज" }
+      ]
+    },
+    {
+      "id": "in-voice-mid",
+      "name": "Mid Range",
+      "emoji": "🎶",
+      "voice": "mid",
+      "songs": [
+        { "title": "Pal Pal Dil Ke Paas", "artist": "Kishore Kumar", "nativeTitle": "पल पल दिल के पास", "nativeArtist": "किशोर कुमार" },
+        { "title": "Mere Sapno Ki Rani", "artist": "Kishore Kumar", "nativeTitle": "मेरे सपनों की रानी", "nativeArtist": "किशोर कुमार" },
+        { "title": "Kesariya", "artist": "Arijit Singh", "nativeTitle": "केसरिया", "nativeArtist": "अरिजीत सिंह" },
+        { "title": "Hawayein", "artist": "Arijit Singh", "nativeTitle": "हवाएँ", "nativeArtist": "अरिजीत सिंह" },
+        { "title": "Tera Ban Jaunga", "artist": "Akhil Sachdeva & Tulsi Kumar", "nativeTitle": "तेरा बन जाऊँगा", "nativeArtist": "अखिल सचदेवा & तुलसी कुमार" },
+        { "title": "Pee Loon", "artist": "Mohit Chauhan", "nativeTitle": "पी लूँ", "nativeArtist": "मोहित चौहान" },
+        { "title": "Tum Se Hi", "artist": "Mohit Chauhan", "nativeTitle": "तुम से ही", "nativeArtist": "मोहित चौहान" },
+        { "title": "Pehla Nasha", "artist": "Udit Narayan & Sadhana Sargam", "nativeTitle": "पहला नशा", "nativeArtist": "उदित नारायण & साधना सरगम" },
+        { "title": "Tujhe Dekha To", "artist": "Kumar Sanu & Lata Mangeshkar", "nativeTitle": "तुझे देखा तो", "nativeArtist": "कुमार सानू & लता मंगेशकर" },
+        { "title": "Kuch Kuch Hota Hai", "artist": "Udit Narayan & Alka Yagnik", "nativeTitle": "कुछ कुछ होता है", "nativeArtist": "उदित नारायण & अलका याज्ञिक" },
+        { "title": "Ek Ladki Ko Dekha", "artist": "Kumar Sanu", "nativeTitle": "एक लड़की को देखा", "nativeArtist": "कुमार सानू" },
+        { "title": "Lag Jaa Gale", "artist": "Lata Mangeshkar", "nativeTitle": "लग जा गले", "nativeArtist": "लता मंगेशकर" }
+      ]
+    },
+    {
+      "id": "in-voice-high",
+      "name": "High & Powerful",
+      "emoji": "🌟",
+      "voice": "high",
+      "songs": [
+        { "title": "Channa Mereya", "artist": "Arijit Singh", "nativeTitle": "चन्ना मेरेया", "nativeArtist": "अरिजीत सिंह" },
+        { "title": "Ae Dil Hai Mushkil", "artist": "Arijit Singh", "nativeTitle": "ऐ दिल है मुश्किल", "nativeArtist": "अरिजीत सिंह" },
+        { "title": "Kun Faya Kun", "artist": "A. R. Rahman, Javed Ali & Mohit Chauhan", "nativeTitle": "कुन फ़या कुन", "nativeArtist": "ए. आर. रहमान, जावेद अली & मोहित चौहान" },
+        { "title": "Jag Ghoomeya", "artist": "Rahat Fateh Ali Khan", "nativeTitle": "जग घूमेया", "nativeArtist": "राहत फ़तेह अली ख़ान" },
+        { "title": "Sandese Aate Hai", "artist": "Sonu Nigam & Roop Kumar Rathod", "nativeTitle": "संदेसे आते हैं", "nativeArtist": "सोनू निगम & रूप कुमार राठौड़" },
+        { "title": "Abhi Mujh Mein Kahin", "artist": "Sonu Nigam", "nativeTitle": "अभी मुझ में कहीं", "nativeArtist": "सोनू निगम" },
+        { "title": "Tadap Tadap Ke", "artist": "KK", "nativeTitle": "तड़प तड़प के", "nativeArtist": "केके" },
+        { "title": "Mitwa", "artist": "Shafqat Amanat Ali", "nativeTitle": "मितवा", "nativeArtist": "शफ़क़त अमानत अली" },
+        { "title": "Sun Raha Hai", "artist": "Ankit Tiwari", "nativeTitle": "सुन रहा है", "nativeArtist": "अंकित तिवारी" },
+        { "title": "Dola Re Dola", "artist": "Shreya Ghoshal, Kavita Krishnamurthy & KK", "nativeTitle": "डोला रे डोला", "nativeArtist": "श्रेया घोषाल, कविता कृष्णमूर्ति & केके" },
+        { "title": "Bairi Piya", "artist": "Shreya Ghoshal & Udit Narayan", "nativeTitle": "बैरी पिया", "nativeArtist": "श्रेया घोषाल & उदित नारायण" },
+        { "title": "Piya Tu Ab To Aaja", "artist": "Asha Bhosle", "nativeTitle": "पिया तू अब तो आजा", "nativeArtist": "आशा भोसले" }
+      ]
     }
   ]
 }

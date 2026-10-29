@@ -152,12 +152,23 @@ describe("regional pack files", () => {
   });
 });
 
-describe("World tab places", () => {
-  it("every language list has a place to live under", async () => {
-    const { SECTION_COUNTRY } = await import("../../components/songsearch/constants");
+describe("song-ideas places", () => {
+  it("every language list is reachable from some charted place", async () => {
+    const { sectionIdForPlace } = await import("../../components/songsearch/placeLists");
+    const { CHART_COUNTRIES } = await import("../../lib/chartCountries");
+    const reachable = new Set(CHART_COUNTRIES.map((cc) => sectionIdForPlace(cc.toUpperCase())));
     const ids = SONG_SECTIONS.filter((s) => ["spanish", "kpop", "japanese"].includes(s.id))
       .map((s) => s.id)
       .concat(LANGUAGE_PACKS.map((p) => loadPack(p.packId).id));
-    for (const id of ids) expect(SECTION_COUNTRY[id], id).toMatch(/^[A-Z]{2}$/);
+    for (const id of ids) expect(reachable.has(id), id).toBe(true);
+  });
+
+  it("every language list carries all four voice ranges", () => {
+    const sections = SONG_SECTIONS.filter((s) => ["spanish", "kpop", "japanese"].includes(s.id))
+      .concat(LANGUAGE_PACKS.map((p) => loadPack(p.packId)));
+    for (const section of sections) {
+      const ranges = section.categories.filter((c) => c.voice).map((c) => c.voice).sort();
+      expect(ranges, section.id).toEqual(["easy", "high", "low", "mid"]);
+    }
   });
 });

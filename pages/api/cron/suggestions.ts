@@ -21,6 +21,7 @@ import {
 } from "../../../lib/corpusHarvest";
 import { feedCharts } from "../../../lib/chartFeed";
 import { rematchMissedSongs } from "../../../lib/corpusRematch";
+import { syncCatalog } from "../../../lib/catalogSync";
 import { migrateToCorpus } from "../../../lib/corpusMigration";
 import { promoteDemand, repairDemandIdentities } from "../../../lib/corpusPromote";
 import { proposeUnmappedAdds, PROPOSAL_SCAN_LIMIT } from "../../../lib/corpusProposals";
@@ -261,6 +262,17 @@ export default async function handler(
       floorMs: 5_000,
       run: async (by) => {
         const { done, report } = await feedCharts(by);
+        return { done, report: { ...report } };
+      },
+    },
+    {
+      // Before the resolver: a song added to a pack since the migration is
+      // cutless here tonight and resolved below. Our own rows, no units.
+      name: "catalog",
+      budgetMs: 10_000,
+      floorMs: 0,
+      run: async () => {
+        const { done, report } = await syncCatalog();
         return { done, report: { ...report } };
       },
     },

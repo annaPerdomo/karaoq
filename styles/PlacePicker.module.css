@@ -1,0 +1,129 @@
+/* ─── Song ideas place picker: a chip beside the heading that opens an inline
+   flag grid (components/songsearch/PlacePicker.tsx). ─── */
+
+.heading {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  margin: 0.75rem 0;
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.heading > .panel {
+  margin-top: 0.6rem;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  max-width: 60%;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 45, 120, 0.35);
+  background: rgba(255, 45, 120, 0.1);
+  color: var(--text-primary);
+  font-size: 0.8rem;
+  font-weight: 650;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.chip:hover,
+.chipOpen {
+  background: rgba(255, 45, 120, 0.18);
+  border-color: rgba(255, 45, 120, 0.55);
+}
+
+.chip:focus-visible,
+.option:focus-visible {
+  outline: 2px solid #ff2d78;
+  outline-offset: 2px;
+}
+
+.chipName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.caret {
+  font-size: 0.65rem;
+  color: var(--text-secondary);
+}
+
+.flag {
+  font-size: 1rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.panel {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.35rem;
+  margin: 0 0 1rem;
+  padding: 0.5rem;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+/* The singer's own place spans the row, so "you're here" reads as its own
+   choice rather than one of the list. */
+.panel > .option:first-child {
+  grid-column: 1 / -1;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  padding: 0.55rem 0.6rem;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 0.82rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.option:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.optionActive {
+  background: rgba(255, 45, 120, 0.14);
+  border-color: rgba(255, 45, 120, 0.45);
+}
+
+.name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.here {
+  flex-shrink: 0;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #ff7aa8;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+@media (min-width: 640px) {
+  .panel {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+}

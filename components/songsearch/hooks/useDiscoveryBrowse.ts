@@ -2,9 +2,7 @@ import * as React from 'react';
 
 import {
   SONG_SECTIONS,
-  COUNTRY_CONFIG,
   LANGUAGE_PACKS,
-  orderSections,
   getRandomSuggestion,
   buildSongQuery,
   SongSuggestion,
@@ -16,6 +14,8 @@ import fetchShelves from '../../../app/queue/fetchShelves';
 import type { IdeaShelf, ShelfSong } from '../../../lib/shelfTypes';
 import { SearchFilters } from '../../../app/queue/searchYoutube';
 import { HOT_TAB } from '../constants';
+import { BUNDLED_SECTIONS, placeLists, sectionIdForPlace } from '../placeLists';
+import { usePlace } from './usePlace';
 
 interface UseDiscoveryBrowseArgs {
   country: string | null;
@@ -34,7 +34,7 @@ interface UseDiscoveryBrowseArgs {
   trackFirstSearch: () => void;
 }
 
-// Owns the "Song ideas" browse view: geo-ordered sections/tabs, lazy-loaded
+// Owns the "Song ideas" browse view: the place every tab follows, lazy-loaded
 // language packs, the hot/rooms shelves, and the category/song selection that
 // feeds a pick back into the search box.
 export function useDiscoveryBrowse({
@@ -50,37 +50,17 @@ export function useDiscoveryBrowse({
   const [activeTab, setActiveTab] = React.useState(HOT_TAB);
   const [activeCategory, setActiveCategory] = React.useState<string | null>(null);
   const [expandedCategory, setExpandedCategory] = React.useState(false);
-  const [regionalSection, setRegionalSection] = React.useState<SongSection | null>(null);
   const [langPacks, setLangPacks] = React.useState<SongSection[]>([]);
   const [shelves, setShelves] = React.useState<IdeaShelf[]>([]);
 
-  // Localize the discovery sections: reorder by country and, where a curated
-  // regional pack exists, splice it in as the first tab.
-  const orderedSections = React.useMemo(() => {
-    const ordered = orderSections(SONG_SECTIONS, country);
-    return regionalSection ? [regionalSection, ...ordered] : ordered;
-  }, [country, regionalSection]);
+  const { place, places, atHome, chart, chartLoading, pick } = usePlace(country);
 
-  React.useEffect(() => {
-    const packId = country ? COUNTRY_CONFIG[country]?.regionalPack : undefined;
-    if (!packId) return;
-    let cancelled = false;
-    fetchRegionalPack(packId).then((section) => {
-      if (!cancelled && section) setRegionalSection(section);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [country]);
-
-
-
-  // Every language pack is available to everyone as its place's classics in
-  // the Hot tab — geo only decides which one gets promoted to its own first
-  // tab. Packs are lazy-loaded (CDN-cached JSON) the first time the singer
-  // looks beyond their own place.
+  // Language packs are CDN-cached JSON, fetched the first time a place needs
+  // one; the bundled sections need nothing.
   const packsRequestedRef = React.useRef(false);
-  function ensureLangPacks() {
+  const placeSectionId = sectionIdForPlace(place);
+  React.useEffect(() => {
+    if (!placeSectionId || BUNDLED_SECTIONS.indexOf(placeSectionId) >= 0) return;
     if (packsRequestedRef.current) return;
     packsRequestedRef.current = true;
     Promise.all(LANGUAGE_PACKS.map((p) => fetchRegionalPack(p.packId))).then((sections) => {
@@ -88,6 +68,18 @@ export function useDiscoveryBrowse({
       if (loaded.length > 0) setLangPacks(loaded);
       else packsRequestedRef.current = false;
     });
+  }, [placeSectionId]);
+
+  const allSections = React.useMemo(() => SONG_SECTIONS.concat(langPacks), [langPacks]);
+  const lists = React.useMemo(
+    () => placeLists(place, atHome, allSections),
+    [place, atHome, allSections]
+  );
+
+  function pickPlace(next: string) {
+    pick(next);
+    setActiveCategory(null);
+    setExpandedCategory(false);
   }
 
   React.useEffect(() => {
@@ -147,8 +139,9 @@ export function useDiscoveryBrowse({
   }
 
   function handleSurpriseMe() {
+    // From the place's own lists, so a Japan pick surprises with Japanese songs.
     const suggestion = getRandomSuggestion(
-      orderedSections.flatMap((s) => s.categories)
+      lists.genres.concat(lists.voice).flatMap((g) => g.categories)
     );
     // The source rides through searchSuggestion's own tracking — a separate
     // pre-track here double-counted every surprise pick as `song_pick` too.
@@ -178,14 +171,18 @@ export function useDiscoveryBrowse({
   }
 
   return {
-    orderedSections,
     activeTab,
     activeCategory,
     expandedCategory,
-    regionalSection,
-    langPacks,
+    allSections,
+    lists,
+    place,
+    places,
+    atHome,
+    chart,
+    chartLoading,
+    pickPlace,
     shelves,
-    ensureLangPacks,
     searchSuggestion,
     showSongCuts,
     trackShelfPick,

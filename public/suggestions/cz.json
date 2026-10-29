@@ -55,6 +55,86 @@
         { "title": "Anděl", "artist": "Karel Kryl" },
         { "title": "Bratříčku, zavírej vrátka", "artist": "Karel Kryl" }
       ]
+    },
+    {
+      "id": "cz-voice-easy",
+      "name": "Easy to Sing",
+      "emoji": "😌",
+      "voice": "easy",
+      "songs": [
+        { "title": "Jožin z bažin", "artist": "Ivan Mládek" },
+        { "title": "Dáme si do bytu", "artist": "Ivan Mládek" },
+        { "title": "Severní vítr", "artist": "Jaroslav Uhlíř & Zdeněk Svěrák" },
+        { "title": "Není nutno", "artist": "Jaroslav Uhlíř & Zdeněk Svěrák" },
+        { "title": "Poupata", "artist": "Michal David" },
+        { "title": "Burlaci", "artist": "Kabát" },
+        { "title": "Kdoví jestli", "artist": "Kabát" },
+        { "title": "Veď mě dál, cesto má", "artist": "Pavel Bobek" },
+        { "title": "Slavíci z Madridu", "artist": "Waldemar Matuška" },
+        { "title": "Malování", "artist": "Divokej Bill" },
+        { "title": "Ladovská zima", "artist": "Jaromír Nohavica" },
+        { "title": "Holky z naší školky", "artist": "Jiří Korn" }
+      ]
+    },
+    {
+      "id": "cz-voice-low",
+      "name": "Low & Deep",
+      "emoji": "🫧",
+      "voice": "low",
+      "songs": [
+        { "title": "Kometa", "artist": "Jaromír Nohavica" },
+        { "title": "Sarajevo", "artist": "Jaromír Nohavica" },
+        { "title": "Anděl", "artist": "Karel Kryl" },
+        { "title": "Růže z Texasu", "artist": "Waldemar Matuška" },
+        { "title": "Báječná ženská", "artist": "Michal Tučný" },
+        { "title": "Jednou mi fotr povídá", "artist": "Michal Tučný" },
+        { "title": "Pohoda", "artist": "Kabát" },
+        { "title": "Malá dáma", "artist": "Kabát" },
+        { "title": "Želva", "artist": "Olympic" },
+        { "title": "Cesta", "artist": "Kryštof" },
+        { "title": "Vokurky", "artist": "Ivan Mládek" },
+        { "title": "Sladké mámení", "artist": "Hana Zagorová" }
+      ]
+    },
+    {
+      "id": "cz-voice-mid",
+      "name": "Mid Range",
+      "emoji": "🎶",
+      "voice": "mid",
+      "songs": [
+        { "title": "Holubí dům", "artist": "Jiří Schelinger" },
+        { "title": "Pár přátel", "artist": "Michal David" },
+        { "title": "Šrouby a matice", "artist": "Lucie" },
+        { "title": "Čmelák", "artist": "Divokej Bill" },
+        { "title": "Vedoucí", "artist": "Chinaski" },
+        { "title": "1970", "artist": "Chinaski" },
+        { "title": "Jasná zpráva", "artist": "Olympic" },
+        { "title": "Osmý den", "artist": "Olympic" },
+        { "title": "Kávu si osladím", "artist": "Karel Gott" },
+        { "title": "Biograf láska", "artist": "Hana Zagorová" },
+        { "title": "Maluj zase obrázky", "artist": "Hana Zagorová" },
+        { "title": "Stín katedrál", "artist": "Petr Muk" }
+      ]
+    },
+    {
+      "id": "cz-voice-high",
+      "name": "High & Powerful",
+      "emoji": "🌟",
+      "voice": "high",
+      "songs": [
+        { "title": "Lady Carneval", "artist": "Karel Gott" },
+        { "title": "Být stále mlád", "artist": "Karel Gott" },
+        { "title": "Trezor", "artist": "Karel Gott" },
+        { "title": "Zvonky štěstí", "artist": "Karel Gott & Darina Rolincová" },
+        { "title": "Dlouhá noc", "artist": "Helena Vondráčková" },
+        { "title": "Malovaný džbánku", "artist": "Helena Vondráčková" },
+        { "title": "Černí andělé", "artist": "Lucie" },
+        { "title": "Amerika", "artist": "Lucie" },
+        { "title": "Nonstop", "artist": "Michal David" },
+        { "title": "Discopříběh", "artist": "Michal David" },
+        { "title": "Měls mě vůbec rád", "artist": "Ewa Farna" },
+        { "title": "Jsi můj pán", "artist": "Lucie Bílá" }
+      ]
     }
   ]
 }

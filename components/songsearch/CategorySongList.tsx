@@ -3,7 +3,7 @@ import * as React from 'react';
 import styles from '../../styles/SongSearch.module.css';
 import { SongCategory, SongSuggestion } from '../../app/queue/songSuggestions';
 import { useT } from '../../lib/i18n/I18nProvider';
-import { labelWithFallback } from './labelWithFallback';
+import { categoryLabel } from './labelWithFallback';
 import SongRow from './SongRow';
 
 interface CategorySongListProps {
@@ -41,7 +41,7 @@ const CategorySongList: React.FC<CategorySongListProps> = ({
           &larr;
         </button>
         <span className={styles.songPanelTitle}>
-          <span>{category.emoji}</span> {labelWithFallback(t, `category.${category.id}`, category.name)}
+          <span>{category.emoji}</span> {categoryLabel(t, category)}
         </span>
       </div>
       <div className={styles.songPanel}>
