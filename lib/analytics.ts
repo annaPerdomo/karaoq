@@ -36,7 +36,8 @@ export type EventType =
   | "song_postponed"
   | "search_failed"
   | "search_run"
-  | "link_lookup";
+  | "link_lookup"
+  | "original_video_resolved";
 
 export interface AnalyticsEvent {
   type: EventType;
@@ -118,6 +119,8 @@ export interface AnalyticsEvent {
   songDataId?: string;
   // search_run only: 90 days, the search_demand retention. TTL index in lib/mongodb.ts.
   expiresAt?: Date;
+  // original_video_resolved: how the response was reached.
+  source?: "cache" | "live" | "quota" | "busy" | "none";
 }
 
 // Heartbeat gap beyond which the next beat starts a fresh session; 30 min tolerates throttled background-tab timers.
