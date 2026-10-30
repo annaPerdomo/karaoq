@@ -42,6 +42,7 @@ import { suggestionCatalog } from "../../../lib/suggestionCatalog";
 import { mergeDemand, suggestionDemand } from "../../../lib/suggestionDemand";
 import { searchDemandScores } from "../../../lib/searchDemandRead";
 import { CLAIM_SCAN_LIMIT, claimBankedVideos } from "../../../lib/corpusClaim";
+import { pruneOrphanLogos } from "../../../lib/roomLogos";
 
 // vercel.json has four entries because a full harvest outlasts the 300s
 // function — a later slot buys clock, not quota (lib/corpusBudget). The slots
@@ -432,9 +433,21 @@ export default async function handler(
     });
   }
 
+  // Once a day, on the first slot only, and after the corpus work so it never
+  // takes that run's clock. A failure is logged and otherwise ignored.
+  let logosPruned: number | undefined;
+  if (req.query.slot === undefined) {
+    try {
+      logosPruned = await pruneOrphanLogos();
+    } catch (e: any) {
+      console.warn("Orphan logo prune failed:", e?.message);
+    }
+  }
+
   const report = {
     slot,
     steps: ran,
+    ...(logosPruned === undefined ? {} : { logosPruned }),
     budget: { searches: searchBudget, pages: pageBudget },
     // What the day had already cost before this run, so a skipped night still
     // leaves a record of why — and of what the account's real ceiling is.

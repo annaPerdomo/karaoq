@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   isValidDisplayConfig,
   isValidQueueEntry,
+  isValidRoomBrand,
   markRateLimitNotified,
   MAX_BANNER_LENGTH,
   MAX_FEEDBACK_CONTACT_LENGTH,
@@ -257,5 +258,31 @@ describe("sanitizeFeedback", () => {
       role: undefined,
       page: undefined,
     });
+  });
+});
+
+describe("isValidRoomBrand", () => {
+  it.each([
+    {},
+    { logo: "0123456789abcdef", accentA: "#ff00AA", accentB: "#000000" },
+    { accentB: "#123abc" },
+  ])("accepts %j", (brand) => {
+    expect(isValidRoomBrand(brand)).toBe(true);
+  });
+
+  it.each([
+    ["an unknown key", { accentA: "#ffffff", font: "Comic Sans" }],
+    ["short hex", { accentA: "#fff" }],
+    ["hex without #", { accentB: "ffffff" }],
+    ["a named colour", { accentA: "red" }],
+    ["a CSS injection", { accentA: "#ffffff; background: url(x)" }],
+    ["an uppercase hash", { logo: "0123456789ABCDEF" }],
+    ["a short hash", { logo: "0123456789abcde" }],
+    ["a non-string hash", { logo: 42 }],
+    ["null", null],
+    ["a string", "#ffffff"],
+    ["an array", []],
+  ])("rejects %s", (_name, brand) => {
+    expect(isValidRoomBrand(brand)).toBe(false);
   });
 });

@@ -43,7 +43,9 @@ export type EventType =
   | "music_video_error"
   | "music_video_offset"
   | "music_video_link"
-  | "logo_upload_rejected";
+  | "logo_upload_rejected"
+  | "logo_uploaded"
+  | "brand_saved";
 
 export interface AnalyticsEvent {
   type: EventType;
@@ -137,8 +139,15 @@ export interface AnalyticsEvent {
   offsetSeconds?: number;
   // music_video_link: which gear-row button was used.
   action?: "open" | "copy";
-  // logo_upload_rejected: no emitter yet — reserved for client-side logo upload validation.
-  reason?: "type" | "size";
+  // logo_upload_rejected: from the logo route, and client-side validation via screen-event.
+  reason?: "type" | "size" | "storage_full";
+  // logo_uploaded.
+  bytes?: number;
+  // brand_saved: what the saved brand carries, and which Customize rail saved it.
+  logo?: boolean;
+  colors?: boolean;
+  cleared?: boolean;
+  surface?: "host" | "display";
 }
 
 // Heartbeat gap beyond which the next beat starts a fresh session; 30 min tolerates throttled background-tab timers.

@@ -297,6 +297,14 @@ export function normalizeAutoAdvance(stored: unknown): AutoAdvance {
   };
 }
 
+export interface RoomBrand {
+  /** Hash of a committed logo in room_logos; absent = no logo. */
+  logo?: string;
+  /** "#rrggbb"; absent = the theme's own accent. */
+  accentA?: string;
+  accentB?: string;
+}
+
 export interface Room {
   id: string;
   queue: QueueEntry[];
@@ -333,6 +341,8 @@ export interface Room {
   fairMode?: boolean;
   displayConfig?: DisplayConfig;
   hostConfig?: HostConfig;
+  /** Room-level, not part of either config: host and Display share one brand. */
+  brand?: RoomBrand;
   /** Wall-clock end of the booked slot / the night. Absent = open-ended. */
   sessionEndsAt?: Date;
   /** Absent = the room predates the setting and stays off; see AUTO_ADVANCE_OFF. */

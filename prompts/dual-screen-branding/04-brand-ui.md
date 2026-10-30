@@ -16,7 +16,7 @@ Plus `uploadLogo(roomId, dataUrl): Promise<{ hash: string; url: string }>` and `
 
 ### 2. Shared control — `components/brand/BrandControls.tsx`
 Props: `{ roomId: string; brand: RoomBrand; onChange: (next: RoomBrand) => void }`. One rail section titled `brand.title`:
-- Logo: thumbnail of the current draft logo (`logoUrl`) or an empty box; **Upload** / **Replace** (hidden `<input type="file" accept="image/png,image/jpeg,image/webp">` → `prepareLogo` → `uploadLogo` → `onChange({...brand, logo: hash})`), **Remove**; inline error from `brand.error.type` / `brand.error.size` / `brand.error.upload`; disabled while uploading.
+- Logo: thumbnail of the current draft logo (`logoUrl` from `lib/logoUrl.ts` — client-safe; never import `lib/roomLogos.ts` on the client) or an empty box; **Upload** / **Replace** (hidden `<input type="file" accept="image/png,image/jpeg,image/webp">` → `prepareLogo` → `uploadLogo` → `onChange({...brand, logo: hash})`), **Remove**; inline error from `brand.error.type` / `brand.error.size` / `brand.error.upload`; disabled while uploading.
 - Colours: two `<input type="color">` labelled `brand.accentA` / `brand.accentB`, prefilled with the current theme accent when unset; **Use theme colours** clears both.
 Reuse the rail's existing section/toggle classes (from `Host.module.css` dp* classes the rails already use) — do not restyle. Use `components/brand/BrandControls.module.css` only for the thumbnail and colour row.
 

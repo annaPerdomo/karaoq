@@ -1,4 +1,4 @@
-import { MongoClient, type Collection, type Db } from "mongodb";
+import { MongoClient, type Binary, type Collection, type Db } from "mongodb";
 import type { FeedbackEntry, Room } from "../pages/api/types";
 import type { EventType } from "./analytics";
 import { YOUTUBE_DATA_MAX_AGE_DAYS } from "./youtubeRetention";
@@ -802,6 +802,36 @@ export async function getFeedbackCollection(): Promise<Collection<FeedbackEntry>
     });
   }
   return db.collection<FeedbackEntry>("feedback");
+}
+
+export interface RoomLogoDoc {
+  /** `${roomId}:${hash}` — one doc per room and image. */
+  _id: string;
+  roomId: string;
+  contentType: string;
+  size: number;
+  data: Binary;
+  createdAt: Date;
+  /** Set on drafts only; a committed logo lives as long as its room. */
+  expireAt?: Date;
+}
+
+let roomLogoIndexesEnsured = false;
+
+export async function getRoomLogosCollection(): Promise<Collection<RoomLogoDoc>> {
+  const client = await getMongoClient();
+  const db = client.db(process.env.MONGODB_DB);
+  if (!roomLogoIndexesEnsured) {
+    roomLogoIndexesEnsured = true;
+    Promise.all([
+      db.collection("room_logos").createIndex({ expireAt: 1 }, { expireAfterSeconds: 0 }),
+      db.collection("room_logos").createIndex({ roomId: 1 }),
+    ]).catch((e) => {
+      console.error("Room logo index creation failed:", e);
+      roomLogoIndexesEnsured = false;
+    });
+  }
+  return db.collection<RoomLogoDoc>("room_logos");
 }
 
 // Heartbeats are high-volume noise once a session is over; every other event

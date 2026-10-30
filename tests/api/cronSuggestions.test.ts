@@ -54,6 +54,11 @@ vi.mock("../../lib/catalogSync", () => ({
   syncCatalog: async () => ({ done: true, report: { catalog: 0, seeded: 0 } }),
 }));
 
+// The prune has its own tests (tests/lib/roomLogos.test.ts); here only its wiring.
+vi.mock("../../lib/roomLogos", () => ({
+  pruneOrphanLogos: vi.fn(async () => 0),
+}));
+
 process.env.MONGODB_URI = "mongodb://test";
 process.env.MONGODB_DB = "test-db";
 process.env.YOUTUBE_API_KEY = "test-key";
@@ -65,6 +70,7 @@ import { REPAIR_ID } from "../../lib/corpusPromote";
 import { pacificDayKey, quotaResetsAtMs } from "../../lib/pacificTime";
 import { resetQuotaAlertMemo } from "../../lib/alerts";
 import { resetSearchQuotaStatusCache } from "../../lib/searchQuotaStatus";
+import { pruneOrphanLogos } from "../../lib/roomLogos";
 import { songKeyFor } from "../../lib/songEntry";
 import { suggestionCatalog, type CatalogEntry } from "../../lib/suggestionCatalog";
 
@@ -1384,5 +1390,43 @@ describe("GET /api/cron/suggestions - resolve", () => {
 
     expect(steps.resolve).toMatchObject({ widened: 1, filled: 0, missed: 1 });
     expect(songs().get(first.key).resolveMisses).toBe(1);
+  });
+});
+
+describe("GET /api/cron/suggestions - orphan logo prune", () => {
+  beforeEach(() => {
+    migrationDone();
+    repairDone();
+  });
+
+  it("prunes on the first slot and reports the count", async () => {
+    vi.mocked(pruneOrphanLogos).mockResolvedValueOnce(3);
+
+    const res = await request();
+
+    expect(pruneOrphanLogos).toHaveBeenCalledOnce();
+    expect(res.getStatus()).toBe(200);
+    expect(res.getBody().logosPruned).toBe(3);
+  });
+
+  it.each([{ slot: "2" }, { slot: "3", mopUp: "1", force: "1" }])(
+    "leaves the prune alone on %j",
+    async (query) => {
+      const res = await request(query);
+
+      expect(pruneOrphanLogos).not.toHaveBeenCalled();
+      expect(res.getBody()).not.toHaveProperty("logosPruned");
+    }
+  );
+
+  it("still finishes the run when the prune throws", async () => {
+    vi.mocked(pruneOrphanLogos).mockRejectedValueOnce(new Error("atlas down"));
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    const res = await request();
+
+    expect(res.getStatus()).toBe(200);
+    expect(res.getBody().steps).toBeDefined();
+    expect(res.getBody()).not.toHaveProperty("logosPruned");
   });
 });

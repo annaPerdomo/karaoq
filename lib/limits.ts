@@ -1,5 +1,5 @@
 import type { NextApiRequest } from "next";
-import type { DisplayConfig, FeedbackKind, HostConfig, QueueEntry, SingWithMePost, SuggestedSong } from "../pages/api/types";
+import type { DisplayConfig, FeedbackKind, HostConfig, QueueEntry, RoomBrand, SingWithMePost, SuggestedSong } from "../pages/api/types";
 import { DISPLAY_THEMES as DISPLAY_THEME_LIST, FEEDBACK_KINDS } from "../pages/api/types";
 import { sanitizeRef } from "./firstTouch";
 import { clientIp } from "./platform";
@@ -282,6 +282,24 @@ export function isValidHostConfig(value: unknown): value is HostConfig {
     (e.bannerPx === undefined ||
       isIntInRange(e.bannerPx, BANNER_PX_MIN, BANNER_PX_MAX)) &&
     isValidHostSectionOrder(e.sectionOrder)
+  );
+}
+
+// Logos share the 512MB free tier with everything else (lib/roomLogos).
+export const LOGO_MAX_BYTES = 64 * 1024;
+export const LOGO_STORE_BUDGET_BYTES = 25 * 1024 * 1024;
+export const LOGO_HASH_RE = /^[0-9a-f]{16}$/;
+const BRAND_COLOR_RE = /^#[0-9a-f]{6}$/i;
+const ROOM_BRAND_KEYS = new Set(["logo", "accentA", "accentB"]);
+
+export function isValidRoomBrand(b: unknown): b is RoomBrand {
+  if (!b || typeof b !== "object" || Array.isArray(b)) return false;
+  const e = b as Record<string, unknown>;
+  if (Object.keys(e).some((k) => !ROOM_BRAND_KEYS.has(k))) return false;
+  return (
+    (e.logo === undefined || (typeof e.logo === "string" && LOGO_HASH_RE.test(e.logo))) &&
+    (e.accentA === undefined || (typeof e.accentA === "string" && BRAND_COLOR_RE.test(e.accentA))) &&
+    (e.accentB === undefined || (typeof e.accentB === "string" && BRAND_COLOR_RE.test(e.accentB)))
   );
 }
 

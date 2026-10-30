@@ -630,6 +630,17 @@ describe("GET /api/queue/[id] - Room retrieval", () => {
     expect((res.getBody() as Room).displayConfig).toEqual(custom);
   });
 
+  it("returns a room's brand on GET", async () => {
+    const brand = { logo: "0123456789abcdef", accentA: "#ff0080" };
+    mockCollection.findOne.mockResolvedValue({ id: "NEW01", queue: [], activeVideoIndex: 0, brand });
+
+    const req = createMockReq({ method: "GET", query: { id: "NEW01" } });
+    const res = createRes();
+    await handler(req, res);
+
+    expect((res.getBody() as Room).brand).toEqual(brand);
+  });
+
   it("passes a live auto-start countdown through", async () => {
     const autoStartAt = new Date(Date.now() + 8000);
     mockCollection.findOne.mockResolvedValue({
