@@ -1,6 +1,12 @@
-import { SONG_SECTIONS, SongCategory, SongSection } from '../../app/queue/songSuggestions';
+import {
+  SONG_SECTIONS,
+  SongCategory,
+  SongSection,
+  SongSuggestion,
+} from '../../app/queue/songSuggestions';
 import { CHART_COUNTRIES } from '../../lib/chartCountries';
 import { placeLanguage } from '../../lib/placeLanguage';
+import type { GenreShelf } from '../../lib/shelfTypes';
 
 /** The language list each language's places share: Mexico, Spain and Peru all
  *  get the Spanish one. A language without one falls back to the core lists. */
@@ -89,4 +95,26 @@ export function placeLists(place: string, isHome: boolean, sections: SongSection
       : [{ heading: null, categories: local }];
   };
   return { genres: build(localGenres, coreGenres), voice: build(localVoice, coreVoice) };
+}
+
+export interface SurprisePick {
+  song: SongSuggestion;
+  key?: string;
+}
+
+const CROSS_BORDER: Record<string, string> = { kpop: 'KR', jpop: 'JP' };
+
+/** A place without lists of its own keeps the core lists: its charts alone
+ *  would drop the karaoke classics. */
+export function surprisePool(lists: PlaceLists, liveGenres: GenreShelf[]): SurprisePick[] {
+  const all = lists.genres.concat(lists.voice).flatMap((g) => g.categories);
+  const coreIds = new Set(core('genre').concat(core('voice-type')).map((c) => c.id));
+  const own = all.filter((c) => !coreIds.has(c.id));
+  const curated: SurprisePick[] = (own.length > 0 ? own : all).flatMap((c) =>
+    c.songs.map((song) => ({ song }))
+  );
+  const charted: SurprisePick[] = liveGenres
+    .filter((g) => !CROSS_BORDER[g.slug] || CROSS_BORDER[g.slug] === g.country)
+    .flatMap((g) => g.songs.map((s) => ({ song: s, key: s.key })));
+  return curated.concat(charted);
 }

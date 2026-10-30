@@ -1,6 +1,12 @@
 import { describe, it, expect } from "vitest";
 import { SONG_SECTIONS } from "../../app/queue/songSuggestions";
-import { placeLists, placesFor, sectionIdForPlace } from "../../components/songsearch/placeLists";
+import {
+  placeLists,
+  placesFor,
+  sectionIdForPlace,
+  surprisePool,
+} from "../../components/songsearch/placeLists";
+import type { GenreShelf } from "../../lib/shelfTypes";
 
 const ids = (groups: { heading: string | null; categories: { id: string }[] }[]) =>
   groups.map((g) => [g.heading, g.categories.map((c) => c.id)]);
@@ -57,5 +63,45 @@ describe("placesFor", () => {
     expect(placesFor("LK")[0]).toBe("LK");
     expect(placesFor(null)[0]).toBe("");
     expect(placesFor("US").filter((p) => p === "US")).toHaveLength(1);
+  });
+});
+
+describe("surprisePool", () => {
+  const coreSongs = new Set(
+    SONG_SECTIONS.filter((s) => s.id === "genre" || s.id === "voice-type")
+      .flatMap((s) => s.categories)
+      .flatMap((c) => c.songs)
+  );
+  const genre = (slug: string, keys: string[], country = "TW"): GenreShelf => ({
+    slug,
+    name: slug,
+    emoji: "🎵",
+    country,
+    store: country,
+    songs: keys.map((key) => ({ key, title: `T ${key}`, artist: `A ${key}` })),
+  });
+
+  it("draws a home place's songs only from its own lists, never the international ones", () => {
+    const pool = surprisePool(placeLists("JP", true, SONG_SECTIONS), []);
+    expect(pool.length).toBeGreaterThan(0);
+    expect(pool.some((p) => coreSongs.has(p.song))).toBe(false);
+  });
+
+  it("adds the place's genre charts, carrying each song's key", () => {
+    const pool = surprisePool(placeLists("JP", false, SONG_SECTIONS), [genre("anime", ["k1", "k2"], "JP")]);
+    expect(pool.filter((p) => p.key).map((p) => p.key)).toEqual(["k1", "k2"]);
+  });
+
+  it("keeps the core lists for a place without lists of its own, with its charts on top", () => {
+    const pool = surprisePool(placeLists("US", true, SONG_SECTIONS), [genre("country", ["c1"], "US")]);
+    expect(pool.some((p) => coreSongs.has(p.song))).toBe(true);
+    expect(pool.filter((p) => p.key).map((p) => p.key)).toEqual(["c1"]);
+  });
+
+  it("leaves out a chart of another country's music", () => {
+    const jp = surprisePool(placeLists("JP", false, SONG_SECTIONS), [genre("kpop", ["k1"], "JP")]);
+    const kr = surprisePool(placeLists("KR", false, SONG_SECTIONS), [genre("kpop", ["k2"], "KR")]);
+    expect(jp.some((p) => p.key)).toBe(false);
+    expect(kr.map((p) => p.key)).toContain("k2");
   });
 });

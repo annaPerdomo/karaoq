@@ -2,7 +2,6 @@ import * as React from 'react';
 
 import {
   SONG_SECTIONS,
-  getRandomSuggestion,
   buildSongQuery,
   SongSuggestion,
   SongCategory,
@@ -14,7 +13,7 @@ import type { GenreShelf, IdeaShelf, ShelfSong } from '../../../lib/shelfTypes';
 import type { IdeaOrigin, IdeaSurface } from '../../../lib/ideaSurface';
 import { SearchFilters } from '../../../app/queue/searchYoutube';
 import { HOT_TAB } from '../constants';
-import { SECTION_PACK, placeLists, sectionIdForPlace } from '../placeLists';
+import { SECTION_PACK, placeLists, sectionIdForPlace, surprisePool } from '../placeLists';
 import { useGenreShelves } from './useGenreShelves';
 import { usePlace } from './usePlace';
 
@@ -157,7 +156,8 @@ export function useDiscoveryBrowse({
     song: SongSuggestion,
     sectionId?: string,
     categoryId?: string,
-    source: 'song_pick' | 'random' = 'song_pick'
+    source: 'song_pick' | 'random' = 'song_pick',
+    songKey?: string
   ) {
     const surface = source === 'random' ? 'random' : surfaceOf(categoryId);
     setIdeaOrigin({ surface, away: !atHome });
@@ -167,7 +167,7 @@ export function useDiscoveryBrowse({
       songTitle: song.title,
       songArtist: song.artist,
     });
-    showSongCuts(song);
+    showSongCuts(song, songKey);
   }
 
   /** A shelf tap's funnel event; the caller opens the song's versions with the
@@ -203,13 +203,11 @@ export function useDiscoveryBrowse({
   }
 
   function handleSurpriseMe() {
-    // From the place's own lists, so a Japan pick surprises with Japanese songs.
-    const suggestion = getRandomSuggestion(
-      lists.genres.concat(lists.voice).flatMap((g) => g.categories)
-    );
+    const pool = surprisePool(lists, liveGenres.genres);
+    const pick = pool[Math.floor(Math.random() * pool.length)];
     // The source rides through searchSuggestion's own tracking — a separate
     // pre-track here double-counted every surprise pick as `song_pick` too.
-    searchSuggestion(suggestion, undefined, undefined, 'random');
+    searchSuggestion(pick.song, undefined, undefined, 'random', pick.key);
   }
 
   function handleTabSelect(tabId: string) {
