@@ -104,4 +104,27 @@ describe("roomChannel - BroadcastChannel cross-tab sync", () => {
     expect(cleanup).toBeTypeOf("function");
     cleanup(); // should not throw
   });
+
+  it("playhead round-trips through broadcastPlayhead/onPlayhead", async () => {
+    const { broadcastPlayhead, onPlayhead } = await import("../../app/queue/roomChannel");
+
+    const callback = vi.fn();
+    onPlayhead("ROOM1", callback);
+
+    const msg = { entryId: "e1", seconds: 12.5, playing: true, sentAt: 1000 };
+    broadcastPlayhead("ROOM1", msg);
+
+    expect(callback).toHaveBeenCalledWith(msg);
+  });
+
+  it("playhead messages for different rooms are isolated", async () => {
+    const { broadcastPlayhead, onPlayhead } = await import("../../app/queue/roomChannel");
+
+    const callback = vi.fn();
+    onPlayhead("ROOM1", callback);
+
+    broadcastPlayhead("ROOM2", { entryId: "e1", seconds: 0, playing: false, sentAt: 0 });
+
+    expect(callback).not.toHaveBeenCalled();
+  });
 });

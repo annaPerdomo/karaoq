@@ -3,17 +3,13 @@ import { ApiError, DEFAULT_AUTO_ADVANCE, DEFAULT_DISPLAY_CONFIG, Room } from "..
 import { attributionFromRequest, trackEvent } from "../../../../lib/analytics";
 import { rateLimit } from "../../../../lib/limits";
 import { getRoomsCollection } from "../../../../lib/mongodb";
-import { normalizeRoomId } from "../../../../lib/roomCode";
+import { normalizeRoomId, ROOM_CODE_PATTERN } from "../../../../lib/roomCode";
 import { AUTO_START_STALE_MS } from "../../../../lib/autoAdvance";
 import { pruneRoomYoutubeData, roomPruneUpdate } from "../../../../lib/youtubeRetention";
 import { searchQuotaResetsAt } from "../../../../lib/searchQuotaStatus";
 import { isRoomDormant } from "../../../../lib/roomDormancy";
 
 const REACTION_TTL_MS = 30000;
-
-// Also protects server-side invariants that assume well-formed ids — e.g. the analytics sessionKey
-// `roomId:clientId:role`, where a ":" in a roomId would collide.
-const ROOM_CODE_PATTERN = /^[A-Z0-9]{3,12}$/;
 
 // Displays heartbeat ~10s from a Web Worker; the window still survives a worst-case once-per-minute
 // throttled beat so a hidden-but-playing display is never mistaken for a dead one.

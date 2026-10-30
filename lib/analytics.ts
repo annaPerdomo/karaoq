@@ -37,7 +37,13 @@ export type EventType =
   | "search_failed"
   | "search_run"
   | "link_lookup"
-  | "original_video_resolved";
+  | "original_video_resolved"
+  | "music_video_screen_opened"
+  | "music_video_screen_closed"
+  | "music_video_error"
+  | "music_video_offset"
+  | "music_video_link"
+  | "logo_upload_rejected";
 
 export interface AnalyticsEvent {
   type: EventType;
@@ -121,6 +127,18 @@ export interface AnalyticsEvent {
   expiresAt?: Date;
   // original_video_resolved: how the response was reached.
   source?: "cache" | "live" | "quota" | "busy" | "none";
+  // music_video_screen_closed.
+  durationSeconds?: number;
+  songsShown?: number;
+  songsUnavailable?: number;
+  // music_video_error: the YouTube onError code.
+  code?: number;
+  // music_video_offset: the manual nudge in effect when the song changed.
+  offsetSeconds?: number;
+  // music_video_link: which gear-row button was used.
+  action?: "open" | "copy";
+  // logo_upload_rejected: no emitter yet — reserved for client-side logo upload validation.
+  reason?: "type" | "size";
 }
 
 // Heartbeat gap beyond which the next beat starts a fresh session; 30 min tolerates throttled background-tab timers.

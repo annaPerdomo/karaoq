@@ -25,6 +25,8 @@ export function SettingsPopover({
   onInviteCohost,
   onPrintQr,
   onSendFeedback,
+  onOpenMusicVideo,
+  onCopyMusicVideoLink,
 }: {
   isOpen: boolean;
   onClose: () => void;
@@ -44,6 +46,8 @@ export function SettingsPopover({
   onInviteCohost: () => void;
   onPrintQr: () => void;
   onSendFeedback: () => void;
+  onOpenMusicVideo: () => void;
+  onCopyMusicVideoLink: () => void;
 }) {
   const { t } = useT();
   const ref = React.useRef<HTMLDivElement>(null);
@@ -149,6 +153,19 @@ export function SettingsPopover({
                 <div className={styles.spBtnDesc}>{t('host.qr.printDesc')}</div>
               </div>
             </button>
+          </div>
+          <div className={styles.spSep} />
+          <div className={styles.spGroup}>
+            <div className={styles.spLabel}>{t('musicVideo.title')}</div>
+            <div className={styles.spBtnDesc}>{t('musicVideo.hint')}</div>
+            <div className={styles.spTimeRow}>
+              <button className={styles.spBtn} onClick={onOpenMusicVideo}>
+                <div className={styles.spBtnTitle}>{t('musicVideo.open')}</div>
+              </button>
+              <button className={styles.spBtn} onClick={onCopyMusicVideoLink}>
+                <div className={styles.spBtnTitle}>{t('musicVideo.copy')}</div>
+              </button>
+            </div>
           </div>
           <div className={styles.spSep} />
         </>

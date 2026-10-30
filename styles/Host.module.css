@@ -142,12 +142,20 @@
   margin-top: 0.1rem;
 }
 
-/* Wrap-up time: a clock field and its two actions on one row. */
+/* Wrap-up time: a clock field and its two actions on one row. Also reused for
+   the music video screen's Open / Copy link row, so its children share the
+   width evenly. */
 .spTimeRow {
   display: flex;
   align-items: center;
   gap: 0.4rem;
   margin-top: 0.5rem;
+}
+
+.spTimeRow .spBtn {
+  width: auto;
+  flex: 1;
+  justify-content: center;
 }
 
 .spTimeInput {

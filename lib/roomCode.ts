@@ -12,6 +12,10 @@ export function normalizeRoomId(
   return typeof rawId === "string" ? rawId.toUpperCase() : rawId;
 }
 
+// Also protects server-side invariants that assume well-formed ids — e.g. the analytics sessionKey
+// `roomId:clientId:role`, where a ":" in a roomId would collide.
+export const ROOM_CODE_PATTERN = /^[A-Z0-9]{3,12}$/;
+
 const CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 
 export function generateCode(): string {

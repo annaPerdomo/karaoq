@@ -34,6 +34,8 @@ export function HostHeader({
   onInviteCohost,
   onPrintQr,
   onSendFeedback,
+  onOpenMusicVideo,
+  onCopyMusicVideoLink,
   onBrandClick,
 }: {
   remote: boolean;
@@ -64,6 +66,8 @@ export function HostHeader({
   onInviteCohost: () => void;
   onPrintQr: () => void;
   onSendFeedback: () => void;
+  onOpenMusicVideo: () => void;
+  onCopyMusicVideoLink: () => void;
   onBrandClick: () => void;
 }) {
   const { t } = useT();
@@ -172,6 +176,8 @@ export function HostHeader({
         onInviteCohost={onInviteCohost}
         onPrintQr={onPrintQr}
         onSendFeedback={onSendFeedback}
+        onOpenMusicVideo={onOpenMusicVideo}
+        onCopyMusicVideoLink={onCopyMusicVideoLink}
       />
     </header>
   );

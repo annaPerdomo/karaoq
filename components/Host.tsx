@@ -45,6 +45,8 @@ import { REACTION_COOLDOWN_MS } from "../app/queue/cheerConstants";
 import { startSessionTracking } from "../app/queue/trackSession";
 import { startVisiblePolling } from "../app/queue/pollWhileVisible";
 import { DORMANT_POLL_MS, isRoomDormant } from "../lib/roomDormancy";
+import { createMusicVideoLink } from "./host/musicVideoLink";
+import { copyLinkOrShow } from "./host/clipboard";
 import { useSearchBackNotice } from "../app/queue/useSearchBackNotice";
 import SearchBackToast from "./search/SearchBackToast";
 import {
@@ -332,6 +334,8 @@ const Host = ({
     });
   }
 
+  const { openMusicVideoScreen, copyMusicVideoLink } = createMusicVideoLink(joinCode, origin, showToast, t('musicVideo.copied'), () => setSettingsOpen(false));
+
   // Persisted on the room (every host device agrees) and in localStorage
   // (fallback for rooms predating server-stored modes).
   function rememberMode(mode: PlayMode) {
@@ -364,16 +368,10 @@ const Host = ({
     showToast(t('host.toast.displayOpened'));
   }
 
-  async function copyCohostLink() {
+  function copyCohostLink() {
     if (!joinCode) return;
     const base = origin || window.location.origin;
-    const url = `${base}/remote/${joinCode}`;
-    try {
-      await navigator.clipboard.writeText(url);
-      showToast(t('host.toast.cohostCopied'));
-    } catch {
-      showToast(url);
-    }
+    copyLinkOrShow(`${base}/remote/${joinCode}`, showToast, t('host.toast.cohostCopied'));
   }
 
   React.useEffect(() => {
@@ -1390,6 +1388,8 @@ const Host = ({
           setSettingsOpen(false);
           setFeedbackOpen(true);
         }}
+        onOpenMusicVideo={openMusicVideoScreen}
+        onCopyMusicVideoLink={copyMusicVideoLink}
         onBrandClick={() => router.push("/")}
       />
 

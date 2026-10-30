@@ -9,6 +9,8 @@ import reportDisplayPaused from '../app/queue/setDisplayPaused';
 import setPlaying from '../app/queue/setPlaying';
 import { normalizeRoomId } from '../lib/roomCode';
 import { onRoomState, onDisplayPause, broadcastVideoEnded } from '../app/queue/roomChannel';
+import { ytCommand, parseYtMessage } from './player/ytCommand';
+import { usePlayheadBroadcast } from './display/hooks/usePlayheadBroadcast';
 import { useRoomTiming } from './hooks/useRoomTiming';
 import { startSessionTracking } from '../app/queue/trackSession';
 import { startVisiblePolling } from '../app/queue/pollWhileVisible';
@@ -311,6 +313,7 @@ const Display = (): React.ReactElement => {
   const currentSongId = queue[activeIndex]?.id;
   const currentSongIdRef = React.useRef(currentSongId);
   currentSongIdRef.current = currentSongId;
+  const reportPlayhead = usePlayheadBroadcast(joinCode, currentSongId);
 
   // A replay of the same song (isPlaying toggle) needs its end reported again.
   React.useEffect(() => {
@@ -340,49 +343,50 @@ const Display = (): React.ReactElement => {
     }
 
     function onMessage(e: MessageEvent) {
-      if (e.origin !== 'https://www.youtube.com') return;
-      try {
-        const data = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
-        const state =
-          data.event === 'onStateChange'
-            ? data.info
-            : data.event === 'infoDelivery'
-              ? data.info?.playerState
-              : undefined;
-        const limitLeft = songSecondsLeft(playerCurrentTime(data), songLimitRef.current);
-        if (limitLeft !== null) {
-          setWrapUpIn(limitLeft <= WRAP_UP_WARN_SECONDS ? limitLeft : null);
-          if (limitLeft <= 0) {
-            reportVideoEnded();
-            return;
-          }
-        }
-        if (state === 0) {
+      const msg = parseYtMessage(e, videoRef.current);
+      if (!msg) return;
+      const state =
+        msg.event === 'onStateChange'
+          ? msg.info
+          : msg.event === 'infoDelivery'
+            ? msg.info?.playerState
+            : undefined;
+      const currentTime = playerCurrentTime(msg);
+      reportPlayhead(currentTime, state);
+
+      const limitLeft = songSecondsLeft(currentTime, songLimitRef.current);
+      if (limitLeft !== null) {
+        setWrapUpIn(limitLeft <= WRAP_UP_WARN_SECONDS ? limitLeft : null);
+        if (limitLeft <= 0) {
           reportVideoEnded();
-        } else if (state === 1 || state === 3) {
-          // Playing or buffering.
-          playbackConfirmedRef.current = true;
-          setNeedsTap(false);
-          if (pausedReportedRef.current) {
-            pausedReportedRef.current = false;
-            localPauseRef.current = { paused: false, at: Date.now() };
-            reportDisplayPaused(roomId, false);
-          }
-        } else if (state === 2) {
-          // Paused. Report once per pause, and only after playback confirmed —
-          // scrubbing and pre-start states also pass through 2.
-          if (playbackConfirmedRef.current && !pausedReportedRef.current) {
-            pausedReportedRef.current = true;
-            localPauseRef.current = { paused: true, at: Date.now() };
-            reportDisplayPaused(roomId, true);
-          }
+          return;
         }
-      } catch {}
+      }
+      if (state === 0) {
+        reportVideoEnded();
+      } else if (state === 1 || state === 3) {
+        // Playing or buffering.
+        playbackConfirmedRef.current = true;
+        setNeedsTap(false);
+        if (pausedReportedRef.current) {
+          pausedReportedRef.current = false;
+          localPauseRef.current = { paused: false, at: Date.now() };
+          reportDisplayPaused(roomId, false);
+        }
+      } else if (state === 2) {
+        // Paused. Report once per pause, and only after playback confirmed —
+        // scrubbing and pre-start states also pass through 2.
+        if (playbackConfirmedRef.current && !pausedReportedRef.current) {
+          pausedReportedRef.current = true;
+          localPauseRef.current = { paused: true, at: Date.now() };
+          reportDisplayPaused(roomId, true);
+        }
+      }
     }
 
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
-  }, [isPlaying, joinCode, activeIndex, playsVideoHere]);
+  }, [isPlaying, joinCode, activeIndex, playsVideoHere, reportPlayhead]);
 
   // If YouTube hasn't reported playing shortly after mount, autoplay was blocked.
   React.useEffect(() => {
@@ -404,18 +408,12 @@ const Display = (): React.ReactElement => {
   // (host paused/resumed from another device).
   React.useEffect(() => {
     if (!isPlaying || !playsVideoHere || !playbackConfirmedRef.current) return;
-    const player = videoRef.current?.contentWindow;
-    if (!player) return;
+    const iframe = videoRef.current;
+    if (!iframe) return;
     if (displayPaused && !pausedReportedRef.current) {
-      player.postMessage(
-        JSON.stringify({ event: 'command', func: 'pauseVideo', args: [] }),
-        'https://www.youtube.com'
-      );
+      ytCommand(iframe, 'pauseVideo');
     } else if (!displayPaused && pausedReportedRef.current) {
-      player.postMessage(
-        JSON.stringify({ event: 'command', func: 'playVideo', args: [] }),
-        'https://www.youtube.com'
-      );
+      ytCommand(iframe, 'playVideo');
     }
   }, [displayPaused, isPlaying, playsVideoHere]);
 
@@ -452,10 +450,7 @@ const Display = (): React.ReactElement => {
   // The tap grants sticky user activation — this song and all later ones can
   // now autoplay with sound.
   function unlockPlayback() {
-    videoRef.current?.contentWindow?.postMessage(
-      JSON.stringify({ event: 'command', func: 'playVideo', args: [] }),
-      'https://www.youtube.com'
-    );
+    ytCommand(videoRef.current, 'playVideo');
     setNeedsTap(false);
     if (unlockRetryRef.current) clearTimeout(unlockRetryRef.current);
     unlockRetryRef.current = setTimeout(() => {
