@@ -1,5 +1,8 @@
 // Shared by the suggestion endpoints and the browser, so no Mongo imports here.
 
+/** The rooms shelf's window, also named in the line under that shelf. */
+export const ROOMS_WINDOW_DAYS = 14;
+
 export interface ShelfSong {
   /** karaoke_songs._id — the suggestionKey an add from this row carries. */
   key: string;
@@ -32,4 +35,9 @@ export interface IdeaShelf {
    *  when scope is "language". */
   language: string | null;
   songs: ShelfSong[];
+  /** Chart shelves: how many Apple Music charts it draws on (one for a
+   *  country's own), and when the newest was fetched (ISO). Shown under the
+   *  shelf so a singer can see where "hot" comes from. */
+  charts?: number;
+  updatedAt?: string;
 }

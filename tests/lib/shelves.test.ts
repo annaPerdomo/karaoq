@@ -297,6 +297,15 @@ describe("computeShelves", () => {
     expect(hot.songs).toHaveLength(9);
   });
 
+  it("says where a chart shelf came from and when", async () => {
+    seedSong("a", ["a1"]);
+    seedVideo("a1");
+    snapshots().seed(snap("us", ["a"]));
+
+    const [hot] = await computeShelves("US", null, NOW);
+    expect(hot).toMatchObject({ charts: 1, updatedAt: NOW.toISOString() });
+  });
+
   it("returns no shelves when nothing is charted or queued", async () => {
     expect(await computeShelves("US", null, NOW)).toEqual([]);
   });
@@ -305,7 +314,7 @@ describe("computeShelves", () => {
 describe("getShelves", () => {
   it("serves a fresh cached copy without recomputing", async () => {
     const cached = [{ id: "hot", scope: "country", country: "US", language: null, songs: [] }];
-    cache().seed({ _id: "c1", key: "shelves:v3:US:-", shelves: cached, computedAt: new Date() });
+    cache().seed({ _id: "c1", key: "shelves:v4:US:-", shelves: cached, computedAt: new Date() });
     expect(await getShelves("US")).toEqual(cached);
   });
 
@@ -315,7 +324,7 @@ describe("getShelves", () => {
     snapshots().seed({ _id: "us", fetchedAt: NOW, ranks: [{ key: "a", rank: 1 }] });
     cache().seed({
       _id: "c1",
-      key: "shelves:v3:US:-",
+      key: "shelves:v4:US:-",
       shelves: [{ id: "rooms", scope: "world", country: null, language: null, songs: [] }],
       computedAt: new Date(Date.now() - 20 * 60 * 1000),
     });
@@ -330,7 +339,7 @@ describe("getShelves", () => {
     snapshots().seed({ _id: "us", fetchedAt: NOW, ranks: [{ key: "a", rank: 1 }] });
     cache().seed({
       _id: "c1",
-      key: "shelves:v3:US:-",
+      key: "shelves:v4:US:-",
       shelves: [],
       computedAt: new Date(Date.now() - 4 * 60 * 60 * 1000),
     });

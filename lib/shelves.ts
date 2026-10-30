@@ -9,7 +9,9 @@ import {
   type ChartSnapshotDoc,
   type KaraokeSongDoc,
 } from "./mongodb";
-import type { IdeaShelf, ShelfScope, ShelfSong } from "./shelfTypes";
+import { ROOMS_WINDOW_DAYS, type IdeaShelf, type ShelfScope, type ShelfSong } from "./shelfTypes";
+
+export { ROOMS_WINDOW_DAYS };
 
 // The idea shelves: what's charting where the singer is (or in their
 // language), and what KaraoQ rooms have actually been queuing. Both are built
@@ -17,7 +19,6 @@ import type { IdeaShelf, ShelfScope, ShelfSong } from "./shelfTypes";
 // versions with no search behind it.
 
 export const SHELF_SIZE = 20;
-export const ROOMS_WINDOW_DAYS = 14;
 /** One room hammering a song isn't "what rooms are singing". */
 export const MIN_ROOMS_PER_SONG = 2;
 /** Below this a shelf is too thin to beat the next-wider one. */
@@ -88,6 +89,18 @@ export interface ShelfPlan {
   country: string | null;
   language: string | null;
   ranked: Ranked[];
+  /** Where a chart plan's songs came from, shown under the shelf. */
+  charts?: number;
+  updatedAt?: Date;
+}
+
+/** How many Apple charts a plan pooled, and when the newest was fetched. */
+function provenance(snaps: ChartSnapshotDoc[]): { charts: number; updatedAt?: Date } {
+  const newest = snaps.reduce<Date | undefined>(
+    (latest, snap) => (!latest || snap.fetchedAt > latest ? snap.fetchedAt : latest),
+    undefined
+  );
+  return { charts: snaps.length, ...(newest ? { updatedAt: newest } : {}) };
 }
 
 /**
@@ -104,7 +117,13 @@ export function hotPlans(
   const plans: ShelfPlan[] = [];
   const own = country ? snaps.find((s) => s._id === country.toLowerCase()) : undefined;
   if (own) {
-    plans.push({ scope: "country", country: country!.toUpperCase(), language: null, ranked: rankChart(own, now) });
+    plans.push({
+      scope: "country",
+      country: country!.toUpperCase(),
+      language: null,
+      ranked: rankChart(own, now),
+      ...provenance([own]),
+    });
   }
   const lang = country ? chartLanguage(country) : language;
   const pool = lang ? snaps.filter((s) => chartLanguage(s._id) === lang) : [];
@@ -115,9 +134,16 @@ export function hotPlans(
       country: null,
       language: lang,
       ranked: pool.length === 1 ? rankChart(pool[0], now) : poolCharts(pool),
+      ...provenance(pool),
     });
   }
-  plans.push({ scope: "world", country: null, language: null, ranked: poolCharts(snaps) });
+  plans.push({
+    scope: "world",
+    country: null,
+    language: null,
+    ranked: poolCharts(snaps),
+    ...provenance(snaps),
+  });
   return plans;
 }
 
@@ -333,8 +359,16 @@ export async function computeShelves(
     }
     if (!best || best.songs.length === 0) return;
     best.songs.forEach((s) => shownKeys.add(s.key));
-    const { scope, country: cc, language: lang } = best.plan;
-    shelves.push({ id, scope, country: cc, language: lang, songs: best.songs });
+    const { scope, country: cc, language: lang, charts: pooled, updatedAt } = best.plan;
+    shelves.push({
+      id,
+      scope,
+      country: cc,
+      language: lang,
+      songs: best.songs,
+      ...(pooled ? { charts: pooled } : {}),
+      ...(updatedAt ? { updatedAt: updatedAt.toISOString() } : {}),
+    });
   };
 
   await place("hot", hotPlans(charts, country, language, now), MIN_HOT_VIEWS);
@@ -351,7 +385,7 @@ export async function getShelves(
 ): Promise<IdeaShelf[]> {
   // The language only matters when the country is unknown (hotPlans).
   const lang = country ? null : language;
-  const key = `shelves:v3:${country ?? "world"}:${lang ?? "-"}`;
+  const key = `shelves:v4:${country ?? "world"}:${lang ?? "-"}`;
   const cache = await getSuggestionCacheCollection();
   const hit = await cache.findOne({ key });
   if (hit?.shelves && Date.now() - hit.computedAt.getTime() < shelvesFreshFor(hit.shelves)) {
@@ -388,13 +422,15 @@ export async function computeWorldCharts(now: Date = new Date()): Promise<IdeaSh
       country: snap._id.toUpperCase(),
       language: null,
       songs: assembleShelf(rankChart(snap, now), new Set(), showable, MIN_HOT_VIEWS),
+      charts: 1,
+      updatedAt: snap.fetchedAt.toISOString(),
     }))
     .filter((shelf) => shelf.songs.length >= MIN_SHELF_SONGS)
     .sort((a, b) => (a.country < b.country ? -1 : 1));
 }
 
 export async function getWorldCharts(): Promise<IdeaShelf[]> {
-  const key = "world:v1";
+  const key = "world:v2";
   const cache = await getSuggestionCacheCollection();
   const hit = await cache.findOne({ key });
   if (hit?.shelves && Date.now() - hit.computedAt.getTime() < SHELF_REFRESH_MS) {

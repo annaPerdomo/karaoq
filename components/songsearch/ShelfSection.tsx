@@ -2,7 +2,7 @@ import * as React from 'react';
 
 import styles from '../../styles/IdeaRows.module.css';
 import ssStyles from '../../styles/SongSearch.module.css';
-import type { IdeaShelf, ShelfSong } from '../../lib/shelfTypes';
+import { ROOMS_WINDOW_DAYS, type IdeaShelf, type ShelfSong } from '../../lib/shelfTypes';
 import { useT } from '../../lib/i18n/I18nProvider';
 import SongRow from './SongRow';
 import { INITIAL_CATEGORY_SONGS } from './constants';
@@ -41,9 +41,27 @@ function useShelfTitle(shelf: IdeaShelf): string {
   return t(`ideas.${id}.titleWorld`);
 }
 
+/** Where the shelf's songs come from, so "hot" is something a singer can check. */
+function useSourceLine(shelf: IdeaShelf): string {
+  const { t, locale } = useT();
+  if (shelf.id === 'rooms') return t('ideas.source.rooms', { days: ROOMS_WINDOW_DAYS });
+  let date = '';
+  try {
+    date = shelf.updatedAt
+      ? new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric' }).format(new Date(shelf.updatedAt))
+      : '';
+  } catch {}
+  const line =
+    shelf.scope === 'country' && shelf.country
+      ? t('ideas.source.chart', { country: displayName(shelf.country, 'region', locale) })
+      : t('ideas.source.chartPooled', { count: shelf.charts ?? 0 });
+  return date ? `${line} · ${t('ideas.source.updated', { date })}` : line;
+}
+
 const ShelfSection: React.FC<ShelfSectionProps> = ({ shelf, onSelect }) => {
   const { t } = useT();
   const title = useShelfTitle(shelf);
+  const source = useSourceLine(shelf);
   const [expanded, setExpanded] = React.useState(false);
   const visible = expanded ? shelf.songs : shelf.songs.slice(0, INITIAL_CATEGORY_SONGS);
 
@@ -73,6 +91,7 @@ const ShelfSection: React.FC<ShelfSectionProps> = ({ shelf, onSelect }) => {
           </button>
         )}
       </div>
+      <p className={styles.source}>{source}</p>
     </section>
   );
 };

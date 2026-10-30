@@ -121,3 +121,11 @@
   font-size: 0.74rem;
   color: var(--text-secondary);
 }
+
+/* The shelf's data source, under its list: quiet, but there to check. */
+.source {
+  margin: 0.45rem 0.25rem 0;
+  font-size: 0.68rem;
+  line-height: 1.35;
+  color: var(--text-muted);
+}
