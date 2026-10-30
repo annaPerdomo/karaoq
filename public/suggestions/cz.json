@@ -57,6 +57,96 @@
       ]
     },
     {
+      "id": "cz-retro-pop",
+      "name": "Retro pop",
+      "emoji": "📼",
+      "songs": [
+        { "title": "Knoflíky lásky", "artist": "Iveta Bartošová & Petr Sepéši" },
+        { "title": "Láska je láska", "artist": "Lucie Bílá" },
+        { "title": "Motorest", "artist": "Petra Janů" },
+        { "title": "Medvídek", "artist": "Lucie" },
+        { "title": "Chci zas v tobě spát", "artist": "Lucie" },
+        { "title": "Duhová víla", "artist": "Hana Zagorová" },
+        { "title": "Asi, asi", "artist": "Hana Zagorová" },
+        { "title": "Je jaká je", "artist": "Karel Gott" },
+        { "title": "Hurikán", "artist": "Dalibor Janda" },
+        { "title": "Lásko voníš deštěm", "artist": "Marie Rottrová" },
+        { "title": "Decibely lásky", "artist": "Michal David & Marcela Holanová" },
+        { "title": "Dej mi víc své lásky", "artist": "Petr Spálený" },
+        { "title": "Zlaté střevíčky", "artist": "Karel Zich" },
+        { "title": "Já budu chodit po špičkách", "artist": "Petr Novák" },
+        { "title": "Na kolena", "artist": "Ready Kirken" },
+        { "title": "Jahody mražený", "artist": "Jiří Schelinger" }
+      ]
+    },
+    {
+      "id": "cz-tramp-folk",
+      "name": "Trampské & folk",
+      "emoji": "🔥",
+      "songs": [
+        { "title": "Rosa na kolejích", "artist": "Wabi Daněk" },
+        { "title": "Jarní tání", "artist": "Greenhorns" },
+        { "title": "Stánky", "artist": "Nedvědi" },
+        { "title": "Těšínská", "artist": "Jaromír Nohavica" },
+        { "title": "Dokud se zpívá", "artist": "Jaromír Nohavica" },
+        { "title": "Zatanči", "artist": "Jaromír Nohavica" },
+        { "title": "Tisíc mil", "artist": "Waldemar Matuška" },
+        { "title": "Hvězda na vrbě", "artist": "Michal Tučný" },
+        { "title": "Prodavač", "artist": "Michal Tučný" },
+        { "title": "Ráda se miluje", "artist": "Žalman & spol." },
+        { "title": "Jarmila", "artist": "Pavel Dobeš" },
+        { "title": "Husličky", "artist": "Vlasta Redl" },
+        { "title": "Morituri te salutant", "artist": "Karel Kryl" },
+        { "title": "Pocity", "artist": "Tomáš Klus" },
+        { "title": "Do nebe", "artist": "Tomáš Klus" }
+      ]
+    },
+    {
+      "id": "cz-soucasny-pop",
+      "name": "Současný pop",
+      "emoji": "✨",
+      "songs": [
+        { "title": "Když nemůžeš, tak přidej", "artist": "Mirai" },
+        { "title": "Celibát", "artist": "Slza" },
+        { "title": "Lhůta záruční", "artist": "Slza" },
+        { "title": "Asio", "artist": "Ben Cristovao" },
+        { "title": "Na ostří nože", "artist": "Ewa Farna" },
+        { "title": "Inzerát", "artist": "Kryštof" },
+        { "title": "Srdcebeat", "artist": "Kryštof" },
+        { "title": "Ztrácíš", "artist": "Marek Ztracený" },
+        { "title": "Bárka", "artist": "Michal Hrůza" },
+        { "title": "Napořád", "artist": "Michal Hrůza" },
+        { "title": "Snadné je žít", "artist": "Mig 21" },
+        { "title": "Hledá se žena", "artist": "Mandrage" },
+        { "title": "Na dlani", "artist": "Mandrage" },
+        { "title": "Magdaléna", "artist": "Jelen" },
+        { "title": "Voda živá", "artist": "Aneta Langerová" }
+      ]
+    },
+    {
+      "id": "cz-slovenske",
+      "name": "Slovenské hity",
+      "emoji": "🇸🇰",
+      "songs": [
+        { "title": "Kaskadér", "artist": "Elán" },
+        { "title": "Zlodej slnečníc", "artist": "Elán" },
+        { "title": "Neviem byť sám", "artist": "Elán" },
+        { "title": "Voda, čo ma drží nad vodou", "artist": "Elán" },
+        { "title": "Tanečnice z Lúčnice", "artist": "Elán" },
+        { "title": "Držím ti miesto", "artist": "Team" },
+        { "title": "Atlantída", "artist": "Miro Žbirka" },
+        { "title": "Balada o poľných vtákoch", "artist": "Miro Žbirka" },
+        { "title": "Vyznanie", "artist": "Marika Gombitová" },
+        { "title": "Ty a tvoja sestra", "artist": "No Name" },
+        { "title": "Ľudia nie sú zlí", "artist": "IMT Smile" },
+        { "title": "Horehronie", "artist": "Kristína" },
+        { "title": "Nie sme zlí", "artist": "Richard Müller" },
+        { "title": "Zhorí všetko čo mám", "artist": "Desmod" },
+        { "title": "Pravda víťazí", "artist": "Tublatanka" },
+        { "title": "Žeravé znamenie osudu", "artist": "Tublatanka" }
+      ]
+    },
+    {
       "id": "cz-voice-easy",
       "name": "Easy to Sing",
       "emoji": "😌",
