@@ -22,8 +22,9 @@ export default function FeatureFeedback({
       ) : (
         <Disclosure summary={`${entries.length} recent entries`} defaultOpen>
           <div className={styles.rankList}>
-            {entries.map((e) => (
+            {entries.map((e, i) => (
               <div key={e.id} className={styles.rankRow}>
+                <span className={styles.rankNum}>#{i + 1}</span>
                 <div className={styles.rankMain}>
                   <span className={styles.rankTitle}>
                     <span className={styles.rankTitleText}>
