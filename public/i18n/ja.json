@@ -29,7 +29,7 @@
   "feedback.placeholder.other": "お伝えしたいことをご自由に…",
   "feedback.contactLabel": "メールアドレス（任意）",
   "feedback.contactPlaceholder": "you@example.com",
-  "feedback.contactHint": "返信や確認のご連絡にのみ使用します。",
+  "feedback.contactHint": "メールアドレスを残していただければ、対応が済み次第お知らせします。KaraoQは個人で開発しており、アドレスを売ることは決してありません。",
   "feedback.discard": "このフィードバックを破棄しますか？メッセージは送信されません。",
   "feedback.send": "送信",
   "feedback.sending": "送信中…",

@@ -29,7 +29,7 @@
   "feedback.placeholder.other": "하고 싶은 이야기를 자유롭게 적어주세요…",
   "feedback.contactLabel": "이메일 (선택)",
   "feedback.contactPlaceholder": "you@example.com",
-  "feedback.contactHint": "답장하거나 추가로 여쭤볼 때만 사용합니다.",
+  "feedback.contactHint": "이메일을 남겨 주시면 반영되었을 때 알려 드릴게요. KaraoQ는 개발자 한 명이 만들고 있으며, 이메일 주소를 절대 팔지 않습니다.",
   "feedback.discard": "이 피드백을 삭제할까요? 메시지가 전송되지 않습니다.",
   "feedback.send": "보내기",
   "feedback.sending": "보내는 중…",

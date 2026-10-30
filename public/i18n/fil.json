@@ -29,7 +29,7 @@
   "feedback.placeholder.other": "Kahit ano na gusto mong sabihin sa amin…",
   "feedback.contactLabel": "Email (opsyonal)",
   "feedback.contactPlaceholder": "ikaw@example.com",
-  "feedback.contactHint": "Para lang masagot ka namin o makapagtanong pa.",
+  "feedback.contactHint": "Iwan mo ang email mo at sasabihan kita kapag tapos na. Iisang developer lang ang gumagawa ng KaraoQ, at hinding-hindi ko ibebenta ang email mo.",
   "feedback.discard": "Itapon ang feedback na ito? Hindi maipapadala ang iyong mensahe.",
   "feedback.send": "Ipadala",
   "feedback.sending": "Ipinapadala…",

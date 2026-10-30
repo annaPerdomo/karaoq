@@ -29,7 +29,7 @@
   "feedback.placeholder.other": "Alles, was du uns sagen möchtest…",
   "feedback.contactLabel": "E-Mail (optional)",
   "feedback.contactPlaceholder": "du@example.com",
-  "feedback.contactHint": "Nur damit wir antworten oder nachfragen können.",
+  "feedback.contactHint": "Hinterlass deine E-Mail und ich sag dir Bescheid, wenn es erledigt ist. KaraoQ wird von einer einzigen Person entwickelt, und ich verkaufe deine Adresse niemals.",
   "feedback.discard": "Dieses Feedback verwerfen? Deine Nachricht wird nicht gesendet.",
   "feedback.send": "Senden",
   "feedback.sending": "Wird gesendet…",
