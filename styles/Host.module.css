@@ -2228,6 +2228,7 @@
    push the lower groups off-screen with no way to reach them. */
 .settingsPopover,
 .modeMenu {
+  max-height: calc(100vh - 72px);
   max-height: calc(100dvh - 72px);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
