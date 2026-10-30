@@ -24,9 +24,8 @@ export async function rematchMissedSongs(): Promise<{ done: boolean; report: Rem
 
   const songs = await getKaraokeSongsCollection();
   const { modifiedCount } = await songs.updateMany(
-    // A retired pack song can't exist (only promoted songs retire), so origin
-    // needn't be checked.
-    { "cuts.0": { $exists: false }, resolveMisses: { $gt: 0 } },
+    // Not promoted songs: their names are inferred, and the misses are mostly junk.
+    { "cuts.0": { $exists: false }, resolveMisses: { $gt: 0 }, origin: { $ne: "demand" } },
     { $unset: { resolveMisses: "", nextResolveAt: "", retired: "" } }
   );
   await state.updateOne(

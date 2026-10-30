@@ -45,12 +45,12 @@ export function decodeEntities(text: string): string {
 }
 
 // Chinese, Japanese and Korean titles carry no spaces between words, so an
-// upload's "晴天-周杰倫" or "【晴天】周杰倫KTV" never splits into the words a
-// catalog entry holds. Those scripts' words are matched inside the title instead.
+// upload's "晴天-周杰倫KTV" never splits into the words a catalog entry holds.
+// Those scripts' words are matched inside a title word instead (inCjkRun).
 const CJK = new RegExp("[\\u3040-\\u30ff\\u3400-\\u9fff\\uac00-\\ud7af\\uf900-\\ufaff]");
 
-/** A run-together phrase ("babymonster") is only trusted this long — a short
- *  one turns up inside unrelated words. */
+/** A name written as one word ("babymonster") is only read this long — two
+ *  short words run together spell too many things. */
 const MIN_COMPACT = 5;
 
 // Hashtags mark a short or promo; the rest mark a reel rather than one song.
@@ -89,30 +89,45 @@ export function songTokens(text: string): string[] {
 
 interface Haystack {
   bag: Set<string>;
-  /** The title's words run together, for scripts and spellings without spaces. */
-  compact: string;
+  words: string[];
 }
 
 function haystackOf(videoTokens: string[]): Haystack {
-  return { bag: new Set(videoTokens), compact: videoTokens.join("") };
+  return { bag: new Set(videoTokens), words: videoTokens };
+}
+
+/** "baby" + "monster" read as "babymonster": consecutive whole words only, so
+ *  "Butterfly" never covers "Butter" and "Hero Enrique" never covers "Héroe". */
+function spelledByRun(words: string[], joined: string): boolean {
+  for (let i = 0; i < words.length; i++) {
+    let run = "";
+    for (let j = i; j < words.length && run.length < joined.length; j++) {
+      run += words[j];
+      if (j > i && run === joined) return true;
+    }
+  }
+  return false;
+}
+
+/** One CJK character is too common a fragment to trust (恋 is in half that artist's titles). */
+function inCjkRun(words: string[], t: string): boolean {
+  return t.length >= 2 && CJK.test(t) && words.some((w) => w.indexOf(t) >= 0);
 }
 
 /** Order-free: channels put the artist first, last, or in a suffix. */
 function covers(hay: Haystack, needle: string[]): boolean {
   if (needle.length === 0) return false;
-  if (needle.every((t) => hay.bag.has(t) || (CJK.test(t) && hay.compact.indexOf(t) >= 0))) {
-    return true;
-  }
-  // "BABY MONSTER" for BABYMONSTER, "back number" run into one word.
+  if (needle.every((t) => hay.bag.has(t) || inCjkRun(hay.words, t))) return true;
   const joined = needle.join("");
-  return joined.length >= MIN_COMPACT && hay.compact.indexOf(joined) >= 0;
+  return (
+    joined.length >= MIN_COMPACT && (hay.bag.has(joined) || spelledByRun(hay.words, joined))
+  );
 }
 
 export interface MatchedVideo extends HarvestedVideo {
   /** Extra words the channel added; fewer sorts first. */
   extra: number;
 }
-
 interface Variant {
   entry: CatalogEntry;
   title: string[];
@@ -208,7 +223,8 @@ export function matchHarvestToCatalog(
         const rows = matches.get(w.entry.key) ?? [];
         rows.push({
           ...video,
-          extra: videoTokens.length - w.title.length - w.artist.length,
+          // Run-together matches go negative; never sort them ahead of exact ones.
+          extra: Math.max(0, videoTokens.length - w.title.length - w.artist.length),
         });
         matches.set(w.entry.key, rows);
       }

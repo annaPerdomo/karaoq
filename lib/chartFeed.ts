@@ -19,9 +19,9 @@ export const CHART_SIZE = 50;
 /** Daily, so the hot shelf moves with the charts. Under 24h so a cron slot that
  *  fires a few minutes early still finds yesterday's country due. */
 export const CHART_REFRESH_HOURS = 20;
-/** Only the first two cron slots run this step (the mop-up slots run resolve
- *  alone), so two runs must cover every country. */
-export const CHART_COUNTRIES_PER_RUN = Math.ceil(CHART_COUNTRIES.length / 2);
+/** Only cron slots 1–2 run this step, so two runs must cover every country;
+ *  the +1 lets a slot-1 failure retry without bumping a never-tried one. */
+export const CHART_COUNTRIES_PER_RUN = Math.ceil(CHART_COUNTRIES.length / 2) + 1;
 export const CHART_NEW_SONGS_PER_RUN = 100;
 
 export interface ChartSong {

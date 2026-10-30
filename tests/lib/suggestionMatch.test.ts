@@ -306,6 +306,21 @@ describe("isCutOf — chart songs", () => {
     expect(isCutOf("BABY MONSTER - &#39;DESERVE&#39; (Karaoke Version)", DESERVE)).toBe(true);
   });
 
+  it("never reads a word inside a longer one as a different song by the same artist", () => {
+    expect(isCutOf("BTS - Butterfly (Karaoke Version)", entry("Butter", "BTS"))).toBe(false);
+    expect(isCutOf("Hero - Enrique Iglesias (Karaoke Version)", entry("Héroe", "Enrique Iglesias"))).toBe(false);
+    expect(isCutOf("BTS - Butter (Karaoke Version)", entry("Butter", "BTS"))).toBe(true);
+  });
+
+  it("reads a name written as one word only from whole words", () => {
+    expect(isCutOf("backnumber - HAPPY BIRTHDAY カラオケ", entry("HAPPY BIRTHDAY", "back number"))).toBe(true);
+  });
+
+  it("won't match a one-character CJK title inside a longer word", () => {
+    expect(isCutOf("星野源 恋人たち カラオケ", entry("恋", "星野源"))).toBe(false);
+    expect(isCutOf("星野源 恋 カラオケ", entry("恋", "星野源"))).toBe(true);
+  });
+
   it("doesn't trust a short run-together fragment", () => {
     expect(isCutOf("Lies karaoke - Dabba", entry("Lies", "ABBA"))).toBe(false);
   });

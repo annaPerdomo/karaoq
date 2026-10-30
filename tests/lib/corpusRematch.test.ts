@@ -46,7 +46,8 @@ afterEach(() => {
 describe("rematchMissedSongs", () => {
   it("gives every cutless song with a miss a fresh try, once", async () => {
     seed("backed-off", { cuts: [], resolveMisses: 1, nextResolveAt: later, origin: "chart" });
-    seed("retired", { cuts: [], resolveMisses: 3, retired: true, origin: "demand" });
+    seed("retired", { cuts: [], resolveMisses: 3, retired: true, origin: "chart" });
+    seed("junk", { cuts: [], resolveMisses: 3, retired: true, origin: "demand" });
     seed("filled", { cuts: ["v1"], resolveMisses: 1, nextResolveAt: later });
     seed("untried", { cuts: [] });
 
@@ -55,6 +56,8 @@ describe("rematchMissedSongs", () => {
     expect(songs().get("backed-off")).not.toHaveProperty("nextResolveAt");
     expect(songs().get("backed-off")).not.toHaveProperty("resolveMisses");
     expect(songs().get("retired")).not.toHaveProperty("retired");
+    // A promoted name inferred from video titles stays retired.
+    expect(songs().get("junk").retired).toBe(true);
     expect(songs().get("filled").nextResolveAt).toEqual(later);
     expect(state().get(REMATCH_ID).done).toBe(true);
 
