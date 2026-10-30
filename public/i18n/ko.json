@@ -201,7 +201,7 @@
   "ideas.rooms.count.one": "방 {count}개",
   "ideas.rooms.count.other": "방 {count}개",
   "ideas.badge.new": "NEW",
-  "ideas.place.nearYou": "📍 내 주변",
+  "ideas.place.nearYou": "내 주변",
   "ideas.place.empty": "이 나라의 차트는 아직 채우는 중이에요. 곧 다시 확인해 주세요.",
   "ideas.place.international": "해외 히트곡",
   "ideas.place.here": "현재 위치",
