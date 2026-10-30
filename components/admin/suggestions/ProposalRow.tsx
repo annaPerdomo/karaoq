@@ -68,7 +68,7 @@ export default function ProposalRow({
   }
 
   return (
-    <div className={styles.rankRow}>
+    <div className={`${styles.rankRow} ${styles.proposalRow}`}>
       <span className={styles.rankMain}>
         <span className={styles.rankTitle}>
           <span className={styles.rankTitleText}>
@@ -95,7 +95,7 @@ export default function ProposalRow({
           {`${row.rooms} rooms · ${row.searchRooms} searching · ${row.countries.length} countries`}
         </span>
         {!picked && (
-          <span className={styles.rankSub}>
+          <span className={`${styles.rankSub} ${styles.proposalWrap}`}>
             {row.candidates.map((c) => (
               <button
                 key={`${c.artist}-${c.title}`}
@@ -110,7 +110,7 @@ export default function ProposalRow({
           </span>
         )}
         {view === 'unnamed' && (
-          <span className={styles.rankSub}>
+          <span className={`${styles.rankSub} ${styles.proposalWrap}`}>
             <input
               className={styles.roomSearch}
               placeholder="Artist"
@@ -126,7 +126,7 @@ export default function ProposalRow({
           </span>
         )}
         {row.videoIds.length > 0 && (
-          <span className={styles.rankSub}>
+          <span className={`${styles.rankSub} ${styles.proposalWrap}`}>
             {row.videoIds.map((id) => (
               <a
                 key={id}
