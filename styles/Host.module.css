@@ -2224,6 +2224,15 @@
   animation: popIn 0.15s ease;
 }
 
+/* Short viewports (landscape tablets, small laptop windows) would otherwise
+   push the lower groups off-screen with no way to reach them. */
+.settingsPopover,
+.modeMenu {
+  max-height: calc(100dvh - 72px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 .modeMenu .spLabel {
   padding: 0.35rem 0.5rem 0.4rem;
   margin-bottom: 0;
@@ -3374,13 +3383,6 @@ html[data-tv] .spToggleRow:focus {
 
   .main:not(.mainCustomizing) .reactionOverlay {
     bottom: 0;
-  }
-
-  .settingsPopover,
-  .modeMenu {
-    max-height: calc(100dvh - 72px);
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
   }
 }
 
