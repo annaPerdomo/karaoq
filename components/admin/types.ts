@@ -473,4 +473,4 @@ export interface QuotaLedgerData {
   billedByDay?: DayBilledWire[];
 }
 
-export type AdminView = 'rooms' | 'quota' | 'errors' | 'suggestions' | 'pulse' | 'feedback';
+export type AdminView = 'rooms' | 'quota' | 'errors' | 'suggestions' | 'pulse' | 'screens' | 'feedback';

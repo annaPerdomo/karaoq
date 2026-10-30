@@ -103,3 +103,11 @@ export const SearchIcon = () => (
     <path d="m20 20-4.9-4.9" />
   </Icon>
 );
+
+export const ScreensIcon = () => (
+  <Icon>
+    <rect x="3" y="4.5" width="18" height="12" rx="2" />
+    <path d="M8.5 20h7" />
+    <path d="M12 16.5V20" />
+  </Icon>
+);
