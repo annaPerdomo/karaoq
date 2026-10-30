@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 import { YoutubeResult } from '../../../app/queue/searchYoutube';
 import postEntryToQueue from '../../../app/queue/postEntryToQueue';
+import type { IdeaOrigin } from '../../../lib/ideaSurface';
 import { QueueEntry } from '../../../pages/api/types';
 
 interface UseSongAddFlowArgs {
@@ -20,6 +21,7 @@ interface UseSongAddFlowArgs {
   via: 'search' | 'paste';
   suggestionKey?: string | null;
   fromCorpus?: boolean | null;
+  idea?: IdeaOrigin | null;
 }
 
 // Owns the preview/confirm modal and the add-to-queue (or pick-and-return)
@@ -34,6 +36,7 @@ export function useSongAddFlow({
   via,
   suggestionKey,
   fromCorpus,
+  idea,
 }: UseSongAddFlowArgs) {
   const [justAdded, setJustAdded] = React.useState<string | null>(null);
   const [addError, setAddError] = React.useState<string | null>(null);
@@ -67,7 +70,8 @@ export function useSongAddFlow({
         entry,
         via,
         suggestionKey ?? undefined,
-        fromCorpus ?? undefined
+        fromCorpus ?? undefined,
+        idea ?? undefined
       );
     } catch {
       ok = false;

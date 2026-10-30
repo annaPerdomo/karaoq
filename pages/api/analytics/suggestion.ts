@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { SUGGESTION_SOURCES, trackEvent, type SuggestionSource } from "../../../lib/analytics";
 import { MAX_ENTRY_ID_LENGTH, MAX_TITLE_LENGTH, rateLimit } from "../../../lib/limits";
+import { ideaFields } from "../../../lib/ideaSurface";
 
 export default async function handler(
   req: NextApiRequest,
@@ -18,6 +19,8 @@ export default async function handler(
     categoryId?: string;
     songTitle?: string;
     songArtist?: string;
+    ideaSurface?: unknown;
+    ideaAway?: unknown;
   };
   try {
     body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
@@ -56,6 +59,7 @@ export default async function handler(
     categoryId: capped(categoryId, MAX_ENTRY_ID_LENGTH),
     songTitle: capped(songTitle, MAX_TITLE_LENGTH),
     songArtist: capped(songArtist, MAX_TITLE_LENGTH),
+    ...ideaFields(body),
   });
 
   res.status(200).json({ ok: true });

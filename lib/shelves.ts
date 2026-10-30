@@ -9,9 +9,15 @@ import {
   type ChartSnapshotDoc,
   type KaraokeSongDoc,
 } from "./mongodb";
-import { ROOMS_WINDOW_DAYS, type IdeaShelf, type ShelfScope, type ShelfSong } from "./shelfTypes";
+import {
+  COUNTRY_ROOMS_WINDOW_DAYS,
+  ROOMS_WINDOW_DAYS,
+  type IdeaShelf,
+  type ShelfScope,
+  type ShelfSong,
+} from "./shelfTypes";
 
-export { ROOMS_WINDOW_DAYS };
+export { COUNTRY_ROOMS_WINDOW_DAYS, ROOMS_WINDOW_DAYS };
 
 // The idea shelves: what's charting where the singer is (or in their
 // language), and what KaraoQ rooms have actually been queuing. Both are built
@@ -23,6 +29,7 @@ export const SHELF_SIZE = 20;
 export const MIN_ROOMS_PER_SONG = 2;
 /** Below this a shelf is too thin to beat the next-wider one. */
 export const MIN_SHELF_SONGS = 8;
+export const MIN_COUNTRY_ROOM_SONGS = 5;
 export const NEW_FOR_DAYS = 7;
 /** A chart hit whose best karaoke video has fewer views than this is one
  *  nobody has shown they can sing — rap tracks, mostly. Rooms-shelf songs are
@@ -90,6 +97,8 @@ export interface ShelfPlan {
   country: string | null;
   language: string | null;
   ranked: Ranked[];
+  minSongs?: number;
+  windowDays?: number;
   /** Where a chart plan's songs came from, shown under the shelf. */
   chartCountries?: string[];
   updatedAt?: Date;
@@ -155,6 +164,8 @@ export interface RoomAdd {
   roomId: string;
   country?: string;
   songKey: string;
+  /** ms since epoch; absent counts as inside every window. */
+  at?: number;
 }
 
 function tallyRooms(rows: RoomAdd[]): Ranked[] {
@@ -177,15 +188,25 @@ function tallyRooms(rows: RoomAdd[]): Ranked[] {
 /** Ranked by distinct rooms, not raw adds: one enthusiastic room shouldn't top
  *  it. Narrowest first — country, the language's rooms, then every room. */
 export function roomPlans(
-  adds: RoomAdd[],
+  all: RoomAdd[],
   country: string | null,
-  language: string | null
+  language: string | null,
+  now: Date = new Date()
 ): ShelfPlan[] {
   const plans: ShelfPlan[] = [];
   if (country) {
     const cc = country.toUpperCase();
-    plans.push({ scope: "country", country: cc, language: null, ranked: tallyRooms(adds.filter((a) => a.country === cc)) });
+    plans.push({
+      scope: "country",
+      country: cc,
+      language: null,
+      ranked: tallyRooms(all.filter((a) => a.country === cc)),
+      minSongs: MIN_COUNTRY_ROOM_SONGS,
+      windowDays: COUNTRY_ROOMS_WINDOW_DAYS,
+    });
   }
+  const since = now.getTime() - ROOMS_WINDOW_DAYS * DAY_MS;
+  const adds = all.filter((a) => a.at === undefined || a.at >= since);
   const lang = country ? chartLanguage(country) : language;
   if (lang) {
     plans.push({
@@ -193,9 +214,16 @@ export function roomPlans(
       country: null,
       language: lang,
       ranked: tallyRooms(adds.filter((a) => !!a.country && chartLanguage(a.country) === lang)),
+      windowDays: ROOMS_WINDOW_DAYS,
     });
   }
-  plans.push({ scope: "world", country: null, language: null, ranked: tallyRooms(adds) });
+  plans.push({
+    scope: "world",
+    country: null,
+    language: null,
+    ranked: tallyRooms(adds),
+    windowDays: ROOMS_WINDOW_DAYS,
+  });
   return plans;
 }
 
@@ -262,7 +290,8 @@ export function assembleShelf(
   ranked: Ranked[],
   skip: Set<string>,
   showable: Map<string, ShowableSong>,
-  minViews: number
+  minViews: number,
+  renumber = false
 ): ShelfSong[] {
   const out: ShelfSong[] = [];
   for (const c of ranked) {
@@ -283,8 +312,8 @@ export function assembleShelf(
       ...(c.roomShare !== undefined ? { roomShare: c.roomShare } : {}),
     });
   }
-  // A pooled or filtered list renumbers, so a gap never reads as a missing song.
-  if (out.some((s) => s.rank !== undefined)) {
+  // Only pooled lists renumber: a single chart's ▲ and source line refer to Apple's ranks.
+  if (renumber && out.some((s) => s.rank !== undefined)) {
     out.forEach((s, i) => {
       s.rank = i + 1;
     });
@@ -296,21 +325,22 @@ export async function hydrateShelf(
   ranked: Ranked[],
   skip: Set<string>,
   trustedArtists: Set<string>,
-  minViews: number
+  minViews: number,
+  renumber = false
 ): Promise<ShelfSong[]> {
   const candidates = ranked.filter((r) => !skip.has(r.key)).slice(0, SHELF_SIZE * 3);
   const showable = await loadShowable(candidates.map((c) => c.key), trustedArtists);
-  return assembleShelf(candidates, skip, showable, minViews);
+  return assembleShelf(candidates, skip, showable, minViews, renumber);
 }
 
 /** The window's adds mapped onto corpus songs; an add no song claims is dropped. */
 export async function readRoomAdds(now: Date): Promise<RoomAdd[]> {
-  const since = new Date(now.getTime() - ROOMS_WINDOW_DAYS * DAY_MS);
+  const since = new Date(now.getTime() - COUNTRY_ROOMS_WINDOW_DAYS * DAY_MS);
   const songData = await getYoutubeSongDataCollection();
   const added = await songData
     .find(
       { type: "song_added", timestamp: { $gte: since }, videoId: { $exists: true } },
-      { projection: { roomId: 1, country: 1, videoId: 1 } }
+      { projection: { roomId: 1, country: 1, videoId: 1, timestamp: 1 } }
     )
     .maxTimeMS(QUERY_TIMEOUT_MS)
     .toArray();
@@ -335,7 +365,9 @@ export async function readRoomAdds(now: Date): Promise<RoomAdd[]> {
   const out: RoomAdd[] = [];
   for (const a of added) {
     const songKey = a.videoId ? songOf.get(a.videoId) : undefined;
-    if (songKey) out.push({ roomId: a.roomId, country: a.country, songKey });
+    if (songKey) {
+      out.push({ roomId: a.roomId, country: a.country, songKey, at: a.timestamp.getTime() });
+    }
   }
   return out;
 }
@@ -359,13 +391,14 @@ export async function computeShelves(
   const place = async (id: IdeaShelf["id"], plans: ShelfPlan[], minViews: number) => {
     let best: { plan: ShelfPlan; songs: ShelfSong[] } | null = null;
     for (const plan of plans) {
-      const songs = await hydrateShelf(plan.ranked, shownKeys, trusted, minViews);
+      const pooled = (plan.chartCountries?.length ?? 0) > 1;
+      const songs = await hydrateShelf(plan.ranked, shownKeys, trusted, minViews, pooled);
       if (!best || songs.length > best.songs.length) best = { plan, songs };
-      if (songs.length >= MIN_SHELF_SONGS) break;
+      if (songs.length >= (plan.minSongs ?? MIN_SHELF_SONGS)) break;
     }
     if (!best || best.songs.length === 0) return;
     best.songs.forEach((s) => shownKeys.add(s.key));
-    const { scope, country: cc, language: lang, chartCountries, updatedAt } = best.plan;
+    const { scope, country: cc, language: lang, chartCountries, updatedAt, windowDays } = best.plan;
     shelves.push({
       id,
       scope,
@@ -374,12 +407,13 @@ export async function computeShelves(
       songs: best.songs,
       ...(chartCountries && chartCountries.length > 0 ? { chartCountries } : {}),
       ...(updatedAt ? { updatedAt: updatedAt.toISOString() } : {}),
+      ...(windowDays ? { windowDays } : {}),
     });
   };
 
   await place("hot", hotPlans(charts, country, language, now), MIN_HOT_VIEWS);
   // The rooms shelf is for what the charts don't already say.
-  await place("rooms", roomPlans(adds, country, language), 0);
+  await place("rooms", roomPlans(adds, country, language, now), 0);
   return shelves;
 }
 
@@ -391,7 +425,7 @@ export async function getShelves(
 ): Promise<IdeaShelf[]> {
   // The language only matters when the country is unknown (hotPlans).
   const lang = country ? null : language;
-  const key = `shelves:v6:${country ?? "world"}:${lang ?? "-"}`;
+  const key = `shelves:v8:${country ?? "world"}:${lang ?? "-"}`;
   const cache = await getSuggestionCacheCollection();
   const hit = await cache.findOne({ key });
   if (hit?.shelves && Date.now() - hit.computedAt.getTime() < shelvesFreshFor(hit.shelves)) {
@@ -405,50 +439,6 @@ export async function getShelves(
     return shelves;
   } catch (e) {
     // A stale shelf beats an empty one while the database is struggling.
-    if (hit?.shelves) return hit.shelves;
-    throw e;
-  }
-}
-
-/** Every charted country's own chart that has enough singable songs to browse,
- *  for "Charts around the world". Charts never widen here: a Japan pick shows
- *  Japan or isn't offered. */
-export async function computeWorldCharts(now: Date = new Date()): Promise<IdeaShelf[]> {
-  const snapshots = await getChartSnapshotsCollection();
-  const [charts, trusted] = await Promise.all([
-    snapshots.find({}).maxTimeMS(QUERY_TIMEOUT_MS).toArray(),
-    readTrustedArtists(),
-  ]);
-  const keys = Array.from(new Set(charts.flatMap((snap) => snap.ranks.map((r) => r.key))));
-  const showable = await loadShowable(keys, trusted);
-  return charts
-    .map((snap) => ({
-      id: "world" as const,
-      scope: "country" as const,
-      country: snap._id.toUpperCase(),
-      language: null,
-      songs: assembleShelf(rankChart(snap, now), new Set(), showable, MIN_HOT_VIEWS),
-      chartCountries: [snap._id.toUpperCase()],
-      updatedAt: snap.fetchedAt.toISOString(),
-    }))
-    .filter((shelf) => shelf.songs.length >= MIN_SHELF_SONGS)
-    .sort((a, b) => (a.country < b.country ? -1 : 1));
-}
-
-export async function getWorldCharts(): Promise<IdeaShelf[]> {
-  const key = "world:v3";
-  const cache = await getSuggestionCacheCollection();
-  const hit = await cache.findOne({ key });
-  if (hit?.shelves && Date.now() - hit.computedAt.getTime() < SHELF_REFRESH_MS) {
-    return hit.shelves;
-  }
-  try {
-    const shelves = await computeWorldCharts();
-    await cache
-      .updateOne({ key }, { $set: { key, shelves, computedAt: new Date() } }, { upsert: true })
-      .catch(() => {});
-    return shelves;
-  } catch (e) {
     if (hit?.shelves) return hit.shelves;
     throw e;
   }

@@ -20,31 +20,25 @@ export function displayName(code: string, type: 'region' | 'language', locale: s
   }
 }
 
-/** Another country's chart reads exactly like the home one. */
-function copyId(shelf: IdeaShelf): 'hot' | 'rooms' {
-  return shelf.id === 'rooms' ? 'rooms' : 'hot';
-}
-
 const SHELF_EMOJI = { hot: '🔥', rooms: '🎤' };
 
 function useShelfTitle(shelf: IdeaShelf): string {
   const { t, locale } = useT();
-  const id = copyId(shelf);
+  const id = shelf.id;
   if (shelf.scope === 'country' && shelf.country) {
     return t(`ideas.${id}.title`, { country: displayName(shelf.country, 'region', locale) });
   }
-  if (shelf.scope === 'language' && shelf.language) {
-    return t(`ideas.${id}.titleLanguage`, {
-      language: displayName(shelf.language, 'language', locale),
-    });
-  }
-  return t(`ideas.${id}.titleWorld`);
+  // A pool stands in for "Near you"; its source line names the charts it pooled.
+  if (id === 'hot' && shelf.scope === 'world') return t('ideas.hot.titleWorld');
+  return t(`ideas.${id}.titleNear`);
 }
 
 /** Where the shelf's songs come from, so "hot" is something a singer can check. */
 function useSourceLine(shelf: IdeaShelf): string {
   const { t, locale } = useT();
-  if (shelf.id === 'rooms') return t('ideas.source.rooms', { days: ROOMS_WINDOW_DAYS });
+  if (shelf.id === 'rooms') {
+    return t('ideas.source.rooms', { days: shelf.windowDays ?? ROOMS_WINDOW_DAYS });
+  }
   let date = '';
   try {
     date = shelf.updatedAt
@@ -74,9 +68,9 @@ const ShelfSection: React.FC<ShelfSectionProps> = ({ shelf, onSelect }) => {
     <section className={styles.shelf}>
       <div className={styles.shelfHead}>
         <h3 className={styles.shelfTitle}>
-          <span aria-hidden="true">{SHELF_EMOJI[copyId(shelf)]}</span> {title}
+          <span aria-hidden="true">{SHELF_EMOJI[shelf.id]}</span> {title}
         </h3>
-        <span className={styles.shelfSub}>{t(`ideas.${copyId(shelf)}.sub`)}</span>
+        <span className={styles.shelfSub}>{t(`ideas.${shelf.id}.sub`)}</span>
       </div>
       <div className={ssStyles.songPanel}>
         {visible.map((song, i) => (

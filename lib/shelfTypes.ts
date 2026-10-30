@@ -2,6 +2,8 @@
 
 /** The rooms shelf's window, also named in the line under that shelf. */
 export const ROOMS_WINDOW_DAYS = 14;
+/** Must not exceed youtube_song_data's 30-day TTL (lib/mongodb). */
+export const COUNTRY_ROOMS_WINDOW_DAYS = 30;
 
 export interface ShelfSong {
   /** karaoke_songs._id — the suggestionKey an add from this row carries. */
@@ -21,8 +23,7 @@ export interface ShelfSong {
   roomShare?: number;
 }
 
-/** "world" is one country's chart picked from Charts around the world. */
-export type ShelfId = "hot" | "rooms" | "world";
+export type ShelfId = "hot" | "rooms";
 
 /** How far the shelf had to widen to find enough songs. */
 export type ShelfScope = "country" | "language" | "world";
@@ -41,4 +42,5 @@ export interface IdeaShelf {
    *  see where "hot" comes from. */
   chartCountries?: string[];
   updatedAt?: string;
+  windowDays?: number;
 }

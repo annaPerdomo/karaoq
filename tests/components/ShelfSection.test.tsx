@@ -40,6 +40,16 @@ describe("ShelfSection source line", () => {
     expect(screen.getByText("Source: Apple Music Top 50 charts")).toBeTruthy();
   });
 
+  it("names the window a country's rooms list counted", () => {
+    render(
+      <ShelfSection
+        shelf={{ id: "rooms", scope: "country", country: "FR", language: null, songs: [{ ...song, roomShare: 40 }], windowDays: 30 }}
+        onSelect={() => {}}
+      />
+    );
+    expect(screen.getByText("Source: songs queued in KaraoQ rooms over the last 30 days")).toBeTruthy();
+  });
+
   it("credits KaraoQ rooms for the rooms shelf", () => {
     render(
       <ShelfSection

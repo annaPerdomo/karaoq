@@ -1,4 +1,5 @@
 import type { NextApiRequest } from "next";
+import type { IdeaSurface } from "./ideaSurface";
 import type { AutoAdvance, DisplayConfig, HostConfig } from "../pages/api/types";
 import { MAX_STORED_UA_LENGTH } from "./limits";
 import { getAnalyticsDb, getYoutubeSongDataCollection } from "./mongodb";
@@ -52,6 +53,8 @@ export interface AnalyticsEvent {
   role?: "host" | "singer" | "display";
   userAgent?: string;
   suggestionSource?: SuggestionSource;
+  ideaSurface?: IdeaSurface;
+  ideaAway?: boolean;
   sectionId?: string;
   categoryId?: string;
   // Our own key, not a YouTube field, so it doesn't expire at 30 days.

@@ -2,7 +2,6 @@ import * as React from 'react';
 
 import {
   SONG_SECTIONS,
-  LANGUAGE_PACKS,
   getRandomSuggestion,
   buildSongQuery,
   SongSuggestion,
@@ -12,9 +11,10 @@ import {
 import fetchRegionalPack from '../../../app/queue/regionalPack';
 import fetchShelves from '../../../app/queue/fetchShelves';
 import type { IdeaShelf, ShelfSong } from '../../../lib/shelfTypes';
+import type { IdeaOrigin, IdeaSurface } from '../../../lib/ideaSurface';
 import { SearchFilters } from '../../../app/queue/searchYoutube';
 import { HOT_TAB } from '../constants';
-import { BUNDLED_SECTIONS, placeLists, sectionIdForPlace } from '../placeLists';
+import { SECTION_PACK, placeLists, sectionIdForPlace } from '../placeLists';
 import { usePlace } from './usePlace';
 
 interface UseDiscoveryBrowseArgs {
@@ -54,28 +54,34 @@ export function useDiscoveryBrowse({
   const [shelves, setShelves] = React.useState<IdeaShelf[]>([]);
   const [shelvesLoading, setShelvesLoading] = React.useState(true);
 
-  const { place, places, atHome, chart, chartLoading, pick } = usePlace(country);
+  const { place, places, atHome, placeShelves, placeLoading, pick } = usePlace(country, locale);
 
-  // Language packs are CDN-cached JSON, fetched the first time a place needs
-  // one; the bundled sections need nothing.
-  const packsRequestedRef = React.useRef(false);
   const placeSectionId = sectionIdForPlace(place);
+  const [failedPacks, setFailedPacks] = React.useState<Record<string, true>>({});
+  const packsInFlightRef = React.useRef<Record<string, true>>({});
   React.useEffect(() => {
-    if (!placeSectionId || BUNDLED_SECTIONS.indexOf(placeSectionId) >= 0) return;
-    if (packsRequestedRef.current) return;
-    packsRequestedRef.current = true;
-    Promise.all(LANGUAGE_PACKS.map((p) => fetchRegionalPack(p.packId))).then((sections) => {
-      const loaded = sections.filter((s): s is SongSection => Boolean(s));
-      if (loaded.length > 0) setLangPacks(loaded);
-      else packsRequestedRef.current = false;
+    const packId = placeSectionId ? SECTION_PACK[placeSectionId] : undefined;
+    if (!placeSectionId || !packId || failedPacks[placeSectionId]) return;
+    if (packsInFlightRef.current[placeSectionId]) return;
+    if (langPacks.some((p) => p.id === placeSectionId)) return;
+    const sectionId = placeSectionId;
+    packsInFlightRef.current[sectionId] = true;
+    fetchRegionalPack(packId).then((section) => {
+      delete packsInFlightRef.current[sectionId];
+      if (section) {
+        setLangPacks((held) => (held.some((p) => p.id === section.id) ? held : held.concat(section)));
+      } else {
+        setFailedPacks((held) => ({ ...held, [sectionId]: true }));
+      }
     });
-  }, [placeSectionId]);
+  }, [placeSectionId, langPacks, failedPacks]);
 
   const allSections = React.useMemo(() => SONG_SECTIONS.concat(langPacks), [langPacks]);
   // A place whose pack hasn't arrived would otherwise flash the core lists.
   const listsLoading =
     !!placeSectionId &&
-    BUNDLED_SECTIONS.indexOf(placeSectionId) < 0 &&
+    !!SECTION_PACK[placeSectionId] &&
+    !failedPacks[placeSectionId] &&
     !allSections.some((s) => s.id === placeSectionId);
   const lists = React.useMemo(
     () => placeLists(place, atHome, allSections),
@@ -83,6 +89,14 @@ export function useDiscoveryBrowse({
   );
 
   function pickPlace(next: string) {
+    const nextSection = sectionIdForPlace(next);
+    if (nextSection && failedPacks[nextSection]) {
+      setFailedPacks((held) => {
+        const rest = { ...held };
+        delete rest[nextSection];
+        return rest;
+      });
+    }
     pick(next);
     setActiveCategory(null);
     setExpandedCategory(false);
@@ -93,20 +107,36 @@ export function useDiscoveryBrowse({
     setShelvesLoading(true);
     fetchShelves(country, locale, controller.signal).then((loaded) => {
       if (controller.signal.aborted) return;
-      setShelves(loaded);
+      setShelves(loaded ?? []);
       setShelvesLoading(false);
     });
     return () => controller.abort();
   }, [country, locale]);
 
+  const [ideaOrigin, setIdeaOrigin] = React.useState<IdeaOrigin | null>(null);
+
+  function surfaceOf(categoryId?: string): IdeaSurface {
+    const category = allSections
+      .flatMap((s) => s.categories)
+      .find((c) => c.id === categoryId);
+    return category?.voice ? 'voice' : 'genre';
+  }
+
   function trackSuggestion(
     source: 'random' | 'song_pick' | 'genre_chip' | 'shelf',
+    surface: IdeaSurface,
     extra?: { sectionId?: string; categoryId?: string; songTitle?: string; songArtist?: string }
   ) {
     fetch('/api/analytics/suggestion', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ roomId, suggestionSource: source, ...extra }),
+      body: JSON.stringify({
+        roomId,
+        suggestionSource: source,
+        ideaSurface: surface,
+        ideaAway: !atHome,
+        ...extra,
+      }),
     }).catch(() => {});
   }
 
@@ -126,7 +156,9 @@ export function useDiscoveryBrowse({
     categoryId?: string,
     source: 'song_pick' | 'random' = 'song_pick'
   ) {
-    trackSuggestion(source, {
+    const surface = source === 'random' ? 'random' : surfaceOf(categoryId);
+    setIdeaOrigin({ surface, away: !atHome });
+    trackSuggestion(source, surface, {
       sectionId,
       categoryId,
       songTitle: song.title,
@@ -139,9 +171,10 @@ export function useDiscoveryBrowse({
    *  shelf's own key (showSongCuts). */
   function trackShelfPick(song: ShelfSong, shelf: IdeaShelf) {
     trackFirstSearch();
-    trackSuggestion('shelf', {
+    setIdeaOrigin({ surface: shelf.id, away: !atHome });
+    trackSuggestion('shelf', shelf.id, {
       sectionId: shelf.id,
-      categoryId: shelf.country ?? 'world',
+      categoryId: shelf.country ?? shelf.language ?? 'world',
       songTitle: song.title,
       songArtist: song.artist,
     });
@@ -167,7 +200,10 @@ export function useDiscoveryBrowse({
     setActiveCategory(category.id);
     setExpandedCategory(false);
     if (sectionId) {
-      trackSuggestion('genre_chip', { sectionId, categoryId: category.id });
+      trackSuggestion('genre_chip', category.voice ? 'voice' : 'genre', {
+        sectionId,
+        categoryId: category.id,
+      });
     }
   }
 
@@ -188,9 +224,10 @@ export function useDiscoveryBrowse({
     place,
     places,
     atHome,
-    chart,
-    chartLoading,
+    placeShelves,
+    placeLoading,
     pickPlace,
+    ideaOrigin,
     shelves,
     shelvesLoading,
     listsLoading,

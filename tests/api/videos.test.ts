@@ -589,6 +589,15 @@ describe("POST /api/queue/[id]/videos - Add song to queue", () => {
       }
     });
 
+    it("records the ideas surface beside a key, and never without one", async () => {
+      const key = Array.from(suggestionCatalog().keys())[0];
+      await addWith({ suggestionKey: key, fromCorpus: true, ideaSurface: "voice", ideaAway: true });
+      expect(mockCollection.insertOne.mock.calls[0][0]).toMatchObject({ ideaSurface: "voice", ideaAway: true });
+
+      await addWith({ ideaSurface: "voice", ideaAway: true });
+      expect(mockCollection.insertOne.mock.calls[0][0]).not.toHaveProperty("ideaSurface");
+    });
+
     it("leaves a non-boolean flag absent rather than coercing it", async () => {
       const key = Array.from(suggestionCatalog().keys())[0];
 

@@ -114,7 +114,7 @@ describe("useDiscoveryBrowse — idea shelves", () => {
     );
 
     await waitFor(() => expect(result.current.shelves).toEqual([shelf]));
-    expect(String((fetch as any).mock.calls[0][0])).toBe("/api/suggestions/shelves?l=es&c=US");
+    expect(String((fetch as any).mock.calls[0][0])).toBe("/api/suggestions/shelves?c=US");
     // Opens on the shelves until the singer picks a tab.
     expect(result.current.activeTab).toBe("hot");
   });
@@ -132,6 +132,8 @@ describe("useDiscoveryBrowse — idea shelves", () => {
       {
         roomId: "ROOM1",
         suggestionSource: "shelf",
+        ideaSurface: "hot",
+        ideaAway: false,
         sectionId: "hot",
         categoryId: "US",
         songTitle: "Housewife",

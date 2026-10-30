@@ -93,9 +93,10 @@ const SongSearch: React.FC<SongSearchProps> = ({
     place,
     places,
     atHome,
-    chart,
-    chartLoading,
+    placeShelves,
+    placeLoading,
     pickPlace,
+    ideaOrigin,
     shelves,
     shelvesLoading,
     listsLoading,
@@ -140,6 +141,7 @@ const SongSearch: React.FC<SongSearchProps> = ({
     via: resultsVia,
     suggestionKey: resultsSuggestionKey,
     fromCorpus: resultsFromCorpus,
+    idea: ideaOrigin,
   });
 
   // Every idea opens on its versions, served from the corpus with the "Most
@@ -225,8 +227,8 @@ const SongSearch: React.FC<SongSearchProps> = ({
           shelves={shelves}
           shelvesLoading={shelvesLoading}
           listsLoading={listsLoading}
-          chart={chart}
-          chartLoading={chartLoading}
+          placeShelves={placeShelves}
+          placeLoading={placeLoading}
           onPlaceChange={pickPlace}
           onShelfPick={handleShelfPick}
           activeTab={activeTab}

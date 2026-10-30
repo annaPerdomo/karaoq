@@ -1,4 +1,5 @@
 import { QueueEntry } from "../../pages/api/types";
+import type { IdeaOrigin } from "../../lib/ideaSurface";
 
 export default async function postEntryToQueue(
   roomId: string,
@@ -7,7 +8,8 @@ export default async function postEntryToQueue(
   /** Set when these results came from tapping a catalogued suggestion: the
    *  corpus learns which cut singers queue from it. */
   suggestionKey?: string,
-  fromCorpus?: boolean
+  fromCorpus?: boolean,
+  idea?: IdeaOrigin
 ): Promise<boolean> {
   try {
     const resp = await fetch(`/api/queue/${roomId}/videos`, {
@@ -22,6 +24,7 @@ export default async function postEntryToQueue(
         ...(via ? { via } : {}),
         ...(suggestionKey ? { suggestionKey } : {}),
         ...(suggestionKey && typeof fromCorpus === "boolean" ? { fromCorpus } : {}),
+        ...(suggestionKey && idea ? { ideaSurface: idea.surface, ideaAway: idea.away } : {}),
       }),
     });
     return resp.ok;

@@ -163,6 +163,11 @@ describe("song-ideas places", () => {
     for (const id of ids) expect(reachable.has(id), id).toBe(true);
   });
 
+  it("every pack's language list names the file it's served from", async () => {
+    const { SECTION_PACK } = await import("../../components/songsearch/placeLists");
+    for (const p of LANGUAGE_PACKS) expect(SECTION_PACK[loadPack(p.packId).id], p.packId).toBe(p.packId);
+  });
+
   it("every language list carries all four voice ranges", () => {
     const sections = SONG_SECTIONS.filter((s) => ["spanish", "kpop", "japanese"].includes(s.id))
       .concat(LANGUAGE_PACKS.map((p) => loadPack(p.packId)));

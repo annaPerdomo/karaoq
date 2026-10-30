@@ -1,18 +1,15 @@
 import * as React from 'react';
 
-import fetchWorldCharts from '../../../app/queue/fetchWorldCharts';
+import fetchShelves from '../../../app/queue/fetchShelves';
 import type { IdeaShelf } from '../../../lib/shelfTypes';
 import { placesFor } from '../placeLists';
 
-// The place every song-ideas tab follows. It opens on the singer's own country
-// every visit — ideas mean here unless they choose otherwise — and only a pick
-// elsewhere costs anything: every other country's chart arrives in one cached
-// request, fetched the first time one is chosen.
-export function usePlace(home: string | null) {
+// Opens on the singer's own country every visit, by design: don't persist the pick.
+export function usePlace(home: string | null, locale: string) {
   const homeValue = home ?? '';
   const [place, setPlace] = React.useState(homeValue);
-  const [charts, setCharts] = React.useState<IdeaShelf[] | null>(null);
-  const loadingRef = React.useRef(false);
+  const [abroad, setAbroad] = React.useState<Record<string, IdeaShelf[]>>({});
+  const failedRef = React.useRef<Record<string, true>>({});
 
   // Follows the country once geo resolves, until the singer picks.
   const pickedRef = React.useRef(false);
@@ -20,26 +17,42 @@ export function usePlace(home: string | null) {
     if (!pickedRef.current) setPlace(homeValue);
   }, [homeValue]);
 
+  const atHome = place === homeValue;
+  React.useEffect(() => {
+    if (atHome || abroad[place]) return;
+    const controller = new AbortController();
+    fetchShelves(place, locale, controller.signal).then((loaded) => {
+      if (controller.signal.aborted) return;
+      if (loaded === null) failedRef.current[place] = true;
+      setAbroad((held) => ({ ...held, [place]: loaded ?? [] }));
+    });
+    return () => controller.abort();
+  }, [place, atHome, abroad, locale]);
+
   function pick(next: string) {
     pickedRef.current = true;
+    if (failedRef.current[next]) {
+      delete failedRef.current[next];
+      setAbroad((held) => {
+        const rest = { ...held };
+        delete rest[next];
+        return rest;
+      });
+    }
     setPlace(next);
-    if (next === homeValue || charts || loadingRef.current) return;
-    loadingRef.current = true;
-    fetchWorldCharts().then((loaded) => {
-      loadingRef.current = false;
-      setCharts(loaded);
-    });
   }
 
-  const atHome = place === homeValue;
+  // A list that widened past the place would be mislabelled under its name.
+  const placeShelves = atHome
+    ? null
+    : (abroad[place] ?? []).filter((s) => s.scope === 'country' && s.country === place);
+
   return {
     place,
     places: placesFor(home),
     atHome,
-    /** Another country's chart; null at home, while loading, or when that
-     *  chart isn't deep enough to browse yet. */
-    chart: atHome ? null : charts?.find((c) => c.country === place) ?? null,
-    chartLoading: !atHome && charts === null,
+    placeShelves,
+    placeLoading: !atHome && !abroad[place],
     pick,
   };
 }

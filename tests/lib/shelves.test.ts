@@ -29,7 +29,6 @@ import {
   MIN_SHELF_SONGS,
   chartLanguage,
   computeShelves,
-  computeWorldCharts,
   getShelves,
   hotPlans,
   roomPlans,
@@ -192,6 +191,21 @@ describe("roomPlans", () => {
   });
 });
 
+describe("roomPlans windows", () => {
+  const at = (days: number) => NOW.getTime() - days * DAY;
+  const add = (songKey: string, roomId: string, days: number, country = "DE"): RoomAdd => ({
+    songKey, roomId, country, at: at(days),
+  });
+
+  it("gives a country 30 days of its rooms, and wider lists only the last 14", () => {
+    const plans = roomPlans([add("old", "r1", 20), add("old", "r2", 20)], "DE", null, NOW);
+    expect(plans[0]).toMatchObject({ scope: "country", windowDays: 30, minSongs: 5 });
+    expect(plans[0].ranked.map((r) => r.key)).toEqual(["old"]);
+    expect(plans[plans.length - 1]).toMatchObject({ scope: "world", windowDays: 14 });
+    expect(plans[plans.length - 1].ranked).toEqual([]);
+  });
+});
+
 describe("computeShelves", () => {
   it("serves only songs with a servable sing-along cut", async () => {
     seedSong("a", ["a1", "a2"], { topVideoId: "a2" });
@@ -227,7 +241,7 @@ describe("computeShelves", () => {
     seedVideo("s1");
     snapshots().seed({ _id: "us", fetchedAt: NOW, ranks: [{ key: "hit", rank: 1 }] });
     const recent = new Date(NOW.getTime() - DAY);
-    const old = new Date(NOW.getTime() - 30 * DAY);
+    const old = new Date(NOW.getTime() - 40 * DAY);
     const rows = [
       { roomId: "r1", videoId: "s1", timestamp: recent },
       { roomId: "r2", videoId: "s2", timestamp: recent },
@@ -281,7 +295,23 @@ describe("computeShelves", () => {
     snapshots().seed(snap("us", ["unsung", "censored", "proven"]));
 
     const [hot] = await computeShelves("US", null, NOW);
-    expect(hot.songs.map((s) => [s.key, s.rank])).toEqual([["proven", 1]]);
+    // A single chart keeps Apple's position, which ▲ and the source line refer to.
+    expect(hot.songs.map((s) => [s.key, s.rank])).toEqual([["proven", 3]]);
+  });
+
+  it("renumbers a pooled list, whose ranks are our own order", async () => {
+    seedSong("gap", ["g1"]);
+    seedVideo("g1", true, "Gap (Karaoke)", 10);
+    ["p", "q"].forEach((key) => {
+      seedSong(key, [`${key}1`]);
+      seedVideo(`${key}1`);
+    });
+    snapshots().seed(snap("us", ["gap", "p"]));
+    snapshots().seed(snap("gb", ["gap", "q"]));
+
+    const [hot] = await computeShelves("LK", "en", NOW);
+    expect(hot.chartCountries).toEqual(["US", "GB"]);
+    expect(hot.songs.map((s) => s.rank)).toEqual([1, 2]);
   });
 
   it("widens a too-thin country chart to the language's charts", async () => {
@@ -309,6 +339,22 @@ describe("computeShelves", () => {
     expect(hot).toMatchObject({ chartCountries: ["US"], updatedAt: NOW.toISOString() });
   });
 
+  it("keeps a country's own rooms list at five songs, and says it counted 30 days", async () => {
+    const keys = ["k0", "k1", "k2", "k3", "k4"];
+    keys.forEach((key, i) => {
+      seedSong(key, [`kv${i}`]);
+      seedVideo(`kv${i}`);
+      ["ra", "rb"].forEach((room, j) =>
+        songData().seed({ _id: `${key}${j}`, dataId: `${key}${j}`, type: "song_added", country: "FR",
+          roomId: room, videoId: `kv${i}`, timestamp: new Date(NOW.getTime() - 20 * DAY) })
+      );
+    });
+
+    const rooms = (await computeShelves("FR", null, NOW)).find((sh) => sh.id === "rooms")!;
+    expect(rooms).toMatchObject({ scope: "country", country: "FR", windowDays: 30 });
+    expect(rooms.songs).toHaveLength(5);
+  });
+
   it("returns no shelves when nothing is charted or queued", async () => {
     expect(await computeShelves("US", null, NOW)).toEqual([]);
   });
@@ -317,7 +363,7 @@ describe("computeShelves", () => {
 describe("getShelves", () => {
   it("serves a fresh cached copy without recomputing", async () => {
     const cached = [{ id: "hot", scope: "country", country: "US", language: null, songs: [] }];
-    cache().seed({ _id: "c1", key: "shelves:v6:US:-", shelves: cached, computedAt: new Date() });
+    cache().seed({ _id: "c1", key: "shelves:v8:US:-", shelves: cached, computedAt: new Date() });
     expect(await getShelves("US")).toEqual(cached);
   });
 
@@ -327,7 +373,7 @@ describe("getShelves", () => {
     snapshots().seed({ _id: "us", fetchedAt: NOW, ranks: [{ key: "a", rank: 1 }] });
     cache().seed({
       _id: "c1",
-      key: "shelves:v6:US:-",
+      key: "shelves:v8:US:-",
       shelves: [{ id: "rooms", scope: "world", country: null, language: null, songs: [] }],
       computedAt: new Date(Date.now() - 20 * 60 * 1000),
     });
@@ -342,7 +388,7 @@ describe("getShelves", () => {
     snapshots().seed({ _id: "us", fetchedAt: NOW, ranks: [{ key: "a", rank: 1 }] });
     cache().seed({
       _id: "c1",
-      key: "shelves:v6:US:-",
+      key: "shelves:v8:US:-",
       shelves: [],
       computedAt: new Date(Date.now() - 4 * 60 * 60 * 1000),
     });
@@ -361,22 +407,3 @@ describe("isSingAlong", () => {
   });
 });
 
-describe("computeWorldCharts", () => {
-  it("offers each country's own chart, and only charts deep enough to browse", async () => {
-    const deep = Array.from({ length: MIN_SHELF_SONGS }, (_, i) => `jp${i}`);
-    deep.forEach((key, i) => {
-      seedSong(key, [`j${i}`]);
-      seedVideo(`j${i}`);
-    });
-    seedSong("thin", ["t1"]);
-    seedVideo("t1");
-    snapshots().seed(snap("jp", deep));
-    snapshots().seed(snap("in", ["thin"]));
-
-    const charts = await computeWorldCharts(NOW);
-    expect(charts.map((c) => [c.id, c.scope, c.country, c.songs.length])).toEqual([
-      ["world", "country", "JP", MIN_SHELF_SONGS],
-    ]);
-    expect(charts[0].songs[0]).toMatchObject({ key: "jp0", rank: 1 });
-  });
-});

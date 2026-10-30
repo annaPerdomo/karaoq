@@ -17,8 +17,17 @@ export const LANGUAGE_SECTION: Record<string, string> = {
   hi: 'bollywood',
 };
 
-/** The language lists served from public/suggestions rather than bundled. */
 export const BUNDLED_SECTIONS = ['spanish', 'japanese', 'kpop'];
+
+export const SECTION_PACK: Record<string, string> = {
+  brasil: 'br',
+  cesko: 'cz',
+  deutsch: 'de',
+  francais: 'fr',
+  indonesia: 'id',
+  bollywood: 'in',
+  opm: 'ph',
+};
 
 export interface CategoryGroup {
   /** "local" lists are the place's own; "international" are the core lists a

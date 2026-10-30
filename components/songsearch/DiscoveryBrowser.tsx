@@ -34,9 +34,8 @@ interface DiscoveryBrowserProps {
   shelvesLoading: boolean;
   /** The place's Genre/Voice lists haven't arrived yet. */
   listsLoading: boolean;
-  /** The picked place's chart, when they're looking elsewhere. */
-  chart: IdeaShelf | null;
-  chartLoading: boolean;
+  placeShelves: IdeaShelf[] | null;
+  placeLoading: boolean;
   onPlaceChange: (place: string) => void;
   onShelfPick: (song: ShelfSong, shelf: IdeaShelf) => void;
   activeTab: string;
@@ -68,8 +67,8 @@ const DiscoveryBrowser: React.FC<DiscoveryBrowserProps> = ({
   shelves,
   shelvesLoading,
   listsLoading,
-  chart,
-  chartLoading,
+  placeShelves,
+  placeLoading,
   onPlaceChange,
   onShelfPick,
   activeTab,
@@ -133,8 +132,8 @@ const DiscoveryBrowser: React.FC<DiscoveryBrowserProps> = ({
 
           {activeTab === HOT_TAB ? (
             <HotTab
-              shelves={atHome ? shelves : chart ? [chart] : []}
-              loading={atHome ? shelvesLoading : chartLoading}
+              shelves={atHome ? shelves : placeShelves ?? []}
+              loading={atHome ? shelvesLoading : placeLoading}
               onSongSelect={onShelfPick}
             />
           ) : listsLoading ? (

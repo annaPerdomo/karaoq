@@ -17,6 +17,7 @@ import { getRoomsCollection } from "../../../../lib/mongodb";
 import { normalizeRoomId } from "../../../../lib/roomCode";
 import { recordAdd } from "../../../../lib/songCorpus";
 import { isCorpusSong } from "../../../../lib/corpusRead";
+import { ideaFields } from "../../../../lib/ideaSurface";
 import { normalizeAutoAdvance } from "../../types";
 import { catalogEntry } from "../../../../lib/suggestionCatalog";
 
@@ -45,6 +46,8 @@ export default async function handler(
     via?: unknown;
     suggestionKey?: unknown;
     fromCorpus?: unknown;
+    ideaSurface?: unknown;
+    ideaAway?: unknown;
   };
   try {
     const parsed = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
@@ -206,6 +209,7 @@ export default async function handler(
         via,
         ...(suggestionKey ? { suggestionKey } : {}),
         ...(fromCorpus !== undefined ? { fromCorpus } : {}),
+        ...(suggestionKey ? ideaFields(body) : {}),
         singers: singerKeys(userName).length,
       });
       res.status(200).json({ code: 200, message: "Song added." });

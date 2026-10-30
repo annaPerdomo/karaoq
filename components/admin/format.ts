@@ -9,14 +9,13 @@ export const SOURCE_LABELS: Record<string, string> = {
   song_pick: 'Song picks',
   genre_chip: 'Genre chips',
   trending: 'Trending (retired)',
-  shelf: 'Hot shelves',
+  shelf: 'Hot & rooms lists',
 };
 
 // A pack id missing here renders as its raw id, not as one of these.
 export const SECTION_LABELS: Record<string, string> = {
   hot: '🔥 Hot shelf',
   rooms: '🎤 Rooms shelf',
-  world: '🌍 World charts',
   genre: 'Genre',
   'voice-type': 'Voice type',
   spanish: 'Spanish',
