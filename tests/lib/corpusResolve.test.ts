@@ -39,7 +39,7 @@ const songs = () => collection("karaoke_songs");
 function wanted(
   artist: string,
   title: string,
-  score: { demand?: number; wantedIn?: number } = {}
+  score: { demand?: number; wantedIn?: number; genreChart?: boolean } = {}
 ) {
   const key = searchCacheKey(buildSearchQuery(`${artist} ${title}`, true));
   songs().seed({
@@ -51,6 +51,7 @@ function wanted(
     addsByCountry: {},
     demand: score.demand ?? 0,
     ...(score.wantedIn === undefined ? {} : { wantedIn: score.wantedIn }),
+    ...(score.genreChart ? { genreChart: true } : {}),
   });
   return key;
 }
@@ -96,6 +97,18 @@ describe("resolveWantedSongs order", () => {
     await resolveWantedSongs(Date.now() + 10_000, 2);
 
     expect(attempted()).toEqual([asked, unasked]);
+  });
+
+  it("gives genre-chart songs only what every other song leaves", async () => {
+    const genre = wanted("Genre", "Chart Song", { demand: 9, wantedIn: 9, genreChart: true });
+    const hit = wanted("Top", "Fifty Song");
+
+    await resolveWantedSongs(Date.now() + 10_000, 1);
+    expect(attempted()).toEqual([hit]);
+
+    searchMock.mockClear();
+    await resolveWantedSongs(Date.now() + 10_000, 1);
+    expect(attempted()).toEqual([genre]);
   });
 });
 

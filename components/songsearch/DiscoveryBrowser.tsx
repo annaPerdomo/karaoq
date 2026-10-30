@@ -2,14 +2,16 @@ import * as React from 'react';
 
 import styles from '../../styles/SongSearch.module.css';
 import { SongCategory, SongSection, SongSuggestion } from '../../app/queue/songSuggestions';
-import type { IdeaShelf, ShelfSong } from '../../lib/shelfTypes';
+import type { GenreShelf, IdeaShelf, ShelfSong } from '../../lib/shelfTypes';
 import { useT } from '../../lib/i18n/I18nProvider';
 import { buildDiscoveryData } from './discoveryData';
 import CategoryGroups from './CategoryGroups';
 import CategorySongList from './CategorySongList';
+import GenreShelfList from './GenreShelfList';
 import { HOT_TAB } from './constants';
 import HotTab from './HotTab';
 import IdeasLoading from './IdeasLoading';
+import LiveGenres from './LiveGenres';
 import PlacePicker from './PlacePicker';
 import type { PlaceLists } from './placeLists';
 
@@ -38,6 +40,11 @@ interface DiscoveryBrowserProps {
   placeLoading: boolean;
   onPlaceChange: (place: string) => void;
   onShelfPick: (song: ShelfSong, shelf: IdeaShelf) => void;
+  liveGenres: GenreShelf[];
+  openGenre: GenreShelf | null;
+  onGenreOpen: (genre: GenreShelf) => void;
+  onGenreBack: () => void;
+  onGenrePick: (song: ShelfSong, genre: GenreShelf) => void;
   activeTab: string;
   onTabSelect: (tabId: string) => void;
   activeCategory: string | null;
@@ -71,6 +78,11 @@ const DiscoveryBrowser: React.FC<DiscoveryBrowserProps> = ({
   placeLoading,
   onPlaceChange,
   onShelfPick,
+  liveGenres,
+  openGenre,
+  onGenreOpen,
+  onGenreBack,
+  onGenrePick,
   activeTab,
   onTabSelect,
   activeCategory,
@@ -94,8 +106,14 @@ const DiscoveryBrowser: React.FC<DiscoveryBrowserProps> = ({
       {/* Rendered inside the scroll container so the room board and the
           idea tabs scroll together instead of the board pinning itself
           above a separately-scrolling ideas list. */}
-      {!expandedData && belowSearch}
-      {expandedData ? (
+      {!expandedData && !openGenre && belowSearch}
+      {openGenre ? (
+        <GenreShelfList
+          genre={openGenre}
+          onBack={onGenreBack}
+          onSelect={(song) => onGenrePick(song, openGenre)}
+        />
+      ) : expandedData ? (
         <CategorySongList
           category={expandedData}
           songs={songs}
@@ -144,6 +162,11 @@ const DiscoveryBrowser: React.FC<DiscoveryBrowserProps> = ({
               place={place}
               sections={allSections}
               onSelect={(cat, sectionId) => onCategorySelect(cat, sectionId)}
+              afterLocal={
+                activeTab === 'genre' ? (
+                  <LiveGenres genres={liveGenres} onSelect={onGenreOpen} />
+                ) : undefined
+              }
             />
           )}
 

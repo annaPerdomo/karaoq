@@ -368,7 +368,7 @@ function evidenceKey(part: string): string {
  *  the same two projections, so a word's score means the same thing in both
  *  places. */
 export function buildArtistEvidence(input: {
-  songs: { artist: string; nativeArtist?: string; origin?: string }[];
+  songs: { artist: string; nativeArtist?: string; origin?: string; genreChart?: boolean }[];
   proposals: { candidates: { artist: string; title: string }[] }[];
 }): ArtistEvidence {
   const packScores = new Map<string, number>();
@@ -382,6 +382,8 @@ export function buildArtistEvidence(input: {
     // Absent is "pack"; a demand song is the thing this pack is correcting,
     // so it must never vouch for its own identity.
     if (song.origin !== undefined && song.origin !== "chart") continue;
+    // A genre chart's tail is covers and filler; its credits aren't evidence.
+    if (song.genreChart) continue;
     const forms = new Set([song.artist, song.nativeArtist].filter(Boolean) as string[]);
     forms.forEach((form) => {
       const key = evidenceKey(form);
@@ -630,7 +632,7 @@ export async function promoteDemand(
   const songs = await getKaraokeSongsCollection();
   const [songRows, proposalRows] = await Promise.all([
     songs
-      .find({}, { projection: { title: 1, artist: 1, nativeTitle: 1, nativeArtist: 1, origin: 1 } })
+      .find({}, { projection: { title: 1, artist: 1, nativeTitle: 1, nativeArtist: 1, origin: 1, genreChart: 1 } })
       .toArray(),
     proposals.find({}, { projection: { candidates: 1 } }).toArray(),
   ]);
@@ -673,7 +675,7 @@ export async function promoteProposal(
   const proposals = await getSongProposalsCollection();
   const [songRows, proposalRows] = await Promise.all([
     songs
-      .find({}, { projection: { title: 1, artist: 1, nativeTitle: 1, nativeArtist: 1, origin: 1 } })
+      .find({}, { projection: { title: 1, artist: 1, nativeTitle: 1, nativeArtist: 1, origin: 1, genreChart: 1 } })
       .toArray(),
     proposals.find({}, { projection: { candidates: 1 } }).toArray(),
   ]);
@@ -885,7 +887,7 @@ export async function repairDemandIdentities(
   const songs = await getKaraokeSongsCollection();
   const proposals = await getSongProposalsCollection();
   const [songRows, proposalRows] = await Promise.all([
-    songs.find({}, { projection: { artist: 1, nativeArtist: 1, origin: 1 } }).toArray(),
+    songs.find({}, { projection: { artist: 1, nativeArtist: 1, origin: 1, genreChart: 1 } }).toArray(),
     proposals.find({}, { projection: { candidates: 1 } }).toArray(),
   ]);
   const evidence = buildArtistEvidence({ songs: songRows, proposals: proposalRows });

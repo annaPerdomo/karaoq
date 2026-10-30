@@ -20,6 +20,7 @@ import {
   harvestIntoCorpus,
 } from "../../../lib/corpusHarvest";
 import { feedCharts } from "../../../lib/chartFeed";
+import { feedGenreCharts } from "../../../lib/genreFeed";
 import { rematchMissedSongs } from "../../../lib/corpusRematch";
 import { syncCatalog } from "../../../lib/catalogSync";
 import { migrateToCorpus } from "../../../lib/corpusMigration";
@@ -262,6 +263,16 @@ export default async function handler(
       floorMs: 5_000,
       run: async (by) => {
         const { done, report } = await feedCharts(by);
+        return { done, report: { ...report } };
+      },
+    },
+    {
+      // After charts, so a song both name is credited to the Top 50. No YouTube units.
+      name: "genres",
+      budgetMs: 60_000,
+      floorMs: 5_000,
+      run: async (by) => {
+        const { done, report } = await feedGenreCharts(by);
         return { done, report: { ...report } };
       },
     },

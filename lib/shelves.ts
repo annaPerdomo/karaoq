@@ -238,7 +238,7 @@ function artistKey(artist: string): string {
 export async function readTrustedArtists(): Promise<Set<string>> {
   const songs = await getKaraokeSongsCollection();
   const rows = await songs
-    .find({ origin: { $ne: "demand" } }, { projection: { artist: 1 } })
+    .find({ origin: { $ne: "demand" }, genreChart: { $ne: true } }, { projection: { artist: 1 } })
     .maxTimeMS(QUERY_TIMEOUT_MS)
     .toArray();
   return new Set(rows.map((r) => artistKey(r.artist ?? "")));

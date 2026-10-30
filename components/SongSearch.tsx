@@ -14,7 +14,7 @@ import ConfirmModal from './songsearch/ConfirmModal';
 import { useSongSearchState } from './songsearch/hooks/useSongSearchState';
 import { useDiscoveryBrowse } from './songsearch/hooks/useDiscoveryBrowse';
 import { useSongAddFlow } from './songsearch/hooks/useSongAddFlow';
-import type { IdeaShelf, ShelfSong } from '../lib/shelfTypes';
+import type { GenreShelf, IdeaShelf, ShelfSong } from '../lib/shelfTypes';
 
 interface SongSearchProps {
   roomId: string;
@@ -103,6 +103,11 @@ const SongSearch: React.FC<SongSearchProps> = ({
     searchSuggestion,
     showSongCuts,
     trackShelfPick,
+    liveGenres,
+    openGenre,
+    handleGenreOpen,
+    handleGenreBack,
+    trackGenrePick,
     handleSurpriseMe,
     handleTabSelect,
     handleCategorySelect,
@@ -149,6 +154,11 @@ const SongSearch: React.FC<SongSearchProps> = ({
   // match what its displayed name would re-key to.
   function handleShelfPick(song: ShelfSong, shelf: IdeaShelf) {
     trackShelfPick(song, shelf);
+    showSongCuts(song, song.key);
+  }
+
+  function handleGenrePick(song: ShelfSong, genre: GenreShelf) {
+    trackGenrePick(song, genre);
     showSongCuts(song, song.key);
   }
 
@@ -231,6 +241,11 @@ const SongSearch: React.FC<SongSearchProps> = ({
           placeLoading={placeLoading}
           onPlaceChange={pickPlace}
           onShelfPick={handleShelfPick}
+          liveGenres={liveGenres}
+          openGenre={openGenre}
+          onGenreOpen={handleGenreOpen}
+          onGenreBack={handleGenreBack}
+          onGenrePick={handleGenrePick}
           activeTab={activeTab}
           onTabSelect={handleTabSelect}
           activeCategory={activeCategory}

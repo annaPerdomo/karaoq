@@ -12,6 +12,7 @@ const SURFACE_LABELS: Record<string, string> = {
   hot: '🔥 Hot chart',
   rooms: '🎤 Rooms list',
   genre: '🎵 Genre lists',
+  genre_chart: '📈 Live genre charts',
   voice: '🎙️ Voice lists',
   random: '🎲 Surprise me',
   unknown: 'Before surfaces were recorded',

@@ -114,7 +114,8 @@ describe("useDiscoveryBrowse — idea shelves", () => {
     );
 
     await waitFor(() => expect(result.current.shelves).toEqual([shelf]));
-    expect(String((fetch as any).mock.calls[0][0])).toBe("/api/suggestions/shelves?c=US");
+    const urls = (fetch as any).mock.calls.map((call: unknown[]) => String(call[0]));
+    expect(urls).toContain("/api/suggestions/shelves?c=US");
     // Opens on the shelves until the singer picks a tab.
     expect(result.current.activeTab).toBe("hot");
   });

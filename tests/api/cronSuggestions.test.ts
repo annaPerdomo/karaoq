@@ -40,6 +40,14 @@ vi.mock("../../lib/chartFeed", async (importOriginal) => ({
   })),
 }));
 
+vi.mock("../../lib/genreFeed", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../lib/genreFeed")>()),
+  feedGenreCharts: vi.fn(async () => ({
+    done: true,
+    report: { countries: [], fetched: 0, added: 0, alreadyKnown: 0, errors: [] },
+  })),
+}));
+
 // The real catalog is ~1,100 songs; seeding it here would bury every resolver
 // test's handful. lib/catalogSync has its own tests.
 vi.mock("../../lib/catalogSync", () => ({

@@ -10,11 +10,12 @@ import {
 } from '../../../app/queue/songSuggestions';
 import fetchRegionalPack from '../../../app/queue/regionalPack';
 import fetchShelves from '../../../app/queue/fetchShelves';
-import type { IdeaShelf, ShelfSong } from '../../../lib/shelfTypes';
+import type { GenreShelf, IdeaShelf, ShelfSong } from '../../../lib/shelfTypes';
 import type { IdeaOrigin, IdeaSurface } from '../../../lib/ideaSurface';
 import { SearchFilters } from '../../../app/queue/searchYoutube';
 import { HOT_TAB } from '../constants';
 import { SECTION_PACK, placeLists, sectionIdForPlace } from '../placeLists';
+import { useGenreShelves } from './useGenreShelves';
 import { usePlace } from './usePlace';
 
 interface UseDiscoveryBrowseArgs {
@@ -55,6 +56,7 @@ export function useDiscoveryBrowse({
   const [shelvesLoading, setShelvesLoading] = React.useState(true);
 
   const { place, places, atHome, placeShelves, placeLoading, pick } = usePlace(country, locale);
+  const liveGenres = useGenreShelves(place);
 
   const placeSectionId = sectionIdForPlace(place);
   const [failedPacks, setFailedPacks] = React.useState<Record<string, true>>({});
@@ -147,6 +149,7 @@ export function useDiscoveryBrowse({
     const q = buildSongQuery(song);
     setQuery(q);
     setActiveCategory(null);
+    liveGenres.close();
     runSearch(q, filters, karaokeMode, songKey ?? true);
   }
 
@@ -180,6 +183,25 @@ export function useDiscoveryBrowse({
     });
   }
 
+  function handleGenreOpen(genre: GenreShelf) {
+    liveGenres.open(genre.slug);
+    trackSuggestion('genre_chip', 'genre_chart', {
+      sectionId: 'live-genre',
+      categoryId: `${genre.country}:${genre.slug}`,
+    });
+  }
+
+  function trackGenrePick(song: ShelfSong, genre: GenreShelf) {
+    trackFirstSearch();
+    setIdeaOrigin({ surface: 'genre_chart', away: !atHome });
+    trackSuggestion('shelf', 'genre_chart', {
+      sectionId: 'live-genre',
+      categoryId: `${genre.country}:${genre.slug}`,
+      songTitle: song.title,
+      songArtist: song.artist,
+    });
+  }
+
   function handleSurpriseMe() {
     // From the place's own lists, so a Japan pick surprises with Japanese songs.
     const suggestion = getRandomSuggestion(
@@ -192,6 +214,7 @@ export function useDiscoveryBrowse({
 
   function handleTabSelect(tabId: string) {
     setActiveTab(tabId);
+    liveGenres.close();
     setActiveCategory(null);
     setExpandedCategory(false);
   }
@@ -234,6 +257,11 @@ export function useDiscoveryBrowse({
     searchSuggestion,
     showSongCuts,
     trackShelfPick,
+    liveGenres: liveGenres.genres,
+    openGenre: liveGenres.openGenre,
+    handleGenreOpen,
+    handleGenreBack: liveGenres.close,
+    trackGenrePick,
     handleSurpriseMe,
     handleTabSelect,
     handleCategorySelect,

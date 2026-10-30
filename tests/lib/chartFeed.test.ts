@@ -211,6 +211,28 @@ describe("feedCharts", () => {
     expect(inserted.chartCountries).toEqual(["us", "gb"]);
   });
 
+  it("takes a genre chart's song off the resolver's back burner once it hits a Top 50", async () => {
+    songs().seed({
+      _id: "genre-song",
+      title: "Genre Song",
+      artist: "Genre Artist",
+      cuts: [],
+      addCount: 0,
+      addsByCountry: {},
+      demand: 0,
+      origin: "chart",
+      chartCountries: ["jp"],
+      genreChart: true,
+    });
+    const fetchImpl = stubFetch({ us: chartResponse([{ name: "Genre Song", artistName: "Genre Artist" }]) });
+
+    await feedCharts(soon(), new Date("2026-10-01T00:00:00Z"), fetchImpl);
+
+    const song = songs().get("genre-song");
+    expect(song.genreChart).toBeUndefined();
+    expect(song.chartCountries).toEqual(["jp", "us"]);
+  });
+
   it("fetches nothing for a country within 20 hours, and refetches after a day", async () => {
     const first = new Date("2026-10-01T00:00:00Z");
     for (const cc of CHART_COUNTRIES) {

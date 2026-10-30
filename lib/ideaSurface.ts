@@ -1,4 +1,4 @@
-export const IDEA_SURFACES = ["hot", "rooms", "genre", "voice", "random"] as const;
+export const IDEA_SURFACES = ["hot", "rooms", "genre", "genre_chart", "voice", "random"] as const;
 export type IdeaSurface = (typeof IDEA_SURFACES)[number];
 
 export interface IdeaOrigin {

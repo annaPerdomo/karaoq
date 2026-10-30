@@ -44,3 +44,16 @@ export interface IdeaShelf {
   updatedAt?: string;
   windowDays?: number;
 }
+
+export interface GenreShelf {
+  slug: string;
+  name: string;
+  emoji: string;
+  /** Uppercase. */
+  country: string;
+  /** Uppercase; not always the place's own (Korea's is the US store). */
+  store: string;
+  songs: ShelfSong[];
+  /** ISO. */
+  updatedAt?: string;
+}

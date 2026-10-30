@@ -2,7 +2,7 @@ import { MongoClient, type Collection, type Db } from "mongodb";
 import type { FeedbackEntry, Room } from "../pages/api/types";
 import type { EventType } from "./analytics";
 import { YOUTUBE_DATA_MAX_AGE_DAYS } from "./youtubeRetention";
-import type { IdeaShelf } from "./shelfTypes";
+import type { GenreShelf, IdeaShelf } from "./shelfTypes";
 
 // Reuse one connected client per serverless instance instead of opening and
 // closing a fresh TCP+TLS connection on every request/tracked event. Stored on
@@ -112,7 +112,9 @@ const SUGGESTION_CACHE_TTL_SECONDS = 7 * 24 * 60 * 60;
 
 export interface SuggestionCacheDoc {
   key: string;
-  shelves: IdeaShelf[];
+  /** Absent on a place's genre doc ("genres:…"), which holds `genres`. */
+  shelves?: IdeaShelf[];
+  genres?: GenreShelf[];
   computedAt: Date;
 }
 
@@ -434,6 +436,9 @@ export interface KaraokeSongDoc {
   proposalId?: string;
   /** Countries whose chart named this song; only set when origin is "chart". */
   chartCountries?: string[];
+  /** Added by a genre chart (lib/genreFeed) and not since by a Top 50 one: the
+   *  resolver takes these last, and their artists vouch for nothing. */
+  genreChart?: boolean;
   /** Set after 3 straight resolve misses on a cutless promoted song, instead
    *  of another backoff. The doc stays, so lib/corpusPromote's dedupe still
    *  blocks it being re-added. */
@@ -711,6 +716,24 @@ export async function getChartSnapshotsCollection(): Promise<Collection<ChartSna
       });
   }
   return db.collection<ChartSnapshotDoc>("chart_snapshots");
+}
+
+let genreSnapshotIndexesEnsured = false;
+
+/** _id "jp:anime". Apart from chart_snapshots so the hot shelf never pools them. */
+export async function getGenreSnapshotsCollection(): Promise<Collection<ChartSnapshotDoc>> {
+  const client = await getMongoClient();
+  const db = client.db(process.env.MONGODB_DB);
+  if (!genreSnapshotIndexesEnsured) {
+    genreSnapshotIndexesEnsured = true;
+    db.collection("genre_snapshots")
+      .createIndex({ fetchedAt: 1 }, { expireAfterSeconds: CHART_SNAPSHOT_TTL_SECONDS })
+      .catch((e) => {
+        console.error("genre_snapshots index creation failed:", e);
+        genreSnapshotIndexesEnsured = false;
+      });
+  }
+  return db.collection<ChartSnapshotDoc>("genre_snapshots");
 }
 
 // The pre-corpus harvest cursors; cron_state holds the live ones.
