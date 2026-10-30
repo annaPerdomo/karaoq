@@ -3,6 +3,7 @@ import * as React from 'react';
 import styles from '../../styles/IdeaRows.module.css';
 import type { IdeaShelf, ShelfSong } from '../../lib/shelfTypes';
 import { useT } from '../../lib/i18n/I18nProvider';
+import IdeasLoading from './IdeasLoading';
 import ShelfSection from './ShelfSection';
 
 interface HotTabProps {
@@ -15,8 +16,9 @@ interface HotTabProps {
 
 const HotTab: React.FC<HotTabProps> = ({ shelves, loading, onSongSelect }) => {
   const { t } = useT();
+  if (loading) return <IdeasLoading />;
   if (shelves.length === 0) {
-    return loading ? null : <span className={styles.shelfSub}>{t('ideas.place.empty')}</span>;
+    return <span className={styles.shelfSub}>{t('ideas.place.empty')}</span>;
   }
   return (
     <div className={styles.shelves}>

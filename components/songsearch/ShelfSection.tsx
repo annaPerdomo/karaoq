@@ -51,10 +51,15 @@ function useSourceLine(shelf: IdeaShelf): string {
       ? new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric' }).format(new Date(shelf.updatedAt))
       : '';
   } catch {}
+  // One chart names its country, however the shelf was scoped; a pool counts
+  // them; a shelf that doesn't say (an older cached one) just names the source.
+  const from = shelf.chartCountries ?? [];
   const line =
-    shelf.scope === 'country' && shelf.country
-      ? t('ideas.source.chart', { country: displayName(shelf.country, 'region', locale) })
-      : t('ideas.source.chartPooled', { count: shelf.charts ?? 0 });
+    from.length === 1
+      ? t('ideas.source.chart', { country: displayName(from[0], 'region', locale) })
+      : from.length > 1
+        ? t('ideas.source.chartPooled', { count: from.length })
+        : t('ideas.source.chartAny');
   return date ? `${line} · ${t('ideas.source.updated', { date })}` : line;
 }
 
@@ -81,7 +86,7 @@ const ShelfSection: React.FC<ShelfSectionProps> = ({ shelf, onSelect }) => {
             number={song.rank ?? i + 1}
             isNew={song.isNew}
             climb={song.climb}
-            rooms={song.rooms}
+            roomShare={song.roomShare}
             onSelect={() => onSelect(song, shelf)}
           />
         ))}

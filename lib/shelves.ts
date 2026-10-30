@@ -50,7 +50,8 @@ interface Ranked {
   rank?: number;
   climb?: number;
   isNew?: boolean;
-  rooms?: number;
+  /** Percent of the scope's singing rooms that queued it, rooms shelf only. */
+  roomShare?: number;
 }
 
 /** One chart with its climbs and new entries. */
@@ -90,17 +91,20 @@ export interface ShelfPlan {
   language: string | null;
   ranked: Ranked[];
   /** Where a chart plan's songs came from, shown under the shelf. */
-  charts?: number;
+  chartCountries?: string[];
   updatedAt?: Date;
 }
 
-/** How many Apple charts a plan pooled, and when the newest was fetched. */
-function provenance(snaps: ChartSnapshotDoc[]): { charts: number; updatedAt?: Date } {
+/** Which Apple charts a plan pooled, and when the newest was fetched. */
+function provenance(snaps: ChartSnapshotDoc[]): { chartCountries: string[]; updatedAt?: Date } {
   const newest = snaps.reduce<Date | undefined>(
     (latest, snap) => (!latest || snap.fetchedAt > latest ? snap.fetchedAt : latest),
     undefined
   );
-  return { charts: snaps.length, ...(newest ? { updatedAt: newest } : {}) };
+  return {
+    chartCountries: snaps.map((snap) => snap._id.toUpperCase()),
+    ...(newest ? { updatedAt: newest } : {}),
+  };
 }
 
 /**
@@ -161,11 +165,13 @@ function tallyRooms(rows: RoomAdd[]): Ranked[] {
     rooms.get(row.songKey)!.add(row.roomId);
     count.set(row.songKey, (count.get(row.songKey) ?? 0) + 1);
   }
+  // A share, never a count: the count is ours to rank by, not to publish.
+  const singing = new Set(rows.map((row) => row.roomId)).size;
   return Array.from(rooms.entries())
     .map(([key, set]) => ({ key, rooms: set.size, adds: count.get(key)! }))
     .filter((r) => r.rooms >= MIN_ROOMS_PER_SONG)
     .sort((a, b) => b.rooms - a.rooms || b.adds - a.adds || (a.key < b.key ? -1 : 1))
-    .map(({ key, rooms: n }) => ({ key, rooms: n }));
+    .map(({ key, rooms: n }) => ({ key, roomShare: Math.max(1, Math.round((100 * n) / singing)) }));
 }
 
 /** Ranked by distinct rooms, not raw adds: one enthusiastic room shouldn't top
@@ -274,7 +280,7 @@ export function assembleShelf(
       ...(c.rank !== undefined ? { rank: c.rank } : {}),
       ...(c.climb !== undefined ? { climb: c.climb } : {}),
       ...(c.isNew ? { isNew: true } : {}),
-      ...(c.rooms !== undefined ? { rooms: c.rooms } : {}),
+      ...(c.roomShare !== undefined ? { roomShare: c.roomShare } : {}),
     });
   }
   // A pooled or filtered list renumbers, so a gap never reads as a missing song.
@@ -359,14 +365,14 @@ export async function computeShelves(
     }
     if (!best || best.songs.length === 0) return;
     best.songs.forEach((s) => shownKeys.add(s.key));
-    const { scope, country: cc, language: lang, charts: pooled, updatedAt } = best.plan;
+    const { scope, country: cc, language: lang, chartCountries, updatedAt } = best.plan;
     shelves.push({
       id,
       scope,
       country: cc,
       language: lang,
       songs: best.songs,
-      ...(pooled ? { charts: pooled } : {}),
+      ...(chartCountries && chartCountries.length > 0 ? { chartCountries } : {}),
       ...(updatedAt ? { updatedAt: updatedAt.toISOString() } : {}),
     });
   };
@@ -385,7 +391,7 @@ export async function getShelves(
 ): Promise<IdeaShelf[]> {
   // The language only matters when the country is unknown (hotPlans).
   const lang = country ? null : language;
-  const key = `shelves:v4:${country ?? "world"}:${lang ?? "-"}`;
+  const key = `shelves:v6:${country ?? "world"}:${lang ?? "-"}`;
   const cache = await getSuggestionCacheCollection();
   const hit = await cache.findOne({ key });
   if (hit?.shelves && Date.now() - hit.computedAt.getTime() < shelvesFreshFor(hit.shelves)) {
@@ -422,7 +428,7 @@ export async function computeWorldCharts(now: Date = new Date()): Promise<IdeaSh
       country: snap._id.toUpperCase(),
       language: null,
       songs: assembleShelf(rankChart(snap, now), new Set(), showable, MIN_HOT_VIEWS),
-      charts: 1,
+      chartCountries: [snap._id.toUpperCase()],
       updatedAt: snap.fetchedAt.toISOString(),
     }))
     .filter((shelf) => shelf.songs.length >= MIN_SHELF_SONGS)
@@ -430,7 +436,7 @@ export async function computeWorldCharts(now: Date = new Date()): Promise<IdeaSh
 }
 
 export async function getWorldCharts(): Promise<IdeaShelf[]> {
-  const key = "world:v2";
+  const key = "world:v3";
   const cache = await getSuggestionCacheCollection();
   const hit = await cache.findOne({ key });
   if (hit?.shelves && Date.now() - hit.computedAt.getTime() < SHELF_REFRESH_MS) {

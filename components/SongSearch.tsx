@@ -97,6 +97,8 @@ const SongSearch: React.FC<SongSearchProps> = ({
     chartLoading,
     pickPlace,
     shelves,
+    shelvesLoading,
+    listsLoading,
     searchSuggestion,
     showSongCuts,
     trackShelfPick,
@@ -221,6 +223,8 @@ const SongSearch: React.FC<SongSearchProps> = ({
           home={country}
           atHome={atHome}
           shelves={shelves}
+          shelvesLoading={shelvesLoading}
+          listsLoading={listsLoading}
           chart={chart}
           chartLoading={chartLoading}
           onPlaceChange={pickPlace}

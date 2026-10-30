@@ -14,18 +14,18 @@ interface SongRowProps {
   number: number;
   isNew?: boolean;
   climb?: number;
-  rooms?: number;
+  roomShare?: number;
   onSelect: () => void;
 }
 
 /** NEW beats a climb, and a fall shows nothing — a list of what's rising, not
  *  a scoreboard of who slipped. */
-function Badge({ isNew, climb, rooms }: Pick<SongRowProps, 'isNew' | 'climb' | 'rooms'>) {
-  const { t, tn } = useT();
+function Badge({ isNew, climb, roomShare }: Pick<SongRowProps, 'isNew' | 'climb' | 'roomShare'>) {
+  const { t } = useT();
   if (isNew) return <span className={styles.badgeNew}>{t('ideas.badge.new')}</span>;
   if (climb && climb > 0) return <span className={styles.badgeClimb}>▲{climb}</span>;
-  if (rooms !== undefined) {
-    return <span className={styles.badgeRooms}>{tn('ideas.rooms.count', rooms)}</span>;
+  if (roomShare !== undefined) {
+    return <span className={styles.badgeRooms}>{t('ideas.rooms.share', { percent: roomShare })}</span>;
   }
   return null;
 }
@@ -35,7 +35,7 @@ const SongRow: React.FC<SongRowProps> = ({
   number,
   isNew,
   climb,
-  rooms,
+  roomShare,
   onSelect,
 }) => {
   const title = displaySongTitle(song);
@@ -48,7 +48,7 @@ const SongRow: React.FC<SongRowProps> = ({
         <span className={styles.title}>{title}</span>
         <span className={styles.artist}>{artist}</span>
       </span>
-      <Badge isNew={isNew} climb={climb} rooms={rooms} />
+      <Badge isNew={isNew} climb={climb} roomShare={roomShare} />
     </button>
   );
 };

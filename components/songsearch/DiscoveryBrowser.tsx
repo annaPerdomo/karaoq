@@ -9,6 +9,7 @@ import CategoryGroups from './CategoryGroups';
 import CategorySongList from './CategorySongList';
 import { HOT_TAB } from './constants';
 import HotTab from './HotTab';
+import IdeasLoading from './IdeasLoading';
 import PlacePicker from './PlacePicker';
 import type { PlaceLists } from './placeLists';
 
@@ -30,6 +31,9 @@ interface DiscoveryBrowserProps {
   atHome: boolean;
   /** The singer's own shelves; shown while they're at home. */
   shelves: IdeaShelf[];
+  shelvesLoading: boolean;
+  /** The place's Genre/Voice lists haven't arrived yet. */
+  listsLoading: boolean;
   /** The picked place's chart, when they're looking elsewhere. */
   chart: IdeaShelf | null;
   chartLoading: boolean;
@@ -62,6 +66,8 @@ const DiscoveryBrowser: React.FC<DiscoveryBrowserProps> = ({
   home,
   atHome,
   shelves,
+  shelvesLoading,
+  listsLoading,
   chart,
   chartLoading,
   onPlaceChange,
@@ -128,9 +134,11 @@ const DiscoveryBrowser: React.FC<DiscoveryBrowserProps> = ({
           {activeTab === HOT_TAB ? (
             <HotTab
               shelves={atHome ? shelves : chart ? [chart] : []}
-              loading={!atHome && chartLoading}
+              loading={atHome ? shelvesLoading : chartLoading}
               onSongSelect={onShelfPick}
             />
+          ) : listsLoading ? (
+            <IdeasLoading />
           ) : (
             <CategoryGroups
               groups={activeTab === 'voice-type' ? lists.voice : lists.genres}

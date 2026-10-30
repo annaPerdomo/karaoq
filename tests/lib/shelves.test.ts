@@ -172,9 +172,10 @@ describe("roomPlans", () => {
       null
     );
     expect(plans).toHaveLength(1);
+    // Shares of the 3 rooms singing, never the counts themselves.
     expect(plans[0].ranked).toEqual([
-      { key: "trio", rooms: 3 },
-      { key: "pair", rooms: 2 },
+      { key: "trio", roomShare: 100 },
+      { key: "pair", roomShare: 67 },
     ]);
   });
 
@@ -244,7 +245,9 @@ describe("computeShelves", () => {
     const rooms = shelves.find((s) => s.id === "rooms")!;
     // Thin everywhere, so the narrowest plan keeps it.
     expect(rooms).toMatchObject({ scope: "country", country: "US" });
-    expect(rooms.songs.map((s) => [s.key, s.rooms])).toEqual([["staple", 2]]);
+    // 2 of the 4 rooms whose adds map onto corpus songs.
+    expect(rooms.songs.map((s) => [s.key, s.roomShare])).toEqual([["staple", 50]]);
+    expect(rooms.songs[0]).not.toHaveProperty("rooms");
   });
 
   it("skips instrumental cuts and untrusted promoted names", async () => {
@@ -303,7 +306,7 @@ describe("computeShelves", () => {
     snapshots().seed(snap("us", ["a"]));
 
     const [hot] = await computeShelves("US", null, NOW);
-    expect(hot).toMatchObject({ charts: 1, updatedAt: NOW.toISOString() });
+    expect(hot).toMatchObject({ chartCountries: ["US"], updatedAt: NOW.toISOString() });
   });
 
   it("returns no shelves when nothing is charted or queued", async () => {
@@ -314,7 +317,7 @@ describe("computeShelves", () => {
 describe("getShelves", () => {
   it("serves a fresh cached copy without recomputing", async () => {
     const cached = [{ id: "hot", scope: "country", country: "US", language: null, songs: [] }];
-    cache().seed({ _id: "c1", key: "shelves:v4:US:-", shelves: cached, computedAt: new Date() });
+    cache().seed({ _id: "c1", key: "shelves:v6:US:-", shelves: cached, computedAt: new Date() });
     expect(await getShelves("US")).toEqual(cached);
   });
 
@@ -324,7 +327,7 @@ describe("getShelves", () => {
     snapshots().seed({ _id: "us", fetchedAt: NOW, ranks: [{ key: "a", rank: 1 }] });
     cache().seed({
       _id: "c1",
-      key: "shelves:v4:US:-",
+      key: "shelves:v6:US:-",
       shelves: [{ id: "rooms", scope: "world", country: null, language: null, songs: [] }],
       computedAt: new Date(Date.now() - 20 * 60 * 1000),
     });
@@ -339,7 +342,7 @@ describe("getShelves", () => {
     snapshots().seed({ _id: "us", fetchedAt: NOW, ranks: [{ key: "a", rank: 1 }] });
     cache().seed({
       _id: "c1",
-      key: "shelves:v4:US:-",
+      key: "shelves:v6:US:-",
       shelves: [],
       computedAt: new Date(Date.now() - 4 * 60 * 60 * 1000),
     });

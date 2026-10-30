@@ -16,8 +16,9 @@ export interface ShelfSong {
   climb?: number;
   /** (Re)entered this chart within the last NEW_FOR_DAYS (lib/shelves). */
   isNew?: boolean;
-  /** Distinct rooms that queued it in the window, rooms shelf only. */
-  rooms?: number;
+  /** Percent of the scope's singing rooms that queued it in the window, rooms
+   *  shelf only. Deliberately not the count of rooms. */
+  roomShare?: number;
 }
 
 /** "world" is one country's chart picked from Charts around the world. */
@@ -35,9 +36,9 @@ export interface IdeaShelf {
    *  when scope is "language". */
   language: string | null;
   songs: ShelfSong[];
-  /** Chart shelves: how many Apple Music charts it draws on (one for a
-   *  country's own), and when the newest was fetched (ISO). Shown under the
-   *  shelf so a singer can see where "hot" comes from. */
-  charts?: number;
+  /** Chart shelves: the countries whose Apple Music charts it draws on, and
+   *  when the newest was fetched (ISO). Shown under the shelf so a singer can
+   *  see where "hot" comes from. */
+  chartCountries?: string[];
   updatedAt?: string;
 }

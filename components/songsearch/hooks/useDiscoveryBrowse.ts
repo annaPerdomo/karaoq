@@ -52,6 +52,7 @@ export function useDiscoveryBrowse({
   const [expandedCategory, setExpandedCategory] = React.useState(false);
   const [langPacks, setLangPacks] = React.useState<SongSection[]>([]);
   const [shelves, setShelves] = React.useState<IdeaShelf[]>([]);
+  const [shelvesLoading, setShelvesLoading] = React.useState(true);
 
   const { place, places, atHome, chart, chartLoading, pick } = usePlace(country);
 
@@ -71,6 +72,11 @@ export function useDiscoveryBrowse({
   }, [placeSectionId]);
 
   const allSections = React.useMemo(() => SONG_SECTIONS.concat(langPacks), [langPacks]);
+  // A place whose pack hasn't arrived would otherwise flash the core lists.
+  const listsLoading =
+    !!placeSectionId &&
+    BUNDLED_SECTIONS.indexOf(placeSectionId) < 0 &&
+    !allSections.some((s) => s.id === placeSectionId);
   const lists = React.useMemo(
     () => placeLists(place, atHome, allSections),
     [place, atHome, allSections]
@@ -84,8 +90,11 @@ export function useDiscoveryBrowse({
 
   React.useEffect(() => {
     const controller = new AbortController();
+    setShelvesLoading(true);
     fetchShelves(country, locale, controller.signal).then((loaded) => {
-      if (!controller.signal.aborted) setShelves(loaded);
+      if (controller.signal.aborted) return;
+      setShelves(loaded);
+      setShelvesLoading(false);
     });
     return () => controller.abort();
   }, [country, locale]);
@@ -183,6 +192,8 @@ export function useDiscoveryBrowse({
     chartLoading,
     pickPlace,
     shelves,
+    shelvesLoading,
+    listsLoading,
     searchSuggestion,
     showSongCuts,
     trackShelfPick,
