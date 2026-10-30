@@ -904,5 +904,17 @@
   "sing.postpone.eta": "Você cantaria em ~{time}",
   "sing.postpone.etaLast": "Você cantaria por último, em ~{time}",
   "sing.postpone.confirm": "Mover minha música",
-  "sing.postpone.cancel": "Manter meu lugar"
+  "sing.postpone.cancel": "Manter meu lugar",
+  "brand.title": "Seu logo e suas cores",
+  "brand.upload": "Enviar logo",
+  "brand.replace": "Substituir",
+  "brand.remove": "Remover",
+  "brand.accentA": "Cor principal",
+  "brand.accentB": "Segunda cor",
+  "brand.useTheme": "Usar cores do tema",
+  "brand.logoAlt": "Logo do local",
+  "brand.error.type": "Use uma imagem PNG, JPG ou WebP",
+  "brand.error.size": "Essa imagem é grande demais",
+  "brand.error.upload": "Falha no envio, tente de novo",
+  "brand.error.full": "O envio de logos está pausado agora, tente mais tarde"
 }

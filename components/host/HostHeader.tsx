@@ -3,9 +3,12 @@ import { useT } from "../../lib/i18n/I18nProvider";
 import LanguageSwitcher from "../LanguageSwitcher";
 import { Icons } from "./icons";
 import { SettingsPopover } from "./SettingsPopover";
+import ClubLogo from "../brand/ClubLogo";
 import { AutoAdvance } from "../../pages/api/types";
 
 export function HostHeader({
+  roomId,
+  logo,
   remote,
   tvMode,
   customizing,
@@ -38,6 +41,8 @@ export function HostHeader({
   onCopyMusicVideoLink,
   onBrandClick,
 }: {
+  roomId: string;
+  logo: string | undefined;
   remote: boolean;
   tvMode: boolean;
   customizing: boolean;
@@ -73,6 +78,7 @@ export function HostHeader({
   const { t } = useT();
   return (
     <header className={styles.header}>
+      <ClubLogo roomId={roomId} logo={logo} className={styles.clubLogo} dividerClassName={styles.clubDivider} />
       <div className={styles.brand} onClick={onBrandClick}>
         KaraoQ
         {remote && <span className={styles.cohostBadge}>{t('host.role.cohost')}</span>}

@@ -16,7 +16,7 @@ import { startSessionTracking } from '../app/queue/trackSession';
 import { startVisiblePolling } from '../app/queue/pollWhileVisible';
 import { DORMANT_POLL_MS, isRoomDormant } from '../lib/roomDormancy';
 import { isTextReaction } from '../app/queue/cheerConstants';
-import { AutoAdvance, AUTO_ADVANCE_OFF, DEFAULT_DISPLAY_CONFIG, DisplayConfig, DisplayTheme, normalizeAutoAdvance, normalizeDisplayConfig, normalizeSongLimit, PlayMode, QueueEntry, Reaction, Room, SingWithMePost, SuggestedSong } from '../pages/api/types';
+import { AutoAdvance, AUTO_ADVANCE_OFF, DEFAULT_DISPLAY_CONFIG, DisplayConfig, DisplayTheme, normalizeAutoAdvance, normalizeDisplayConfig, normalizeSongLimit, PlayMode, QueueEntry, Reaction, Room, RoomBrand, SingWithMePost, SuggestedSong } from '../pages/api/types';
 import { useAutoStart } from './hooks/useAutoStart';
 import { useTvScale } from './display/hooks/useTvScale';
 import { useDisplayRemoteNav } from './display/hooks/useDisplayRemoteNav';
@@ -24,7 +24,6 @@ import { isTvDevice } from '../lib/calmMotion';
 import { autoStartEpoch, playerCurrentTime, songSecondsLeft, WRAP_UP_WARN_SECONDS } from '../lib/autoAdvance';
 import { useT } from '../lib/i18n/I18nProvider';
 import { renderWithHeart } from '../lib/i18n/renderWithHeart';
-import LanguageSwitcher from './LanguageSwitcher';
 import FullscreenToggle from './FullscreenToggle';
 import DisplaySidebar from './display/DisplaySidebar';
 import NowPlayingBar from './display/NowPlayingBar';
@@ -38,7 +37,8 @@ import { ConfigRail } from './edit/ConfigRail';
 import { displayRailToggles } from './display/edit/railToggles';
 import { EditOverlay } from './edit/EditOverlay';
 import { SAMPLE_QUEUE } from './display/edit/sampleContent';
-import { Icons } from './host/icons';
+import DisplayHeader from './display/DisplayHeader';
+import { brandStyle } from '../lib/brandStyle';
 
 const POLL_INTERVAL = 1500;
 // How long a refused embed's notice shows before the queue moves on.
@@ -63,6 +63,7 @@ const Display = (): React.ReactElement => {
   const [singWithMe, setSingWithMe] = React.useState<SingWithMePost[]>([]);
   const [suggestions, setSuggestions] = React.useState<SuggestedSong[]>([]);
   const [boardsOn, setBoardsOn] = React.useState(true);
+  const [brand, setBrand] = React.useState<RoomBrand>({});
   const [hostJoined, setHostJoined] = React.useState(false);
   const [activeIndex, setActiveIndex] = React.useState(0);
   const [isPlaying, setIsPlaying] = React.useState(false);
@@ -202,6 +203,7 @@ const Display = (): React.ReactElement => {
     setSingWithMe(room.singWithMe ?? []);
     setSuggestions(room.suggestions ?? []);
     setBoardsOn(room.boardsOnDisplay ?? true);
+    setBrand(room.brand ?? {});
     setActiveIndex(room.activeVideoIndex);
     setIsPlaying(room.isPlaying ?? false);
     timing.adoptRoom(room);
@@ -227,11 +229,13 @@ const Display = (): React.ReactElement => {
     joinCode,
     config: displayConfig,
     boardsOn,
+    brand,
     scale: tvScaleFactor,
     sidebarScale,
-    onSaved: (nextConfig, nextBoards) => {
+    onSaved: (nextConfig, nextBoards, nextBrand) => {
       setDisplayConfig(nextConfig);
       setBoardsOn(nextBoards);
+      setBrand(nextBrand);
     },
   });
 
@@ -517,6 +521,7 @@ const Display = (): React.ReactElement => {
       ref={pageRef}
       className={`${styles.main} ${themeClass} ${sideClass} ${editSideClass}`}
       style={{
+        ...brandStyle(edit.brandView),
         '--sb-w': `${view.sidebarWidth * sidebarScale}px`,
         '--now-h': `calc(${view.nowPlayingHeight}px * var(--tv-scale, 1))`,
         // CSS can't divide two px lengths into a unitless number, so the type
@@ -528,23 +533,13 @@ const Display = (): React.ReactElement => {
       } as React.CSSProperties}
       onClick={edit.editing ? () => edit.setSelected(null) : undefined}
     >
-      <header className={`${styles.header} ${sidebarCollapsed ? styles.headerNoSidebar : ''}`}>
-        <div className={styles.brand}>KaraoQ</div>
-        <div className={styles.headerActions}>
-          {!edit.editing && !loading && (
-            <button
-              className={styles.headerEdit}
-              onClick={edit.enter}
-              title={t('customize.button')}
-              data-remote="customize"
-            >
-              {Icons.brush}
-              <span>{t('customize.button')}</span>
-            </button>
-          )}
-          <LanguageSwitcher className={styles.headerLang} />
-        </div>
-      </header>
+      <DisplayHeader
+        joinCode={joinCode}
+        logo={edit.brandView.logo}
+        sidebarCollapsed={sidebarCollapsed}
+        showCustomize={!edit.editing && !loading}
+        onCustomize={edit.enter}
+      />
 
       <div className={`${styles.videoArea} ${sidebarCollapsed ? styles.videoAreaNoSidebar : ''}`}>
         <DisplayStage
@@ -693,6 +688,7 @@ const Display = (): React.ReactElement => {
               hintKey="customize.hint.display"
               theme={view.theme}
               onPickTheme={(theme) => edit.change({ theme })}
+              brand={{ roomId: joinCode, ...edit.brandControls }}
               toggles={displayRailToggles(
                 view,
                 edit.change,

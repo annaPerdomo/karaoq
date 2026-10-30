@@ -904,5 +904,17 @@
   "sing.postpone.eta": "Ikaw na sa ~{time}",
   "sing.postpone.etaLast": "Ikaw ang huli, sa ~{time}",
   "sing.postpone.confirm": "Ilipat ang kanta ko",
-  "sing.postpone.cancel": "Panatilihin ang pwesto ko"
+  "sing.postpone.cancel": "Panatilihin ang pwesto ko",
+  "brand.title": "Ang logo at kulay mo",
+  "brand.upload": "Mag-upload ng logo",
+  "brand.replace": "Palitan",
+  "brand.remove": "Alisin",
+  "brand.accentA": "Pangunahing kulay",
+  "brand.accentB": "Pangalawang kulay",
+  "brand.useTheme": "Gamitin ang kulay ng tema",
+  "brand.logoAlt": "Logo ng venue",
+  "brand.error.type": "Gumamit ng PNG, JPG o WebP na larawan",
+  "brand.error.size": "Masyadong malaki ang larawang iyan",
+  "brand.error.upload": "Hindi na-upload, subukan ulit",
+  "brand.error.full": "Naka-pause muna ang pag-upload ng logo, subukan ulit mamaya"
 }

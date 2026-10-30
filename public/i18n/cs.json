@@ -904,5 +904,17 @@
   "sing.postpone.eta": "Byli byste na řadě za ~{time}",
   "sing.postpone.etaLast": "Zpívali byste poslední, za ~{time}",
   "sing.postpone.confirm": "Přesunout mou píseň",
-  "sing.postpone.cancel": "Nechat místo"
+  "sing.postpone.cancel": "Nechat místo",
+  "brand.title": "Vaše logo a barvy",
+  "brand.upload": "Nahrát logo",
+  "brand.replace": "Nahradit",
+  "brand.remove": "Odebrat",
+  "brand.accentA": "Hlavní barva",
+  "brand.accentB": "Druhá barva",
+  "brand.useTheme": "Použít barvy motivu",
+  "brand.logoAlt": "Logo podniku",
+  "brand.error.type": "Použijte obrázek PNG, JPG nebo WebP",
+  "brand.error.size": "Obrázek je příliš velký",
+  "brand.error.upload": "Nahrání se nezdařilo, zkuste to znovu",
+  "brand.error.full": "Nahrávání log je teď pozastavené, zkuste to později"
 }

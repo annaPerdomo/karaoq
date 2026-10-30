@@ -904,5 +904,17 @@
   "sing.postpone.eta": "約{time}後にあなたの番",
   "sing.postpone.etaLast": "最後の番、約{time}後",
   "sing.postpone.confirm": "順番を変える",
-  "sing.postpone.cancel": "このままにする"
+  "sing.postpone.cancel": "このままにする",
+  "brand.title": "ロゴとカラー",
+  "brand.upload": "ロゴをアップロード",
+  "brand.replace": "差し替え",
+  "brand.remove": "削除",
+  "brand.accentA": "メインカラー",
+  "brand.accentB": "サブカラー",
+  "brand.useTheme": "テーマの色を使う",
+  "brand.logoAlt": "店舗ロゴ",
+  "brand.error.type": "PNG・JPG・WebP の画像を使ってください",
+  "brand.error.size": "画像が大きすぎます",
+  "brand.error.upload": "アップロードに失敗しました。もう一度お試しください",
+  "brand.error.full": "ロゴのアップロードは現在停止中です。しばらくしてからお試しください"
 }

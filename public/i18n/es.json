@@ -904,5 +904,17 @@
   "sing.postpone.eta": "Te tocaría en ~{time}",
   "sing.postpone.etaLast": "Cantarías al final, en ~{time}",
   "sing.postpone.confirm": "Mover mi canción",
-  "sing.postpone.cancel": "Mantener mi turno"
+  "sing.postpone.cancel": "Mantener mi turno",
+  "brand.title": "Tu logo y colores",
+  "brand.upload": "Subir logo",
+  "brand.replace": "Reemplazar",
+  "brand.remove": "Quitar",
+  "brand.accentA": "Color principal",
+  "brand.accentB": "Segundo color",
+  "brand.useTheme": "Usar colores del tema",
+  "brand.logoAlt": "Logo del local",
+  "brand.error.type": "Usa una imagen PNG, JPG o WebP",
+  "brand.error.size": "Esa imagen es demasiado grande",
+  "brand.error.upload": "No se pudo subir, inténtalo de nuevo",
+  "brand.error.full": "La subida de logos está en pausa, inténtalo más tarde"
 }

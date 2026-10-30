@@ -904,5 +904,17 @@
   "sing.postpone.eta": "Du wärst in ~{time} dran",
   "sing.postpone.etaLast": "Du wärst als Letzte:r dran, in ~{time}",
   "sing.postpone.confirm": "Song verschieben",
-  "sing.postpone.cancel": "Platz behalten"
+  "sing.postpone.cancel": "Platz behalten",
+  "brand.title": "Dein Logo & deine Farben",
+  "brand.upload": "Logo hochladen",
+  "brand.replace": "Ersetzen",
+  "brand.remove": "Entfernen",
+  "brand.accentA": "Hauptfarbe",
+  "brand.accentB": "Zweitfarbe",
+  "brand.useTheme": "Farben des Designs verwenden",
+  "brand.logoAlt": "Logo des Lokals",
+  "brand.error.type": "Verwende ein PNG-, JPG- oder WebP-Bild",
+  "brand.error.size": "Das Bild ist zu groß",
+  "brand.error.upload": "Hochladen fehlgeschlagen, versuch es noch einmal",
+  "brand.error.full": "Logo-Uploads sind gerade pausiert, versuch es später noch einmal"
 }

@@ -904,5 +904,17 @@
   "sing.postpone.eta": "Giliranmu dalam ~{time}",
   "sing.postpone.etaLast": "Kamu terakhir, dalam ~{time}",
   "sing.postpone.confirm": "Pindahkan laguku",
-  "sing.postpone.cancel": "Tetap di sini"
+  "sing.postpone.cancel": "Tetap di sini",
+  "brand.title": "Logo & warna Anda",
+  "brand.upload": "Unggah logo",
+  "brand.replace": "Ganti",
+  "brand.remove": "Hapus",
+  "brand.accentA": "Warna utama",
+  "brand.accentB": "Warna kedua",
+  "brand.useTheme": "Pakai warna tema",
+  "brand.logoAlt": "Logo tempat",
+  "brand.error.type": "Gunakan gambar PNG, JPG, atau WebP",
+  "brand.error.size": "Gambar itu terlalu besar",
+  "brand.error.upload": "Gagal mengunggah, coba lagi",
+  "brand.error.full": "Unggah logo sedang dijeda, coba lagi nanti"
 }

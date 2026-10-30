@@ -161,6 +161,19 @@
   background-clip: text;
 }
 
+.clubLogo {
+  height: 1.9rem;
+  max-width: 9rem;
+  object-fit: contain;
+}
+
+.clubDivider {
+  width: 1px;
+  height: 1.4rem;
+  margin: 0 0.8rem;
+  background: rgba(255, 255, 255, 0.25);
+}
+
 .videoArea {
   flex: 1;
   min-width: 0;

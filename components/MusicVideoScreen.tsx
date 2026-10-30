@@ -8,7 +8,9 @@ import { onRoomState, onDisplayPause } from '../app/queue/roomChannel';
 import { startVisiblePolling } from '../app/queue/pollWhileVisible';
 import { DORMANT_POLL_MS, isRoomDormant } from '../lib/roomDormancy';
 import { useT } from '../lib/i18n/I18nProvider';
-import { QueueEntry, Room } from '../pages/api/types';
+import { QueueEntry, Room, RoomBrand } from '../pages/api/types';
+import { brandStyle } from '../lib/brandStyle';
+import ClubLogo from './brand/ClubLogo';
 import MusicVideoPlayer from './musicvideo/MusicVideoPlayer';
 import MusicVideoIdle from './musicvideo/MusicVideoIdle';
 import { useOriginalVideo } from './musicvideo/hooks/useOriginalVideo';
@@ -33,6 +35,7 @@ export default function MusicVideoScreen(): React.ReactElement {
   const [playPausedAt, setPlayPausedAt] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [notFound, setNotFound] = React.useState(false);
+  const [brand, setBrand] = React.useState<RoomBrand>({});
 
   const videoRef = React.useRef<HTMLIFrameElement>(null);
   const dormantRef = React.useRef(false);
@@ -55,6 +58,7 @@ export default function MusicVideoScreen(): React.ReactElement {
     setDisplayPaused(room.displayPaused ?? false);
     setPlayStartedAt((room.playStartedAt as unknown as string | null) ?? null);
     setPlayPausedAt((room.playPausedAt as unknown as string | null) ?? null);
+    setBrand(room.brand ?? {});
   }
 
   // Never passes { display: true } — this screen is a viewer, not the heartbeat.
@@ -214,15 +218,17 @@ export default function MusicVideoScreen(): React.ReactElement {
   const joinUrl = `${origin || 'https://karaoq.live'}/sing/${joinCode}`;
 
   return (
-    <main className={styles.main}>
+    <main className={styles.main} style={brandStyle(brand) as React.CSSProperties}>
       {!idle && videoId && (
         <MusicVideoPlayer videoId={videoId} videoRef={videoRef} onInfo={handleInfo} onError={handleError} />
       )}
+      {!idle && <ClubLogo roomId={joinCode} logo={brand.logo} className={styles.cornerLogo} />}
       {idle && (
         <MusicVideoIdle
           joinUrl={joinUrl}
           joinCode={joinCode}
           origin={origin}
+          logo={brand.logo}
           songTitle={currentEntry?.songTitle}
           reason={!currentEntry || status === 'loading' ? 'waiting' : 'unavailable'}
         />

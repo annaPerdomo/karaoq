@@ -1,4 +1,4 @@
-import type { RoomBrand } from "../pages/api/types";
+import type { DisplayTheme, RoomBrand } from "../pages/api/types";
 
 function hexToRgb(hex: string): string {
   const n = parseInt(hex.slice(1), 16);
@@ -16,3 +16,14 @@ export function brandStyle(brand: RoomBrand | undefined): Record<string, string>
   }
   return style;
 }
+
+export function brandsEqual(a: RoomBrand, b: RoomBrand): boolean {
+  return a.logo === b.logo && a.accentA === b.accentA && a.accentB === b.accentB;
+}
+
+/** Mirrors the theme accents in Display/Host CSS. */
+export const THEME_ACCENTS: Record<DisplayTheme, { accentA: string; accentB: string }> = {
+  classic: { accentA: "#ff2d78", accentB: "#00f0ff" },
+  minimal: { accentA: "#aab0c0", accentB: "#d7dae2" },
+  neon: { accentA: "#ff2d78", accentB: "#00f0ff" },
+};

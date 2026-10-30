@@ -32,6 +32,21 @@
   position: relative;
 }
 
+.clubLogo {
+  height: 1.9rem;
+  max-width: 8rem;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.clubDivider {
+  width: 1px;
+  height: 1.4rem;
+  margin: 0 -0.4rem;
+  background: rgba(255, 255, 255, 0.25);
+  flex-shrink: 0;
+}
+
 .brand {
   font-family: var(--font-brand);
   font-weight: 400;

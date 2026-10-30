@@ -904,5 +904,17 @@
   "sing.postpone.eta": "Vous passeriez dans ~{time}",
   "sing.postpone.etaLast": "Vous passeriez en dernier, dans ~{time}",
   "sing.postpone.confirm": "Déplacer ma chanson",
-  "sing.postpone.cancel": "Garder ma place"
+  "sing.postpone.cancel": "Garder ma place",
+  "brand.title": "Votre logo et vos couleurs",
+  "brand.upload": "Importer un logo",
+  "brand.replace": "Remplacer",
+  "brand.remove": "Retirer",
+  "brand.accentA": "Couleur principale",
+  "brand.accentB": "Couleur secondaire",
+  "brand.useTheme": "Utiliser les couleurs du thème",
+  "brand.logoAlt": "Logo de l'établissement",
+  "brand.error.type": "Utilisez une image PNG, JPG ou WebP",
+  "brand.error.size": "Cette image est trop lourde",
+  "brand.error.upload": "Échec de l'envoi, réessayez",
+  "brand.error.full": "L'envoi de logos est suspendu pour le moment, réessayez plus tard"
 }

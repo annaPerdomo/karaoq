@@ -904,5 +904,17 @@
   "sing.postpone.eta": "약 {time} 후 내 차례",
   "sing.postpone.etaLast": "맨 마지막, 약 {time} 후",
   "sing.postpone.confirm": "내 곡 옮기기",
-  "sing.postpone.cancel": "자리 유지"
+  "sing.postpone.cancel": "자리 유지",
+  "brand.title": "로고 및 색상",
+  "brand.upload": "로고 업로드",
+  "brand.replace": "교체",
+  "brand.remove": "삭제",
+  "brand.accentA": "메인 색상",
+  "brand.accentB": "보조 색상",
+  "brand.useTheme": "테마 색상 사용",
+  "brand.logoAlt": "매장 로고",
+  "brand.error.type": "PNG, JPG 또는 WebP 이미지를 사용하세요",
+  "brand.error.size": "이미지가 너무 큽니다",
+  "brand.error.upload": "업로드에 실패했어요. 다시 시도해 주세요",
+  "brand.error.full": "지금은 로고 업로드가 일시 중지되었어요. 나중에 다시 시도해 주세요"
 }

@@ -65,7 +65,9 @@ import {
   QueueEntry,
   Reaction,
   Room,
+  RoomBrand,
 } from "../pages/api/types";
+import { brandStyle } from "../lib/brandStyle";
 import { v4 as uuidv4 } from "uuid";
 import { useT } from "../lib/i18n/I18nProvider";
 import { POLL_INTERVAL, DISPLAY_GONE_CONFIRM_MS } from "./host/constants";
@@ -86,6 +88,7 @@ import { QrModal } from "./host/QrModal";
 import { ConfirmRemoveModal } from "./host/ConfirmRemoveModal";
 import { WelcomePrompt } from "./host/WelcomePrompt";
 import { HostHeader } from "./host/HostHeader";
+import { HostErrorState } from "./host/HostErrorState";
 import { SongStage } from "./host/SongStage";
 import { TransportBar } from "./host/TransportBar";
 import { QueueSidebar } from "./host/QueueSidebar";
@@ -150,6 +153,7 @@ const Host = ({
   const { sessionEndsAt, estimate } = timing;
   const [displayConfig, setDisplayConfigState] = React.useState<DisplayConfig>(DEFAULT_DISPLAY_CONFIG);
   const [hostConfig, setHostConfigState] = React.useState<HostConfig>(DEFAULT_HOST_CONFIG);
+  const [brand, setBrand] = React.useState<RoomBrand>({});
   const [reactionCooldown, setReactionCooldown] = React.useState(false);
   const [lastSentEmoji, setLastSentEmoji] = React.useState<string | null>(null);
   const [visibleReactions, setVisibleReactions] = React.useState<
@@ -434,6 +438,7 @@ const Host = ({
     timing.adoptRoom(room);
     setDisplayConfigState(normalizeDisplayConfig(room.displayConfig));
     setHostConfigState(normalizeHostConfig(room.hostConfig));
+    setBrand(room.brand ?? {});
     if (room.playMode) setPlayMode(room.playMode);
   }
 
@@ -442,7 +447,11 @@ const Host = ({
   const hostEdit = useHostEdit({
     joinCode,
     config: hostConfig,
-    onSaved: setHostConfigState,
+    brand,
+    onSaved: (config, nextBrand) => {
+      setHostConfigState(config);
+      setBrand(nextBrand);
+    },
   });
   const hostView = hostEdit.view;
 
@@ -1286,38 +1295,17 @@ const Host = ({
 
   if (!joinCode) return <div className={styles.loading}>{t('host.loading')}</div>;
 
-  if (error) {
+  if (error || loadError) {
     return (
-      <main className={styles.main}>
-        <div className={styles.errorCard}>
-          <h2>{t('host.error.title')}</h2>
-          <p>{error}</p>
-          <button className={styles.btn} onClick={() => router.push("/")}>
-            {t('common.goHome')}
-          </button>
-        </div>
-      </main>
-    );
-  }
-
-  if (loadError) {
-    return (
-      <main className={styles.main}>
-        <div className={styles.errorCard}>
-          <h2>{t('common.connectionErrorTitle')}</h2>
-          <p>{t('common.connectionErrorBody')}</p>
-          <button
-            className={styles.btn}
-            onClick={() => {
-              setLoadError(false);
-              setLoading(true);
-              setInitNonce((n) => n + 1);
-            }}
-          >
-            {t('common.retry')}
-          </button>
-        </div>
-      </main>
+      <HostErrorState
+        error={error}
+        onGoHome={() => router.push("/")}
+        onRetry={() => {
+          setLoadError(false);
+          setLoading(true);
+          setInitNonce((n) => n + 1);
+        }}
+      />
     );
   }
 
@@ -1326,6 +1314,7 @@ const Host = ({
       className={`${styles.main} ${HOST_THEME_CLASS[hostView.theme]} ${customizing ? styles.mainCustomizing : ""}`}
       style={
         {
+          ...brandStyle(hostEdit.brandView),
           "--host-sb-w": `${hostView.sidebarWidth}px`,
           "--host-now-h": `${hostView.nowPlayingHeight}px`,
           // CSS can't divide px by px into a plain number, so the type-scale
@@ -1337,6 +1326,8 @@ const Host = ({
     >
       <SearchBackToast show={searchBack.show} onDismiss={searchBack.dismiss} />
       <HostHeader
+        roomId={joinCode}
+        logo={hostEdit.brandView.logo}
         remote={remote}
         tvMode={tvMode}
         customizing={customizing}
@@ -1553,6 +1544,7 @@ const Host = ({
               hintKey="customize.hint.host"
               theme={hostView.theme}
               onPickTheme={(theme) => hostEdit.change({ theme })}
+              brand={{ roomId: joinCode, ...hostEdit.brandControls }}
               toggles={hostRailToggles(hostView, hostEdit.change)}
               bannerId="banner"
               bannerLine={hostView.bannerLine}

@@ -904,5 +904,17 @@
   "sing.postpone.eta": "You'd be up in ~{time}",
   "sing.postpone.etaLast": "You'd sing last, in ~{time}",
   "sing.postpone.confirm": "Move my song",
-  "sing.postpone.cancel": "Keep my spot"
+  "sing.postpone.cancel": "Keep my spot",
+  "brand.title": "Your logo & colours",
+  "brand.upload": "Upload logo",
+  "brand.replace": "Replace",
+  "brand.remove": "Remove",
+  "brand.accentA": "Main colour",
+  "brand.accentB": "Second colour",
+  "brand.useTheme": "Use theme colours",
+  "brand.logoAlt": "Venue logo",
+  "brand.error.type": "Use a PNG, JPG or WebP image",
+  "brand.error.size": "That image is too large",
+  "brand.error.upload": "Upload failed, try again",
+  "brand.error.full": "Logo uploads are paused right now, try again later"
 }

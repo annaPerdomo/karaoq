@@ -79,3 +79,20 @@
   border-radius: 999px;
   font-size: 0.85rem;
 }
+
+.cornerLogo {
+  position: absolute;
+  right: 24px;
+  bottom: 24px;
+  max-width: 12vw;
+  max-height: 10vh;
+  object-fit: contain;
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.idleLogo {
+  max-width: 40vw;
+  max-height: 22vh;
+  object-fit: contain;
+}
