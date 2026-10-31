@@ -1,6 +1,8 @@
 import * as React from "react";
 import type { OriginalVideoCandidate } from "../../lib/originalVideo";
-import { SwapSearchOutcome, SwapSource, VideoSwapPanel } from "./VideoSwapPanel";
+import { useT } from "../../lib/i18n/I18nProvider";
+import { SwapSearchOutcome, SwapSource } from "./VideoSwapPanel";
+import { SwapListStatus, VideoSwapSheet } from "./VideoSwapSheet";
 
 export type { SwapSource };
 
@@ -15,19 +17,41 @@ function searchOriginalVideos(joinCode: string, q: string): Promise<SwapSearchOu
     .catch((): SwapSearchOutcome => ({ status: "failed" }));
 }
 
-export function MusicVideoSwapPanel({
+export function MusicVideoSwapSheet({
   joinCode,
+  subtitle,
+  loading,
+  status,
   candidates,
   currentId,
   onPick,
+  previewMuted,
+  onClose,
 }: {
   joinCode: string;
+  subtitle: string;
+  loading: boolean;
+  status: SwapListStatus;
   candidates: OriginalVideoCandidate[];
   currentId: string | null;
   onPick: (videoId: string, source: SwapSource, meta?: OriginalVideoCandidate) => void;
+  previewMuted: boolean;
+  onClose: () => void;
 }) {
+  const { t } = useT();
   const search = React.useCallback((q: string) => searchOriginalVideos(joinCode, q), [joinCode]);
   return (
-    <VideoSwapPanel candidates={candidates} currentId={currentId} onPick={onPick} search={search} />
+    <VideoSwapSheet
+      title={t("musicVideo.swap")}
+      subtitle={subtitle}
+      loading={loading}
+      status={status}
+      candidates={candidates}
+      currentId={currentId}
+      onPick={onPick}
+      search={search}
+      previewMuted={previewMuted}
+      onClose={onClose}
+    />
   );
 }

@@ -5,7 +5,9 @@ import { QueueEntry } from "../../pages/api/types";
 import { OriginalVideoCandidate } from "../../lib/originalVideo";
 import { broadcastOriginalOffset } from "../../app/queue/roomChannel";
 import { MusicVideoScrubber, SongPlayback } from "./MusicVideoScrubber";
-import { MusicVideoSwapPanel, SwapSource } from "./MusicVideoSwapPanel";
+import { MusicVideoSwapSheet, SwapSource } from "./MusicVideoSwapSheet";
+import { formatSongTitle } from "./utils";
+import { SwapButton } from "./SwapButton";
 
 const CARD_WINDOW_MS = 12 * 60 * 1000;
 const PENDING_RETRY_MS = 4000;
@@ -207,6 +209,8 @@ export function MusicVideoCard({
     applyOffset(Math.max(OFFSET_MIN, Math.min(OFFSET_MAX, next)));
   }
 
+  const closeSheet = React.useCallback(() => setExpanded(false), []);
+
   const displayedId = picked ?? candidates[0]?.videoId ?? null;
   const displayedMeta =
     candidates.find((c) => c.videoId === displayedId) ??
@@ -219,9 +223,7 @@ export function MusicVideoCard({
     <div className={styles.card}>
       <div className={styles.header}>
         <span className={styles.label}>{t("musicVideo.card.title")}</span>
-        <button className={styles.swapBtn} onClick={() => setExpanded((v) => !v)}>
-          {t("musicVideo.card.swap")}
-        </button>
+        <SwapButton label={t("musicVideo.swap")} onClick={() => setExpanded(true)} />
       </div>
 
       {loading || status === "pending" ? (
@@ -250,11 +252,16 @@ export function MusicVideoCard({
       {timingFailed && <div className={styles.badLink}>{t("musicVideo.card.timingFailed")}</div>}
 
       {expanded && (
-        <MusicVideoSwapPanel
+        <MusicVideoSwapSheet
           joinCode={joinCode}
+          subtitle={`${activeEntry.userName} · ${formatSongTitle(activeEntry.songTitle)}`}
+          loading={loading || status === "pending"}
+          status={status === "pending" ? "ok" : status}
           candidates={candidates}
           currentId={displayedId}
           onPick={pick}
+          previewMuted={playback.isPlaying}
+          onClose={closeSheet}
         />
       )}
     </div>

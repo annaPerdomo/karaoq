@@ -79,7 +79,7 @@ describe("MusicVideoCard", () => {
 
     await waitFor(() => expect(screen.getByText("Right Video")).toBeTruthy());
 
-    fireEvent.click(screen.getByText("Swap"));
+    fireEvent.click(screen.getByLabelText("Swap music video"));
     expect(screen.getByText("Wrong Video")).toBeTruthy();
   });
 
@@ -118,8 +118,9 @@ describe("MusicVideoCard", () => {
     render(<MusicVideoCard playback={NOT_PLAYING} joinCode="ROOM1" activeEntry={ENTRY} />);
     await waitFor(() => expect(screen.getByText("Right Video")).toBeTruthy());
 
-    fireEvent.click(screen.getByText("Swap"));
+    fireEvent.click(screen.getByLabelText("Swap music video"));
     fireEvent.click(screen.getByText("Wrong Video"));
+    fireEvent.click(screen.getByText("Use this video"));
 
     expect(screen.getByText("Wrong Video")).toBeTruthy();
     expect(posts).toEqual([{ entryId: "e1", videoId: "v2", source: "candidate" }]);
@@ -135,7 +136,7 @@ describe("MusicVideoCard", () => {
     render(<MusicVideoCard playback={NOT_PLAYING} joinCode="ROOM1" activeEntry={ENTRY} />);
     await waitFor(() => expect(screen.getByText("No match found. Paste a link instead.")).toBeTruthy());
 
-    fireEvent.click(screen.getByText("Swap"));
+    fireEvent.click(screen.getByLabelText("Swap music video"));
     const input = screen.getByPlaceholderText("Search or paste a link...");
     fireEvent.change(input, { target: { value: "https://example.com/watch?v=x" } });
     fireEvent.click(screen.getByText("Search"));
@@ -240,8 +241,9 @@ describe("MusicVideoCard", () => {
     render(<MusicVideoCard playback={NOT_PLAYING} joinCode="ROOM1" activeEntry={ENTRY} />);
     await waitFor(() => expect(screen.getByText("Right Video")).toBeTruthy());
 
-    fireEvent.click(screen.getByText("Swap"));
+    fireEvent.click(screen.getByLabelText("Swap music video"));
     fireEvent.click(screen.getByText("Wrong Video"));
+    fireEvent.click(screen.getByText("Use this video"));
 
     await waitFor(() =>
       expect(screen.getByText("Couldn't swap that video. Try again.")).toBeTruthy()
@@ -259,10 +261,11 @@ describe("MusicVideoCard", () => {
     render(<MusicVideoCard playback={NOT_PLAYING} joinCode="ROOM1" activeEntry={ENTRY} />);
     await waitFor(() => expect(screen.getByText("No match found. Paste a link instead.")).toBeTruthy());
 
-    fireEvent.click(screen.getByText("Swap"));
+    fireEvent.click(screen.getByLabelText("Swap music video"));
     const input = screen.getByPlaceholderText("Search or paste a link...");
     fireEvent.change(input, { target: { value: "https://youtu.be/dQw4w9WgXcQ" } });
     fireEvent.click(screen.getByText("Search"));
+    fireEvent.click(screen.getByText("Use this video"));
 
     expect(screen.getByText("Pasted video")).toBeTruthy();
   });
@@ -280,10 +283,11 @@ describe("MusicVideoCard", () => {
     render(<MusicVideoCard playback={NOT_PLAYING} joinCode="ROOM1" activeEntry={ENTRY} />);
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
 
-    fireEvent.click(screen.getByText("Swap"));
+    fireEvent.click(screen.getByLabelText("Swap music video"));
     const input = screen.getByPlaceholderText("Search or paste a link...");
     fireEvent.change(input, { target: { value: "https://youtu.be/dQw4w9WgXcQ" } });
     fireEvent.click(screen.getByText("Search"));
+    fireEvent.click(screen.getByText("Use this video"));
     expect(screen.getByText("Pasted video")).toBeTruthy();
 
     await act(async () => {
@@ -388,8 +392,9 @@ describe("MusicVideoCard", () => {
     await waitFor(() => expect(sliderValue()).toBe("2"));
     broadcastOriginalOffsetMock.mockClear();
 
-    fireEvent.click(screen.getByText("Swap"));
+    fireEvent.click(screen.getByLabelText("Swap music video"));
     fireEvent.click(screen.getByText("Wrong Video"));
+    fireEvent.click(screen.getByText("Use this video"));
     expect(broadcastOriginalOffsetMock).toHaveBeenLastCalledWith("ROOM1", { entryId: "e1", offsetSeconds: 0 });
 
     await waitFor(() => expect(sliderValue()).toBe("2"));
@@ -541,8 +546,9 @@ describe("MusicVideoCard", () => {
     render(<MusicVideoCard playback={NOT_PLAYING} joinCode="ROOM1" activeEntry={{ ...ENTRY, originalOffsetSeconds: 2 }} />);
     await waitFor(() => expect(sliderValue()).toBe("2"));
 
-    fireEvent.click(screen.getByText("Swap"));
+    fireEvent.click(screen.getByLabelText("Swap music video"));
     fireEvent.click(screen.getByText("Wrong Video"));
+    fireEvent.click(screen.getByText("Use this video"));
 
     expect(sliderValue()).toBe("0");
     expect(screen.queryByText("Reset timing")).toBeNull();
@@ -634,7 +640,7 @@ describe("MusicVideoCard", () => {
     render(<MusicVideoCard playback={NOT_PLAYING} joinCode="ROOM1" activeEntry={ENTRY} />);
     await waitFor(() => expect(screen.getByText("Right Video")).toBeTruthy());
 
-    fireEvent.click(screen.getByText("Swap"));
+    fireEvent.click(screen.getByLabelText("Swap music video"));
     fireEvent.change(screen.getByPlaceholderText("Search or paste a link..."), {
       target: { value: "bad romance live" },
     });
@@ -642,6 +648,7 @@ describe("MusicVideoCard", () => {
     await waitFor(() => expect(screen.getByText("Bad Romance (Live)")).toBeTruthy());
 
     fireEvent.click(screen.getByText("Bad Romance (Live)"));
+    fireEvent.click(screen.getByText("Use this video"));
     await waitFor(() => expect(posts).toEqual([{ entryId: "e1", videoId: "live1234567", source: "search" }]));
     expect(screen.getByText("Bad Romance (Live)")).toBeTruthy();
   });

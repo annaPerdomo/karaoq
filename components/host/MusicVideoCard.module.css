@@ -28,16 +28,6 @@
   color: var(--text-muted);
 }
 
-.swapBtn {
-  padding: 4px 10px;
-  border-radius: 999px;
-  border: 1px solid rgba(var(--acc-b-rgb, 0, 240, 255), 0.35);
-  background: rgba(var(--acc-b-rgb, 0, 240, 255), 0.1);
-  color: var(--acc-b, #00f0ff);
-  font-size: 0.75rem;
-  cursor: pointer;
-}
-
 .skeleton {
   height: 36px;
   border-radius: 8px;
@@ -268,4 +258,75 @@
 
 .skipBtn:hover {
   background: rgba(var(--acc-b-rgb, 0, 240, 255), 0.18);
+}
+
+.sheetTitle {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.sheetSub {
+  margin: 0.2rem 0 0.6rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.candidateRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.candidateThumbBtn {
+  position: relative;
+  flex-shrink: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.candidateThumbPlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.candidateThumbBtn:hover .candidateThumbPlay,
+.candidateThumbBtn:focus-visible .candidateThumbPlay {
+  background: rgba(var(--acc-a-rgb, 255, 45, 120), 0.55);
+}
+
+.candidateText {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+}
+
+.previewTitle {
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  text-align: center;
+}
+
+.soundToggle {
+  align-self: center;
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(var(--acc-b-rgb, 0, 240, 255), 0.35);
+  background: rgba(var(--acc-b-rgb, 0, 240, 255), 0.1);
+  color: var(--acc-b, #00f0ff);
+  font-size: 0.78rem;
+  cursor: pointer;
 }

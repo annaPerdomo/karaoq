@@ -104,6 +104,7 @@ import { HideButton, Spot } from "./edit/EditChrome";
 import p from "../styles/DisplayDesigner.module.css";
 import type { OriginalVideoCandidate } from "../lib/originalVideo";
 import type { SwapSource } from "./host/VideoSwapPanel";
+import { KaraokeSwapSheet } from "./host/KaraokeSwapSheet";
 
 const HOST_THEME_CLASS: Record<DisplayTheme, string> = {
   classic: "",
@@ -140,6 +141,7 @@ const Host = ({
   const dormantRef = React.useRef(false);
   const [origin, setOrigin] = React.useState("");
   const [confirmRemove, setConfirmRemove] = React.useState<string | null>(null);
+  const [swapEntryId, setSwapEntryId] = React.useState<string | null>(null);
   const [reactionsOn, setReactionsOn] = React.useState(true);
   const [boardsOnDisplay, setBoardsOnDisplayState] = React.useState(true);
   const [fairMode, setFairModeState] = React.useState(false);
@@ -1183,6 +1185,8 @@ const Host = ({
 
   // A live swap restarts the song, so it waits for the server: a rejected one
   // must not restart anything, and the clock takes the server's stamp.
+  const closeSwapSheet = () => setSwapEntryId(null);
+
   async function swapKaraoke(id: string, video: OriginalVideoCandidate, source: SwapSource) {
     if (!joinCode) return;
     pausePolling();
@@ -1227,6 +1231,9 @@ const Host = ({
   }
 
   const currentSong = queue[activeIndex];
+  const swapEntry = swapEntryId
+    ? queue.slice(activeIndex).find((e) => e.id === swapEntryId)
+    : undefined;
   const upNext = includesCurrentInSidebar(!!currentSong, isPlaying)
     ? queue.slice(activeIndex)
     : queue.slice(activeIndex + 1);
@@ -1307,6 +1314,7 @@ const Host = ({
       onModeOpenChange={setPlaybackSheetOpen}
       autoStartIn={autoStartIn}
       onCancelAutoStart={remote ? undefined : cancelPendingAutoStart}
+      onSwapVideo={remote || !queue[activeIndex] ? undefined : () => setSwapEntryId(queue[activeIndex].id)}
     />
   );
 
@@ -1537,7 +1545,7 @@ const Host = ({
           reactionsOn={reactionsOn}
           isPlaying={isPlaying}
           currentSong={currentSong} musicVideoAt={musicVideoAt} songClock={timing}
-          onSwapKaraoke={swapKaraoke}
+          onSwapVideo={remote ? undefined : setSwapEntryId}
           cheersOpen={cheersOpen}
           onToggleCheers={toggleCheers}
           onSendReaction={sendReaction}
@@ -1637,6 +1645,17 @@ const Host = ({
           queue={queue}
           onCancel={() => setConfirmRemove(null)}
           onConfirm={removeSong}
+        />
+      )}
+
+      {joinCode && swapEntry && (
+        <KaraokeSwapSheet
+          joinCode={joinCode}
+          entry={swapEntry}
+          live={isPlaying && swapEntry.id === queue[activeIndex]?.id}
+          roomPlaying={isPlaying}
+          onClose={closeSwapSheet}
+          onSwap={swapKaraoke}
         />
       )}
 

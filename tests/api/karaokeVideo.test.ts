@@ -17,6 +17,7 @@ vi.mock("../../lib/limits", async (importOriginal) => ({
 
 const trackEventMock = vi.fn(async (..._args: unknown[]) => {});
 vi.mock("../../lib/analytics", () => ({
+  SCREEN_EVENT_TTL_MS: 90 * 24 * 60 * 60 * 1000,
   trackEvent: (...args: unknown[]) => trackEventMock(...args),
 }));
 
@@ -29,6 +30,29 @@ const findSongForQueryMock = vi.fn(async (..._args: unknown[]) => null as string
 vi.mock("../../lib/corpusLookup", () => ({
   findSongForQuery: (...args: unknown[]) => findSongForQueryMock(...args),
 }));
+
+const cache = new Map<string, unknown[]>();
+const writeCacheMock = vi.fn((key: string, results: unknown[]) => void cache.set(key, results));
+vi.mock("../../lib/searchCache", () => ({
+  readCache: async (key: string) => (cache.has(key) ? { results: cache.get(key), ageMs: 0 } : null),
+  writeCache: (key: string, results: unknown[]) => writeCacheMock(key, results),
+}));
+
+const liveSearchMock = vi.fn(async (..._args: unknown[]) => [] as unknown[]);
+vi.mock("../../lib/liveSearch", () => ({
+  getInFlightSearch: () => undefined,
+  setInFlightSearch: () => {},
+  clearInFlightSearch: () => {},
+  searchWithBurstRetry: (...args: unknown[]) => liveSearchMock(...args),
+}));
+
+let quotaSpent = false;
+vi.mock("../../lib/searchQuotaStatus", () => ({
+  searchQuotaSpent: async () => quotaSpent,
+  confirmDailyOut: async () => false,
+}));
+
+vi.mock("../../lib/corpusBudget", () => ({ recordSpend: async () => {} }));
 
 const blocked = new Set<string>();
 vi.mock("../../lib/videoBlocklist", () => ({
@@ -54,6 +78,7 @@ const roomDoc = {
   id: "ROOM1",
   activeVideoIndex: 1,
   isPlaying: true,
+  playStartedAt: new Date(Date.now() - 95_000),
   queue: [
     { id: "e0", userName: "Ann", songTitle: "Old Song", videoId: "old00000000" },
     { id: "e1", userName: "Bea", songTitle: "Queen - Bohemian Rhapsody (Karaoke)", videoId: "bad00000000", originalOffsetSeconds: 3 },
@@ -71,6 +96,9 @@ const SWAP = { videoId: "good0000000", title: "Bohemian Rhapsody - Sing King", d
 beforeEach(() => {
   vi.clearAllMocks();
   blocked.clear();
+  cache.clear();
+  quotaSpent = false;
+  liveSearchMock.mockResolvedValue([]);
   for (const k of Object.keys(rateLimitAllowed)) delete rateLimitAllowed[k];
   rooms.findOne.mockResolvedValue(roomDoc);
   rooms.updateOne.mockResolvedValue({ matchedCount: 1 });
@@ -92,11 +120,13 @@ describe("GET /api/queue/[id]/karaoke-video", () => {
     expect(readSongCutsMock).toHaveBeenCalledWith("queen bohemian rhapsody karaoke");
     expect(findSongForQueryMock).not.toHaveBeenCalled();
     expect(res.getBody()).toEqual({
+      status: "ok",
       candidates: [
         { videoId: "cut10000000", title: "Cut one", durationSeconds: 350 },
         { videoId: "cut20000000", title: "Cut two" },
       ],
     });
+    expect(liveSearchMock).not.toHaveBeenCalled();
   });
 
   it("falls back to matching the title when the video isn't filed", async () => {
@@ -106,7 +136,41 @@ describe("GET /api/queue/[id]/karaoke-video", () => {
 
     expect(findSongForQueryMock).toHaveBeenCalledWith("ABBA - Waterloo (Karaoke)");
     expect(readSongCutsMock).toHaveBeenCalledWith("abba waterloo karaoke");
-    expect(res.getBody()).toEqual({ candidates: [] });
+    expect(res.getBody()).toEqual({ status: "none", candidates: [] });
+  });
+
+  it("serves the song search's cached results when the corpus has no cuts", async () => {
+    cache.set("abba waterloo karaoke|any|relevance", [
+      { videoId: "cached00000", title: "Waterloo karaoke", thumbnailUrl: "t" },
+      { videoId: "dead0000000", title: "Gone", thumbnailUrl: "t" },
+    ]);
+    blocked.add("dead0000000");
+    const res = createRes();
+    await handler(getReq("e2"), res);
+
+    expect(res.getBody()).toEqual({
+      status: "ok",
+      candidates: [{ videoId: "cached00000", title: "Waterloo karaoke" }],
+    });
+    expect(liveSearchMock).not.toHaveBeenCalled();
+  });
+
+  it("runs one live search on a miss and caches it for the next open", async () => {
+    liveSearchMock.mockResolvedValue([{ videoId: "live0000000", title: "Live cut", thumbnailUrl: "t" }]);
+    const res = createRes();
+    await handler(getReq("e2"), res);
+
+    expect(liveSearchMock).toHaveBeenCalledWith("ABBA - Waterloo (Karaoke)", "any", "relevance");
+    expect(writeCacheMock).toHaveBeenCalledWith("abba waterloo karaoke|any|relevance", expect.any(Array));
+    expect(res.getBody()).toEqual({ status: "ok", candidates: [{ videoId: "live0000000", title: "Live cut" }] });
+  });
+
+  it("says so when the day's search quota is spent", async () => {
+    quotaSpent = true;
+    const res = createRes();
+    await handler(getReq("e2"), res);
+    expect(res.getBody()).toEqual({ status: "quota", candidates: [] });
+    expect(liveSearchMock).not.toHaveBeenCalled();
   });
 
   it("404s an unknown entry", async () => {
@@ -139,6 +203,11 @@ describe("POST /api/queue/[id]/karaoke-video", () => {
     expect(trackEventMock).toHaveBeenCalledWith(expect.anything(), "karaoke_video_swapped", {
       roomId: "ROOM1",
       source: "search",
+      live: true,
+      swapAtSeconds: 95,
+      songTitle: "Queen - Bohemian Rhapsody (Karaoke)",
+      videoId: "bad00000000",
+      expiresAt: expect.any(Date),
     });
   });
 
@@ -147,6 +216,8 @@ describe("POST /api/queue/[id]/karaoke-video", () => {
     await handler(postReq({ entryId: "e2", videoId: "good0000000", title: "Waterloo", source: "link" }), res);
 
     expect(res.getBody()).toEqual({ ok: true, playStartedAt: null });
+    expect(trackEventMock.mock.calls[0][2]).toMatchObject({ live: false, songTitle: "ABBA - Waterloo (Karaoke)" });
+    expect(trackEventMock.mock.calls[0][2]).not.toHaveProperty("swapAtSeconds");
     expect(rooms.updateOne).toHaveBeenCalledWith(
       { id: "ROOM1", "queue.id": "e2", activeVideoIndex: 1, isPlaying: true },
       {

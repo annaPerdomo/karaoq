@@ -46,6 +46,21 @@ export const Icons = {
       <path d="M8.5 2.5l3 3L4.5 12.5H1.5v-3l7-7z" />
     </svg>
   ),
+  swap: (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 14 14"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M2 4.5h9M8.5 2l2.5 2.5L8.5 7" />
+      <path d="M12 9.5H3M5.5 7L3 9.5 5.5 12" />
+    </svg>
+  ),
   remove: (
     <svg
       width="14"

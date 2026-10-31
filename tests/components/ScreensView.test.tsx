@@ -29,6 +29,19 @@ function makeStats(overrides: Partial<ScreensStats["brand"]> = {}, empty = false
         rooms: empty ? 0 : i % 3,
       })),
     },
+    karaokeSwap: {
+      opens: empty ? 0 : 10,
+      swaps: empty ? 0 : 6,
+      rooms: empty ? 0 : 4,
+      live: empty ? 0 : 3,
+      medianSwapAtSeconds: empty ? null : 75,
+      sources: { candidate: empty ? 0 : 4, search: empty ? 0 : 1, link: empty ? 0 : 1 },
+      swappedAway: empty ? [] : [{ title: "ABBA - Dancing Queen (with lead vocal)", swaps: 2 }],
+      daily: Array.from({ length: 30 }, (_, i) => ({
+        day: `2026-10-${String(i + 1).padStart(2, "0")}`,
+        swaps: 0,
+      })),
+    },
     brand: {
       roomsWithLogo: empty ? 0 : 3,
       roomsWithColors: empty ? 0 : 5,
@@ -102,6 +115,11 @@ describe("ScreensView", () => {
     expect(screen.getByText("From cache")).toBeTruthy();
     expect(screen.getByText("The video lags behind")).toBeTruthy();
     expect(storageDot()).toBeNull();
+    expect(screen.getByText("Opened, then swapped")).toBeTruthy();
+    expect(screen.getByText("60%")).toBeTruthy();
+    expect(screen.getByText("3 swaps · median 1:15 in")).toBeTruthy();
+    expect(screen.getByText("Suggested version")).toBeTruthy();
+    expect(screen.getByTitle("ABBA - Dancing Queen (with lead vocal) — 2")).toBeTruthy();
   });
 
   it("switches the storage tile to warning at 80% of the budget", async () => {
@@ -123,7 +141,7 @@ describe("ScreensView", () => {
     render(<ScreensView secret="s" />);
     await waitFor(() =>
       expect(
-        screen.getByText(/No music-video screen or branding activity in the last 30 days/)
+        screen.getByText(/No music-video screen, swap or branding activity in the last 30 days/)
       ).toBeTruthy()
     );
     expect(screen.queryByText("Rooms using it")).toBeNull();

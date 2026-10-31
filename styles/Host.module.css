@@ -1446,6 +1446,25 @@
   text-overflow: ellipsis;
 }
 
+.tSongRow {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+/* Overhang: a full 28px row pushes the label against the 64px bar's top edge. */
+.tSongRow > button {
+  margin-block: -6px;
+}
+
+/* Under 480px .tSong hides and the button is the row; overhanging would clip it. */
+@media (max-width: 480px) {
+  .tSongRow > button {
+    margin-block: 0;
+  }
+}
+
 .transportControls {
   display: flex;
   align-items: center;

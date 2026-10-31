@@ -183,6 +183,33 @@ describe("GET /api/analytics/screens", () => {
     expect(brand.committedLogos).toBe(2);
   });
 
+  it("counts karaoke swaps, mid-song rescues and the cuts swapped away", async () => {
+    event("karaoke_swap_opened", "R1", 1, { live: true });
+    event("karaoke_swap_opened", "R1", 1, { live: false });
+    event("karaoke_swap_opened", "R2", 2, { live: true });
+    event("karaoke_video_swapped", "R1", 1, { source: "candidate", live: true, swapAtSeconds: 40, songDataId: "d1" });
+    event("karaoke_video_swapped", "R2", 2, { source: "search", live: true, swapAtSeconds: 80, songDataId: "d2" });
+    event("karaoke_video_swapped", "R2", 0, { source: "link", live: false, songDataId: "d3" });
+    // Past the 30-day YouTube retention: counted, but nameless.
+    event("karaoke_video_swapped", "R3", 3, { source: "candidate", live: false, songDataId: "gone" });
+    collectionFor("youtube_song_data").seed({ _id: "y1", dataId: "d1", songTitle: "ABBA - Dancing Queen (lead vocal)" });
+    collectionFor("youtube_song_data").seed({ _id: "y2", dataId: "d2", songTitle: "abba - dancing queen (LEAD VOCAL)" });
+    collectionFor("youtube_song_data").seed({ _id: "y3", dataId: "d3", songTitle: "Queen - Bohemian Rhapsody" });
+
+    const k = (await get()).getBody().karaokeSwap;
+    expect(k.opens).toBe(3);
+    expect(k.swaps).toBe(4);
+    expect(k.rooms).toBe(3);
+    expect(k.live).toBe(2);
+    expect(k.medianSwapAtSeconds).toBe(60);
+    expect(k.sources).toEqual({ candidate: 2, search: 1, link: 1 });
+    expect(k.swappedAway).toEqual([
+      { title: "ABBA - Dancing Queen (lead vocal)", swaps: 2 },
+      { title: "Queen - Bohemian Rhapsody", swaps: 1 },
+    ]);
+    expect(k.daily.reduce((n: number, d: { swaps: number }) => n + d.swaps, 0)).toBe(4);
+  });
+
   it("returns feedback from /video pages and feature rooms only", async () => {
     event("brand_saved", "AAAA", 0, { logo: true, surface: "host" });
     const fb = collectionFor("feedback");

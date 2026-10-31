@@ -56,6 +56,7 @@ describe("POST /api/analytics/screen-event", () => {
     ["music_video_offset", { offsetSeconds: -1.5 }],
     ["music_video_link", { action: "open" }],
     ["logo_upload_rejected", { reason: "size" }],
+    ["karaoke_swap_opened", { live: true }],
   ];
 
   it.each(cases)("accepts a valid %s event", async (type, data) => {

@@ -4,6 +4,7 @@ import { useT } from "../../lib/i18n/I18nProvider";
 import { classifySearchInput } from "../../lib/videoLink";
 import SearchBar from "../songsearch/SearchBar";
 import type { OriginalVideoCandidate } from "../../lib/originalVideo";
+import { SwapPreview } from "./SwapPreview";
 
 export type SwapSource = "candidate" | "link" | "search";
 
@@ -17,25 +18,45 @@ type SearchState =
   | { kind: "done"; results: OriginalVideoCandidate[] }
   | { kind: "error"; message: "none" | "quota" | "failed" | "badLink" };
 
+interface Preview {
+  candidate: OriginalVideoCandidate;
+  source: SwapSource;
+  autoplay: boolean;
+  /** Pasted links carry no metadata; the sheet resolves them itself. */
+  meta: boolean;
+}
+
 function CandidateRow({
   candidate,
   active,
-  onPick,
+  onPreview,
 }: {
   candidate: OriginalVideoCandidate;
   active: boolean;
-  onPick: () => void;
+  onPreview: (autoplay: boolean) => void;
 }) {
+  const { t } = useT();
   return (
-    <button className={`${styles.candidate} ${active ? styles.candidateActive : ""}`} onClick={onPick}>
-      {/* eslint-disable-next-line @next/next/no-img-element -- external YouTube thumbnail */}
-      <img
-        className={styles.candidateThumb}
-        alt=""
-        src={`https://i.ytimg.com/vi/${candidate.videoId}/mqdefault.jpg`}
-      />
-      <span className={styles.candidateTitle}>{candidate.title}</span>
-    </button>
+    <div className={`${styles.candidate} ${styles.candidateRow} ${active ? styles.candidateActive : ""}`}>
+      <button
+        type="button"
+        className={styles.candidateThumbBtn}
+        onClick={() => onPreview(true)}
+        title={t("search.confirm.previewVideo")}
+        aria-label={t("search.confirm.previewVideo")}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element -- external YouTube thumbnail */}
+        <img
+          className={styles.candidateThumb}
+          alt=""
+          src={`https://i.ytimg.com/vi/${candidate.videoId}/mqdefault.jpg`}
+        />
+        <span className={styles.candidateThumbPlay} aria-hidden="true">▶</span>
+      </button>
+      <button type="button" className={`${styles.candidate} ${styles.candidateText}`} onClick={() => onPreview(false)}>
+        <span className={styles.candidateTitle}>{candidate.title}</span>
+      </button>
+    </div>
   );
 }
 
@@ -44,20 +65,21 @@ export function VideoSwapPanel({
   currentId,
   onPick,
   search: runSearch,
-  initialQuery = "",
+  previewMuted = false,
   karaokeMode = false,
 }: {
   candidates: OriginalVideoCandidate[];
   currentId: string | null;
   onPick: (videoId: string, source: SwapSource, meta?: OriginalVideoCandidate) => void;
   search: (q: string) => Promise<SwapSearchOutcome>;
-  initialQuery?: string;
+  previewMuted?: boolean;
   karaokeMode?: boolean;
 }) {
   const { t } = useT();
-  const [query, setQuery] = React.useState(initialQuery);
+  const [query, setQuery] = React.useState("");
   const [search, setSearch] = React.useState<SearchState>({ kind: "idle" });
   const searchSeqRef = React.useRef(0);
+  const [preview, setPreview] = React.useState<Preview | null>(null);
 
   function submit() {
     const q = query.trim();
@@ -66,7 +88,12 @@ export function VideoSwapPanel({
       searchSeqRef.current += 1;
       setSearch({ kind: "idle" });
       setQuery("");
-      onPick(input.id, "link");
+      setPreview({
+        candidate: { videoId: input.id, title: t("musicVideo.card.pasted") },
+        source: "link",
+        autoplay: false,
+        meta: false,
+      });
       return;
     }
     if (input.kind === "youtube-url" || input.kind === "url") {
@@ -94,6 +121,20 @@ export function VideoSwapPanel({
   }
 
   const showingResults = search.kind === "done";
+
+  if (preview) {
+    const { candidate, source, meta } = preview;
+    return (
+      <SwapPreview
+        key={candidate.videoId}
+        candidate={candidate}
+        autoplay={preview.autoplay}
+        muted={previewMuted}
+        onUse={() => onPick(candidate.videoId, source, meta ? candidate : undefined)}
+        onBack={() => setPreview(null)}
+      />
+    );
+  }
 
   return (
     <div className={styles.expanded}>
@@ -129,7 +170,7 @@ export function VideoSwapPanel({
                 key={`s-${c.videoId}`}
                 candidate={c}
                 active={c.videoId === currentId}
-                onPick={() => onPick(c.videoId, "search", c)}
+                onPreview={(autoplay) => setPreview({ candidate: c, source: "search", autoplay, meta: true })}
               />
             ))
           : candidates.map((c) => (
@@ -137,7 +178,7 @@ export function VideoSwapPanel({
                 key={c.videoId}
                 candidate={c}
                 active={c.videoId === currentId}
-                onPick={() => onPick(c.videoId, "candidate")}
+                onPreview={(autoplay) => setPreview({ candidate: c, source: "candidate", autoplay, meta: false })}
               />
             ))}
       </div>

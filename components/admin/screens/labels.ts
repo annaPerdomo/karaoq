@@ -73,6 +73,7 @@ export function hasActivity(stats: ScreensStats): boolean {
     b.roomsWithLogo + b.roomsWithColors > 0 ||
     b.storageBytes > 0 ||
     b.committedLogos > 0 ||
+    stats.karaokeSwap.swaps + stats.karaokeSwap.opens > 0 ||
     stats.feedback.length > 0
   );
 }
