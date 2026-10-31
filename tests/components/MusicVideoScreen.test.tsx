@@ -242,6 +242,54 @@ describe("MusicVideoScreen", () => {
     expect(screen.queryByText("No music video for this one")).toBeNull();
   });
 
+  it("swaps the player for the poster once the original has run out, until the song changes", async () => {
+    vi.useFakeTimers();
+    // Karaoke started 10 minutes ago: well past a 5-minute original.
+    const room = { ...ROOM, playStartedAt: new Date(Date.now() - 600_000).toISOString(), serverNow: Date.now() };
+    vi.stubGlobal("fetch", fetchMockFor(room));
+    const { container } = render(<MusicVideoScreen />);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(50);
+    });
+    const iframe = container.querySelector("iframe")!;
+    expect(iframe).toBeTruthy();
+    const postMessage = vi.fn();
+    Object.defineProperty(iframe, "contentWindow", { value: { postMessage } });
+    window.dispatchEvent(
+      new MessageEvent("message", {
+        origin: "https://www.youtube.com",
+        source: iframe.contentWindow as Window,
+        data: JSON.stringify({ event: "infoDelivery", info: { currentTime: 1, playerState: 1, progressState: { duration: 300 } } }),
+      })
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1500);
+    });
+
+    try {
+      expect(container.querySelector("iframe")).toBeNull();
+      expect(container.querySelector('img[src*="i.ytimg.com/vi/ov1/"]')).toBeTruthy();
+      expect(screen.queryByText("No music video for this one")).toBeNull();
+      expect(screen.getByText("Ana")).toBeTruthy();
+      expect(screen.queryByText("Up Next")).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("never layers anything over the player, and shows it uncropped", async () => {
+    vi.stubGlobal("fetch", fetchMockFor(ROOM));
+    const { container } = render(<MusicVideoScreen />);
+    await waitFor(() => expect(container.querySelector("iframe")).toBeTruthy());
+    const iframe = container.querySelector("iframe")!;
+    expect(iframe.src).not.toMatch(/modestbranding|cc_load_policy/);
+    // The player's parent band holds the player alone; chrome is in the sibling bars.
+    const stage = iframe.parentElement!.parentElement!;
+    expect(stage.querySelectorAll("*").length).toBe(2);
+    expect(stage.previousElementSibling!.textContent).toContain("Ana");
+    expect(stage.nextElementSibling!.textContent).toContain("KaraoQ");
+  });
+
   it("says unavailable only when the song has no original video", async () => {
     const room = ROOM;
     vi.stubGlobal(

@@ -1,7 +1,4 @@
 .main {
-  /* The KaraoQ wordmark: per theme, never overridden by a room's brand. */
-  --mark-a: #ff2d78;
-  --mark-b: #00f0ff;
   --acc-a: #ff2d78;
   --acc-a-rgb: 255, 45, 120;
   --acc-b: #00f0ff;
@@ -27,8 +24,6 @@
 
 /* Theme presets; classic = the base vars, no class. */
 .themeMinimal {
-  --mark-a: #aab0c0;
-  --mark-b: #d7dae2;
   --acc-a: #aab0c0;
   --acc-a-rgb: 170, 176, 192;
   --acc-b: #d7dae2;
@@ -45,12 +40,6 @@
 .themeMinimal .nowGlow {
   background: var(--acc-a);
   animation: none;
-}
-
-.themeMinimal .waitingTitle {
-  background: none;
-  -webkit-text-fill-color: var(--text-primary);
-  color: var(--text-primary);
 }
 
 .themeMinimal .readyTag {
@@ -175,7 +164,7 @@
   font-weight: 400;
   font-size: 1.4rem;
   letter-spacing: calc(2px * var(--tv-scale, 1));
-  background: linear-gradient(135deg, var(--mark-a, #ff2d78), var(--mark-b, #00f0ff));
+  background: linear-gradient(135deg, #ff2d78, #00f0ff);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -423,7 +412,7 @@
   font-family: var(--font-brand);
   font-weight: 400;
   font-size: 3rem;
-  background: linear-gradient(135deg, var(--acc-a), var(--acc-b));
+  background: linear-gradient(135deg, #ff2d78, #00f0ff);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;

@@ -4,10 +4,8 @@ import { useT } from "../../lib/i18n/I18nProvider";
 import { onPlayhead, PlayheadMessage } from "../../app/queue/roomChannel";
 import { serverNow } from "../../lib/clockSkew";
 import { serverPlayhead, targetSeconds } from "../../lib/musicVideoSync";
-import { ScrubPreview } from "./ScrubPreview";
 
 const TICK_MS = 500;
-const PREVIEW_LINGER_MS = 8000;
 const SKIP_SECONDS = 5;
 // A pasted link carries no duration.
 const UNKNOWN_DURATION_MIN_S = 240;
@@ -57,18 +55,6 @@ export function MusicVideoScrubber({
   const { t } = useT();
   const elapsed = useKaraokeElapsed(joinCode, entryId, playback);
   const [dragValue, setDragValue] = React.useState<number | null>(null);
-  const [previewing, setPreviewing] = React.useState(false);
-  const lingerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  function touch() {
-    setPreviewing(true);
-    if (lingerRef.current) clearTimeout(lingerRef.current);
-    lingerRef.current = setTimeout(() => setPreviewing(false), PREVIEW_LINGER_MS);
-  }
-  React.useEffect(() => () => {
-    if (lingerRef.current) clearTimeout(lingerRef.current);
-  }, []);
-  React.useEffect(() => setPreviewing(false), [videoId]);
 
   const live = Math.max(0, elapsed + offsetSeconds);
   const max = durationSeconds ?? Math.max(UNKNOWN_DURATION_MIN_S, Math.ceil(live) + 60);
@@ -76,7 +62,6 @@ export function MusicVideoScrubber({
 
   function skip(delta: number) {
     onChange(Math.max(offsetSeconds + delta, Math.ceil(-elapsed * 4) / 4));
-    touch();
   }
 
   const inputRef = React.useRef<HTMLInputElement>(null);
@@ -100,11 +85,11 @@ export function MusicVideoScrubber({
 
   return (
     <div className={styles.timing}>
-      {/* Always there, so opening the live preview never shifts the bar. */}
+      {/* A still, not a second player: a muted preview player would be a second
+          autoplaying embed on the host page, which YouTube's terms don't allow. */}
       <div className={styles.preview}>
         {/* eslint-disable-next-line @next/next/no-img-element -- external YouTube thumbnail */}
         <img className={styles.previewThumb} alt="" src={`https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`} />
-        {previewing && <ScrubPreview videoId={videoId} seconds={shown} />}
       </div>
       <input
         type="range"
@@ -117,12 +102,7 @@ export function MusicVideoScrubber({
         aria-valuetext={`${clock(shown)} / ${clock(max)}`}
         style={{ "--played": `${(shown / max) * 100}%` } as React.CSSProperties}
         ref={inputRef}
-        onPointerDown={touch}
-        onKeyDown={touch}
-        onChange={(e) => {
-          setDragValue(Number(e.currentTarget.value));
-          touch();
-        }}
+        onChange={(e) => setDragValue(Number(e.currentTarget.value))}
       />
       <div className={styles.timingHead}>
         <button className={styles.skipBtn} aria-label={t("musicVideo.card.back")} onClick={() => skip(-SKIP_SECONDS)}>

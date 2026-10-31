@@ -71,15 +71,15 @@ export function canSeek(
   return state !== 3 && nowMs >= cooldownUntilMs;
 }
 
-/** YouTube's own "ended" (state 0) also fires on a stale/paused player and on
- * scrubbing past the end transiently — only trust it once the sync target has
- * actually caught up to the original's known duration. */
-export function originalEnded(
-  target: number | null,
-  duration: number | null,
-  state: number | undefined
-): boolean {
-  return state === 0 && duration !== null && target !== null && target >= duration;
+/** Seconds before the original's end at which it counts as over, so the
+ * screen is on the poster before YouTube's end card can show. */
+export const END_LEAD_S = 0.5;
+
+/** From the sync target alone: a player seeked past its end restarts from zero
+ * instead of reporting state 0. Null while the original's duration is unknown. */
+export function originalEnded(target: number | null, duration: number | null): boolean | null {
+  if (duration === null || target === null) return null;
+  return target >= duration - END_LEAD_S;
 }
 
 function freshFor(playhead: PlayheadMessage | null, entryId: string, nowMs: number): boolean {

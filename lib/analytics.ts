@@ -41,6 +41,7 @@ export type EventType =
   | "original_video_searched"
   | "original_video_swapped"
   | "original_video_nudged"
+  | "karaoke_video_swapped"
   | "music_video_screen_opened"
   | "music_video_screen_closed"
   | "music_video_error"
@@ -135,8 +136,8 @@ export interface AnalyticsEvent {
   expiresAt?: Date;
   // original_video_resolved: whether the answer carried at least one video.
   found?: boolean;
-  // original_video_resolved: how the response was reached. original_video_swapped:
-  // where the host's pick came from.
+  // original_video_resolved: how the response was reached. original_video_swapped,
+  // karaoke_video_swapped: where the host's pick came from.
   source?: "cache" | "live" | "quota" | "busy" | "none" | "candidate" | "link" | "search";
   // music_video_screen_closed.
   durationSeconds?: number;

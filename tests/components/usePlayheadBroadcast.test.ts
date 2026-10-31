@@ -24,6 +24,19 @@ describe("usePlayheadBroadcast", () => {
     expect(broadcastPlayhead.mock.calls[0][1]).toMatchObject({ entryId: "e1", seconds: 42, playing: false });
   });
 
+  it("forgets the old cut's position when a swap keeps the entry", () => {
+    const { result, rerender } = renderHook(
+      ({ videoId }) => usePlayheadBroadcast("ROOM1", "e1", videoId),
+      { initialProps: { videoId: "old" } }
+    );
+    result.current(180, 2);
+    rerender({ videoId: "new" });
+    broadcastPlayhead.mockClear();
+    result.current(null, -1);
+    vi.advanceTimersByTime(3000);
+    expect(broadcastPlayhead).not.toHaveBeenCalled();
+  });
+
   it("keeps repeating a pause so it never goes stale", () => {
     const { result } = renderHook(() => usePlayheadBroadcast("ROOM1", "e1"));
     result.current(42, 2);
