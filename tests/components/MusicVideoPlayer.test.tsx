@@ -22,10 +22,9 @@ describe("MusicVideoPlayer", () => {
 });
 
 describe("MusicVideoPlayer captions", () => {
-  it("asks for no captions and unloads them once playback starts", () => {
+  it("unloads captions on every start of playback", () => {
     const { container } = render(<Player />);
     const iframe = container.querySelector("iframe")!;
-    expect(iframe.src).toContain("cc_load_policy=0");
     const post = vi.fn();
     Object.defineProperty(iframe, "contentWindow", { value: { postMessage: post } });
     const play = () =>
@@ -36,9 +35,22 @@ describe("MusicVideoPlayer captions", () => {
           data: JSON.stringify({ event: "onStateChange", info: 1 }),
         })
       );
+    const state = (info: number) =>
+      window.dispatchEvent(
+        new MessageEvent("message", {
+          origin: "https://www.youtube.com",
+          source: iframe.contentWindow as Window,
+          data: JSON.stringify({ event: "onStateChange", info }),
+        })
+      );
+    const unloads = () =>
+      post.mock.calls.filter((c) => String(c[0]).includes("unloadModule")).map((c) => JSON.parse(c[0]).args[0]);
     play();
     play();
-    const unloads = post.mock.calls.filter((c) => String(c[0]).includes("unloadModule"));
-    expect(unloads.map((c) => JSON.parse(c[0]).args[0])).toEqual(["captions", "cc"]);
+    expect(unloads()).toEqual(["captions", "cc"]);
+    // A seek buffers and resumes, and YouTube brings captions back with it.
+    state(3);
+    play();
+    expect(unloads()).toEqual(["captions", "cc", "captions", "cc"]);
   });
 });

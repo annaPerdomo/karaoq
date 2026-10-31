@@ -10,7 +10,7 @@ import { DORMANT_POLL_MS, isRoomDormant } from '../lib/roomDormancy';
 import { useT } from '../lib/i18n/I18nProvider';
 import { DEFAULT_DISPLAY_CONFIG, DisplayTheme, QueueEntry, Room, RoomBrand, normalizeDisplayConfig, roomTheme } from '../pages/api/types';
 import { brandStyle } from '../lib/brandStyle';
-import MusicVideoLockup from './musicvideo/MusicVideoLockup';
+import ClubLogo from './brand/ClubLogo';
 import MusicVideoPlayer from './musicvideo/MusicVideoPlayer';
 import MusicVideoIdle from './musicvideo/MusicVideoIdle';
 import MusicVideoQrCorner from './musicvideo/MusicVideoQrCorner';
@@ -153,7 +153,7 @@ export default function MusicVideoScreen(): React.ReactElement {
     }
   }, [currentEntryId, status]);
 
-  const { ended, paused, onInfo } = useVideoSync({
+  const { ended, onInfo } = useVideoSync({
     roomId: joinCode,
     entryId: currentEntryId,
     videoRef,
@@ -164,8 +164,12 @@ export default function MusicVideoScreen(): React.ReactElement {
     offsetS: effectiveOffsetS,
   });
 
-  const idle = !currentEntry || !isPlaying || status !== 'ok' || !videoId || ended;
-  const unavailable = isPlaying && (status === 'none' || status === 'quota' || ended || (status === 'ok' && !videoId));
+  // The poster replaces the player rather than covering it: YouTube's terms
+  // forbid overlays on, or cropping of, the embedded player.
+  const onAir = !!currentEntry && isPlaying && status === 'ok' && !!videoId;
+  const showPlayer = onAir && !ended;
+  const idle = !showPlayer;
+  const unavailable = isPlaying && (status === 'none' || status === 'quota' || (status === 'ok' && !videoId));
 
   function handleInfo(currentTime: number | null, state: number | undefined, duration: number | null) {
     onInfo(currentTime, state, duration);
@@ -256,31 +260,47 @@ export default function MusicVideoScreen(): React.ReactElement {
 
   return (
     <main className={`${styles.main} ${THEME_CLASS[theme]}`} style={brandStyle(brand) as React.CSSProperties}>
-      {!idle && videoId && (
-        <MusicVideoPlayer videoId={videoId} videoRef={videoRef} onInfo={handleInfo} onError={handleError} />
-      )}
-      {!idle && paused && <div className={styles.pausedScrim} />}
-      {!idle && currentEntry?.userName && (
-        <div className={styles.onStage}>
-          <span className={styles.onStageTag}>{t('display.tag.onStage')}</span>
-          <span className={styles.onStageName}>{currentEntry.userName}</span>
+      <header className={styles.topBar}>
+        <div className={styles.topBarSide}>
+          <ClubLogo roomId={joinCode} logo={brand.logo} className={styles.clubLogo} />
         </div>
-      )}
-      <MusicVideoLockup joinCode={joinCode} logo={brand.logo} />
-      {idle && (
-        <MusicVideoIdle
-          singerName={currentEntry?.userName}
-          songTitle={currentEntry?.songTitle}
-          reason={unavailable ? 'unavailable' : 'waiting'}
-          thumbnailId={thumbnailId}
-        />
-      )}
-      {!qrHidden && (
-        <MusicVideoQrCorner joinUrl={joinUrl} joinCode={joinCode} origin={origin} qrPx={qrPx} />
-      )}
-      {showOffset && (
-        <div className={styles.offsetPill}>{t('musicVideo.offset', { seconds: effectiveOffsetS })}</div>
-      )}
+        {onAir && currentEntry?.userName ? (
+          <div className={styles.onStage}>
+            <span className={styles.onStageTag}>{t('display.tag.onStage')}</span>
+            <span className={styles.onStageName}>{currentEntry.userName}</span>
+          </div>
+        ) : (
+          <div />
+        )}
+        <div className={`${styles.topBarSide} ${styles.topBarEnd}`}>
+          {showOffset && (
+            <div className={styles.offsetPill}>{t('musicVideo.offset', { seconds: effectiveOffsetS })}</div>
+          )}
+        </div>
+      </header>
+      <div className={styles.stage}>
+        {showPlayer && videoId && (
+          <MusicVideoPlayer videoId={videoId} videoRef={videoRef} onInfo={handleInfo} onError={handleError} />
+        )}
+        {idle && (
+          <MusicVideoIdle
+            singerName={ended ? undefined : currentEntry?.userName}
+            songTitle={ended ? undefined : currentEntry?.songTitle}
+            reason={unavailable ? 'unavailable' : 'waiting'}
+            thumbnailId={thumbnailId}
+          />
+        )}
+      </div>
+      <footer className={styles.bottomBar}>
+        {!qrHidden ? (
+          <MusicVideoQrCorner joinUrl={joinUrl} joinCode={joinCode} origin={origin} qrPx={qrPx} />
+        ) : (
+          <div />
+        )}
+        <div className={styles.karaoqBadge}>
+          <span className={styles.wordmark}>KaraoQ</span>
+        </div>
+      </footer>
     </main>
   );
 }

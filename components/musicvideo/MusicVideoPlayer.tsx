@@ -16,9 +16,9 @@ export default function MusicVideoPlayer({
   onInfo: (currentTime: number | null, state: number | undefined, duration: number | null) => void;
   onError: (code: number) => void;
 }) {
-  const captionsOffRef = React.useRef(false);
+  const lastStateRef = React.useRef<number | undefined>(undefined);
   React.useEffect(() => {
-    captionsOffRef.current = false;
+    lastStateRef.current = undefined;
   }, [videoId]);
 
   React.useEffect(() => {
@@ -36,13 +36,14 @@ export default function MusicVideoPlayer({
           : msg.event === "infoDelivery"
             ? msg.info?.playerState
             : undefined;
-      // cc_load_policy=0 can't override a viewer's own captions preference;
-      // the captions module only exists once playback starts, so unload it then.
-      if (state === 1 && !captionsOffRef.current) {
-        captionsOffRef.current = true;
+      // No player parameter overrides a viewer's caption preference, and a
+      // seek brings captions back, so this runs on every transition into playback.
+      if (state === 1 && lastStateRef.current !== 1) {
+        ytCommand(videoRef.current, "setOption", ["captions", "track", {}]);
         ytCommand(videoRef.current, "unloadModule", ["captions"]);
         ytCommand(videoRef.current, "unloadModule", ["cc"]);
       }
+      if (state !== undefined) lastStateRef.current = state;
       onInfo(playerCurrentTime(msg), state, playerDuration(msg));
     }
     window.addEventListener("message", onMessage);
@@ -64,7 +65,7 @@ export default function MusicVideoPlayer({
         ref={videoRef}
         key={videoId}
         className={styles.video}
-        src={embedSrc(videoId, "mute=1&controls=0&cc_load_policy=0&disablekb=1&fs=0&iv_load_policy=3&modestbranding=1&playsinline=1&rel=0&enablejsapi=1")}
+        src={embedSrc(videoId, "mute=1&controls=0&disablekb=1&fs=0&iv_load_policy=3&playsinline=1&rel=0&enablejsapi=1")}
         allow="autoplay; encrypted-media"
         tabIndex={-1}
         onLoad={handleLoad}

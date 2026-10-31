@@ -4,6 +4,7 @@ import {
   playCommand,
   DRIFT_SEEK_S,
   PLAYHEAD_FRESH_MS,
+  END_LEAD_S,
   SEEK_COOLDOWN_MS,
   canSeek,
   originalEnded,
@@ -110,25 +111,20 @@ describe("musicVideoSync - canSeek", () => {
 });
 
 describe("musicVideoSync - originalEnded", () => {
-  it("is false without a known duration", () => {
-    expect(originalEnded(200, null, 0)).toBe(false);
+  it("is undecided without a known duration or target", () => {
+    expect(originalEnded(200, null)).toBeNull();
+    expect(originalEnded(null, 200)).toBeNull();
   });
 
-  it("is false when the target hasn't reached the duration yet", () => {
-    expect(originalEnded(150, 200, 0)).toBe(false);
+  it("is false while the target is short of the end", () => {
+    expect(originalEnded(150, 200)).toBe(false);
+    expect(originalEnded(200 - END_LEAD_S - 0.01, 200)).toBe(false);
   });
 
-  it("is false on state 0 if the target is stale/behind, even past the duration numerically", () => {
-    expect(originalEnded(null, 200, 0)).toBe(false);
-  });
-
-  it("is true once the target reaches the duration and the player reports ended", () => {
-    expect(originalEnded(200, 200, 0)).toBe(true);
-    expect(originalEnded(210, 200, 0)).toBe(true);
-  });
-
-  it("is false if the player hasn't reported state 0, even past the duration", () => {
-    expect(originalEnded(210, 200, 1)).toBe(false);
+  it("is true from just before the end onward, whatever the player reports", () => {
+    expect(originalEnded(200 - END_LEAD_S, 200)).toBe(true);
+    expect(originalEnded(200, 200)).toBe(true);
+    expect(originalEnded(600, 200)).toBe(true);
   });
 });
 
