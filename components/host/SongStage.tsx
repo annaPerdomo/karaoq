@@ -214,7 +214,7 @@ export function SongStage({
       <>
         <iframe
           ref={videoRef}
-          key={currentSong.id}
+          key={`${currentSong.id}:${currentSong.videoId}`}
           className={styles.video}
           src={embedSrc(currentSong.videoId, "autoplay=1&rel=0&enablejsapi=1")}
           allow="autoplay; encrypted-media"

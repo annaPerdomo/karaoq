@@ -14,12 +14,14 @@ import updatePosition from "../app/queue/updatePosition";
 import reorderQueue from "../app/queue/reorderQueue";
 import removeFromQueue from "../app/queue/removeFromQueue";
 import renameQueueEntry from "../app/queue/renameQueueEntry";
+import swapKaraokeVideo from "../app/queue/swapKaraokeVideo";
 import setPlaying from "../app/queue/setPlaying";
 import savePlayMode from "../app/queue/setPlayMode";
 import saveDisplayPaused from "../app/queue/setDisplayPaused";
 import {
   broadcastRoomState,
   broadcastDisplayPause,
+  broadcastOriginalOffset,
   onVideoEnded,
 } from "../app/queue/roomChannel";
 import setReactionsEnabled from "../app/queue/setReactionsEnabled";
@@ -100,6 +102,8 @@ import { hostRailToggles } from "./host/edit/railToggles";
 import { EditOverlay } from "./edit/EditOverlay";
 import { HideButton, Spot } from "./edit/EditChrome";
 import p from "../styles/DisplayDesigner.module.css";
+import type { OriginalVideoCandidate } from "../lib/originalVideo";
+import type { SwapSource } from "./host/VideoSwapPanel";
 
 const HOST_THEME_CLASS: Record<DisplayTheme, string> = {
   classic: "",
@@ -631,7 +635,7 @@ const Host = ({
   // commits, which would advance twice and skip a singer's song.
   const endedHandledRef = React.useRef(false);
   const currentQueueSongId = queue[activeIndex]?.id;
-  const reportPlayhead = usePlayheadBroadcast(playsVideoHere && !tvMode ? joinCode : undefined, currentQueueSongId);
+  const reportPlayhead = usePlayheadBroadcast(playsVideoHere && !tvMode ? joinCode : undefined, currentQueueSongId, queue[activeIndex]?.videoId);
   const reportPlayheadRef = React.useRef(reportPlayhead);
   reportPlayheadRef.current = reportPlayhead;
   React.useEffect(() => {
@@ -1177,6 +1181,37 @@ const Host = ({
     if (!ok) await resyncAfterFailedWrite();
   }
 
+  // A live swap restarts the song, so it waits for the server: a rejected one
+  // must not restart anything, and the clock takes the server's stamp.
+  async function swapKaraoke(id: string, video: OriginalVideoCandidate, source: SwapSource) {
+    if (!joinCode) return;
+    pausePolling();
+    const live = isPlaying && queue[activeIndex]?.id === id;
+    const apply = (startedAt: string | null) => {
+      const newQueue = queue.map((e) => {
+        if (e.id !== id) return e;
+        const { originalOffsetSeconds: _offset, durationSeconds: _duration, ...rest } = e;
+        return { ...rest, videoId: video.videoId, songTitle: video.title, ...(video.durationSeconds ? { durationSeconds: video.durationSeconds } : {}) };
+      });
+      setQueue(newQueue);
+      if (startedAt) {
+        timing.adoptBroadcast(startedAt, true);
+        setDisplayPaused(false);
+        broadcastDisplayPause(joinCode, false);
+      }
+      broadcast(newQueue, activeIndex, isPlaying, startedAt ?? timing.playStartedAt);
+      broadcastOriginalOffset(joinCode, { entryId: id, offsetSeconds: 0 });
+    };
+    if (!live) apply(null);
+    const result = await swapKaraokeVideo(joinCode, id, video, source);
+    if (result === false) {
+      if (live) showToast(t("host.toast.saveFailed"));
+      else await resyncAfterFailedWrite();
+      return;
+    }
+    if (live) apply(result ?? timing.markStarted());
+  }
+
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
@@ -1502,6 +1537,7 @@ const Host = ({
           reactionsOn={reactionsOn}
           isPlaying={isPlaying}
           currentSong={currentSong} musicVideoAt={musicVideoAt} songClock={timing}
+          onSwapKaraoke={swapKaraoke}
           cheersOpen={cheersOpen}
           onToggleCheers={toggleCheers}
           onSendReaction={sendReaction}

@@ -32,7 +32,7 @@ function Player({
   const failed = usePlaybackError({ videoRef: ref, roomId, entryId, videoId, active });
   return (
     <>
-      {active && entryId ? <iframe key={entryId} ref={ref} title="player" /> : null}
+      {active && entryId ? <iframe key={`${entryId}:${videoId}`} ref={ref} title="player" /> : null}
       <span data-testid="notice">{failed ? "failed" : "playing"}</span>
     </>
   );
@@ -126,6 +126,23 @@ describe("usePlaybackError", () => {
       raiseError!({ data: 101 });
     });
     expect(noticeText()).toBe("failed");
+  });
+
+  it("clears the notice when the host swaps the entry onto another video", async () => {
+    const { rerender } = render(
+      <Player roomId="ABCD" entryId="entry-1" videoId="dQw4w9WgXcQ" active />
+    );
+    await attach();
+    act(() => {
+      raiseError!({ data: 150 });
+    });
+    expect(noticeText()).toBe("failed");
+
+    raiseError = null;
+    rerender(<Player roomId="ABCD" entryId="entry-1" videoId="9bZkp7q19f0" active />);
+    expect(noticeText()).toBe("playing");
+    expect(screen.getByTitle("player").isConnected).toBe(true);
+    await attach();
   });
 
   it("drops the notice when this screen stops showing the video", async () => {

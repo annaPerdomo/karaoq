@@ -15,7 +15,9 @@ const PLAYHEAD_REPEAT_MS = 1000;
  */
 export function usePlayheadBroadcast(
   roomId: string | undefined,
-  entryId: string | undefined
+  entryId: string | undefined,
+  /** A host swap keeps the entry but restarts it on another cut. */
+  videoId?: string
 ): (currentTime: number | null, state: number | undefined) => void {
   const throttleRef = React.useRef({ last: 0 });
   const lastStateRef = React.useRef<number | undefined>(undefined);
@@ -26,7 +28,7 @@ export function usePlayheadBroadcast(
   React.useEffect(() => {
     lastStateRef.current = undefined;
     lastTimeRef.current = null;
-  }, [entryId]);
+  }, [entryId, videoId]);
 
   const send = React.useCallback(() => {
     if (!roomId || !entryId || lastTimeRef.current === null) return;

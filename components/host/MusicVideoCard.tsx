@@ -80,9 +80,10 @@ export function MusicVideoCard({
     lastSavedOffsetRef.current = next;
     setTimingFailed(false);
     if (offsetDebounceRef.current) clearTimeout(offsetDebounceRef.current);
-    // entryId only, on purpose: every poll yields a new but equal activeEntry object.
+    // Ids only, on purpose: every poll yields a new but equal activeEntry object.
+    // A karaoke swap keeps the entry but drops its nudge, hence the videoId.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [entryId]);
+  }, [entryId, activeEntry.videoId]);
 
   React.useEffect(() => setPickedMeta(null), [entryId]);
 

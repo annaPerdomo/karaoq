@@ -12,7 +12,7 @@ import { Icons } from "./icons";
 import { SidebarSections, HostSidebarEdit } from "./SidebarSections";
 import { UpNextTab } from "./UpNextTab";
 import { HistoryTab } from "./HistoryTab";
-import { MusicVideoCard, musicVideoCardVisible } from "./MusicVideoCard";
+import { KaraokeSwapHandler, SongVideoCards } from "./SongVideoCards";
 import { QueueEstimate } from "../../lib/queueTime";
 
 export function QueueSidebar({
@@ -48,6 +48,7 @@ export function QueueSidebar({
   currentSong,
   musicVideoAt,
   songClock,
+  onSwapKaraoke,
   cheersOpen,
   onToggleCheers,
   onSendReaction,
@@ -105,6 +106,7 @@ export function QueueSidebar({
   /** Room.musicVideoAt, as an ISO string — gates the music-video swap card. */
   musicVideoAt: string | null;
   songClock: Pick<RoomTiming, "playStartedAt" | "playPausedAt">;
+  onSwapKaraoke: KaraokeSwapHandler;
   cheersOpen: boolean;
   onToggleCheers: () => void;
   onSendReaction: (emoji: string) => void;
@@ -169,11 +171,14 @@ export function QueueSidebar({
         {Icons.plus} {t('host.sidebar.addSong')}
       </button>
 
-      {joinCode && musicVideoCardVisible(remote, musicVideoAt, currentSong) && (
-        <MusicVideoCard
+      {joinCode && (
+        <SongVideoCards
           joinCode={joinCode}
-          activeEntry={currentSong as QueueEntry}
+          remote={remote}
+          currentSong={currentSong}
+          musicVideoAt={musicVideoAt}
           playback={{ isPlaying, ...songClock }}
+          onSwapKaraoke={onSwapKaraoke}
         />
       )}
 

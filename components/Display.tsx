@@ -317,7 +317,10 @@ const Display = (): React.ReactElement => {
   const currentSongId = queue[activeIndex]?.id;
   const currentSongIdRef = React.useRef(currentSongId);
   currentSongIdRef.current = currentSongId;
-  const reportPlayhead = usePlayheadBroadcast(joinCode, currentSongId);
+  const currentVideoId = queue[activeIndex]?.videoId;
+  const currentVideoIdRef = React.useRef(currentVideoId);
+  currentVideoIdRef.current = currentVideoId;
+  const reportPlayhead = usePlayheadBroadcast(joinCode, currentSongId, currentVideoId);
 
   // A replay of the same song (isPlaying toggle) needs its end reported again.
   React.useEffect(() => {
@@ -444,10 +447,14 @@ const Display = (): React.ReactElement => {
   function handlePlaybackFailed() {
     if (!autoAdvance.enabled) return;
     const failedId = currentSongIdRef.current;
+    const failedVideo = currentVideoIdRef.current;
     if (failedSkipRef.current) clearTimeout(failedSkipRef.current);
     failedSkipRef.current = setTimeout(() => {
-      // A host who skipped meanwhile must not have the next song reported ended.
-      if (currentSongIdRef.current === failedId) reportVideoEndedRef.current();
+      // A host who skipped, or swapped in a cut that plays, must not have the
+      // song reported ended.
+      if (currentSongIdRef.current === failedId && currentVideoIdRef.current === failedVideo) {
+        reportVideoEndedRef.current();
+      }
     }, FAILED_VIDEO_SKIP_MS);
   }
 
