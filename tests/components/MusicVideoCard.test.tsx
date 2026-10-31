@@ -79,7 +79,7 @@ describe("MusicVideoCard", () => {
 
     await waitFor(() => expect(screen.getByText("Right Video")).toBeTruthy());
 
-    fireEvent.click(screen.getByText("Swap"));
+    fireEvent.click(screen.getByLabelText("Swap music video"));
     expect(screen.getByText("Wrong Video")).toBeTruthy();
   });
 
@@ -118,8 +118,9 @@ describe("MusicVideoCard", () => {
     render(<MusicVideoCard playback={NOT_PLAYING} joinCode="ROOM1" activeEntry={ENTRY} />);
     await waitFor(() => expect(screen.getByText("Right Video")).toBeTruthy());
 
-    fireEvent.click(screen.getByText("Swap"));
+    fireEvent.click(screen.getByLabelText("Swap music video"));
     fireEvent.click(screen.getByText("Wrong Video"));
+    fireEvent.click(screen.getByText("Use this video"));
 
     expect(screen.getByText("Wrong Video")).toBeTruthy();
     expect(posts).toEqual([{ entryId: "e1", videoId: "v2", source: "candidate" }]);
@@ -135,10 +136,10 @@ describe("MusicVideoCard", () => {
     render(<MusicVideoCard playback={NOT_PLAYING} joinCode="ROOM1" activeEntry={ENTRY} />);
     await waitFor(() => expect(screen.getByText("No match found. Paste a link instead.")).toBeTruthy());
 
-    fireEvent.click(screen.getByText("Swap"));
-    const input = screen.getByPlaceholderText("Or paste a YouTube link");
-    fireEvent.change(input, { target: { value: "not a link" } });
-    fireEvent.click(screen.getByText("Use"));
+    fireEvent.click(screen.getByLabelText("Swap music video"));
+    const input = screen.getByPlaceholderText("Search or paste a link...");
+    fireEvent.change(input, { target: { value: "https://example.com/watch?v=x" } });
+    fireEvent.click(screen.getByText("Search"));
 
     expect(screen.getByText("That isn't a YouTube video link")).toBeTruthy();
     expect(fetchMock.mock.calls.some((c) => (c[1] as RequestInit | undefined)?.method === "POST")).toBe(
@@ -189,6 +190,39 @@ describe("MusicVideoCard", () => {
     vi.useRealTimers();
   });
 
+  it("treats a 404 as not-yet, not as no match: the server lags the host's advance", async () => {
+    vi.useFakeTimers();
+    let calls = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        calls += 1;
+        return calls === 1
+          ? ({ ok: false, status: 404, json: async () => ({ code: 404 }) } as Response)
+          : jsonResponse({
+              status: "ok",
+              videoIds: ["v1"],
+              picked: null,
+              candidates: [{ videoId: "v1", title: "Right Video" }],
+            });
+      })
+    );
+
+    const { container } = render(<MusicVideoCard playback={NOT_PLAYING} joinCode="ROOM1" activeEntry={ENTRY} />);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(screen.queryByText("No match found. Paste a link instead.")).toBeNull();
+    expect(container.querySelector('[class*="skeleton"]')).toBeTruthy();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5000);
+    });
+    expect(screen.getByText("Right Video")).toBeTruthy();
+
+    vi.useRealTimers();
+  });
+
   it("rolls back and shows an inline error when a pick fails", async () => {
     const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
       if (init?.method === "POST") return { ok: false, status: 500, json: async () => ({}) } as Response;
@@ -207,8 +241,9 @@ describe("MusicVideoCard", () => {
     render(<MusicVideoCard playback={NOT_PLAYING} joinCode="ROOM1" activeEntry={ENTRY} />);
     await waitFor(() => expect(screen.getByText("Right Video")).toBeTruthy());
 
-    fireEvent.click(screen.getByText("Swap"));
+    fireEvent.click(screen.getByLabelText("Swap music video"));
     fireEvent.click(screen.getByText("Wrong Video"));
+    fireEvent.click(screen.getByText("Use this video"));
 
     await waitFor(() =>
       expect(screen.getByText("Couldn't swap that video. Try again.")).toBeTruthy()
@@ -226,10 +261,11 @@ describe("MusicVideoCard", () => {
     render(<MusicVideoCard playback={NOT_PLAYING} joinCode="ROOM1" activeEntry={ENTRY} />);
     await waitFor(() => expect(screen.getByText("No match found. Paste a link instead.")).toBeTruthy());
 
-    fireEvent.click(screen.getByText("Swap"));
-    const input = screen.getByPlaceholderText("Or paste a YouTube link");
-    fireEvent.change(input, { target: { value: "dQw4w9WgXcQ" } });
-    fireEvent.click(screen.getByText("Use"));
+    fireEvent.click(screen.getByLabelText("Swap music video"));
+    const input = screen.getByPlaceholderText("Search or paste a link...");
+    fireEvent.change(input, { target: { value: "https://youtu.be/dQw4w9WgXcQ" } });
+    fireEvent.click(screen.getByText("Search"));
+    fireEvent.click(screen.getByText("Use this video"));
 
     expect(screen.getByText("Pasted video")).toBeTruthy();
   });
@@ -247,10 +283,11 @@ describe("MusicVideoCard", () => {
     render(<MusicVideoCard playback={NOT_PLAYING} joinCode="ROOM1" activeEntry={ENTRY} />);
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
 
-    fireEvent.click(screen.getByText("Swap"));
-    const input = screen.getByPlaceholderText("Or paste a YouTube link");
-    fireEvent.change(input, { target: { value: "dQw4w9WgXcQ" } });
-    fireEvent.click(screen.getByText("Use"));
+    fireEvent.click(screen.getByLabelText("Swap music video"));
+    const input = screen.getByPlaceholderText("Search or paste a link...");
+    fireEvent.change(input, { target: { value: "https://youtu.be/dQw4w9WgXcQ" } });
+    fireEvent.click(screen.getByText("Search"));
+    fireEvent.click(screen.getByText("Use this video"));
     expect(screen.getByText("Pasted video")).toBeTruthy();
 
     await act(async () => {
@@ -355,8 +392,9 @@ describe("MusicVideoCard", () => {
     await waitFor(() => expect(sliderValue()).toBe("2"));
     broadcastOriginalOffsetMock.mockClear();
 
-    fireEvent.click(screen.getByText("Swap"));
+    fireEvent.click(screen.getByLabelText("Swap music video"));
     fireEvent.click(screen.getByText("Wrong Video"));
+    fireEvent.click(screen.getByText("Use this video"));
     expect(broadcastOriginalOffsetMock).toHaveBeenLastCalledWith("ROOM1", { entryId: "e1", offsetSeconds: 0 });
 
     await waitFor(() => expect(sliderValue()).toBe("2"));
@@ -508,8 +546,9 @@ describe("MusicVideoCard", () => {
     render(<MusicVideoCard playback={NOT_PLAYING} joinCode="ROOM1" activeEntry={{ ...ENTRY, originalOffsetSeconds: 2 }} />);
     await waitFor(() => expect(sliderValue()).toBe("2"));
 
-    fireEvent.click(screen.getByText("Swap"));
+    fireEvent.click(screen.getByLabelText("Swap music video"));
     fireEvent.click(screen.getByText("Wrong Video"));
+    fireEvent.click(screen.getByText("Use this video"));
 
     expect(sliderValue()).toBe("0");
     expect(screen.queryByText("Reset timing")).toBeNull();
@@ -553,7 +592,7 @@ describe("MusicVideoCard", () => {
     vi.useRealTimers();
   });
 
-  it("opens a live preview of the music video only once the bar is touched", async () => {
+  it("previews the music video with a still, never a second player", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async () =>
@@ -571,7 +610,7 @@ describe("MusicVideoCard", () => {
     expect(container.querySelector('[class*="preview"] img[src*="/vi/v1/"]')).toBeTruthy();
 
     fireEvent.pointerDown(screen.getByLabelText("Timing"));
-    expect(container.querySelector('iframe[src*="youtube.com/embed/v1"]')).toBeTruthy();
+    expect(container.querySelector("iframe")).toBeNull();
   });
 
   it("Swap has a search box: results can be picked and keep their title", async () => {
@@ -601,14 +640,15 @@ describe("MusicVideoCard", () => {
     render(<MusicVideoCard playback={NOT_PLAYING} joinCode="ROOM1" activeEntry={ENTRY} />);
     await waitFor(() => expect(screen.getByText("Right Video")).toBeTruthy());
 
-    fireEvent.click(screen.getByText("Swap"));
-    fireEvent.change(screen.getByLabelText("Search YouTube for any video"), {
+    fireEvent.click(screen.getByLabelText("Swap music video"));
+    fireEvent.change(screen.getByPlaceholderText("Search or paste a link..."), {
       target: { value: "bad romance live" },
     });
     fireEvent.click(screen.getByText("Search"));
     await waitFor(() => expect(screen.getByText("Bad Romance (Live)")).toBeTruthy());
 
     fireEvent.click(screen.getByText("Bad Romance (Live)"));
+    fireEvent.click(screen.getByText("Use this video"));
     await waitFor(() => expect(posts).toEqual([{ entryId: "e1", videoId: "live1234567", source: "search" }]));
     expect(screen.getByText("Bad Romance (Live)")).toBeTruthy();
   });

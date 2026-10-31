@@ -85,7 +85,7 @@ describe("useVideoSync", () => {
     expect(seeks(postMessage)).toHaveLength(0);
   });
 
-  it("latches ended only once the target has caught up to the known duration and the player reports state 0", () => {
+  it("latches ended once the target passes the known duration, without waiting on the player", () => {
     vi.useFakeTimers();
     const { ref } = makeVideoRef();
     // Karaoke started 305s ago: the sync target is already past a 300s original.
@@ -107,7 +107,7 @@ describe("useVideoSync", () => {
     expect(result.current.ended).toBe(false);
 
     act(() => {
-      result.current.onInfo(300, 0, 300);
+      result.current.onInfo(299, 1, 300);
     });
     act(() => {
       vi.advanceTimersByTime(1000);
@@ -115,7 +115,71 @@ describe("useVideoSync", () => {
     expect(result.current.ended).toBe(true);
   });
 
-  it("does not latch ended on state 0 if the target hasn't reached the duration yet", () => {
+  it("neither seeks nor plays a player that has run past its end", () => {
+    vi.useFakeTimers();
+    const { ref, postMessage } = makeVideoRef();
+    const playStartedAt = new Date(Date.now() - 305_000).toISOString();
+
+    const { result } = renderHook(() =>
+      useVideoSync({
+        roomId: "ROOM1",
+        entryId: "e1",
+        videoRef: ref,
+        isPlaying: true,
+        displayPaused: false,
+        playStartedAt,
+        playPausedAt: null,
+        offsetS: 0,
+      })
+    );
+    act(() => {
+      result.current.onInfo(300, 0, 300);
+    });
+    act(() => {
+      vi.advanceTimersByTime(1000);
+    });
+    expect(result.current.ended).toBe(true);
+    postMessage.mockClear();
+
+    act(() => {
+      vi.advanceTimersByTime(SEEK_COOLDOWN_MS * 3);
+    });
+    expect(commands(postMessage)).toHaveLength(0);
+  });
+
+  it("un-ends and resumes syncing when the host scrubs the target back before the end", () => {
+    vi.useFakeTimers();
+    const { ref, postMessage } = makeVideoRef();
+    const playStartedAt = new Date(Date.now() - 305_000).toISOString();
+    const props = {
+      roomId: "ROOM1",
+      entryId: "e1",
+      videoRef: ref,
+      isPlaying: true,
+      displayPaused: false,
+      playStartedAt,
+      playPausedAt: null,
+      offsetS: 0,
+    };
+    const { result, rerender } = renderHook((p) => useVideoSync(p), { initialProps: props });
+    act(() => {
+      result.current.onInfo(300, 0, 300);
+    });
+    act(() => {
+      vi.advanceTimersByTime(1000);
+    });
+    expect(result.current.ended).toBe(true);
+    postMessage.mockClear();
+
+    rerender({ ...props, offsetS: -60 });
+    act(() => {
+      vi.advanceTimersByTime(SEEK_COOLDOWN_MS + 1000);
+    });
+    expect(result.current.ended).toBe(false);
+    expect(seeks(postMessage).length).toBeGreaterThan(0);
+  });
+
+  it("does not latch ended while the target is short of the duration, even on state 0", () => {
     vi.useFakeTimers();
     const { ref } = makeVideoRef();
     const playStartedAt = new Date(Date.now() - 10_000).toISOString();

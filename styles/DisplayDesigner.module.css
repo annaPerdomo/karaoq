@@ -133,6 +133,17 @@
   left: var(--sb-w, 280px);
 }
 
+/* Mirrors the display's stacked layout (Display.module.css, 900px). */
+@media (max-width: 900px) {
+  html:not([data-tv]) .nowSlot,
+  html:not([data-tv]) .edLeft .nowSlot {
+    left: 0;
+    right: 0;
+    top: max(0px, calc(50vh - var(--now-h, 132px)));
+    bottom: auto;
+  }
+}
+
 .chrome {
   position: absolute;
   top: calc(6px * var(--tv-scale, 1));
@@ -435,9 +446,9 @@
 .rail {
   position: fixed;
   top: calc(64px * var(--tv-scale, 1));
-  /* The 214px cap keeps the rail clear of the save bar and the real now-playing bar. */
-  max-height: calc(100vh - calc(214px * var(--tv-scale, 1)));
-  max-height: calc(100dvh - calc(214px * var(--tv-scale, 1)));
+  /* --rail-clear: the surface's bottom bar. 150px fits the display's; the host sets its own. */
+  max-height: calc(100vh - calc(64px * var(--tv-scale, 1)) - var(--rail-clear, calc(150px * var(--tv-scale, 1))));
+  max-height: calc(100dvh - calc(64px * var(--tv-scale, 1)) - var(--rail-clear, calc(150px * var(--tv-scale, 1))));
   width: calc(280px * var(--tv-scale, 1));
   z-index: 50;
   overflow-y: auto;

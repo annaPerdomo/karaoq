@@ -5,7 +5,9 @@ import { QueueEntry } from "../../pages/api/types";
 import { OriginalVideoCandidate } from "../../lib/originalVideo";
 import { broadcastOriginalOffset } from "../../app/queue/roomChannel";
 import { MusicVideoScrubber, SongPlayback } from "./MusicVideoScrubber";
-import { MusicVideoSwapPanel, SwapSource } from "./MusicVideoSwapPanel";
+import { MusicVideoSwapSheet, SwapSource } from "./MusicVideoSwapSheet";
+import { formatSongTitle } from "./utils";
+import { SwapButton } from "./SwapButton";
 
 const CARD_WINDOW_MS = 12 * 60 * 1000;
 const PENDING_RETRY_MS = 4000;
@@ -34,8 +36,8 @@ interface OriginalVideoGetResponse {
   candidates: OriginalVideoCandidate[];
 }
 
-const EMPTY_RESPONSE: OriginalVideoGetResponse = {
-  status: "none",
+const PENDING_RESPONSE: OriginalVideoGetResponse = {
+  status: "pending",
   videoIds: [],
   picked: null,
   candidates: [],
@@ -80,9 +82,10 @@ export function MusicVideoCard({
     lastSavedOffsetRef.current = next;
     setTimingFailed(false);
     if (offsetDebounceRef.current) clearTimeout(offsetDebounceRef.current);
-    // entryId only, on purpose: every poll yields a new but equal activeEntry object.
+    // Ids only, on purpose: every poll yields a new but equal activeEntry object.
+    // A karaoke swap keeps the entry but drops its nudge, hence the videoId.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [entryId]);
+  }, [entryId, activeEntry.videoId]);
 
   React.useEffect(() => setPickedMeta(null), [entryId]);
 
@@ -96,8 +99,10 @@ export function MusicVideoCard({
       `/api/queue/${joinCode}/original-video?entryId=${encodeURIComponent(entryId)}&from=host`,
       { cache: "no-store" }
     )
-      .then((r) => (r.ok ? (r.json() as Promise<OriginalVideoGetResponse>) : EMPTY_RESPONSE))
-      .catch(() => EMPTY_RESPONSE)
+      // Non-200 is transient, never "no match": right after an advance the server
+      // 404s until it catches up, and a screen may still be mid-search.
+      .then((r) => (r.ok ? (r.json() as Promise<OriginalVideoGetResponse>) : PENDING_RESPONSE))
+      .catch(() => PENDING_RESPONSE)
       .then((body) => {
         if (cancelled || pickVersionRef.current !== startVersion) return;
         setStatus(body.status);
@@ -204,6 +209,8 @@ export function MusicVideoCard({
     applyOffset(Math.max(OFFSET_MIN, Math.min(OFFSET_MAX, next)));
   }
 
+  const closeSheet = React.useCallback(() => setExpanded(false), []);
+
   const displayedId = picked ?? candidates[0]?.videoId ?? null;
   const displayedMeta =
     candidates.find((c) => c.videoId === displayedId) ??
@@ -216,9 +223,7 @@ export function MusicVideoCard({
     <div className={styles.card}>
       <div className={styles.header}>
         <span className={styles.label}>{t("musicVideo.card.title")}</span>
-        <button className={styles.swapBtn} onClick={() => setExpanded((v) => !v)}>
-          {t("musicVideo.card.swap")}
-        </button>
+        <SwapButton label={t("musicVideo.swap")} onClick={() => setExpanded(true)} />
       </div>
 
       {loading || status === "pending" ? (
@@ -247,11 +252,16 @@ export function MusicVideoCard({
       {timingFailed && <div className={styles.badLink}>{t("musicVideo.card.timingFailed")}</div>}
 
       {expanded && (
-        <MusicVideoSwapPanel
+        <MusicVideoSwapSheet
           joinCode={joinCode}
+          subtitle={`${activeEntry.userName} · ${formatSongTitle(activeEntry.songTitle)}`}
+          loading={loading || status === "pending"}
+          status={status === "pending" ? "ok" : status}
           candidates={candidates}
           currentId={displayedId}
           onPick={pick}
+          previewMuted={playback.isPlaying}
+          onClose={closeSheet}
         />
       )}
     </div>

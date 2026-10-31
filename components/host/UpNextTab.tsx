@@ -34,6 +34,7 @@ export function UpNextTab({
   onMoveTop,
   onToggleEdit,
   onEditSave,
+  onSwapVideo,
   onRequestRemove,
 }: {
   upNext: QueueEntry[];
@@ -48,6 +49,7 @@ export function UpNextTab({
   onMoveTop: (id: string) => void;
   onToggleEdit: (id: string) => void;
   onEditSave: (id: string, name: string) => void;
+  onSwapVideo?: (id: string) => void;
   onRequestRemove: (id: string) => void;
 }) {
   const { t, tn } = useT();
@@ -115,6 +117,7 @@ export function UpNextTab({
                     onEdit={() => onToggleEdit(item.id)}
                     onEditSave={(name) => onEditSave(item.id, name)}
                     onRemove={() => onRequestRemove(item.id)}
+                    onSwapVideo={onSwapVideo && (() => onSwapVideo(item.id))}
                   />
                 );
               })}

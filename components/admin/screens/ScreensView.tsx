@@ -5,6 +5,7 @@ import { SCREENS_WINDOWS, type ScreensStats, type ScreensWindow } from './types'
 import { hasActivity } from './labels';
 import MusicVideoSection from './MusicVideoSection';
 import BrandSection from './BrandSection';
+import KaraokeSwapSection from './KaraokeSwapSection';
 import FeatureFeedback from './FeatureFeedback';
 
 export default function ScreensView({
@@ -56,8 +57,8 @@ export default function ScreensView({
         <div>
           <h1 className={styles.viewTitle}>Screens</h1>
           <p className={styles.viewSub}>
-            The music-video screen and club branding: who uses them, whether
-            they work, and what people say. Days are UTC.
+            The music-video screen, karaoke video swaps and club branding: who
+            uses them, whether they work, and what people say. Days are UTC.
           </p>
         </div>
       </header>
@@ -90,13 +91,14 @@ export default function ScreensView({
 
       {stats && !loading && !hasActivity(stats) && (
         <p className={styles.empty}>
-          No music-video screen or branding activity in the last {stats.days} days.
+          No music-video screen, swap or branding activity in the last {stats.days} days.
         </p>
       )}
 
       {stats && !loading && hasActivity(stats) && (
         <>
           <MusicVideoSection stats={stats.musicVideo} days={stats.days} />
+          <KaraokeSwapSection stats={stats.karaokeSwap} days={stats.days} />
           <BrandSection stats={stats.brand} days={stats.days} />
           <FeatureFeedback entries={stats.feedback} />
         </>

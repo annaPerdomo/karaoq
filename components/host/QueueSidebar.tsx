@@ -48,6 +48,7 @@ export function QueueSidebar({
   currentSong,
   musicVideoAt,
   songClock,
+  onSwapVideo,
   cheersOpen,
   onToggleCheers,
   onSendReaction,
@@ -105,6 +106,8 @@ export function QueueSidebar({
   /** Room.musicVideoAt, as an ISO string — gates the music-video swap card. */
   musicVideoAt: string | null;
   songClock: Pick<RoomTiming, "playStartedAt" | "playPausedAt">;
+  /** Absent for co-hosts. */
+  onSwapVideo?: (entryId: string) => void;
   cheersOpen: boolean;
   onToggleCheers: () => void;
   onSendReaction: (emoji: string) => void;
@@ -191,6 +194,7 @@ export function QueueSidebar({
           onMoveTop={onMoveTop}
           onToggleEdit={onToggleEdit}
           onEditSave={onEditSave}
+          onSwapVideo={onSwapVideo}
           onRequestRemove={onRequestRemove}
         />
       )}

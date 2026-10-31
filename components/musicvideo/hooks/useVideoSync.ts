@@ -44,7 +44,6 @@ export function useVideoSync({
   offsetS: number;
 }): {
   ended: boolean;
-  paused: boolean;
   onInfo: (currentTime: number | null, state: number | undefined, duration: number | null) => void;
 } {
   const currentTimeRef = React.useRef<number | null>(null);
@@ -55,8 +54,11 @@ export function useVideoSync({
   const lastCommandRef = React.useRef<PlayCommand | null>(null);
   const lastDesiredRef = React.useRef<boolean | null>(null);
   const settleUntilRef = React.useRef(0);
+  const endedRef = React.useRef(false);
   const [ended, setEnded] = React.useState(false);
-  const [paused, setPaused] = React.useState(false);
+  React.useEffect(() => {
+    endedRef.current = ended;
+  }, [ended]);
 
   // A new song, or a play/pause toggle, invalidates whatever the last song's
   // tail looked like.
@@ -86,14 +88,21 @@ export function useVideoSync({
       const server = serverPlayhead({ isPlaying, playStartedAt, playPausedAt }, now);
       const target = targetSeconds(server, playheadRef.current, activeEntryId, now, offsetS);
 
-      if (originalEnded(target, durationRef.current, stateRef.current)) {
-        setEnded(true);
-      } else if (target !== null && durationRef.current !== null && target < durationRef.current) {
-        setEnded(false);
+      const over = originalEnded(target, durationRef.current);
+      if (over !== null && over !== endedRef.current) {
+        setEnded(over);
+        endedRef.current = over;
+        // The screen swaps the player for the poster and back; a fresh iframe
+        // starts from zero, so its last-known position and state are void.
+        currentTimeRef.current = null;
+        stateRef.current = undefined;
+        lastCommandRef.current = null;
       }
+      // Seeking a player past its end makes YouTube restart from zero, and
+      // playVideo does the same, so an ended original gets no commands.
+      if (endedRef.current) return;
 
       const playing = desiredPlaying(isPlaying && !displayPaused, playheadRef.current, activeEntryId, now);
-      setPaused(!playing);
       if (canSeek(stateRef.current, seekCooldownUntilRef.current, Date.now())) {
         const action = syncAction(currentTimeRef.current, target, playing);
         if (action.seekTo !== undefined) {
@@ -127,5 +136,5 @@ export function useVideoSync({
     []
   );
 
-  return { ended, paused, onInfo };
+  return { ended, onInfo };
 }

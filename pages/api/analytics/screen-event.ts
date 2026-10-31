@@ -79,6 +79,13 @@ EXTRACTORS.music_video_link = (data) => {
   return { action: d.action };
 };
 
+EXTRACTORS.karaoke_swap_opened = (data) => {
+  if (!data || typeof data !== "object") return null;
+  const d = data as Record<string, unknown>;
+  if (!hasOnlyKeys(d, ["live"]) || typeof d.live !== "boolean") return null;
+  return { live: d.live };
+};
+
 EXTRACTORS.logo_upload_rejected = (data) => {
   if (!data || typeof data !== "object") return null;
   const d = data as Record<string, unknown>;

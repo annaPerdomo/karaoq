@@ -1,4 +1,6 @@
 .main {
+  /* Customize rail clearance: transport bar + footer row + gap. */
+  --rail-clear: calc(var(--host-now-h, 64px) + 40px);
   height: 100dvh;
   height: 100vh; /* fallback for older browsers */
   display: flex;
@@ -59,7 +61,7 @@
   font-weight: 400;
   font-size: 1.4rem;
   letter-spacing: 2px;
-  background: linear-gradient(135deg, var(--mark-a, #ff2d78), var(--mark-b, #00f0ff));
+  background: linear-gradient(135deg, #ff2d78, #00f0ff);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -385,7 +387,7 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  text-shadow: 0 0 12px rgba(191, 90, 242, 0.5);
+  text-shadow: 0 0 12px rgba(var(--acc-a-rgb, 255, 45, 120), 0.5);
 }
 
 .liveIndicator {
@@ -418,6 +420,10 @@
   font-size: clamp(2.5rem, 6vw, 4.5rem);
   font-weight: 700;
   color: var(--acc-b, #00f0ff);
+  background: linear-gradient(135deg, var(--acc-a, #ff2d78), var(--acc-b, #00f0ff));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
   text-align: center;
   letter-spacing: -0.02em;
   line-height: 1.2;
@@ -1433,6 +1439,13 @@
   font-size: calc(1.1rem * var(--host-now-scale, 1));
   font-weight: 700;
   color: var(--acc-b, #00f0ff);
+  /* Shrink to the name so the gradient spans it, not the whole bar. */
+  align-self: flex-start;
+  max-width: 100%;
+  background: linear-gradient(135deg, var(--acc-a, #ff2d78), var(--acc-b, #00f0ff));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1444,6 +1457,25 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.tSongRow {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+/* Overhang: a full 28px row pushes the label against the 64px bar's top edge. */
+.tSongRow > button {
+  margin-block: -6px;
+}
+
+/* Under 480px .tSong hides and the button is the row; overhanging would clip it. */
+@media (max-width: 480px) {
+  .tSongRow > button {
+    margin-block: 0;
+  }
 }
 
 .transportControls {
@@ -3243,9 +3275,6 @@ html[data-tv] .transportHeart {
 
 /* Theme presets; classic = the base vars, no class. */
 .main {
-  /* The KaraoQ wordmark: per theme, never overridden by a room's brand. */
-  --mark-a: #ff2d78;
-  --mark-b: #00f0ff;
   --acc-a: #ff2d78;
   --acc-a-rgb: 255, 45, 120;
   --acc-b: #00f0ff;
@@ -3257,8 +3286,6 @@ html[data-tv] .transportHeart {
 }
 
 .themeMinimal {
-  --mark-a: #aab0c0;
-  --mark-b: #d7dae2;
   --acc-a: #aab0c0;
   --acc-a-rgb: 170, 176, 192;
   --acc-b: #d7dae2;

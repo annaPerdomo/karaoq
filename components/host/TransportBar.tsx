@@ -10,6 +10,7 @@ import { Icons } from "./icons";
 import { formatSongTitle } from "./utils";
 import { formatGap, formatSecondsLeft } from "../../lib/duration";
 import { PlaybackModeSheet } from "./PlaybackModeSheet";
+import { TransportStatus } from "./TransportStatus";
 
 // Transport bar. For hosts the control cluster branches by where the video
 // plays: TV display (pause/stop), here (pause-toggle/stop), or idle/takeover
@@ -34,10 +35,13 @@ export function TransportBar({
   cohostCanPlay = false,
   autoAdvance,
   onChangeAutoAdvance,
+  songLimit = null,
+  onChangeSongLimit,
   modeOpen = false,
   onModeOpenChange,
   autoStartIn = null,
   onCancelAutoStart,
+  onSwapVideo,
   onPrevious,
   onToggleDisplayPause,
   onStop,
@@ -64,11 +68,15 @@ export function TransportBar({
   cohostCanPlay?: boolean;
   autoAdvance?: AutoAdvance;
   onChangeAutoAdvance?: (patch: Partial<AutoAdvance>) => void;
+  songLimit?: number | null;
+  onChangeSongLimit?: (seconds: number | null) => void;
   modeOpen?: boolean;
   onModeOpenChange?: (open: boolean) => void;
   /** Seconds until the waiting song starts on its own; null = no countdown. */
   autoStartIn?: number | null;
   onCancelAutoStart?: () => void;
+  /** Absent for co-hosts. */
+  onSwapVideo?: () => void;
   onPrevious: () => void;
   onToggleDisplayPause: () => void;
   onStop: () => void;
@@ -107,46 +115,13 @@ export function TransportBar({
       className={`${styles.transport} ${hideOnPhone ? styles.transportEmptyMobile : ""}`}
     >
       <div className={styles.transportMain}>
-        <div className={styles.transportInfo}>
-          {currentSong ? (
-            <div className={styles.transportStatus}>
-              <div
-                className={`${styles.tLabel} ${isPlaying ? styles.tLabelPlaying : styles.tLabelReady}`}
-              >
-                {(isPlaying || autoStartIn !== null) && <span className={styles.tDot} />}
-                {isPlaying ? (
-                  t('host.status.onStage')
-                ) : autoStartIn !== null ? (
-                  <>
-                    <span className={styles.tAutoCount}>
-                      {t('host.status.autoIn', { n: formatSecondsLeft(autoStartIn) })}
-                    </span>
-                    {onCancelAutoStart && (
-                      <button className={styles.tAutoCancel} onClick={onCancelAutoStart}>
-                        {t('host.transport.cancelAuto')}
-                      </button>
-                    )}
-                  </>
-                ) : (
-                  t('host.status.upNext')
-                )}
-              </div>
-              <div className={styles.tSinger}>
-                {currentSong.userName}
-              </div>
-              <div className={styles.tSong}>
-                {formatSongTitle(currentSong.songTitle)}
-              </div>
-            </div>
-          ) : (
-            <div className={styles.transportStatus}>
-              <div className={`${styles.tLabel} ${styles.tLabelEmpty}`}>
-                {t('host.status.waiting')}
-              </div>
-              <div className={styles.tSong}>{t('host.status.noSongs')}</div>
-            </div>
-          )}
-        </div>
+        <TransportStatus
+          currentSong={currentSong}
+          isPlaying={isPlaying}
+          autoStartIn={autoStartIn}
+          onCancelAutoStart={onCancelAutoStart}
+          onSwapVideo={onSwapVideo}
+        />
         <div className={styles.transportControls}>
           <button
             className={styles.tBtn}
@@ -270,6 +245,8 @@ export function TransportBar({
           onClose={closeMode}
           autoAdvance={autoAdvance}
           onChangeAutoAdvance={onChangeAutoAdvance}
+          songLimit={songLimit}
+          onChangeSongLimit={onChangeSongLimit}
         />
       )}
       <div className={styles.transportFooter}>

@@ -6,6 +6,7 @@ import {
   getAnalyticsDb,
   getFeedbackCollection,
   getRoomLogosCollection,
+  getYoutubeSongDataCollection,
 } from "../../../lib/mongodb";
 import { logoStoreBytes } from "../../../lib/roomLogos";
 import {
@@ -13,10 +14,13 @@ import {
   type BrandRow,
   featureRooms,
   type FeedbackRow,
+  KARAOKE_SWAP_EVENTS,
+  type KaraokeSwapRow,
   MUSIC_VIDEO_EVENTS,
   type MusicVideoRow,
   pickFeatureFeedback,
   summarizeBrand,
+  summarizeKaraokeSwap,
   summarizeMusicVideo,
   windowDays,
   windowStart,
@@ -74,7 +78,7 @@ export default async function handler(
   try {
     const now = Date.now();
     const since = windowStart(days, now);
-    const [musicRows, brandRows, storageBytes, committedLogos, feedbackRows] =
+    const [musicRows, brandRows, swapRows, storageBytes, committedLogos, feedbackRows] =
       await Promise.all([
         eventRows<MusicVideoRow>(MUSIC_VIDEO_EVENTS, since, [
           "timestamp",
@@ -88,6 +92,13 @@ export default async function handler(
           "action",
         ]),
         eventRows<BrandRow>(BRAND_EVENTS, since, ["logo", "colors", "cleared", "surface", "reason"]),
+        eventRows<KaraokeSwapRow>(KARAOKE_SWAP_EVENTS, since, [
+          "timestamp",
+          "source",
+          "live",
+          "swapAtSeconds",
+          "songDataId",
+        ]),
         logoStoreBytes(),
         getRoomLogosCollection().then((c) =>
           c.countDocuments({ expireAt: { $exists: false } })
@@ -104,10 +115,20 @@ export default async function handler(
         ),
       ]);
 
+    const dataIds = swapRows.map((r) => r.songDataId).filter((id): id is string => !!id);
+    const titleByDataId = new Map<string, string>();
+    if (dataIds.length > 0) {
+      const docs = await (await getYoutubeSongDataCollection())
+        .find({ dataId: { $in: dataIds } }, { projection: { _id: 0, dataId: 1, songTitle: 1 } })
+        .toArray();
+      for (const d of docs) if (d.songTitle) titleByDataId.set(d.dataId, d.songTitle);
+    }
+
     const rooms = featureRooms((musicRows as { roomId?: string }[]).concat(brandRows));
     const data: ScreensStats = {
       days,
       musicVideo: summarizeMusicVideo(musicRows, windowDays(days, now)),
+      karaokeSwap: summarizeKaraokeSwap(swapRows, titleByDataId, windowDays(days, now)),
       brand: summarizeBrand(brandRows, {
         storageBytes,
         storageBudgetBytes: LOGO_STORE_BUDGET_BYTES,

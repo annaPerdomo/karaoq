@@ -11,9 +11,13 @@ export function playerCurrentTime(data: unknown): number | null {
 /** The video's total length, off the same `infoDelivery` message. */
 export function playerDuration(data: unknown): number | null {
   if (!data || typeof data !== "object") return null;
-  const d = data as { event?: unknown; info?: { duration?: unknown } };
+  const d = data as {
+    event?: unknown;
+    info?: { duration?: unknown; progressState?: { duration?: unknown } };
+  };
   if (d.event !== "infoDelivery") return null;
-  const dur = d.info?.duration;
+  // Only the first burst carries a top-level duration; later deliveries keep it in progressState.
+  const dur = d.info?.duration ?? d.info?.progressState?.duration;
   return typeof dur === "number" && Number.isFinite(dur) && dur > 0 ? dur : null;
 }
 

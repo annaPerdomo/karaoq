@@ -1,7 +1,4 @@
 .main {
-  /* The KaraoQ wordmark: per theme, never overridden by a room's brand. */
-  --mark-a: #ff2d78;
-  --mark-b: #00f0ff;
   --acc-a: #ff2d78;
   --acc-a-rgb: 255, 45, 120;
   --acc-b: #00f0ff;
@@ -27,8 +24,6 @@
 
 /* Theme presets; classic = the base vars, no class. */
 .themeMinimal {
-  --mark-a: #aab0c0;
-  --mark-b: #d7dae2;
   --acc-a: #aab0c0;
   --acc-a-rgb: 170, 176, 192;
   --acc-b: #d7dae2;
@@ -45,12 +40,6 @@
 .themeMinimal .nowGlow {
   background: var(--acc-a);
   animation: none;
-}
-
-.themeMinimal .waitingTitle {
-  background: none;
-  -webkit-text-fill-color: var(--text-primary);
-  color: var(--text-primary);
 }
 
 .themeMinimal .readyTag {
@@ -83,9 +72,13 @@
   text-shadow: 0 0 16px rgba(255, 45, 120, 0.55), 0 0 32px rgba(0, 240, 255, 0.35);
 }
 
-.themeNeon .readySinger,
 .themeNeon .nowSinger {
   text-shadow: 0 0 20px rgba(var(--acc-b-rgb, 0, 240, 255), 0.6);
+}
+
+/* drop-shadow: a text-shadow would show through the gradient's transparent fill. */
+.themeNeon .readySinger {
+  filter: drop-shadow(0 0 20px rgba(var(--acc-b-rgb, 0, 240, 255), 0.6));
 }
 
 .themeNeon .upNextTitle {
@@ -175,7 +168,7 @@
   font-weight: 400;
   font-size: 1.4rem;
   letter-spacing: calc(2px * var(--tv-scale, 1));
-  background: linear-gradient(135deg, var(--mark-a, #ff2d78), var(--mark-b, #00f0ff));
+  background: linear-gradient(135deg, #ff2d78, #00f0ff);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -423,7 +416,7 @@
   font-family: var(--font-brand);
   font-weight: 400;
   font-size: 3rem;
-  background: linear-gradient(135deg, var(--acc-a), var(--acc-b));
+  background: linear-gradient(135deg, #ff2d78, #00f0ff);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -472,6 +465,10 @@
   font-size: clamp(2.5rem, 6vw, 4.5rem);
   font-weight: 700;
   color: var(--acc-b);
+  background: linear-gradient(135deg, var(--acc-a), var(--acc-b));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
   text-align: center;
   letter-spacing: -0.02em;
   line-height: 1.2;
@@ -908,6 +905,11 @@
     margin-left: 0;
   }
 
+  /* Exactly 50vh: the fixed nowBar and fullscreen button below are placed by it. */
+  html:not([data-tv]) .videoArea:not(.videoAreaNoSidebar) {
+    flex: none;
+  }
+
   html:not([data-tv]) .sidebar,
   html:not([data-tv]) .sidebarLeft .sidebar {
     width: 100%;
@@ -919,10 +921,18 @@
     max-height: 50vh;
   }
 
+  /* Bottom of the video half, not the viewport: the stacked sidebar sits there. */
   html:not([data-tv]) .nowBar,
   html:not([data-tv]) .sidebarLeft .nowBar {
     right: 0;
     left: 0;
+    top: max(0px, calc(50vh - var(--now-h, 132px)));
+    bottom: auto;
+  }
+
+  html:not([data-tv]) .main:has(.videoAreaNoSidebar) .nowBar {
+    top: auto;
+    bottom: 0;
   }
 
   html:not([data-tv]) .sidebarLeft .header,
@@ -957,8 +967,14 @@
 
   html:not([data-tv]) .videoFullscreen {
     right: 12px;
-    bottom: 4rem;
+    top: calc(50vh - 52px);
+    bottom: auto;
     z-index: 21;
+  }
+
+  html:not([data-tv]) .main:has(.videoAreaNoSidebar) .videoFullscreen {
+    top: auto;
+    bottom: 4rem;
   }
 
   html:not([data-tv]) .reactionOverlay {

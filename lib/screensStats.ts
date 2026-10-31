@@ -5,6 +5,7 @@
 
 import type {
   BrandSurface,
+  KaraokeSwapSource,
   LogoRejectReason,
   ResolveSource,
   ScreensFeedbackEntry,
@@ -23,6 +24,19 @@ export const MUSIC_VIDEO_EVENTS = [
   "music_video_offset",
   "music_video_link",
 ] as const;
+
+export const KARAOKE_SWAP_EVENTS = ["karaoke_video_swapped", "karaoke_swap_opened"] as const;
+export const SWAPPED_AWAY_MAX = 10;
+
+export interface KaraokeSwapRow {
+  type: string;
+  roomId?: string;
+  timestamp: Date | string;
+  source?: string;
+  live?: boolean;
+  swapAtSeconds?: number;
+  songDataId?: string;
+}
 
 export const BRAND_EVENTS = ["brand_saved", "logo_uploaded", "logo_upload_rejected"] as const;
 
@@ -176,6 +190,60 @@ export function summarizeMusicVideo(
     medianAbsOffset: median(absOffsets),
     links,
     daily: days.map((day) => ({ day, rooms: roomsByDay.get(day)!.size })),
+  };
+}
+
+export function summarizeKaraokeSwap(
+  rows: KaraokeSwapRow[],
+  titleByDataId: Map<string, string>,
+  days: string[]
+): ScreensStats["karaokeSwap"] {
+  const sources: Record<KaraokeSwapSource, number> = { candidate: 0, search: 0, link: 0 };
+  const rooms = new Set<string>();
+  const perDay = new Map<string, number>(days.map((d) => [d, 0]));
+  const swapAt: number[] = [];
+  const away = new Map<string, { title: string; swaps: number }>();
+  let opens = 0;
+  let swaps = 0;
+  let live = 0;
+
+  for (const row of rows) {
+    if (row.type === "karaoke_swap_opened") {
+      opens += 1;
+      continue;
+    }
+    if (row.type !== "karaoke_video_swapped") continue;
+    swaps += 1;
+    if (row.roomId) rooms.add(row.roomId);
+    const day = utcDay(row.timestamp);
+    if (perDay.has(day)) perDay.set(day, perDay.get(day)! + 1);
+    if (row.source && Object.prototype.hasOwnProperty.call(sources, row.source)) {
+      sources[row.source as KaraokeSwapSource] += 1;
+    }
+    if (row.live) {
+      live += 1;
+      if (isNum(row.swapAtSeconds)) swapAt.push(row.swapAtSeconds);
+    }
+    const title = row.songDataId ? titleByDataId.get(row.songDataId) : undefined;
+    if (title) {
+      const key = title.trim().toLowerCase();
+      const entry = away.get(key) ?? { title, swaps: 0 };
+      entry.swaps += 1;
+      away.set(key, entry);
+    }
+  }
+
+  return {
+    opens,
+    swaps,
+    rooms: rooms.size,
+    live,
+    medianSwapAtSeconds: median(swapAt),
+    sources,
+    swappedAway: Array.from(away.values())
+      .sort((a, b) => b.swaps - a.swaps || a.title.localeCompare(b.title))
+      .slice(0, SWAPPED_AWAY_MAX),
+    daily: days.map((day) => ({ day, swaps: perDay.get(day)! })),
   };
 }
 
