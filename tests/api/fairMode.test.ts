@@ -86,6 +86,32 @@ describe("POST /api/queue/[id]/fair-mode - Toggle fair rotation", () => {
     );
   });
 
+  it("preserves a host-chosen originalVideoId through a re-sort", async () => {
+    const [cur, a1, a2, b1] = [
+      entry("cur", "X", 1), entry("a1", "A", 2), entry("a2", "A", 3), entry("b1", "B", 4),
+    ];
+    (a2 as unknown as { originalVideoId: string }).originalVideoId = "overridenvid";
+    const room: Room = {
+      id: "ROOM1",
+      queue: [cur, a1, b1, a2],
+      activeVideoIndex: 0,
+      isPlaying: true,
+      reactionsEnabled: true,
+      fairMode: false,
+    };
+    mockCollection.findOne.mockResolvedValue(room);
+    mockCollection.updateOne.mockResolvedValue({ matchedCount: 1, modifiedCount: 1 });
+
+    const req = createMockReq({ method: "POST", query: { id: "ROOM1", enabled: "true" } });
+    const res = createRes();
+    await handler(req, res);
+
+    expect(res.getStatus()).toBe(200);
+    const [, update] = mockCollection.updateOne.mock.calls[0];
+    const written = update.$set.queue.find((e: { id: string }) => e.id === "a2");
+    expect(written.originalVideoId).toBe("overridenvid");
+  });
+
   it("tracks the toggle for analytics, but only once the write lands", async () => {
     const room: Room = {
       id: "ROOM1",

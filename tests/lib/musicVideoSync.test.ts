@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
+  desiredPlaying,
+  playCommand,
   DRIFT_SEEK_S,
   PLAYHEAD_FRESH_MS,
   SEEK_COOLDOWN_MS,
@@ -127,5 +129,39 @@ describe("musicVideoSync - originalEnded", () => {
 
   it("is false if the player hasn't reported state 0, even past the duration", () => {
     expect(originalEnded(210, 200, 1)).toBe(false);
+  });
+});
+
+describe("musicVideoSync - desiredPlaying", () => {
+  const head = (playing: boolean, sentAt: number) => ({ entryId: "e1", seconds: 10, playing, sentAt });
+
+  it("follows a fresh same-entry playhead over the room flags", () => {
+    expect(desiredPlaying(true, head(false, 1000), "e1", 2000)).toBe(false);
+    expect(desiredPlaying(false, head(true, 1000), "e1", 2000)).toBe(true);
+  });
+
+  it("falls back to the room when the playhead is stale or for another entry", () => {
+    expect(desiredPlaying(true, head(false, 1000), "e1", 1000 + PLAYHEAD_FRESH_MS + 1)).toBe(true);
+    expect(desiredPlaying(true, head(false, 1000), "e2", 2000)).toBe(true);
+    expect(desiredPlaying(true, null, "e1", 2000)).toBe(true);
+  });
+});
+
+describe("musicVideoSync - playCommand", () => {
+  it("sends nothing when the player already matches", () => {
+    expect(playCommand(1, true, null)).toBeNull();
+    expect(playCommand(3, true, null)).toBeNull();
+    expect(playCommand(2, false, null)).toBeNull();
+  });
+
+  it("sends the command when the player disagrees", () => {
+    expect(playCommand(2, true, "playVideo")).toBe("playVideo");
+    expect(playCommand(1, false, null)).toBe("pauseVideo");
+  });
+
+  it("sends once while the player state is unknown", () => {
+    expect(playCommand(undefined, true, null)).toBe("playVideo");
+    expect(playCommand(undefined, true, "playVideo")).toBeNull();
+    expect(playCommand(undefined, false, "playVideo")).toBe("pauseVideo");
   });
 });

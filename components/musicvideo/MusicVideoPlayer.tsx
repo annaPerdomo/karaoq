@@ -16,6 +16,11 @@ export default function MusicVideoPlayer({
   onInfo: (currentTime: number | null, state: number | undefined, duration: number | null) => void;
   onError: (code: number) => void;
 }) {
+  const captionsOffRef = React.useRef(false);
+  React.useEffect(() => {
+    captionsOffRef.current = false;
+  }, [videoId]);
+
   React.useEffect(() => {
     function onMessage(e: MessageEvent) {
       const msg = parseYtMessage(e, videoRef.current);
@@ -31,11 +36,18 @@ export default function MusicVideoPlayer({
           : msg.event === "infoDelivery"
             ? msg.info?.playerState
             : undefined;
+      // cc_load_policy=0 can't override a viewer's own captions preference;
+      // the captions module only exists once playback starts, so unload it then.
+      if (state === 1 && !captionsOffRef.current) {
+        captionsOffRef.current = true;
+        ytCommand(videoRef.current, "unloadModule", ["captions"]);
+        ytCommand(videoRef.current, "unloadModule", ["cc"]);
+      }
       onInfo(playerCurrentTime(msg), state, playerDuration(msg));
     }
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [videoRef, onInfo, onError]);
+  }, [videoRef, onInfo, onError, videoId]);
 
   function handleLoad() {
     const iframe = videoRef.current;
@@ -47,14 +59,16 @@ export default function MusicVideoPlayer({
   }
 
   return (
-    <iframe
-      ref={videoRef}
-      key={videoId}
-      className={styles.video}
-      src={embedSrc(videoId, "mute=1&controls=0&playsinline=1&rel=0&enablejsapi=1")}
-      allow="autoplay; encrypted-media"
-      tabIndex={-1}
-      onLoad={handleLoad}
-    />
+    <div className={styles.videoFrame}>
+      <iframe
+        ref={videoRef}
+        key={videoId}
+        className={styles.video}
+        src={embedSrc(videoId, "mute=1&controls=0&cc_load_policy=0&disablekb=1&fs=0&iv_load_policy=3&modestbranding=1&playsinline=1&rel=0&enablejsapi=1")}
+        allow="autoplay; encrypted-media"
+        tabIndex={-1}
+        onLoad={handleLoad}
+      />
+    </div>
   );
 }

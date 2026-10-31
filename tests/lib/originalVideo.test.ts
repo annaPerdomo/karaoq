@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { originalVideoQuery, pickOriginalCandidates } from "../../lib/originalVideo";
+import { cleanSongTitle, originalVideoQuery, pickOriginalCandidates } from "../../lib/originalVideo";
 
 describe("originalVideoQuery", () => {
   it("drops a karaoke version suffix", () => {
@@ -120,5 +120,17 @@ describe("pickOriginalCandidates", () => {
       { title: "Цеца - Кукавица (Official Video)", thumbnailUrl: "t", videoId: "keep" },
     ];
     expect(pickOriginalCandidates(mixed)).toEqual(["keep"]);
+  });
+});
+
+describe("cleanSongTitle", () => {
+  it("drops the karaoke extras for display", () => {
+    expect(cleanSongTitle("Bad Romance - Lady Gaga (Karaoke Songs With Lyrics - Original Key)")).toBe(
+      "Bad Romance - Lady Gaga"
+    );
+  });
+
+  it("returns null when only noise is left", () => {
+    expect(cleanSongTitle("Karaoke Instrumental")).toBeNull();
   });
 });

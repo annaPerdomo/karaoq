@@ -435,6 +435,48 @@ describe("GET /api/queue/[id] - Room retrieval", () => {
     );
   });
 
+  it("a music video screen's read refreshes musicVideoAt at most once per window", async () => {
+    const base: Room = {
+      id: "XYZ99",
+      queue: [],
+      activeVideoIndex: 0,
+      isPlaying: false,
+      reactionsEnabled: true,
+    };
+    mockCollection.updateOne.mockResolvedValue({ matchedCount: 1 });
+
+    mockCollection.findOne.mockResolvedValue({ ...base, musicVideoAt: new Date(Date.now() - 6 * 60 * 1000) });
+    await handler(createMockReq({ method: "GET", query: { id: "XYZ99", musicVideo: "1" } }), createRes());
+    expect(mockCollection.updateOne).toHaveBeenCalledWith(
+      { id: "XYZ99" },
+      { $set: { musicVideoAt: expect.any(Date) } }
+    );
+
+    mockCollection.updateOne.mockClear();
+    mockCollection.findOne.mockResolvedValue({ ...base, musicVideoAt: new Date(Date.now() - 60 * 1000) });
+    await handler(createMockReq({ method: "GET", query: { id: "XYZ99", musicVideo: "1" } }), createRes());
+    expect(mockCollection.updateOne).not.toHaveBeenCalled();
+
+    mockCollection.findOne.mockResolvedValue({ ...base });
+    await handler(createMockReq({ method: "GET", query: { id: "XYZ99" } }), createRes());
+    expect(mockCollection.updateOne).not.toHaveBeenCalled();
+  });
+
+  it("never fails the read when the musicVideoAt write fails", async () => {
+    mockCollection.findOne.mockResolvedValue({
+      id: "XYZ99",
+      queue: [],
+      activeVideoIndex: 0,
+      isPlaying: false,
+      reactionsEnabled: true,
+    });
+    mockCollection.updateOne.mockRejectedValueOnce(new Error("write failed"));
+    const res = createRes();
+    await handler(createMockReq({ method: "GET", query: { id: "XYZ99", musicVideo: "1" } }), res);
+    expect(res.getStatus()).toBe(200);
+    expect((res.getBody() as Room).musicVideoAt).toBeTruthy();
+  });
+
   it("wakes a dormant room when a screen first opens it", async () => {
     const room: Room = {
       id: "XYZ99",

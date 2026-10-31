@@ -38,7 +38,7 @@ export function targetSeconds(
   offsetS: number
 ): number | null {
   let base: number | null = server;
-  if (playhead && playhead.entryId === entryId && nowMs - playhead.sentAt <= PLAYHEAD_FRESH_MS) {
+  if (playhead && freshFor(playhead, entryId, nowMs)) {
     const elapsed = playhead.playing ? (nowMs - playhead.sentAt) / 1000 : 0;
     base = playhead.seconds + elapsed;
   }
@@ -80,4 +80,34 @@ export function originalEnded(
   state: number | undefined
 ): boolean {
   return state === 0 && duration !== null && target !== null && target >= duration;
+}
+
+function freshFor(playhead: PlayheadMessage | null, entryId: string, nowMs: number): boolean {
+  return !!playhead && playhead.entryId === entryId && nowMs - playhead.sentAt <= PLAYHEAD_FRESH_MS;
+}
+
+/** A "Playing here" host pauses only on its own device — the room never hears
+ * about it — so a fresh same-browser playhead outranks the room's flags. */
+export function desiredPlaying(
+  roomPlaying: boolean,
+  playhead: PlayheadMessage | null,
+  entryId: string,
+  nowMs: number
+): boolean {
+  return freshFor(playhead, entryId, nowMs) ? playhead!.playing : roomPlaying;
+}
+
+export type PlayCommand = "playVideo" | "pauseVideo";
+
+/** YouTube animates its centre play/pause glyph on every command, so only send
+ * one when the player isn't already where we want it. */
+export function playCommand(
+  state: number | undefined,
+  playing: boolean,
+  lastSent: PlayCommand | null
+): PlayCommand | null {
+  const want: PlayCommand = playing ? "playVideo" : "pauseVideo";
+  if (state === undefined) return lastSent === want ? null : want;
+  const running = state === 1 || state === 3;
+  return running === playing ? null : want;
 }

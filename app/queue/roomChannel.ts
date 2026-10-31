@@ -93,6 +93,29 @@ export function onPlayhead(
   return () => ch.close();
 }
 
+// Host timing nudges (Host → music-video screen, same browser only).
+export interface OriginalOffsetMessage {
+  entryId: string;
+  offsetSeconds: number;
+}
+
+export function broadcastOriginalOffset(roomId: string, msg: OriginalOffsetMessage) {
+  if (typeof BroadcastChannel === "undefined") return;
+  const ch = new BroadcastChannel(`karaoq-original-offset:${roomId}`);
+  ch.postMessage(msg);
+  ch.close();
+}
+
+export function onOriginalOffset(
+  roomId: string,
+  callback: (msg: OriginalOffsetMessage) => void
+): () => void {
+  if (typeof BroadcastChannel === "undefined") return () => {};
+  const ch = new BroadcastChannel(`karaoq-original-offset:${roomId}`);
+  ch.onmessage = (e: MessageEvent<OriginalOffsetMessage>) => callback(e.data);
+  return () => ch.close();
+}
+
 // Video-ended events (Display → Host for TV mode)
 export function broadcastVideoEnded(roomId: string) {
   if (typeof BroadcastChannel === "undefined") return;

@@ -92,21 +92,51 @@ export function originalVideoQuery(
   corpus?: { artist: string; title: string } | null
 ): string | null {
   if (corpus) return `${corpus.artist} ${corpus.title} official video`;
+  const picked = cleanSongTitle(songTitle);
+  return picked === null ? null : `${picked} official video`;
+}
 
+export function cleanSongTitle(songTitle: string): string | null {
   const q = songTitle
     .replace(BRACKET_RE, (match) => (isNoiseBracket(match.slice(1, -1)) ? "" : match))
     .replace(CHANNEL_PREFIX_RE, "");
 
   const picked = q.split(SEGMENT_SPLIT_RE).map(cleanSegment).find((s) => s.length > 0) ?? "";
 
-  return picked.length < 2 ? null : `${picked} official video`;
+  return picked.length < 2 ? null : picked;
 }
 
-export function pickOriginalCandidates(results: SearchResult[], max = 3): string[] {
+export interface OriginalVideoCandidate {
+  videoId: string;
+  title: string;
+  durationSeconds?: number;
+}
+
+export function pickOriginalCandidateDetails(
+  results: SearchResult[],
+  max = 6
+): OriginalVideoCandidate[] {
   return results
     .filter((r) => !ORIGINAL_NOISE.test(r.title))
     .slice()
     .sort((a, b) => Number(/official/i.test(b.title)) - Number(/official/i.test(a.title)))
     .slice(0, max)
-    .map((r) => r.videoId);
+    .map((r) => ({
+      videoId: r.videoId,
+      title: r.title,
+      ...(r.durationSeconds ? { durationSeconds: r.durationSeconds } : {}),
+    }));
+}
+
+export function pickOriginalCandidates(results: SearchResult[], max = 3): string[] {
+  return pickOriginalCandidateDetails(results, max).map((c) => c.videoId);
+}
+
+/** A host's own search: whatever they asked for, karaoke cuts included. */
+export function searchCandidateDetails(results: SearchResult[], max = 8): OriginalVideoCandidate[] {
+  return results.slice(0, max).map((r) => ({
+    videoId: r.videoId,
+    title: r.title,
+    ...(r.durationSeconds ? { durationSeconds: r.durationSeconds } : {}),
+  }));
 }

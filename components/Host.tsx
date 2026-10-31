@@ -1,5 +1,7 @@
 import * as React from "react";
 import { useRouter } from "next/router";
+import { parseYtMessage, ytCommand } from "./player/ytCommand";
+import { usePlayheadBroadcast } from "./display/hooks/usePlayheadBroadcast";
 import { DragEndEvent } from "@dnd-kit/core";
 import { arrayMove } from "@dnd-kit/sortable";
 import styles from "../styles/Host.module.css";
@@ -39,7 +41,7 @@ import {
 import setSessionEnd from "../app/queue/setSessionEnd";
 import { formatClockTime } from "../lib/queueTime";
 import { useRoomTiming } from "./hooks/useRoomTiming";
-import { fairInsertIndex, singerKeys } from "../lib/fairQueue";
+import { fairInsertIndex } from "../lib/fairQueue";
 import postReaction from "../app/queue/postReaction";
 import { REACTION_COOLDOWN_MS } from "../app/queue/cheerConstants";
 import { startSessionTracking } from "../app/queue/trackSession";
@@ -71,7 +73,7 @@ import { brandStyle } from "../lib/brandStyle";
 import { v4 as uuidv4 } from "uuid";
 import { useT } from "../lib/i18n/I18nProvider";
 import { POLL_INTERVAL, DISPLAY_GONE_CONFIRM_MS } from "./host/constants";
-import { formatSongTitle, shouldClaimPlayback } from "./host/utils";
+import { formatSongTitle, includesCurrentInSidebar, shouldClaimPlayback, uniqueSingerCount } from "./host/utils";
 import {
   playModeStorageKey,
   readStoredPlayToken,
@@ -154,6 +156,7 @@ const Host = ({
   const [displayConfig, setDisplayConfigState] = React.useState<DisplayConfig>(DEFAULT_DISPLAY_CONFIG);
   const [hostConfig, setHostConfigState] = React.useState<HostConfig>(DEFAULT_HOST_CONFIG);
   const [brand, setBrand] = React.useState<RoomBrand>({});
+  const [musicVideoAt, setMusicVideoAt] = React.useState<string | null>(null);
   const [reactionCooldown, setReactionCooldown] = React.useState(false);
   const [lastSentEmoji, setLastSentEmoji] = React.useState<string | null>(null);
   const [visibleReactions, setVisibleReactions] = React.useState<
@@ -439,6 +442,7 @@ const Host = ({
     setDisplayConfigState(normalizeDisplayConfig(room.displayConfig));
     setHostConfigState(normalizeHostConfig(room.hostConfig));
     setBrand(room.brand ?? {});
+    setMusicVideoAt((room.musicVideoAt as unknown as string | null) ?? null);
     if (room.playMode) setPlayMode(room.playMode);
   }
 
@@ -627,6 +631,9 @@ const Host = ({
   // commits, which would advance twice and skip a singer's song.
   const endedHandledRef = React.useRef(false);
   const currentQueueSongId = queue[activeIndex]?.id;
+  const reportPlayhead = usePlayheadBroadcast(playsVideoHere && !tvMode ? joinCode : undefined, currentQueueSongId);
+  const reportPlayheadRef = React.useRef(reportPlayhead);
+  reportPlayheadRef.current = reportPlayhead;
   React.useEffect(() => {
     endedHandledRef.current = false;
     setWrapUpIn(null);
@@ -663,7 +670,8 @@ const Host = ({
     if (remote || !playsVideoHere || tvMode) return;
 
     function onMessage(e: MessageEvent) {
-      if (e.origin !== "https://www.youtube.com") return;
+      // Source-checked: the music video card's preview player posts the same events.
+      if (!parseYtMessage(e, videoRef.current)) return;
       try {
         const data = typeof e.data === "string" ? JSON.parse(e.data) : e.data;
         const state =
@@ -672,6 +680,7 @@ const Host = ({
             : data.event === "infoDelivery"
               ? data.info?.playerState
               : undefined;
+        reportPlayheadRef.current(playerCurrentTime(data), state);
         const limitLeft = songSecondsLeft(playerCurrentTime(data), songLimitRef.current);
         if (limitLeft !== null) {
           setWrapUpIn(limitLeft <= WRAP_UP_WARN_SECONDS ? limitLeft : null);
@@ -779,14 +788,7 @@ const Host = ({
   // The click is the user gesture that lets a blocked player start with sound.
   function toggleHereVideo() {
     const playing = hereVideoPlaying;
-    videoRef.current?.contentWindow?.postMessage(
-      JSON.stringify({
-        event: "command",
-        func: playing ? "pauseVideo" : "playVideo",
-        args: [],
-      }),
-      "https://www.youtube.com",
-    );
+    ytCommand(videoRef.current, playing ? "pauseVideo" : "playVideo");
     setHereVideoPlaying(!playing);
   }
 
@@ -1179,9 +1181,7 @@ const Host = ({
     const { active, over } = event;
     if (!over || active.id === over.id) return;
 
-    // Match the rendered list: when paused the on-stage song is part of the sidebar.
-    const includesCurrent = !!(queue[activeIndex] && !isPlaying);
-    const start = includesCurrent ? activeIndex : activeIndex + 1;
+    const start = includesCurrentInSidebar(!!queue[activeIndex], isPlaying) ? activeIndex : activeIndex + 1;
     const upNext = queue.slice(start);
     const oldIndex = upNext.findIndex((e) => e.id === active.id);
     const newIndex = upNext.findIndex((e) => e.id === over.id);
@@ -1192,17 +1192,14 @@ const Host = ({
   }
 
   const currentSong = queue[activeIndex];
-  // The waiting current song stays in the sidebar while paused.
-  const includesCurrent = !!(currentSong && !isPlaying);
-  const upNext = includesCurrent
+  const upNext = includesCurrentInSidebar(!!currentSong, isPlaying)
     ? queue.slice(activeIndex)
     : queue.slice(activeIndex + 1);
   const historyItems = queue.slice(0, activeIndex);
 
   const roomEmpty = queue.length === 0;
 
-  // Counted the way the rotation groups people — a duet entry counts each member.
-  const uniqueSingers = new Set(upNext.flatMap((s) => singerKeys(s.userName))).size;
+  const uniqueSingers = uniqueSingerCount(upNext);
 
   // hostView is the staged draft while customizing, the room's config otherwise.
   const customizing = !remote && hostEdit.editing;
@@ -1328,6 +1325,8 @@ const Host = ({
       <HostHeader
         roomId={joinCode}
         logo={hostEdit.brandView.logo}
+        logoScale={hostEdit.brandView.logoScale ?? 1}
+        onLogoScaleChange={(logoScale) => hostEdit.brandControls.onChange({ ...hostEdit.brandControls.brand, logoScale: logoScale === 1 ? undefined : logoScale })}
         remote={remote}
         tvMode={tvMode}
         customizing={customizing}
@@ -1504,7 +1503,7 @@ const Host = ({
           onReplayFromHistory={replayFromHistory}
           reactionsOn={reactionsOn}
           isPlaying={isPlaying}
-          currentSong={currentSong}
+          currentSong={currentSong} musicVideoAt={musicVideoAt} songClock={timing}
           cheersOpen={cheersOpen}
           onToggleCheers={toggleCheers}
           onSendReaction={sendReaction}

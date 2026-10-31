@@ -173,4 +173,66 @@ describe("useVideoSync", () => {
     rerender({ entryId: "e2" });
     expect(result.current.ended).toBe(false);
   });
+
+  it("doesn't answer a seek's transient pause with playVideo (YouTube's glyph)", () => {
+    vi.useFakeTimers();
+    const { ref, postMessage } = makeVideoRef();
+    const playStartedAt = new Date(Date.now() - 20_000).toISOString();
+    const props = {
+      roomId: "ROOM1",
+      entryId: "e1",
+      videoRef: ref,
+      isPlaying: true,
+      displayPaused: false,
+      playStartedAt,
+      playPausedAt: null,
+      offsetS: 0,
+    };
+    const { result, rerender } = renderHook((p) => useVideoSync(p), { initialProps: props });
+    act(() => result.current.onInfo(20, 1, 200));
+    act(() => {
+      vi.advanceTimersByTime(SEEK_COOLDOWN_MS + 1000);
+    });
+
+    postMessage.mockClear();
+    rerender({ ...props, offsetS: 30 });
+    for (let i = 0; i < 10 && seeks(postMessage).length === 0; i++) {
+      act(() => {
+        vi.advanceTimersByTime(1000);
+      });
+    }
+    expect(seeks(postMessage).length).toBeGreaterThan(0);
+    postMessage.mockClear();
+    act(() => result.current.onInfo(null, 2, null));
+    act(() => {
+      vi.advanceTimersByTime(1500);
+    });
+    expect(commands(postMessage).some((c) => c.func === "playVideo")).toBe(false);
+
+    act(() => {
+      vi.advanceTimersByTime(SEEK_COOLDOWN_MS);
+    });
+    expect(commands(postMessage).some((c) => c.func === "playVideo")).toBe(true);
+  });
+
+  it("still pauses at once when the karaoke pauses mid-seek", () => {
+    vi.useFakeTimers();
+    const { ref, postMessage } = makeVideoRef();
+    const playStartedAt = new Date(Date.now() - 20_000).toISOString();
+    const props = {
+      roomId: "ROOM1",
+      entryId: "e1",
+      videoRef: ref,
+      isPlaying: true,
+      displayPaused: false,
+      playStartedAt,
+      playPausedAt: null,
+      offsetS: 0,
+    };
+    const { result, rerender } = renderHook((p) => useVideoSync(p), { initialProps: props });
+    act(() => result.current.onInfo(20, 1, 200));
+    postMessage.mockClear();
+    rerender({ ...props, displayPaused: true });
+    expect(commands(postMessage).some((c) => c.func === "pauseVideo")).toBe(true);
+  });
 });

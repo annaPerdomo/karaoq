@@ -8,15 +8,22 @@ import { onRoomState, onDisplayPause } from '../app/queue/roomChannel';
 import { startVisiblePolling } from '../app/queue/pollWhileVisible';
 import { DORMANT_POLL_MS, isRoomDormant } from '../lib/roomDormancy';
 import { useT } from '../lib/i18n/I18nProvider';
-import { QueueEntry, Room, RoomBrand } from '../pages/api/types';
+import { DEFAULT_DISPLAY_CONFIG, DisplayTheme, QueueEntry, Room, RoomBrand, normalizeDisplayConfig } from '../pages/api/types';
 import { brandStyle } from '../lib/brandStyle';
-import ClubLogo from './brand/ClubLogo';
+import MusicVideoLockup from './musicvideo/MusicVideoLockup';
 import MusicVideoPlayer from './musicvideo/MusicVideoPlayer';
 import MusicVideoIdle from './musicvideo/MusicVideoIdle';
+import MusicVideoQrCorner from './musicvideo/MusicVideoQrCorner';
 import { useOriginalVideo } from './musicvideo/hooks/useOriginalVideo';
+import { useEntryOffset } from './musicvideo/hooks/useEntryOffset';
 import { useVideoSync } from './musicvideo/hooks/useVideoSync';
 
 const MUSIC_VIDEO_POLL_MS = 3000;
+const THEME_CLASS: Record<DisplayTheme, string> = {
+  classic: '',
+  minimal: styles.themeMinimal,
+  neon: styles.themeNeon,
+};
 const OFFSET_STEP_S = 0.5;
 const OFFSET_SHOW_MS = 1500;
 // Same threshold Display uses before treating repeated 404s as the room being gone.
@@ -36,6 +43,9 @@ export default function MusicVideoScreen(): React.ReactElement {
   const [loading, setLoading] = React.useState(true);
   const [notFound, setNotFound] = React.useState(false);
   const [brand, setBrand] = React.useState<RoomBrand>({});
+  const [theme, setTheme] = React.useState<DisplayTheme>('classic');
+  const [qrHidden, setQrHidden] = React.useState(false);
+  const [qrPx, setQrPx] = React.useState(DEFAULT_DISPLAY_CONFIG.qrPx);
 
   const videoRef = React.useRef<HTMLIFrameElement>(null);
   const dormantRef = React.useRef(false);
@@ -59,6 +69,10 @@ export default function MusicVideoScreen(): React.ReactElement {
     setPlayStartedAt((room.playStartedAt as unknown as string | null) ?? null);
     setPlayPausedAt((room.playPausedAt as unknown as string | null) ?? null);
     setBrand(room.brand ?? {});
+    const displayConfig = normalizeDisplayConfig(room.displayConfig);
+    setTheme(displayConfig.theme);
+    setQrHidden(displayConfig.qrSize === 'hidden');
+    setQrPx(displayConfig.qrPx);
   }
 
   // Never passes { display: true } — this screen is a viewer, not the heartbeat.
@@ -66,7 +80,7 @@ export default function MusicVideoScreen(): React.ReactElement {
     if (!joinCode) return;
     let cancelled = false;
     (async () => {
-      const room = await getRoom(joinCode);
+      const room = await getRoom(joinCode, { musicVideo: true });
       if (cancelled) return;
       if (room === 'notFound') {
         setNotFound(true);
@@ -87,7 +101,7 @@ export default function MusicVideoScreen(): React.ReactElement {
   React.useEffect(() => {
     if (!joinCode || notFound) return;
     return startVisiblePolling(async () => {
-      const room = await getRoom(joinCode);
+      const room = await getRoom(joinCode, { musicVideo: true });
       if (room === 'error') return;
       if (room === 'notFound') {
         notFoundPollsRef.current += 1;
@@ -119,7 +133,15 @@ export default function MusicVideoScreen(): React.ReactElement {
   const nextEntry = queue[activeIndex + 1];
   const currentEntryId = currentEntry?.id ?? null;
 
-  const { videoId, status, fail } = useOriginalVideo(joinCode, currentEntryId, nextEntry?.id ?? null);
+  const { videoId, status, fail } = useOriginalVideo(
+    joinCode,
+    currentEntryId,
+    nextEntry?.id ?? null,
+    currentEntry?.originalVideoId ?? null
+  );
+  const thumbnailId = status === 'ok' ? videoId : null;
+  const entryOffsetS = useEntryOffset(joinCode, currentEntryId, currentEntry?.originalOffsetSeconds ?? 0);
+  const effectiveOffsetS = entryOffsetS + offsetS;
 
   React.useEffect(() => {
     setOffsetS(0);
@@ -131,7 +153,7 @@ export default function MusicVideoScreen(): React.ReactElement {
     }
   }, [currentEntryId, status]);
 
-  const { ended, onInfo } = useVideoSync({
+  const { ended, paused, onInfo } = useVideoSync({
     roomId: joinCode,
     entryId: currentEntryId,
     videoRef,
@@ -139,10 +161,11 @@ export default function MusicVideoScreen(): React.ReactElement {
     displayPaused,
     playStartedAt,
     playPausedAt,
-    offsetS,
+    offsetS: effectiveOffsetS,
   });
 
   const idle = !currentEntry || !isPlaying || status !== 'ok' || !videoId || ended;
+  const unavailable = isPlaying && (status === 'none' || status === 'quota' || ended || (status === 'ok' && !videoId));
 
   function handleInfo(currentTime: number | null, state: number | undefined, duration: number | null) {
     onInfo(currentTime, state, duration);
@@ -166,7 +189,8 @@ export default function MusicVideoScreen(): React.ReactElement {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  // A non-zero offset on the entry that just finished tells us sync needed a nudge.
+  // Must stay above the effect that updates prevOffsetRef: same-commit effects run
+  // in declaration order, so the ref still holds the outgoing entry's offset here.
   const prevEntryIdRef = React.useRef<string | null>(null);
   const prevOffsetRef = React.useRef(0);
   React.useEffect(() => {
@@ -180,7 +204,9 @@ export default function MusicVideoScreen(): React.ReactElement {
     }
     prevEntryIdRef.current = currentEntryId;
   }, [currentEntryId, joinCode]);
-  prevOffsetRef.current = offsetS;
+  React.useEffect(() => {
+    prevOffsetRef.current = effectiveOffsetS;
+  }, [effectiveOffsetS]);
 
   React.useEffect(() => {
     if (!joinCode) return;
@@ -191,8 +217,19 @@ export default function MusicVideoScreen(): React.ReactElement {
         songsUnavailable: unavailableIdsRef.current.size,
       });
     }
+    // bfcache restore: pagehide already sent the closed event, so this is a new session.
+    function onPageShow(e: PageTransitionEvent) {
+      if (!e.persisted) return;
+      startedAtRef.current = Date.now();
+      shownIdsRef.current.clear();
+      unavailableIdsRef.current.clear();
+    }
     window.addEventListener('pagehide', onPageHide);
-    return () => window.removeEventListener('pagehide', onPageHide);
+    window.addEventListener('pageshow', onPageShow);
+    return () => {
+      window.removeEventListener('pagehide', onPageHide);
+      window.removeEventListener('pageshow', onPageShow);
+    };
   }, [joinCode]);
 
   if (!joinCode || loading) {
@@ -218,23 +255,31 @@ export default function MusicVideoScreen(): React.ReactElement {
   const joinUrl = `${origin || 'https://karaoq.live'}/sing/${joinCode}`;
 
   return (
-    <main className={styles.main} style={brandStyle(brand) as React.CSSProperties}>
+    <main className={`${styles.main} ${THEME_CLASS[theme]}`} style={brandStyle(brand) as React.CSSProperties}>
       {!idle && videoId && (
         <MusicVideoPlayer videoId={videoId} videoRef={videoRef} onInfo={handleInfo} onError={handleError} />
       )}
-      {!idle && <ClubLogo roomId={joinCode} logo={brand.logo} className={styles.cornerLogo} />}
+      {!idle && paused && <div className={styles.pausedScrim} />}
+      {!idle && currentEntry?.userName && (
+        <div className={styles.onStage}>
+          <span className={styles.onStageTag}>{t('display.tag.onStage')}</span>
+          <span className={styles.onStageName}>{currentEntry.userName}</span>
+        </div>
+      )}
+      <MusicVideoLockup joinCode={joinCode} logo={brand.logo} />
       {idle && (
         <MusicVideoIdle
-          joinUrl={joinUrl}
-          joinCode={joinCode}
-          origin={origin}
-          logo={brand.logo}
+          singerName={currentEntry?.userName}
           songTitle={currentEntry?.songTitle}
-          reason={!currentEntry || status === 'loading' ? 'waiting' : 'unavailable'}
+          reason={unavailable ? 'unavailable' : 'waiting'}
+          thumbnailId={thumbnailId}
         />
       )}
+      {!qrHidden && (
+        <MusicVideoQrCorner joinUrl={joinUrl} joinCode={joinCode} origin={origin} qrPx={qrPx} />
+      )}
       {showOffset && (
-        <div className={styles.offsetPill}>{t('musicVideo.offset', { seconds: offsetS })}</div>
+        <div className={styles.offsetPill}>{t('musicVideo.offset', { seconds: effectiveOffsetS })}</div>
       )}
     </main>
   );

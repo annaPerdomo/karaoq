@@ -16,6 +16,7 @@ const REACTION_TTL_MS = 30000;
 const DISPLAY_LIVE_MS = 75_000;
 // A visible display's poll is its heartbeat; Display only POSTs display-seen while hidden.
 const DISPLAY_SEEN_REFRESH_MS = 10_000;
+const MUSIC_VIDEO_SEEN_REFRESH_MS = 5 * 60 * 1000;
 // Time for a display to load and start heartbeating after play — and, in here-mode, for a host page
 // to claim the surface — before playback counts as orphaned. A host mid-drag re-arms its polling
 // hold, so a co-host's Play during a long reorder can expire this and appear to do nothing.
@@ -188,6 +189,17 @@ export default async function handler(
             now - new Date(room.displayLastSeen).getTime() >= DISPLAY_SEEN_REFRESH_MS)
         ) {
           await collection.updateOne({ id: roomId }, { $set: { displayLastSeen: new Date(now) } });
+        }
+
+        if (
+          req.query.musicVideo === "1" &&
+          (!room.musicVideoAt ||
+            now - new Date(room.musicVideoAt).getTime() >= MUSIC_VIDEO_SEEN_REFRESH_MS)
+        ) {
+          room.musicVideoAt = new Date(now);
+          collection
+            .updateOne({ id: roomId }, { $set: { musicVideoAt: room.musicVideoAt } })
+            .catch(() => {});
         }
 
         // In-memory filter only — persisting the cleanup would turn every poll into a write; the

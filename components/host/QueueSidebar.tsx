@@ -1,4 +1,5 @@
 import * as React from "react";
+import type { RoomTiming } from "../hooks/useRoomTiming";
 import { DragEndEvent } from "@dnd-kit/core";
 import styles from "../../styles/Host.module.css";
 import p from "../../styles/DisplayDesigner.module.css";
@@ -11,6 +12,7 @@ import { Icons } from "./icons";
 import { SidebarSections, HostSidebarEdit } from "./SidebarSections";
 import { UpNextTab } from "./UpNextTab";
 import { HistoryTab } from "./HistoryTab";
+import { MusicVideoCard, musicVideoCardVisible } from "./MusicVideoCard";
 import { QueueEstimate } from "../../lib/queueTime";
 
 export function QueueSidebar({
@@ -44,6 +46,8 @@ export function QueueSidebar({
   reactionsOn,
   isPlaying,
   currentSong,
+  musicVideoAt,
+  songClock,
   cheersOpen,
   onToggleCheers,
   onSendReaction,
@@ -98,6 +102,9 @@ export function QueueSidebar({
   reactionsOn: boolean;
   isPlaying: boolean;
   currentSong: QueueEntry | undefined;
+  /** Room.musicVideoAt, as an ISO string — gates the music-video swap card. */
+  musicVideoAt: string | null;
+  songClock: Pick<RoomTiming, "playStartedAt" | "playPausedAt">;
   cheersOpen: boolean;
   onToggleCheers: () => void;
   onSendReaction: (emoji: string) => void;
@@ -161,6 +168,14 @@ export function QueueSidebar({
       >
         {Icons.plus} {t('host.sidebar.addSong')}
       </button>
+
+      {joinCode && musicVideoCardVisible(remote, musicVideoAt, currentSong) && (
+        <MusicVideoCard
+          joinCode={joinCode}
+          activeEntry={currentSong as QueueEntry}
+          playback={{ isPlaying, ...songClock }}
+        />
+      )}
 
       {sidebarTab === "queue" && (
         <UpNextTab

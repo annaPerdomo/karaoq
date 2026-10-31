@@ -535,10 +535,10 @@ const Display = (): React.ReactElement => {
     >
       <DisplayHeader
         joinCode={joinCode}
-        logo={edit.brandView.logo}
-        sidebarCollapsed={sidebarCollapsed}
-        showCustomize={!edit.editing && !loading}
-        onCustomize={edit.enter}
+        logo={edit.brandView.logo} logoScale={edit.brandView.logoScale ?? 1}
+        onLogoScaleChange={(logoScale) => edit.brandControls.onChange({ ...edit.brandControls.brand, logoScale: logoScale === 1 ? undefined : logoScale })}
+        editing={edit.editing} sidebarCollapsed={sidebarCollapsed}
+        showCustomize={!edit.editing && !loading} onCustomize={edit.enter}
       />
 
       <div className={`${styles.videoArea} ${sidebarCollapsed ? styles.videoAreaNoSidebar : ''}`}>
