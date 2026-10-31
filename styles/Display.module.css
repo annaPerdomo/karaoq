@@ -905,6 +905,11 @@
     margin-left: 0;
   }
 
+  /* Exactly 50vh: the fixed nowBar and fullscreen button below are placed by it. */
+  html:not([data-tv]) .videoArea:not(.videoAreaNoSidebar) {
+    flex: none;
+  }
+
   html:not([data-tv]) .sidebar,
   html:not([data-tv]) .sidebarLeft .sidebar {
     width: 100%;
@@ -916,10 +921,18 @@
     max-height: 50vh;
   }
 
+  /* Bottom of the video half, not the viewport: the stacked sidebar sits there. */
   html:not([data-tv]) .nowBar,
   html:not([data-tv]) .sidebarLeft .nowBar {
     right: 0;
     left: 0;
+    top: max(0px, calc(50vh - var(--now-h, 132px)));
+    bottom: auto;
+  }
+
+  html:not([data-tv]) .main:has(.videoAreaNoSidebar) .nowBar {
+    top: auto;
+    bottom: 0;
   }
 
   html:not([data-tv]) .sidebarLeft .header,
@@ -954,8 +967,14 @@
 
   html:not([data-tv]) .videoFullscreen {
     right: 12px;
-    bottom: 4rem;
+    top: calc(50vh - 52px);
+    bottom: auto;
     z-index: 21;
+  }
+
+  html:not([data-tv]) .main:has(.videoAreaNoSidebar) .videoFullscreen {
+    top: auto;
+    bottom: 4rem;
   }
 
   html:not([data-tv]) .reactionOverlay {

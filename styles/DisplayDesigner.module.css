@@ -133,6 +133,17 @@
   left: var(--sb-w, 280px);
 }
 
+/* Mirrors the display's stacked layout (Display.module.css, 900px). */
+@media (max-width: 900px) {
+  html:not([data-tv]) .nowSlot,
+  html:not([data-tv]) .edLeft .nowSlot {
+    left: 0;
+    right: 0;
+    top: max(0px, calc(50vh - var(--now-h, 132px)));
+    bottom: auto;
+  }
+}
+
 .chrome {
   position: absolute;
   top: calc(6px * var(--tv-scale, 1));
