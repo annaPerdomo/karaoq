@@ -50,6 +50,9 @@ export default async function handler(
     ...(brand.logo ? { logo: brand.logo } : {}),
     ...(brand.accentA ? { accentA: brand.accentA } : {}),
     ...(brand.accentB ? { accentB: brand.accentB } : {}),
+    ...(brand.logoScale !== undefined && brand.logoScale !== 1
+      ? { logoScale: brand.logoScale }
+      : {}),
   };
 
   try {
@@ -76,6 +79,7 @@ export default async function handler(
       colors: !!(saved.accentA || saved.accentB),
       cleared: Object.keys(saved).length === 0,
       surface: surface as Surface,
+      resized: saved.logoScale !== undefined,
     });
     res.status(200).json({ brand: saved });
   } catch (e) {

@@ -26,6 +26,7 @@ import {
   logoStoreBytes,
   LogoStoreFullError,
   logoUrl,
+  MAX_DRAFTS_PER_ROOM,
   pruneOrphanLogos,
   readLogo,
   saveDraftLogo,
@@ -110,6 +111,19 @@ describe("logo store", () => {
       LogoStoreFullError
     );
     expect(db.logos.docs).toHaveLength(1);
+  });
+
+  it("keeps only the newest drafts per room, oldest deleted first, committed logos untouched", async () => {
+    db.logos.insert({ _id: "ROOM1:committed", roomId: "ROOM1", size: 1, createdAt: new Date(0) });
+    for (let i = 0; i < MAX_DRAFTS_PER_ROOM + 2; i++) {
+      await saveDraftLogo("ROOM1", Buffer.concat([PNG, Buffer.from([i])]), "image/png");
+    }
+
+    const drafts = db.logos.docs.filter((d) => d.roomId === "ROOM1" && d.expireAt);
+    expect(drafts).toHaveLength(MAX_DRAFTS_PER_ROOM);
+    const ages = drafts.map((d) => d.createdAt.getTime());
+    expect(ages.every((t) => t > 0)).toBe(true);
+    expect(db.logos.docs.find((d) => d._id === "ROOM1:committed")).toBeTruthy();
   });
 
   it("does not count a same-hash re-upload twice", async () => {

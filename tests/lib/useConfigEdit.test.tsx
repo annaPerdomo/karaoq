@@ -4,7 +4,7 @@ import { act, render } from "@testing-library/react";
 import { useConfigEdit } from "../../components/edit/useConfigEdit";
 
 interface Cfg {
-  theme: string;
+  theme: "classic" | "minimal" | "neon";
   sidebarPosition: "left" | "right";
   sidebarWidth: number;
   nowPlayingHeight: number;
@@ -117,6 +117,34 @@ describe("useConfigEdit", () => {
     expect(h.hook.draft.theme).toBe("minimal");
     expect(h.hook.draft.sidebarWidth).toBe(280);
     expect(h.hook.dirty).toBe(true);
+  });
+
+  it("sends the live theme, not the stale draft, when the draft never touched it", async () => {
+    const h = harness();
+    await act(async () => h.hook.enter());
+    expect(h.hook.draft.theme).toBe("classic");
+
+    await act(async () => h.hook.change({ sidebarWidth: 340 }));
+
+    h.poll({ ...BASE, theme: "neon", sidebarWidth: 300 });
+    expect(h.hook.draft.theme).toBe("classic");
+
+    await act(async () => h.hook.save());
+
+    expect(h.save).toHaveBeenCalledOnce();
+    expect(h.save.mock.calls[0][1].theme).toBe("neon");
+    expect(h.save.mock.calls[0][1].sidebarWidth).toBe(340);
+  });
+
+  it("still sends the draft's theme when the user deliberately set it", async () => {
+    const h = harness();
+    await act(async () => h.hook.enter());
+    await act(async () => h.hook.change({ theme: "minimal" }));
+
+    h.poll({ ...BASE, theme: "neon" });
+    await act(async () => h.hook.save());
+
+    expect(h.save.mock.calls[0][1].theme).toBe("minimal");
   });
 
   it("surfaces a failed save and stays in edit mode", async () => {

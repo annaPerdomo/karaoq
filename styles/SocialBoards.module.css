@@ -35,7 +35,7 @@
 .tabActive {
   color: #fff;
   border-color: transparent;
-  background: linear-gradient(135deg, #ff2d78, #a34bff);
+  background: linear-gradient(135deg, var(--acc-a, #ff2d78), #a34bff);
 }
 
 .tabCount {
@@ -58,9 +58,9 @@
 .postBtn {
   width: 100%;
   padding: 0.6rem;
-  border: 1px dashed rgba(255, 45, 120, 0.5);
+  border: 1px dashed rgba(var(--acc-a-rgb, 255, 45, 120), 0.5);
   border-radius: 10px;
-  background: rgba(255, 45, 120, 0.06);
+  background: rgba(var(--acc-a-rgb, 255, 45, 120), 0.06);
   color: #ff6aa0;
   font-size: 0.85rem;
   font-weight: 600;
@@ -69,8 +69,8 @@
 }
 
 .postBtn:hover {
-  background: rgba(255, 45, 120, 0.12);
-  border-color: rgba(255, 45, 120, 0.8);
+  background: rgba(var(--acc-a-rgb, 255, 45, 120), 0.12);
+  border-color: rgba(var(--acc-a-rgb, 255, 45, 120), 0.8);
 }
 
 /* Stacked card: content row on top, actions row below. Buttons beside the
@@ -130,7 +130,7 @@
 .progressText {
   font-size: 0.75rem;
   font-weight: 600;
-  color: #00f0ff;
+  color: var(--acc-b, #00f0ff);
 }
 
 .queuedBadge {
@@ -153,7 +153,7 @@
   padding: 0.45rem 0.85rem;
   border: none;
   border-radius: 8px;
-  background: linear-gradient(135deg, #ff2d78, #ff8a3d);
+  background: linear-gradient(135deg, var(--acc-a, #ff2d78), #ff8a3d);
   color: #fff;
   font-size: 0.8rem;
   font-weight: 700;
@@ -219,8 +219,8 @@
 }
 
 .editBtn:hover:not(:disabled) {
-  color: #00f0ff;
-  border-color: rgba(0, 240, 255, 0.5);
+  color: var(--acc-b, #00f0ff);
+  border-color: rgba(var(--acc-b-rgb, 0, 240, 255), 0.5);
 }
 
 .previewBtn {
@@ -230,10 +230,10 @@
   justify-content: center;
   gap: 0.3rem;
   padding: 0.4rem 0.6rem;
-  border: 1px solid rgba(0, 240, 255, 0.35);
+  border: 1px solid rgba(var(--acc-b-rgb, 0, 240, 255), 0.35);
   border-radius: 8px;
-  background: rgba(0, 240, 255, 0.08);
-  color: #00f0ff;
+  background: rgba(var(--acc-b-rgb, 0, 240, 255), 0.08);
+  color: var(--acc-b, #00f0ff);
   font-size: 0.72rem;
   font-weight: 600;
   cursor: pointer;
@@ -241,8 +241,8 @@
 }
 
 .previewBtn:hover {
-  background: rgba(0, 240, 255, 0.16);
-  border-color: rgba(0, 240, 255, 0.6);
+  background: rgba(var(--acc-b-rgb, 0, 240, 255), 0.16);
+  border-color: rgba(var(--acc-b-rgb, 0, 240, 255), 0.6);
 }
 
 .previewBtnIcon {
@@ -392,7 +392,7 @@
 
 .previewPlayBtn:hover .previewPlayIcon {
   transform: translate(-50%, -50%) scale(1.1);
-  background: rgba(255, 45, 120, 0.7);
+  background: rgba(var(--acc-a-rgb, 255, 45, 120), 0.7);
 }
 
 .changeBtn {
@@ -400,7 +400,7 @@
   padding: 0.3rem 0.6rem;
   border: none;
   background: transparent;
-  color: #00f0ff;
+  color: var(--acc-b, #00f0ff);
   font-size: 0.8rem;
   cursor: pointer;
 }
@@ -467,7 +467,7 @@
   padding: 0.7rem;
   border: none;
   border-radius: 10px;
-  background: linear-gradient(135deg, #ff2d78, #a34bff);
+  background: linear-gradient(135deg, var(--acc-a, #ff2d78), #a34bff);
   color: #fff;
   font-size: 0.95rem;
   font-weight: 700;

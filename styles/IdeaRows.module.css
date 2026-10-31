@@ -23,12 +23,12 @@
 
 .row:hover,
 .row:focus-visible {
-  background: rgba(255, 45, 120, 0.08);
+  background: rgba(var(--acc-a-rgb, 255, 45, 120), 0.08);
   outline: none;
 }
 
 .row:focus-visible {
-  box-shadow: inset 0 0 0 2px rgba(255, 45, 120, 0.6);
+  box-shadow: inset 0 0 0 2px rgba(var(--acc-a-rgb, 255, 45, 120), 0.6);
 }
 
 .num {
@@ -83,7 +83,7 @@
 }
 
 .badgeNew {
-  background: linear-gradient(135deg, #ff2d78, #9b1dff);
+  background: linear-gradient(135deg, var(--acc-a, #ff2d78), var(--acc-c, #9b1dff));
   color: #fff;
 }
 

@@ -175,8 +175,29 @@ describe("POST /api/queue/[id]/brand - save the room brand", () => {
         colors: true,
         cleared: false,
         surface: "display",
+        resized: false,
       }),
     ]);
+  });
+
+  it("stores a logoScale that differs from the default, and tracks resized:true", async () => {
+    const hash = await saveDraftLogo("ROOM1", PNG, "image/png");
+
+    const res = await save({ brand: { logo: hash, logoScale: 1.5 } });
+
+    expect(res.getStatus()).toBe(200);
+    expect(room().brand).toEqual({ logo: hash, logoScale: 1.5 });
+    expect(tracked()).toEqual([expect.objectContaining({ resized: true })]);
+  });
+
+  it("never stores a logoScale of 1 (the default), and tracks resized:false", async () => {
+    const hash = await saveDraftLogo("ROOM1", PNG, "image/png");
+
+    const res = await save({ brand: { logo: hash, logoScale: 1 } });
+
+    expect(res.getStatus()).toBe(200);
+    expect(room().brand).toEqual({ logo: hash });
+    expect(tracked()).toEqual([expect.objectContaining({ resized: false })]);
   });
 
   it.each([

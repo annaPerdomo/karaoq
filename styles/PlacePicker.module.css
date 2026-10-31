@@ -26,8 +26,8 @@
   max-width: 60%;
   padding: 0.35rem 0.7rem;
   border-radius: 999px;
-  border: 1px solid rgba(255, 45, 120, 0.35);
-  background: rgba(255, 45, 120, 0.1);
+  border: 1px solid rgba(var(--acc-a-rgb, 255, 45, 120), 0.35);
+  background: rgba(var(--acc-a-rgb, 255, 45, 120), 0.1);
   color: var(--text-primary);
   font-size: 0.8rem;
   font-weight: 650;
@@ -37,13 +37,13 @@
 
 .chip:hover,
 .chipOpen {
-  background: rgba(255, 45, 120, 0.18);
-  border-color: rgba(255, 45, 120, 0.55);
+  background: rgba(var(--acc-a-rgb, 255, 45, 120), 0.18);
+  border-color: rgba(var(--acc-a-rgb, 255, 45, 120), 0.55);
 }
 
 .chip:focus-visible,
 .option:focus-visible {
-  outline: 2px solid #ff2d78;
+  outline: 2px solid var(--acc-a, #ff2d78);
   outline-offset: 2px;
 }
 
@@ -103,8 +103,8 @@
 }
 
 .optionActive {
-  background: rgba(255, 45, 120, 0.14);
-  border-color: rgba(255, 45, 120, 0.45);
+  background: rgba(var(--acc-a-rgb, 255, 45, 120), 0.14);
+  border-color: rgba(var(--acc-a-rgb, 255, 45, 120), 0.45);
 }
 
 .name {

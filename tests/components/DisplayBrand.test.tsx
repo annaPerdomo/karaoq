@@ -50,6 +50,16 @@ describe("Display brand", () => {
     expect(screen.getByText("KaraoQ", { selector: "div" })).toBeInTheDocument();
   });
 
+  it("keeps its own stored theme — the config routes mirror the two on save", async () => {
+    getRoom.mockResolvedValue({
+      ...room(),
+      hostConfig: { theme: "neon" },
+      displayConfig: { ...DEFAULT_DISPLAY_CONFIG, theme: "minimal" },
+    });
+    const { container } = render(<Display />);
+    await waitFor(() => expect(container.querySelector("main")!.className).toMatch(/themeMinimal/));
+  });
+
   it("renders no logo when the brand has none", async () => {
     getRoom.mockResolvedValue(room());
     const { container } = render(<Display />);
@@ -135,6 +145,37 @@ describe("Display edit brand draft", () => {
     expect(h.hook.brandView).toEqual({ logo: HASH });
     expect(h.hook.dirty).toBe(false);
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("dragging the logo handle stages logoScale, posted only when it differs, discard reverts it", async () => {
+    fetchMock.mockImplementation(async (url: string) => ({
+      ok: true,
+      status: 200,
+      json: async () => (url.endsWith("/brand") ? { brand: { logo: HASH, logoScale: 1.4 } } : {}),
+    }));
+    const h = editHarness({ logo: HASH });
+    await act(async () => h.hook.enter());
+    await act(async () =>
+      h.hook.brandControls.onChange({ ...h.hook.brandControls.brand, logoScale: 1.4 })
+    );
+    await act(async () => h.hook.save());
+    expect(urls()).toEqual(["/api/queue/ROOM1/display-config", "/api/queue/ROOM1/brand"]);
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toEqual({
+      brand: { logo: HASH, logoScale: 1.4 },
+      surface: "display",
+    });
+
+    fetchMock.mockClear();
+    await act(async () => h.hook.enter());
+    await act(async () =>
+      h.hook.brandControls.onChange({ ...h.hook.brandControls.brand, logoScale: 1.9 })
+    );
+    await act(async () => h.hook.discard());
+    expect(h.hook.brandView.logoScale).toBe(1.4);
+
+    await act(async () => h.hook.enter());
+    await act(async () => h.hook.save());
+    expect(urls()).toEqual(["/api/queue/ROOM1/display-config"]);
   });
 
   it("retries only the failed brand write, not the config that already landed", async () => {

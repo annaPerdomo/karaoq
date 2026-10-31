@@ -64,4 +64,21 @@ describe("useScalarDrag keyboard support", () => {
     expect(onChange).not.toHaveBeenCalled();
     expect(e.preventDefault).not.toHaveBeenCalled();
   });
+
+  it("applies a custom round function instead of the integer default", () => {
+    const onChange = vi.fn();
+    const { result } = renderHook(() =>
+      useScalarDrag({
+        value: 1.2,
+        min: 0.5,
+        max: 2,
+        axis: "x",
+        step: 0.1,
+        round: (n) => Math.round(n * 100) / 100,
+        onChange,
+      })
+    );
+    result.current.onKeyDown(keyEvent("ArrowRight"));
+    expect(onChange).toHaveBeenCalledWith(1.3);
+  });
 });

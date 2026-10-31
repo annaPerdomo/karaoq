@@ -28,6 +28,8 @@ function header(logo: string | undefined) {
     <HostHeader
       roomId="ROOM1"
       logo={logo}
+      logoScale={1}
+      onLogoScaleChange={noop}
       remote={false}
       tvMode={false}
       customizing={false}
@@ -123,6 +125,39 @@ describe("Host brand", () => {
     ]);
     expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toEqual({ brand: {}, surface: "host" });
     expect(onSaved).toHaveBeenLastCalledWith(DEFAULT_HOST_CONFIG, {});
+  });
+
+  it("dragging the logo handle stages logoScale, saved only when it differs, discard reverts it", async () => {
+    const state: { hook?: ReturnType<typeof useHostEdit> } = {};
+    function Probe({ brand }: { brand: RoomBrand }) {
+      state.hook = useHostEdit({ joinCode: "ROOM1", config: DEFAULT_HOST_CONFIG, brand, onSaved: noop });
+      return null;
+    }
+    render(<Probe brand={{ logo: HASH }} />);
+
+    await act(async () => state.hook!.enter());
+    await act(async () =>
+      state.hook!.brandControls.onChange({ ...state.hook!.brandControls.brand, logoScale: 1.4 })
+    );
+    expect(state.hook!.brandView.logoScale).toBe(1.4);
+
+    await act(async () => state.hook!.save());
+    expect(JSON.parse(fetchMock.mock.calls.at(-1)![1].body)).toEqual({
+      brand: { logo: HASH, logoScale: 1.4 },
+      surface: "host",
+    });
+
+    fetchMock.mockClear();
+    await act(async () => state.hook!.enter());
+    await act(async () =>
+      state.hook!.brandControls.onChange({ ...state.hook!.brandControls.brand, logoScale: 1.9 })
+    );
+    await act(async () => state.hook!.discard());
+    expect(state.hook!.brandView.logoScale).toBe(1.4);
+
+    await act(async () => state.hook!.enter());
+    await act(async () => state.hook!.save());
+    expect(fetchMock.mock.calls.map(([u]) => u)).toEqual(["/api/queue/ROOM1/host-config"]);
   });
 
   it("host retry after a failed brand write doesn't re-post the config", async () => {

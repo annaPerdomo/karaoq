@@ -15,7 +15,8 @@ import { startVisiblePolling } from '../app/queue/pollWhileVisible';
 import { DORMANT_POLL_MS, isRoomDormant } from '../lib/roomDormancy';
 import { useSearchBackNotice } from '../app/queue/useSearchBackNotice';
 import SearchBackToast from './search/SearchBackToast';
-import { DisplayTheme, QueueEntry, Reaction, Room, normalizeDisplayConfig } from '../pages/api/types';
+import { DisplayTheme, QueueEntry, Reaction, Room, RoomBrand, normalizeDisplayConfig } from '../pages/api/types';
+import { brandStyle } from '../lib/brandStyle';
 import { useT } from '../lib/i18n/I18nProvider';
 import { getStoredName, setStoredName } from '../lib/username';
 import LanguageSwitcher from './LanguageSwitcher';
@@ -53,6 +54,7 @@ const Sing = (): React.ReactElement => {
   const [isPlaying, setIsPlaying] = React.useState(false);
   const [reactionsOn, setReactionsOn] = React.useState(true);
   const [theme, setTheme] = React.useState<DisplayTheme>('classic');
+  const [brand, setBrand] = React.useState<RoomBrand>({});
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [loadError, setLoadError] = React.useState(false);
@@ -176,6 +178,7 @@ const Sing = (): React.ReactElement => {
     applyTiming(room);
     setReactionsOn(room.reactionsEnabled ?? true);
     setTheme(normalizeDisplayConfig(room.displayConfig).theme);
+    setBrand(room.brand ?? {});
     applySearchBack(room);
     processReactions(room.reactions, animateReactions);
   }
@@ -316,7 +319,7 @@ const Sing = (): React.ReactElement => {
   };
 
   return (
-    <main className={mainClass}>
+    <main className={mainClass} style={brandStyle(brand) as React.CSSProperties}>
       <SearchBackToast show={searchBack.show} onDismiss={searchBack.dismiss} />
       <header className={styles.header}>
         <div className={styles.brand} onClick={() => router.push('/')}>

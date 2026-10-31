@@ -303,6 +303,8 @@ export interface RoomBrand {
   /** "#rrggbb"; absent = the theme's own accent. */
   accentA?: string;
   accentB?: string;
+  /** Absent = 1 (unscaled). */
+  logoScale?: number;
 }
 
 export interface Room {
@@ -358,6 +360,9 @@ export interface Room {
   endedEntryId?: string;
   /** A phone opened the host link from the TV's QR; the TV then hides it. */
   hostJoinedAt?: Date;
+  /** Last time a music-video screen asked for a video; bumped at most once
+   * per 5 minutes. Gates the host's swap card. */
+  musicVideoAt?: Date;
   createdAt?: Date;
   /** Bumped on every write; drives the TTL index. */
   lastActivity?: Date;
@@ -375,4 +380,8 @@ export interface QueueEntry {
   /** Epoch ms at queue time — the order fair-mode-off restores, since fair
    * rotation destroys array-position-as-arrival. Absent on legacy entries. */
   addedAt?: number;
+  /** Host-chosen override for the music-video screen's resolved video. */
+  originalVideoId?: string;
+  /** Host-chosen timing nudge for the music-video screen, seconds. Absent = 0. */
+  originalOffsetSeconds?: number;
 }

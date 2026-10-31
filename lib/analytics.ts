@@ -38,6 +38,9 @@ export type EventType =
   | "search_run"
   | "link_lookup"
   | "original_video_resolved"
+  | "original_video_searched"
+  | "original_video_swapped"
+  | "original_video_nudged"
   | "music_video_screen_opened"
   | "music_video_screen_closed"
   | "music_video_error"
@@ -46,6 +49,9 @@ export type EventType =
   | "logo_upload_rejected"
   | "logo_uploaded"
   | "brand_saved";
+
+// Music-video / brand telemetry retention: the Screens view's longest window.
+export const SCREEN_EVENT_TTL_MS = 90 * 24 * 60 * 60 * 1000;
 
 export interface AnalyticsEvent {
   type: EventType;
@@ -125,10 +131,13 @@ export interface AnalyticsEvent {
   // Key of the youtube_song_data doc holding this event's title/video id until
   // it expires at 30 days. Absent on events from before the split.
   songDataId?: string;
-  // search_run only: 90 days, the search_demand retention. TTL index in lib/mongodb.ts.
+  // search_run and the screen telemetry: per-doc retention. TTL index in lib/mongodb.ts.
   expiresAt?: Date;
-  // original_video_resolved: how the response was reached.
-  source?: "cache" | "live" | "quota" | "busy" | "none";
+  // original_video_resolved: whether the answer carried at least one video.
+  found?: boolean;
+  // original_video_resolved: how the response was reached. original_video_swapped:
+  // where the host's pick came from.
+  source?: "cache" | "live" | "quota" | "busy" | "none" | "candidate" | "link" | "search";
   // music_video_screen_closed.
   durationSeconds?: number;
   songsShown?: number;
@@ -136,6 +145,7 @@ export interface AnalyticsEvent {
   // music_video_error: the YouTube onError code.
   code?: number;
   // music_video_offset: the manual nudge in effect when the song changed.
+  // original_video_nudged: the host's saved timing nudge.
   offsetSeconds?: number;
   // music_video_link: which gear-row button was used.
   action?: "open" | "copy";
@@ -148,6 +158,8 @@ export interface AnalyticsEvent {
   colors?: boolean;
   cleared?: boolean;
   surface?: "host" | "display";
+  // brand_saved: the logo was resized away from its default.
+  resized?: boolean;
 }
 
 // Heartbeat gap beyond which the next beat starts a fresh session; 30 min tolerates throttled background-tab timers.

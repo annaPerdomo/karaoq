@@ -1,7 +1,7 @@
 import { createHash } from "crypto";
 import { Binary } from "mongodb";
 import { LOGO_STORE_BUDGET_BYTES } from "./limits";
-import { getRoomLogosCollection, getRoomsCollection } from "./mongodb";
+import { getRoomLogosCollection, type RoomLogoDoc, getRoomsCollection } from "./mongodb";
 
 export { logoUrl } from "./logoUrl";
 
@@ -10,6 +10,7 @@ export type LogoContentType = "image/png" | "image/jpeg" | "image/webp";
 // An upload is a draft until the brand is saved, so Discard never touches the
 // live logo; an abandoned draft is gone by itself through the TTL index.
 const DRAFT_TTL_MS = 24 * 60 * 60 * 1000;
+export const MAX_DRAFTS_PER_ROOM = 3;
 
 export class LogoStoreFullError extends Error {
   constructor() {
@@ -72,6 +73,19 @@ export async function saveDraftLogo(
       await collection.updateOne({ _id, expireAt: { $exists: true } }, { $set: { expireAt } });
     }
     return hash;
+  }
+
+  // The store budget is global: one room cycling through uploads must not drain it.
+  const drafts = (await collection
+    .find({ roomId, expireAt: { $exists: true } }, { projection: { _id: 1, createdAt: 1 } })
+    .toArray()) as Pick<RoomLogoDoc, "_id" | "createdAt">[];
+  const excess = drafts.length - (MAX_DRAFTS_PER_ROOM - 1);
+  if (excess > 0) {
+    const oldest = drafts
+      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+      .slice(0, excess)
+      .map((d) => d._id);
+    await collection.deleteMany({ _id: { $in: oldest } });
   }
 
   if ((await logoStoreBytes()) + buf.length > LOGO_STORE_BUDGET_BYTES) {

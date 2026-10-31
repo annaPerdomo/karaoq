@@ -4,11 +4,17 @@ import LanguageSwitcher from "../LanguageSwitcher";
 import { Icons } from "./icons";
 import { SettingsPopover } from "./SettingsPopover";
 import ClubLogo from "../brand/ClubLogo";
+import { CornerHandle } from "../edit/EditChrome";
+import { useScalarDrag } from "../edit/hooks/useScalarDrag";
+import { roundLogoScale } from "../../lib/brandStyle";
+import { LOGO_SCALE_MAX, LOGO_SCALE_MIN } from "../../lib/limits";
 import { AutoAdvance } from "../../pages/api/types";
 
 export function HostHeader({
   roomId,
   logo,
+  logoScale,
+  onLogoScaleChange,
   remote,
   tvMode,
   customizing,
@@ -43,6 +49,8 @@ export function HostHeader({
 }: {
   roomId: string;
   logo: string | undefined;
+  logoScale: number;
+  onLogoScaleChange: (scale: number) => void;
   remote: boolean;
   tvMode: boolean;
   customizing: boolean;
@@ -76,9 +84,27 @@ export function HostHeader({
   onBrandClick: () => void;
 }) {
   const { t } = useT();
+  const logoDrag = useScalarDrag({
+    value: logoScale,
+    min: LOGO_SCALE_MIN,
+    max: LOGO_SCALE_MAX,
+    scale: 80,
+    step: 0.1,
+    round: roundLogoScale,
+    onChange: onLogoScaleChange,
+  });
   return (
     <header className={styles.header}>
-      <ClubLogo roomId={roomId} logo={logo} className={styles.clubLogo} dividerClassName={styles.clubDivider} />
+      <span className={styles.logoWrap}>
+        <ClubLogo roomId={roomId} logo={logo} className={styles.clubLogo} dividerClassName={styles.clubDivider} />
+        {customizing && logo && (
+          <CornerHandle
+            title={t('customize.dragResize')}
+            ariaLabel={t('edit.handle.logoSize')}
+            dragProps={logoDrag}
+          />
+        )}
+      </span>
       <div className={styles.brand} onClick={onBrandClick}>
         KaraoQ
         {remote && <span className={styles.cohostBadge}>{t('host.role.cohost')}</span>}

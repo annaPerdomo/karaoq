@@ -32,9 +32,16 @@
   position: relative;
 }
 
+.logoWrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
 .clubLogo {
-  height: 1.9rem;
-  max-width: 8rem;
+  height: min(calc(1.9rem * var(--logo-scale, 1)), 40px);
+  max-width: calc(8rem * var(--logo-scale, 1));
   object-fit: contain;
   flex-shrink: 0;
 }
@@ -52,7 +59,7 @@
   font-weight: 400;
   font-size: 1.4rem;
   letter-spacing: 2px;
-  background: linear-gradient(135deg, var(--acc-a, #ff2d78), var(--acc-b, #00f0ff));
+  background: linear-gradient(135deg, var(--mark-a, #ff2d78), var(--mark-b, #00f0ff));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -141,7 +148,7 @@
 }
 
 .spBtn svg {
-  color: #00f0ff;
+  color: var(--acc-b, #00f0ff);
   flex-shrink: 0;
 }
 
@@ -188,7 +195,7 @@
 }
 
 .spTimeInput:focus {
-  border-color: rgba(0, 240, 255, 0.5);
+  border-color: rgba(var(--acc-b-rgb, 0, 240, 255), 0.5);
 }
 
 .spTimeBtn,
@@ -198,9 +205,9 @@
   font-family: inherit;
   padding: 0.4rem 0.6rem;
   border-radius: 6px;
-  border: 1px solid rgba(0, 240, 255, 0.35);
-  background: rgba(0, 240, 255, 0.1);
-  color: #00f0ff;
+  border: 1px solid rgba(var(--acc-b-rgb, 0, 240, 255), 0.35);
+  background: rgba(var(--acc-b-rgb, 0, 240, 255), 0.1);
+  color: var(--acc-b, #00f0ff);
   cursor: pointer;
   white-space: nowrap;
 }
@@ -260,9 +267,9 @@
 }
 
 .spChipOn {
-  border-color: rgba(0, 240, 255, 0.5);
-  background: rgba(0, 240, 255, 0.12);
-  color: #00f0ff;
+  border-color: rgba(var(--acc-b-rgb, 0, 240, 255), 0.5);
+  background: rgba(var(--acc-b-rgb, 0, 240, 255), 0.12);
+  color: var(--acc-b, #00f0ff);
 }
 
 .spToggleRow {
@@ -372,7 +379,7 @@
 .readyLabel {
   font-size: 0.8rem;
   letter-spacing: 4px;
-  color: #ff2d78;
+  color: var(--acc-a, #ff2d78);
   text-transform: uppercase;
   font-weight: 700;
   display: flex;
@@ -410,7 +417,7 @@
   font-family: var(--font-headline);
   font-size: clamp(2.5rem, 6vw, 4.5rem);
   font-weight: 700;
-  color: #00f0ff;
+  color: var(--acc-b, #00f0ff);
   text-align: center;
   letter-spacing: -0.02em;
   line-height: 1.2;
@@ -508,7 +515,7 @@
   font-size: 1rem;
   font-weight: 700;
   color: #fff;
-  background: linear-gradient(135deg, rgba(255, 45, 120, 0.85), rgba(255, 107, 53, 0.85));
+  background: linear-gradient(135deg, rgba(var(--acc-a-rgb, 255, 45, 120), 0.85), rgba(var(--acc-warm-rgb, 255, 107, 53), 0.85));
   padding: 0.25rem 0.6rem;
   border-radius: 10px;
   white-space: nowrap;
@@ -541,12 +548,12 @@
   background: transparent;
   border: none;
   cursor: pointer;
-  color: #ff2d78;
+  color: var(--acc-a, #ff2d78);
   transition: background 0.15s;
 }
 
 .sidebarReopen:hover {
-  background: rgba(255, 45, 120, 0.08);
+  background: rgba(var(--acc-a-rgb, 255, 45, 120), 0.08);
 }
 
 .sidebarReopenLabel {
@@ -594,8 +601,8 @@
 .sidebarBadge {
   font-size: 0.6rem;
   font-weight: 700;
-  background: rgba(255, 45, 120, 0.2);
-  color: #ff2d78;
+  background: rgba(var(--acc-a-rgb, 255, 45, 120), 0.2);
+  color: var(--acc-a, #ff2d78);
   padding: 0.1rem 0.4rem;
   border-radius: 10px;
   letter-spacing: 0;
@@ -695,7 +702,7 @@
 /* Queue time estimate — deliberately quieter than the counts it sits beside;
    it's a guide, not a promise. */
 .queueTimeLeft {
-  color: #00f0ff;
+  color: var(--acc-b, #00f0ff);
   opacity: 0.85;
   font-weight: 600;
 }
@@ -763,13 +770,13 @@
 }
 
 .queueItemDragging {
-  background: rgba(255, 45, 120, 0.08);
+  background: rgba(var(--acc-a-rgb, 255, 45, 120), 0.08);
   border-radius: 8px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
 .queueItemEditing {
-  background: rgba(0, 240, 255, 0.04);
+  background: rgba(var(--acc-b-rgb, 0, 240, 255), 0.04);
 }
 
 .dragHandle {
@@ -794,7 +801,7 @@
 .queueNum {
   font-size: 0.62rem;
   font-weight: 700;
-  color: #ff2d78;
+  color: var(--acc-a, #ff2d78);
   width: 1.4rem;
   height: 1.4rem;
   display: flex;
@@ -802,7 +809,7 @@
   justify-content: center;
   text-align: center;
   flex-shrink: 0;
-  background: rgba(255, 45, 120, 0.12);
+  background: rgba(var(--acc-a-rgb, 255, 45, 120), 0.12);
   border-radius: 6px;
 }
 
@@ -823,7 +830,7 @@
 .queueSingerName {
   font-size: 0.85rem;
   font-weight: 600;
-  color: #00f0ff;
+  color: var(--acc-b, #00f0ff);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -846,9 +853,9 @@
 
 .editInput {
   background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(0, 240, 255, 0.3);
+  border: 1px solid rgba(var(--acc-b-rgb, 0, 240, 255), 0.3);
   border-radius: 4px;
-  color: #00f0ff;
+  color: var(--acc-b, #00f0ff);
   /* ≥16px (1rem) or iOS Safari zooms in on focus and stays zoomed. */
   font-size: 1rem;
   font-weight: 600;
@@ -899,13 +906,13 @@
 }
 
 .removeBtn:hover {
-  background: rgba(255, 45, 120, 0.15);
-  color: #ff2d78;
+  background: rgba(var(--acc-a-rgb, 255, 45, 120), 0.15);
+  color: var(--acc-a, #ff2d78);
 }
 
 .actionBtnActive {
-  background: rgba(0, 240, 255, 0.15);
-  color: #00f0ff;
+  background: rgba(var(--acc-b-rgb, 0, 240, 255), 0.15);
+  color: var(--acc-b, #00f0ff);
 }
 
 .historyBadge {
@@ -958,10 +965,10 @@
   gap: 0.4rem;
   height: 32px;
   padding: 0 0.75rem;
-  background: rgba(0, 240, 255, 0.08);
-  border: 1px solid rgba(0, 240, 255, 0.22);
+  background: rgba(var(--acc-b-rgb, 0, 240, 255), 0.08);
+  border: 1px solid rgba(var(--acc-b-rgb, 0, 240, 255), 0.22);
   border-radius: 999px;
-  color: #00f0ff;
+  color: var(--acc-b, #00f0ff);
   font-size: 0.72rem;
   font-weight: 600;
   letter-spacing: 0.02em;
@@ -975,8 +982,8 @@
 }
 
 .replayBtn:hover {
-  background: rgba(0, 240, 255, 0.16);
-  border-color: rgba(0, 240, 255, 0.45);
+  background: rgba(var(--acc-b-rgb, 0, 240, 255), 0.16);
+  border-color: rgba(var(--acc-b-rgb, 0, 240, 255), 0.45);
   transform: scale(1.04);
 }
 
@@ -1033,7 +1040,7 @@
   flex-direction: column;
   background: var(--bg-primary);
   border-top: 2px solid transparent;
-  border-image: linear-gradient(90deg, #ff2d78, #00f0ff) 1;
+  border-image: linear-gradient(90deg, var(--acc-a, #ff2d78), var(--acc-b, #00f0ff)) 1;
 }
 
 .transportMain {
@@ -1166,11 +1173,11 @@
 }
 
 .tLabelPlaying {
-  color: #ff2d78;
+  color: var(--acc-a, #ff2d78);
 }
 
 .tLabelReady {
-  color: #ff2d78;
+  color: var(--acc-a, #ff2d78);
 }
 
 .tLabelEmpty {
@@ -1182,14 +1189,14 @@
   height: calc(6px * var(--host-now-scale, 1));
   border-radius: 50%;
   flex-shrink: 0;
-  background: #ff2d78;
-  box-shadow: 0 0 8px rgba(255, 45, 120, 0.8);
+  background: var(--acc-a, #ff2d78);
+  box-shadow: 0 0 8px rgba(var(--acc-a-rgb, 255, 45, 120), 0.8);
   animation: pulse 1.5s ease-in-out infinite;
 }
 
 /* Auto-advance: the countdown with its cancel while the breather runs. */
 .tAutoCount {
-  color: #00f0ff;
+  color: var(--acc-b, #00f0ff);
   white-space: nowrap;
 }
 
@@ -1240,16 +1247,16 @@
 }
 
 .tModePillOn {
-  color: #00f0ff;
-  border-color: rgba(0, 240, 255, 0.5);
-  background: rgba(0, 240, 255, 0.12);
-  box-shadow: 0 0 12px rgba(0, 240, 255, 0.25);
+  color: var(--acc-b, #00f0ff);
+  border-color: rgba(var(--acc-b-rgb, 0, 240, 255), 0.5);
+  background: rgba(var(--acc-b-rgb, 0, 240, 255), 0.12);
+  box-shadow: 0 0 12px rgba(var(--acc-b-rgb, 0, 240, 255), 0.25);
 }
 
 .tModePillOn:hover,
 .tModePillOn:focus-visible {
-  background: rgba(0, 240, 255, 0.2);
-  color: #00f0ff;
+  background: rgba(var(--acc-b-rgb, 0, 240, 255), 0.2);
+  color: var(--acc-b, #00f0ff);
 }
 
 .tModeGap {
@@ -1386,7 +1393,7 @@
 
 .gapField input:focus {
   outline: none;
-  border-color: rgba(0, 240, 255, 0.6);
+  border-color: rgba(var(--acc-b-rgb, 0, 240, 255), 0.6);
 }
 
 .gapHint {
@@ -1425,7 +1432,7 @@
 .tSinger {
   font-size: calc(1.1rem * var(--host-now-scale, 1));
   font-weight: 700;
-  color: #00f0ff;
+  color: var(--acc-b, #00f0ff);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1476,38 +1483,38 @@
 }
 
 .tPlayAuto {
-  box-shadow: 0 0 0 2px rgba(0, 240, 255, 0.55), 0 0 16px rgba(0, 240, 255, 0.35);
+  box-shadow: 0 0 0 2px rgba(var(--acc-b-rgb, 0, 240, 255), 0.55), 0 0 16px rgba(var(--acc-b-rgb, 0, 240, 255), 0.35);
 }
 
 .tPlay {
   width: 56px;
   height: 48px;
-  background: linear-gradient(135deg, #ff2d78, #ff6b35);
+  background: linear-gradient(135deg, var(--acc-a, #ff2d78), var(--acc-warm, #ff6b35));
   color: #fff;
   border-radius: 14px;
-  box-shadow: 0 3px 16px rgba(255, 45, 120, 0.35);
+  box-shadow: 0 3px 16px rgba(var(--acc-a-rgb, 255, 45, 120), 0.35);
 }
 
 .tPlay:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 6px 24px rgba(255, 45, 120, 0.5);
-  background: linear-gradient(135deg, #ff2d78, #ff6b35);
+  box-shadow: 0 6px 24px rgba(var(--acc-a-rgb, 255, 45, 120), 0.5);
+  background: linear-gradient(135deg, var(--acc-a, #ff2d78), var(--acc-warm, #ff6b35));
   color: #fff;
 }
 
 .tPause {
   width: 56px;
   height: 48px;
-  background: linear-gradient(135deg, #ff2d78, #ff6b35);
+  background: linear-gradient(135deg, var(--acc-a, #ff2d78), var(--acc-warm, #ff6b35));
   color: #fff;
   border-radius: 14px;
-  box-shadow: 0 3px 16px rgba(255, 45, 120, 0.35);
+  box-shadow: 0 3px 16px rgba(var(--acc-a-rgb, 255, 45, 120), 0.35);
 }
 
 .tPause:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 6px 24px rgba(255, 45, 120, 0.5);
-  background: linear-gradient(135deg, #ff2d78, #ff6b35);
+  box-shadow: 0 6px 24px rgba(var(--acc-a-rgb, 255, 45, 120), 0.5);
+  background: linear-gradient(135deg, var(--acc-a, #ff2d78), var(--acc-warm, #ff6b35));
   color: #fff;
 }
 
@@ -1643,7 +1650,7 @@
 .btnDanger {
   flex: 1;
   padding: 0.65rem 1rem;
-  background: linear-gradient(135deg, #ff2d78, #e01b50);
+  background: linear-gradient(135deg, var(--acc-a, #ff2d78), #e01b50);
   border: none;
   border-radius: 10px;
   color: #fff;
@@ -1655,7 +1662,7 @@
 
 .btnDanger:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 16px rgba(255, 45, 120, 0.4);
+  box-shadow: 0 4px 16px rgba(var(--acc-a-rgb, 255, 45, 120), 0.4);
 }
 
 .btnGhost {
@@ -1754,14 +1761,14 @@
   align-items: flex-end;
   gap: 7px;
   height: 64px;
-  filter: drop-shadow(0 0 18px rgba(255, 45, 120, 0.35));
+  filter: drop-shadow(0 0 18px rgba(var(--acc-a-rgb, 255, 45, 120), 0.35));
 }
 
 .stageEq span {
   width: 10px;
   height: 20px;
   border-radius: 5px;
-  background: linear-gradient(180deg, #ff2d78, #9b1dff);
+  background: linear-gradient(180deg, var(--acc-a, #ff2d78), #9b1dff);
   animation: stageEqBounce 1.05s ease-in-out infinite;
 }
 
@@ -1788,7 +1795,7 @@
   padding: 2rem;
   background: rgba(255, 255, 255, 0.05);
   border-radius: 20px;
-  border: 1px solid rgba(255, 45, 120, 0.2);
+  border: 1px solid rgba(var(--acc-a-rgb, 255, 45, 120), 0.2);
   max-width: 400px;
 }
 
@@ -1804,7 +1811,7 @@
 
 .btn {
   padding: 0.7rem 1.5rem;
-  background: linear-gradient(135deg, #ff2d78, #ff6b35);
+  background: linear-gradient(135deg, var(--acc-a, #ff2d78), var(--acc-warm, #ff6b35));
   border: none;
   border-radius: 10px;
   color: #fff;
@@ -1878,8 +1885,8 @@
 }
 
 .welcomeInput:focus {
-  border-color: #00f0ff;
-  box-shadow: 0 0 0 3px rgba(0, 240, 255, 0.12);
+  border-color: var(--acc-b, #00f0ff);
+  box-shadow: 0 0 0 3px rgba(var(--acc-b-rgb, 0, 240, 255), 0.12);
 }
 
 .welcomeInput::placeholder {
@@ -1889,7 +1896,7 @@
 .welcomeBtn {
   width: 100%;
   padding: 0.85rem;
-  background: linear-gradient(135deg, #ff2d78, #ff6b35);
+  background: linear-gradient(135deg, var(--acc-a, #ff2d78), var(--acc-warm, #ff6b35));
   border: none;
   border-radius: 14px;
   color: #fff;
@@ -1897,13 +1904,13 @@
   font-size: 1rem;
   letter-spacing: 0.5px;
   transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
-  box-shadow: 0 4px 16px rgba(255, 45, 120, 0.3);
+  box-shadow: 0 4px 16px rgba(var(--acc-a-rgb, 255, 45, 120), 0.3);
   cursor: pointer;
 }
 
 .welcomeBtn:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 6px 24px rgba(255, 45, 120, 0.45);
+  box-shadow: 0 6px 24px rgba(var(--acc-a-rgb, 255, 45, 120), 0.45);
 }
 
 .welcomeBtn:disabled {
@@ -2164,10 +2171,10 @@
   letter-spacing: 0.05em;
   text-transform: uppercase;
   vertical-align: middle;
-  color: #00f0ff;
-  background: rgba(0, 240, 255, 0.12);
-  border: 1px solid rgba(0, 240, 255, 0.35);
-  -webkit-text-fill-color: #00f0ff;
+  color: var(--acc-b, #00f0ff);
+  background: rgba(var(--acc-b-rgb, 0, 240, 255), 0.12);
+  border: 1px solid rgba(var(--acc-b-rgb, 0, 240, 255), 0.35);
+  -webkit-text-fill-color: var(--acc-b, #00f0ff);
 }
 
 .cohostNote {
@@ -2219,7 +2226,7 @@
 }
 
 .modePill > svg {
-  color: #00f0ff;
+  color: var(--acc-b, #00f0ff);
 }
 
 .modePillCaret {
@@ -2282,17 +2289,17 @@
 }
 
 .modeMenuItem svg {
-  color: #00f0ff;
+  color: var(--acc-b, #00f0ff);
   flex-shrink: 0;
 }
 
 .modeMenuItemActive {
-  background: rgba(0, 240, 255, 0.08);
+  background: rgba(var(--acc-b-rgb, 0, 240, 255), 0.08);
 }
 
 .modeCheck {
   margin-left: auto;
-  color: #00f0ff;
+  color: var(--acc-b, #00f0ff);
   font-weight: 700;
   font-size: 0.85rem;
 }
@@ -2327,8 +2334,8 @@
 }
 
 .sidebarTabActive {
-  background: rgba(255, 45, 120, 0.15);
-  color: #ff2d78;
+  background: rgba(var(--acc-a-rgb, 255, 45, 120), 0.15);
+  color: var(--acc-a, #ff2d78);
 }
 
 .addSongBtn {
@@ -2342,7 +2349,7 @@
   font-size: 0.82rem;
   font-weight: 600;
   color: #fff;
-  background: linear-gradient(135deg, #ff2d78, #ff6b35);
+  background: linear-gradient(135deg, var(--acc-a, #ff2d78), var(--acc-warm, #ff6b35));
   border: none;
   cursor: pointer;
   flex-shrink: 0;
@@ -2351,12 +2358,12 @@
 
 .addSongBtn:hover {
   transform: translateY(-1px);
-  box-shadow: 0 3px 14px rgba(255, 45, 120, 0.4);
+  box-shadow: 0 3px 14px rgba(var(--acc-a-rgb, 255, 45, 120), 0.4);
 }
 
 .addSongBtnActive {
-  background: rgba(0, 240, 255, 0.15);
-  color: #00f0ff;
+  background: rgba(var(--acc-b-rgb, 0, 240, 255), 0.15);
+  color: var(--acc-b, #00f0ff);
   box-shadow: none;
 }
 
@@ -2387,7 +2394,7 @@
 .cheersLive {
   flex-shrink: 0;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(255, 45, 120, 0.03);
+  background: rgba(var(--acc-a-rgb, 255, 45, 120), 0.03);
 }
 
 .drawerToggle {
@@ -2430,7 +2437,7 @@
   font-weight: 700;
   line-height: 1.3;
   text-align: center;
-  background: linear-gradient(135deg, #ff2d78, #00f0ff);
+  background: linear-gradient(135deg, var(--acc-a, #ff2d78), var(--acc-b, #00f0ff));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -2604,7 +2611,7 @@
 
 .stageSplashLeft {
   left: calc(50% - var(--mic-h) * 1.02);
-  --beam: rgba(255, 45, 120, 0.34);
+  --beam: rgba(var(--acc-a-rgb, 255, 45, 120), 0.34);
   animation: wingStrike 0.8s ease-out 2.5s both,
     splashLeft 17s ease-in-out 5s infinite,
     rgbLeft 26s linear 2.5s infinite;
@@ -2612,7 +2619,7 @@
 
 .stageSplashRight {
   left: calc(50% + var(--mic-h) * 1.02);
-  --beam: rgba(0, 240, 255, 0.28);
+  --beam: rgba(var(--acc-b-rgb, 0, 240, 255), 0.28);
   animation: wingStrike 0.8s ease-out 3s both,
     splashRight 23s ease-in-out 5.9s infinite,
     rgbRight 26s linear 3s infinite;
@@ -2661,7 +2668,7 @@
 
 .stageBeamLeft {
   left: calc(50% - var(--mic-h) * 1.85);
-  --beam: rgba(255, 45, 120, 0.34);
+  --beam: rgba(var(--acc-a-rgb, 255, 45, 120), 0.34);
   transform: rotate(-22.5deg);
   animation: wingStrike 0.8s ease-out 2.5s both,
     swayLeft 17s ease-in-out 5s infinite,
@@ -2670,7 +2677,7 @@
 
 .stageBeamRight {
   left: calc(50% + var(--mic-h) * 0.95);
-  --beam: rgba(0, 240, 255, 0.28);
+  --beam: rgba(var(--acc-b-rgb, 0, 240, 255), 0.28);
   transform: rotate(22.5deg);
   animation: wingStrike 0.8s ease-out 3s both,
     swayRight 23s ease-in-out 5.9s infinite,
@@ -2768,25 +2775,25 @@
 /* Adjacent hues only, or the interpolation passes through grey. The two run
    the same loop half a turn apart, so they are never the same colour. */
 @keyframes rgbLeft {
-  0%      { --beam: rgba(255, 45, 120, 0.34); }
+  0%      { --beam: rgba(var(--acc-a-rgb, 255, 45, 120), 0.34); }
   14.3%   { --beam: rgba(255, 90, 45, 0.34); }
   28.6%   { --beam: rgba(255, 181, 45, 0.32); }
   42.9%   { --beam: rgba(125, 255, 45, 0.28); }
-  57.1%   { --beam: rgba(0, 240, 255, 0.28); }
+  57.1%   { --beam: rgba(var(--acc-b-rgb, 0, 240, 255), 0.28); }
   71.4%   { --beam: rgba(45, 107, 255, 0.36); }
   85.7%   { --beam: rgba(176, 45, 255, 0.36); }
-  100%    { --beam: rgba(255, 45, 120, 0.34); }
+  100%    { --beam: rgba(var(--acc-a-rgb, 255, 45, 120), 0.34); }
 }
 
 @keyframes rgbRight {
-  0%      { --beam: rgba(0, 240, 255, 0.28); }
+  0%      { --beam: rgba(var(--acc-b-rgb, 0, 240, 255), 0.28); }
   14.3%   { --beam: rgba(45, 107, 255, 0.36); }
   28.6%   { --beam: rgba(176, 45, 255, 0.36); }
-  42.9%   { --beam: rgba(255, 45, 120, 0.34); }
+  42.9%   { --beam: rgba(var(--acc-a-rgb, 255, 45, 120), 0.34); }
   57.1%   { --beam: rgba(255, 90, 45, 0.34); }
   71.4%   { --beam: rgba(255, 181, 45, 0.32); }
   85.7%   { --beam: rgba(125, 255, 45, 0.28); }
-  100%    { --beam: rgba(0, 240, 255, 0.28); }
+  100%    { --beam: rgba(var(--acc-b-rgb, 0, 240, 255), 0.28); }
 }
 
 @keyframes floorOn {
@@ -2886,7 +2893,7 @@
   font-size: 1rem;
   font-weight: 700;
   color: #fff;
-  background: linear-gradient(135deg, #ff2d78, #ff6b35);
+  background: linear-gradient(135deg, var(--acc-a, #ff2d78), var(--acc-warm, #ff6b35));
   border: none;
   border-radius: 12px;
   cursor: pointer;
@@ -2897,12 +2904,12 @@
 .emptyAddBtn:hover {
   animation: none;
   transform: translateY(-1px);
-  box-shadow: 0 6px 22px rgba(255, 45, 120, 0.4);
+  box-shadow: 0 6px 22px rgba(var(--acc-a-rgb, 255, 45, 120), 0.4);
 }
 
 @keyframes beckon {
-  0%, 100% { box-shadow: 0 0 0 rgba(255, 45, 120, 0); }
-  50% { box-shadow: 0 8px 32px rgba(255, 45, 120, 0.45); }
+  0%, 100% { box-shadow: 0 0 0 rgba(var(--acc-a-rgb, 255, 45, 120), 0); }
+  50% { box-shadow: 0 8px 32px rgba(var(--acc-a-rgb, 255, 45, 120), 0.45); }
 }
 
 /* Last of the stage rules on purpose: media queries add no specificity, so
@@ -3038,16 +3045,16 @@ html[data-tv] .transportHeart {
   justify-content: center;
   font-size: 0.78rem;
   font-weight: 700;
-  color: #00f0ff;
-  background: rgba(0, 240, 255, 0.12);
-  border: 1px solid rgba(0, 240, 255, 0.35);
+  color: var(--acc-b, #00f0ff);
+  background: rgba(var(--acc-b-rgb, 0, 240, 255), 0.12);
+  border: 1px solid rgba(var(--acc-b-rgb, 0, 240, 255), 0.35);
   border-radius: 999px;
 }
 
 .cohostLink {
   margin-top: 0.35rem;
   font-size: 0.85rem;
-  color: #00f0ff;
+  color: var(--acc-b, #00f0ff);
   text-align: center;
   word-break: break-all;
 }
@@ -3068,7 +3075,7 @@ html[data-tv] .transportHeart {
 
 .cohostIcon {
   display: flex;
-  color: #00f0ff;
+  color: var(--acc-b, #00f0ff);
   flex-shrink: 0;
   margin-top: 0.1rem;
 }
@@ -3177,9 +3184,9 @@ html[data-tv] .transportHeart {
 
 .dpSegmentBtnActive {
   color: var(--text-primary);
-  background: rgba(255, 45, 120, 0.18);
-  border-color: #ff2d78;
-  box-shadow: 0 0 0 1px rgba(255, 45, 120, 0.4) inset;
+  background: rgba(var(--acc-a-rgb, 255, 45, 120), 0.18);
+  border-color: var(--acc-a, #ff2d78);
+  box-shadow: 0 0 0 1px rgba(var(--acc-a-rgb, 255, 45, 120), 0.4) inset;
 }
 
 .dpWelcomeInput {
@@ -3198,7 +3205,7 @@ html[data-tv] .transportHeart {
 
 .dpWelcomeInput:focus {
   outline: none;
-  border-color: #00f0ff;
+  border-color: var(--acc-b, #00f0ff);
 }
 
 
@@ -3236,24 +3243,44 @@ html[data-tv] .transportHeart {
 
 /* Theme presets; classic = the base vars, no class. */
 .main {
+  /* The KaraoQ wordmark: per theme, never overridden by a room's brand. */
+  --mark-a: #ff2d78;
+  --mark-b: #00f0ff;
   --acc-a: #ff2d78;
+  --acc-a-rgb: 255, 45, 120;
   --acc-b: #00f0ff;
   --acc-b-rgb: 0, 240, 255;
+  --acc-c: #9b1dff;
+  --acc-c-rgb: 155, 29, 255;
+  --acc-warm: #ff6b35;
+  --acc-warm-rgb: 255, 107, 53;
 }
 
 .themeMinimal {
+  --mark-a: #aab0c0;
+  --mark-b: #d7dae2;
   --acc-a: #aab0c0;
+  --acc-a-rgb: 170, 176, 192;
   --acc-b: #d7dae2;
   --acc-b-rgb: 215, 218, 226;
+  --acc-c: #b8bcc8;
+  --acc-c-rgb: 184, 188, 200;
+  --acc-warm: #c4c8d4;
+  --acc-warm-rgb: 196, 200, 212;
   --bg-primary: #0a0a0c;
   --bg-secondary: #151517;
 }
 
 .themeNeon {
+  --acc-a-rgb: 255, 45, 120;
+  --acc-c: #9b1dff;
+  --acc-c-rgb: 155, 29, 255;
+  --acc-warm: #ff6b35;
+  --acc-warm-rgb: 255, 107, 53;
   --bg-primary: #050505;
   --bg-secondary: #0d0d14;
   /* Picked up by the count-in's sung lyric (styles/Countdown.module.css). */
-  --cd-glow: drop-shadow(0 0 10px rgba(0, 240, 255, 0.55));
+  --cd-glow: drop-shadow(0 0 10px rgba(var(--acc-b-rgb, 0, 240, 255), 0.55));
 }
 
 @media (min-width: 769px) {
@@ -3300,12 +3327,12 @@ html[data-tv] .transportHeart {
 }
 
 .spToggleRow:focus-visible {
-  outline: calc(3px * var(--tv-scale, 1)) solid #00f0ff;
+  outline: calc(3px * var(--tv-scale, 1)) solid var(--acc-b, #00f0ff);
   outline-offset: calc(-3px * var(--tv-scale, 1));
 }
 
 html[data-tv] .spToggleRow:focus {
-  outline: calc(3px * var(--tv-scale, 1)) solid #00f0ff;
+  outline: calc(3px * var(--tv-scale, 1)) solid var(--acc-b, #00f0ff);
   outline-offset: calc(-3px * var(--tv-scale, 1));
 }
 

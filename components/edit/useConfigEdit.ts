@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { SidebarPosition } from '../../pages/api/types';
+import { DisplayTheme, SidebarPosition } from '../../pages/api/types';
 import { SIDEBAR_WIDTH_MIN, SIDEBAR_WIDTH_MAX } from '../../lib/limits';
 import { configsEqual } from './configEquality';
 import { useScalarDrag } from './hooks/useScalarDrag';
@@ -8,6 +8,7 @@ interface SurfaceLayout {
   sidebarPosition: SidebarPosition;
   sidebarWidth: number;
   nowPlayingHeight: number;
+  theme: DisplayTheme;
 }
 
 /** How long a fresh save outranks the server: the slowest poll (host's 3s) plus
@@ -90,6 +91,8 @@ export function useConfigEdit<C extends SurfaceLayout, Id extends string>(opts: 
     return () => window.removeEventListener('beforeunload', warn);
   }, [dirty]);
 
+  const themeAtEnterRef = React.useRef(settled.theme);
+
   function reset() {
     setDraft(settled);
     setSelected(null);
@@ -99,6 +102,7 @@ export function useConfigEdit<C extends SurfaceLayout, Id extends string>(opts: 
 
   function enter() {
     reset();
+    themeAtEnterRef.current = settled.theme;
     setEditing(true);
   }
 
@@ -115,11 +119,17 @@ export function useConfigEdit<C extends SurfaceLayout, Id extends string>(opts: 
     if (!joinCode) return;
     setSaving(true);
     setSaveFailed(false);
-    const ok = await persist(joinCode, draft);
+    // A draft that never touched the theme must not revert one another device
+    // saved while this edit sat open — send the live (settled) theme instead.
+    const outgoing =
+      draft.theme === themeAtEnterRef.current && draft.theme !== settled.theme
+        ? { ...draft, theme: settled.theme }
+        : draft;
+    const ok = await persist(joinCode, outgoing);
     setSaving(false);
     if (ok) {
-      setJustSaved(draft);
-      onSaved(draft);
+      setJustSaved(outgoing);
+      onSaved(outgoing);
       setSelected(null);
       setEditing(false);
     } else {

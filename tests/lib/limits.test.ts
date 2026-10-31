@@ -266,6 +266,10 @@ describe("isValidRoomBrand", () => {
     {},
     { logo: "0123456789abcdef", accentA: "#ff00AA", accentB: "#000000" },
     { accentB: "#123abc" },
+    { logoScale: 1 },
+    { logoScale: 0.5 },
+    { logoScale: 2 },
+    { logoScale: 1.23 },
   ])("accepts %j", (brand) => {
     expect(isValidRoomBrand(brand)).toBe(true);
   });
@@ -282,6 +286,12 @@ describe("isValidRoomBrand", () => {
     ["null", null],
     ["a string", "#ffffff"],
     ["an array", []],
+    ["logoScale below the floor", { logoScale: 0.49 }],
+    ["logoScale above the ceiling", { logoScale: 2.01 }],
+    ["logoScale with more than 2 decimals", { logoScale: 1.234 }],
+    ["logoScale as a string", { logoScale: "1.2" }],
+    ["logoScale as NaN", { logoScale: NaN }],
+    ["logoScale as Infinity", { logoScale: Infinity }],
   ])("rejects %s", (_name, brand) => {
     expect(isValidRoomBrand(brand)).toBe(false);
   });

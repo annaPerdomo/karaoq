@@ -290,7 +290,19 @@ export const LOGO_MAX_BYTES = 64 * 1024;
 export const LOGO_STORE_BUDGET_BYTES = 25 * 1024 * 1024;
 export const LOGO_HASH_RE = /^[0-9a-f]{16}$/;
 const BRAND_COLOR_RE = /^#[0-9a-f]{6}$/i;
-const ROOM_BRAND_KEYS = new Set(["logo", "accentA", "accentB"]);
+const ROOM_BRAND_KEYS = new Set(["logo", "accentA", "accentB", "logoScale"]);
+export const LOGO_SCALE_MIN = 0.5;
+export const LOGO_SCALE_MAX = 2;
+
+function isValidLogoScale(value: unknown): boolean {
+  return (
+    typeof value === "number" &&
+    Number.isFinite(value) &&
+    value >= LOGO_SCALE_MIN &&
+    value <= LOGO_SCALE_MAX &&
+    Math.round(value * 100) / 100 === value
+  );
+}
 
 export function isValidRoomBrand(b: unknown): b is RoomBrand {
   if (!b || typeof b !== "object" || Array.isArray(b)) return false;
@@ -299,7 +311,8 @@ export function isValidRoomBrand(b: unknown): b is RoomBrand {
   return (
     (e.logo === undefined || (typeof e.logo === "string" && LOGO_HASH_RE.test(e.logo))) &&
     (e.accentA === undefined || (typeof e.accentA === "string" && BRAND_COLOR_RE.test(e.accentA))) &&
-    (e.accentB === undefined || (typeof e.accentB === "string" && BRAND_COLOR_RE.test(e.accentB)))
+    (e.accentB === undefined || (typeof e.accentB === "string" && BRAND_COLOR_RE.test(e.accentB))) &&
+    (e.logoScale === undefined || isValidLogoScale(e.logoScale))
   );
 }
 

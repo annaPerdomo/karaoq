@@ -66,6 +66,7 @@ export default async function handler(
       {
         $set: {
           displayConfig: config,
+          "hostConfig.theme": config.theme,
           lastActivity: new Date(),
           ...(boardsOnDisplay === undefined ? {} : { boardsOnDisplay }),
         },

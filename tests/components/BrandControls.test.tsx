@@ -52,9 +52,9 @@ describe("BrandControls", () => {
     expect(onChange).toHaveBeenCalledWith({ accentA: "#112233", logo: HASH });
   });
 
-  it("shows the current logo, and Remove clears it", () => {
+  it("shows the current logo, and Remove clears it along with its scale", () => {
     const onChange = vi.fn();
-    render(<BrandControls roomId="ROOM1" brand={{ logo: HASH }} onChange={onChange} />);
+    render(<BrandControls roomId="ROOM1" brand={{ logo: HASH, logoScale: 1.5 }} onChange={onChange} />);
     expect(screen.getByAltText(en["brand.logoAlt"])).toHaveAttribute(
       "src",
       `/api/queue/ROOM1/logo?h=${HASH}`
@@ -62,9 +62,10 @@ describe("BrandControls", () => {
     expect(screen.getByText(en["brand.replace"])).toBeInTheDocument();
     fireEvent.click(screen.getByText(en["brand.remove"]));
     expect(onChange.mock.calls[0][0].logo).toBeUndefined();
+    expect(onChange.mock.calls[0][0].logoScale).toBeUndefined();
   });
 
-  it("Use theme colours clears both accents", () => {
+  it("Use theme colors clears both accents", () => {
     const onChange = vi.fn();
     render(
       <BrandControls
@@ -80,7 +81,7 @@ describe("BrandControls", () => {
     expect(next.accentB).toBeUndefined();
   });
 
-  it("prefills the colour pickers with the theme accent when unset", () => {
+  it("prefills the color pickers with the theme accent when unset", () => {
     const { container } = render(
       <BrandControls roomId="ROOM1" brand={{ accentB: "#445566" }} onChange={() => {}} theme="minimal" />
     );

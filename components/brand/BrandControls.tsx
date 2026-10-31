@@ -88,7 +88,7 @@ export default function BrandControls({
             <button
               className={styles.dpSegmentBtn}
               disabled={uploading}
-              onClick={() => onChange({ ...brand, logo: undefined })}
+              onClick={() => onChange({ ...brand, logo: undefined, logoScale: undefined })}
             >
               {t('brand.remove')}
             </button>

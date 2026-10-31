@@ -1,7 +1,12 @@
 .main {
   --acc-a: #ff2d78;
+  --acc-a-rgb: 255, 45, 120;
   --acc-b: #00f0ff;
   --acc-b-rgb: 0, 240, 255;
+  --acc-c: #9b1dff;
+  --acc-c-rgb: 155, 29, 255;
+  --acc-warm: #ff6b35;
+  --acc-warm-rgb: 255, 107, 53;
   height: 100dvh;
   height: 100vh; /* fallback for older browsers */
   display: flex;
@@ -17,8 +22,13 @@
 /* Theme presets; classic = the base vars, no class. */
 .themeMinimal {
   --acc-a: #aab0c0;
+  --acc-a-rgb: 170, 176, 192;
   --acc-b: #d7dae2;
   --acc-b-rgb: 215, 218, 226;
+  --acc-c: #b8bcc8;
+  --acc-c-rgb: 184, 188, 200;
+  --acc-warm: #c4c8d4;
+  --acc-warm-rgb: 196, 200, 212;
   --bg-primary: #0a0a0c;
   --bg-secondary: #151517;
 }
@@ -40,6 +50,11 @@
 }
 
 .themeNeon {
+  --acc-a-rgb: 255, 45, 120;
+  --acc-c: #9b1dff;
+  --acc-c-rgb: 155, 29, 255;
+  --acc-warm: #ff6b35;
+  --acc-warm-rgb: 255, 107, 53;
   --bg-primary: #050505;
   --bg-secondary: #0d0d14;
 }
