@@ -16,6 +16,9 @@ function makeStats(overrides: Partial<ScreensStats["brand"]> = {}, empty = false
       medianMinutesOpen: empty ? null : 42,
       songsShown: empty ? 0 : 90,
       songsUnavailable: empty ? 0 : 10,
+      songsResolved: empty ? 0 : 100,
+      songsWithVideo: empty ? 0 : 90,
+      swaps: empty ? 0 : 7,
       resolve: { cache: empty ? 0 : 60, live: empty ? 0 : 30, quota: 0, busy: 0, none: empty ? 0 : 10 },
       errors: empty ? [] : [{ code: 150, count: 3 }, { code: 101, count: 2 }, { code: 100, count: 1 }],
       songsNudged: empty ? 0 : 9,
@@ -89,7 +92,7 @@ describe("ScreensView", () => {
     expect(screen.getByText("Needed a nudge")).toBeTruthy();
     expect(screen.getByText("10%")).toBeTruthy();
     expect(screen.getByText("Rooms with a logo")).toBeTruthy();
-    expect(screen.getByText("Rooms with colours")).toBeTruthy();
+    expect(screen.getByText("Rooms with colors")).toBeTruthy();
     expect(screen.getByText("5.0 MB of 25.0 MB")).toBeTruthy();
     // 101 and 150 share one row: 3 + 2.
     expect(screen.getAllByText("Embedding blocked")).toHaveLength(1);

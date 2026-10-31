@@ -68,6 +68,19 @@ describe("POST /api/analytics/screen-event", () => {
     const event = mockInsertOne.mock.calls[0][0];
     expect(event.type).toBe(type);
     expect(event.roomId).toBe("ROOM1");
+    const ttl = event.expiresAt.getTime() - Date.now();
+    expect(ttl).toBeGreaterThan(89 * 24 * 3600_000);
+    expect(ttl).toBeLessThanOrEqual(90 * 24 * 3600_000);
+  });
+
+  it("accepts an offset as large as the host's nudge range and rejects beyond it", async () => {
+    const ok = createRes();
+    await handler(post({ roomId: "ROOM1", type: "music_video_offset", data: { offsetSeconds: 600 } }), ok);
+    expect(ok.getStatus()).toBe(200);
+
+    const tooFar = createRes();
+    await handler(post({ roomId: "ROOM1", type: "music_video_offset", data: { offsetSeconds: 600.5 } }), tooFar);
+    expect(tooFar.getStatus()).toBe(400);
   });
 
   it("rejects an unknown type with 400", async () => {
@@ -154,7 +167,7 @@ describe("POST /api/analytics/screen-event", () => {
   });
 
   it("rate limits after too many requests", async () => {
-    for (let i = 0; i < 60; i++) {
+    for (let i = 0; i < 30; i++) {
       await handler(post({ roomId: "ROOM1", type: "music_video_link", data: { action: "open" } }), createRes());
     }
     const res = createRes();

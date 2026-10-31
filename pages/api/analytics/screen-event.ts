@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from "next";
-import { EventType, trackEvent } from "../../../lib/analytics";
+import { EventType, SCREEN_EVENT_TTL_MS, trackEvent } from "../../../lib/analytics";
 import { rateLimit } from "../../../lib/limits";
 import { normalizeRoomId, ROOM_CODE_PATTERN } from "../../../lib/roomCode";
 
@@ -9,7 +9,8 @@ import { normalizeRoomId, ROOM_CODE_PATTERN } from "../../../lib/roomCode";
 // the room-state endpoints.
 const MAX_SECONDS = 24 * 60 * 60;
 const MAX_SONGS = 1000;
-const MAX_OFFSET_S = 30;
+// Matches the host's ±600s nudge range (original-video.ts); the screen adds its own on top.
+const MAX_OFFSET_S = 600;
 const MAX_ERROR_CODE = 999;
 
 type Extractor = (data: unknown) => Record<string, unknown> | null;
@@ -120,13 +121,17 @@ export default async function handler(
     return;
   }
 
-  if (!rateLimit(req, "screen-event", 60, 60_000)) {
+  if (!rateLimit(req, "screen-event", 30, 60_000)) {
     res.status(429).json({ code: 429, message: "Too many requests, slow down." });
     return;
   }
 
   // Built from `extracted` + `roomId` only, never the raw `data` — nothing the
   // client sends can override `type`, `roomId` or `timestamp`.
-  await trackEvent(req, type as EventType, { roomId, ...extracted });
+  await trackEvent(req, type as EventType, {
+    roomId,
+    ...extracted,
+    expiresAt: new Date(Date.now() + SCREEN_EVENT_TTL_MS),
+  });
   res.status(200).json({ ok: true });
 }

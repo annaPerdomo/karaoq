@@ -16,7 +16,6 @@ export default function MusicVideoSection({
   stats: ScreensStats['musicVideo'];
   days: number;
 }): React.ReactElement {
-  const songsTried = stats.songsShown + stats.songsUnavailable;
 
   return (
     <>
@@ -38,17 +37,22 @@ export default function MusicVideoSection({
         />
         <StatTile
           label="Videos found"
-          value={songsTried > 0 ? `${pct(stats.songsShown, songsTried)}%` : '—'}
-          sub={`${stats.songsShown} of ${songsTried} songs had a video`}
+          value={stats.songsResolved > 0 ? `${pct(stats.songsWithVideo, stats.songsResolved)}%` : '—'}
+          sub={`${stats.songsWithVideo} of ${stats.songsResolved} lookups had a video`}
         />
         <StatTile
           label="Needed a nudge"
-          value={stats.songsShown > 0 ? `${Math.min(100, pct(stats.songsNudged, stats.songsShown))}%` : '—'}
+          value={stats.songsWithVideo > 0 ? `${Math.min(100, pct(stats.songsNudged, stats.songsWithVideo))}%` : '—'}
           sub={
             stats.medianAbsOffset !== null
               ? `${stats.songsNudged} songs · median ${stats.medianAbsOffset}s off`
               : `${stats.songsNudged} songs`
           }
+        />
+        <StatTile
+          label="Swapped by host"
+          value={stats.songsWithVideo > 0 ? `${Math.min(100, pct(stats.swaps, stats.songsWithVideo))}%` : '—'}
+          sub={`${stats.swaps} swaps`}
         />
       </div>
 

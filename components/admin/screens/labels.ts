@@ -68,7 +68,9 @@ export function hasActivity(stats: ScreensStats): boolean {
   );
   return (
     mv.opens + resolved + mv.errors.length + mv.songsNudged + mv.links.open + mv.links.copy > 0 ||
-    b.saves.host + b.saves.display + b.uploads + rejected > 0 ||
+    mv.swaps + mv.songsShown + mv.songsUnavailable + mv.songsResolved > 0 ||
+    b.saves.host + b.saves.display + b.uploads + rejected + b.clears > 0 ||
+    b.roomsWithLogo + b.roomsWithColors > 0 ||
     b.storageBytes > 0 ||
     b.committedLogos > 0 ||
     stats.feedback.length > 0

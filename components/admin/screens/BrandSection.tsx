@@ -24,7 +24,7 @@ export default function BrandSection({
       <div className={styles.tileGrid}>
         <StatTile label="Rooms with a logo" value={stats.roomsWithLogo} sub={`${stats.uploads} uploads`} />
         <StatTile
-          label="Rooms with colours"
+          label="Rooms with colors"
           value={stats.roomsWithColors}
           sub={`${stats.clears} cleared the brand`}
         />

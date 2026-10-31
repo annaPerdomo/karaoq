@@ -79,6 +79,7 @@ export default async function handler(
         eventRows<MusicVideoRow>(MUSIC_VIDEO_EVENTS, since, [
           "timestamp",
           "source",
+          "found",
           "durationSeconds",
           "songsShown",
           "songsUnavailable",

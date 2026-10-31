@@ -25,9 +25,13 @@ export interface ScreensStats {
     /** Rooms that opened it on ≥2 distinct UTC days in the window. */
     repeatRooms: number;
     medianMinutesOpen: number | null;
-    /** Summed from music_video_screen_closed. */
+    /** Summed from music_video_screen_closed, which only fires on pagehide — a TV
+     *  powered off never reports, so the rates use the resolve counts instead. */
     songsShown: number;
     songsUnavailable: number;
+    songsResolved: number;
+    songsWithVideo: number;
+    swaps: number;
     resolve: Record<ResolveSource, number>;
     errors: { code: number; count: number }[];
     /** music_video_offset count. */

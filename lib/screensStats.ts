@@ -16,6 +16,7 @@ export const FEEDBACK_MAX = 20;
 
 export const MUSIC_VIDEO_EVENTS = [
   "original_video_resolved",
+  "original_video_swapped",
   "music_video_screen_opened",
   "music_video_screen_closed",
   "music_video_error",
@@ -30,6 +31,7 @@ export interface MusicVideoRow {
   roomId?: string;
   timestamp: Date | string;
   source?: string;
+  found?: boolean;
   durationSeconds?: number;
   songsShown?: number;
   songsUnavailable?: number;
@@ -106,6 +108,9 @@ export function summarizeMusicVideo(
   let opens = 0;
   let songsShown = 0;
   let songsUnavailable = 0;
+  let songsResolved = 0;
+  let songsWithVideo = 0;
+  let swaps = 0;
 
   for (const row of rows) {
     switch (row.type) {
@@ -113,6 +118,13 @@ export function summarizeMusicVideo(
         if (row.source && Object.prototype.hasOwnProperty.call(resolve, row.source)) {
           resolve[row.source as ResolveSource] += 1;
         }
+        if (row.source === "cache" || row.source === "live" || row.source === "none") {
+          songsResolved += 1;
+          if (row.found) songsWithVideo += 1;
+        }
+        break;
+      case "original_video_swapped":
+        swaps += 1;
         break;
       case "music_video_screen_opened": {
         opens += 1;
@@ -153,6 +165,9 @@ export function summarizeMusicVideo(
     medianMinutesOpen: median(minutesOpen),
     songsShown,
     songsUnavailable,
+    songsResolved,
+    songsWithVideo,
+    swaps,
     resolve,
     errors: Array.from(errors.entries())
       .map(([code, count]) => ({ code, count }))
