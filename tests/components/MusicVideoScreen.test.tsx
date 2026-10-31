@@ -256,13 +256,13 @@ describe("MusicVideoScreen", () => {
     await waitFor(() => expect(screen.getByText("No music video for this one")).toBeTruthy());
   });
 
-  it("takes the display's theme — it is a TV surface, like the main Display", async () => {
+  it("takes the host's theme, which wins over a stale display theme", async () => {
     vi.stubGlobal(
       "fetch",
       fetchMockFor({ ...ROOM, hostConfig: { theme: "neon" }, displayConfig: { theme: "minimal" } } as typeof ROOM)
     );
     const { container } = render(<MusicVideoScreen />);
-    await waitFor(() => expect(container.querySelector("main")!.className).toMatch(/themeMinimal/));
+    await waitFor(() => expect(container.querySelector("main")!.className).toMatch(/themeNeon/));
   });
 
   it("applies the room's --logo-scale to the club logo", async () => {

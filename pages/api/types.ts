@@ -385,3 +385,10 @@ export interface QueueEntry {
   /** Host-chosen timing nudge for the music-video screen, seconds. Absent = 0. */
   originalOffsetSeconds?: number;
 }
+
+/** One theme for the whole room: the host's. Both config routes mirror a save
+ *  onto the other config; rooms saved before that may disagree, and the host's
+ *  wins on every screen. */
+export function roomTheme(room: Pick<Room, "hostConfig">): DisplayTheme {
+  return normalizeHostConfig(room.hostConfig).theme;
+}

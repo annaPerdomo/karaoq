@@ -15,7 +15,7 @@ import { startVisiblePolling } from '../app/queue/pollWhileVisible';
 import { DORMANT_POLL_MS, isRoomDormant } from '../lib/roomDormancy';
 import { useSearchBackNotice } from '../app/queue/useSearchBackNotice';
 import SearchBackToast from './search/SearchBackToast';
-import { DisplayTheme, QueueEntry, Reaction, Room, RoomBrand, normalizeDisplayConfig } from '../pages/api/types';
+import { DisplayTheme, QueueEntry, Reaction, Room, RoomBrand, roomTheme } from '../pages/api/types';
 import { brandStyle } from '../lib/brandStyle';
 import { useT } from '../lib/i18n/I18nProvider';
 import { getStoredName, setStoredName } from '../lib/username';
@@ -177,7 +177,7 @@ const Sing = (): React.ReactElement => {
     setIsPlaying(room.isPlaying ?? false);
     applyTiming(room);
     setReactionsOn(room.reactionsEnabled ?? true);
-    setTheme(normalizeDisplayConfig(room.displayConfig).theme);
+    setTheme(roomTheme(room));
     setBrand(room.brand ?? {});
     applySearchBack(room);
     processReactions(room.reactions, animateReactions);

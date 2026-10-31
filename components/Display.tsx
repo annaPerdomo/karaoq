@@ -16,7 +16,7 @@ import { startSessionTracking } from '../app/queue/trackSession';
 import { startVisiblePolling } from '../app/queue/pollWhileVisible';
 import { DORMANT_POLL_MS, isRoomDormant } from '../lib/roomDormancy';
 import { isTextReaction } from '../app/queue/cheerConstants';
-import { AutoAdvance, AUTO_ADVANCE_OFF, DEFAULT_DISPLAY_CONFIG, DisplayConfig, DisplayTheme, normalizeAutoAdvance, normalizeDisplayConfig, normalizeSongLimit, PlayMode, QueueEntry, Reaction, Room, RoomBrand, SingWithMePost, SuggestedSong } from '../pages/api/types';
+import { AutoAdvance, AUTO_ADVANCE_OFF, DEFAULT_DISPLAY_CONFIG, DisplayConfig, DisplayTheme, normalizeAutoAdvance, normalizeDisplayConfig, normalizeSongLimit, PlayMode, roomTheme, QueueEntry, Reaction, Room, RoomBrand, SingWithMePost, SuggestedSong } from '../pages/api/types';
 import { useAutoStart } from './hooks/useAutoStart';
 import { useTvScale } from './display/hooks/useTvScale';
 import { useDisplayRemoteNav } from './display/hooks/useDisplayRemoteNav';
@@ -215,7 +215,7 @@ const Display = (): React.ReactElement => {
     setDisplayPaused(paused);
     setPlayMode(room.playMode ?? null);
     setReactionsOn(room.reactionsEnabled ?? true);
-    setDisplayConfig(normalizeDisplayConfig(room.displayConfig));
+    setDisplayConfig({ ...normalizeDisplayConfig(room.displayConfig), theme: roomTheme(room) });
     setAutoAdvance(normalizeAutoAdvance(room.autoAdvance));
     setSongLimit(normalizeSongLimit(room.songLimitSeconds));
     setAutoStartAt(autoStartEpoch(room.autoStartAt));
@@ -280,7 +280,7 @@ const Display = (): React.ReactElement => {
       setIsPlaying(state.isPlaying);
       adoptBroadcast(state.playStartedAt ?? null, state.isPlaying);
       setReactionsOn(state.reactionsEnabled);
-      if (state.displayConfig) setDisplayConfig(normalizeDisplayConfig(state.displayConfig));
+      if (state.displayConfig) setDisplayConfig((prev) => ({ ...normalizeDisplayConfig(state.displayConfig), theme: prev.theme }));
       processReactions(state.reactions);
     });
     // adoptBroadcast is stable; depending on `timing` would resubscribe the

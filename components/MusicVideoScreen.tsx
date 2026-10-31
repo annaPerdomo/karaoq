@@ -8,7 +8,7 @@ import { onRoomState, onDisplayPause } from '../app/queue/roomChannel';
 import { startVisiblePolling } from '../app/queue/pollWhileVisible';
 import { DORMANT_POLL_MS, isRoomDormant } from '../lib/roomDormancy';
 import { useT } from '../lib/i18n/I18nProvider';
-import { DEFAULT_DISPLAY_CONFIG, DisplayTheme, QueueEntry, Room, RoomBrand, normalizeDisplayConfig } from '../pages/api/types';
+import { DEFAULT_DISPLAY_CONFIG, DisplayTheme, QueueEntry, Room, RoomBrand, normalizeDisplayConfig, roomTheme } from '../pages/api/types';
 import { brandStyle } from '../lib/brandStyle';
 import MusicVideoLockup from './musicvideo/MusicVideoLockup';
 import MusicVideoPlayer from './musicvideo/MusicVideoPlayer';
@@ -69,8 +69,8 @@ export default function MusicVideoScreen(): React.ReactElement {
     setPlayStartedAt((room.playStartedAt as unknown as string | null) ?? null);
     setPlayPausedAt((room.playPausedAt as unknown as string | null) ?? null);
     setBrand(room.brand ?? {});
+    setTheme(roomTheme(room));
     const displayConfig = normalizeDisplayConfig(room.displayConfig);
-    setTheme(displayConfig.theme);
     setQrHidden(displayConfig.qrSize === 'hidden');
     setQrPx(displayConfig.qrPx);
   }

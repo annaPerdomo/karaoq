@@ -50,14 +50,14 @@ describe("Display brand", () => {
     expect(screen.getByText("KaraoQ", { selector: "div" })).toBeInTheDocument();
   });
 
-  it("keeps its own stored theme — the config routes mirror the two on save", async () => {
+  it("follows the host's theme over its own stored one", async () => {
     getRoom.mockResolvedValue({
       ...room(),
       hostConfig: { theme: "neon" },
       displayConfig: { ...DEFAULT_DISPLAY_CONFIG, theme: "minimal" },
     });
     const { container } = render(<Display />);
-    await waitFor(() => expect(container.querySelector("main")!.className).toMatch(/themeMinimal/));
+    await waitFor(() => expect(container.querySelector("main")!.className).toMatch(/themeNeon/));
   });
 
   it("renders no logo when the brand has none", async () => {
