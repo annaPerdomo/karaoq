@@ -72,9 +72,13 @@
   text-shadow: 0 0 16px rgba(255, 45, 120, 0.55), 0 0 32px rgba(0, 240, 255, 0.35);
 }
 
-.themeNeon .readySinger,
 .themeNeon .nowSinger {
   text-shadow: 0 0 20px rgba(var(--acc-b-rgb, 0, 240, 255), 0.6);
+}
+
+/* drop-shadow: a text-shadow would show through the gradient's transparent fill. */
+.themeNeon .readySinger {
+  filter: drop-shadow(0 0 20px rgba(var(--acc-b-rgb, 0, 240, 255), 0.6));
 }
 
 .themeNeon .upNextTitle {
@@ -461,6 +465,10 @@
   font-size: clamp(2.5rem, 6vw, 4.5rem);
   font-weight: 700;
   color: var(--acc-b);
+  background: linear-gradient(135deg, var(--acc-a), var(--acc-b));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
   text-align: center;
   letter-spacing: -0.02em;
   line-height: 1.2;

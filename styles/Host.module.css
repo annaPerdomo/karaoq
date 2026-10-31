@@ -385,7 +385,7 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  text-shadow: 0 0 12px rgba(191, 90, 242, 0.5);
+  text-shadow: 0 0 12px rgba(var(--acc-a-rgb, 255, 45, 120), 0.5);
 }
 
 .liveIndicator {
@@ -418,6 +418,10 @@
   font-size: clamp(2.5rem, 6vw, 4.5rem);
   font-weight: 700;
   color: var(--acc-b, #00f0ff);
+  background: linear-gradient(135deg, var(--acc-a, #ff2d78), var(--acc-b, #00f0ff));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
   text-align: center;
   letter-spacing: -0.02em;
   line-height: 1.2;
@@ -1433,6 +1437,13 @@
   font-size: calc(1.1rem * var(--host-now-scale, 1));
   font-weight: 700;
   color: var(--acc-b, #00f0ff);
+  /* Shrink to the name so the gradient spans it, not the whole bar. */
+  align-self: flex-start;
+  max-width: 100%;
+  background: linear-gradient(135deg, var(--acc-a, #ff2d78), var(--acc-b, #00f0ff));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

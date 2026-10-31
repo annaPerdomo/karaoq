@@ -296,12 +296,6 @@
   filter: drop-shadow(0 2px 14px rgba(0, 0, 0, 0.75));
 }
 
-.themeMinimal .idleSinger {
-  background: none;
-  -webkit-text-fill-color: var(--text-primary);
-  color: var(--text-primary);
-}
-
 .onStage {
   max-width: min(46vw, 900px);
   display: flex;
