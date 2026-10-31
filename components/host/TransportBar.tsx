@@ -34,6 +34,8 @@ export function TransportBar({
   cohostCanPlay = false,
   autoAdvance,
   onChangeAutoAdvance,
+  songLimit = null,
+  onChangeSongLimit,
   modeOpen = false,
   onModeOpenChange,
   autoStartIn = null,
@@ -64,6 +66,8 @@ export function TransportBar({
   cohostCanPlay?: boolean;
   autoAdvance?: AutoAdvance;
   onChangeAutoAdvance?: (patch: Partial<AutoAdvance>) => void;
+  songLimit?: number | null;
+  onChangeSongLimit?: (seconds: number | null) => void;
   modeOpen?: boolean;
   onModeOpenChange?: (open: boolean) => void;
   /** Seconds until the waiting song starts on its own; null = no countdown. */
@@ -270,6 +274,8 @@ export function TransportBar({
           onClose={closeMode}
           autoAdvance={autoAdvance}
           onChangeAutoAdvance={onChangeAutoAdvance}
+          songLimit={songLimit}
+          onChangeSongLimit={onChangeSongLimit}
         />
       )}
       <div className={styles.transportFooter}>

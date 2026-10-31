@@ -3,7 +3,7 @@ import * as React from "react";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import ClubLogo from "../../components/brand/ClubLogo";
 import { en } from "../../lib/i18n/messages";
-import { AUTO_ADVANCE_OFF, DEFAULT_HOST_CONFIG, RoomBrand } from "../../pages/api/types";
+import { DEFAULT_HOST_CONFIG, RoomBrand } from "../../pages/api/types";
 import { HostHeader } from "../../components/host/HostHeader";
 import { ConfigRail } from "../../components/edit/ConfigRail";
 import { hostRailToggles } from "../../components/host/edit/railToggles";
@@ -47,10 +47,6 @@ function header(logo: string | undefined) {
       onToggleReactions={noop}
       fairMode={false}
       onToggleFairMode={noop}
-      autoAdvance={AUTO_ADVANCE_OFF}
-      onChangeAutoAdvance={noop}
-      songLimit={null}
-      onChangeSongLimit={noop}
       sessionEndsAt={null}
       onChangeSessionEnd={noop}
       hostName="Anna"
