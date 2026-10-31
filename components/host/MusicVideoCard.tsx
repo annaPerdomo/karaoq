@@ -34,8 +34,8 @@ interface OriginalVideoGetResponse {
   candidates: OriginalVideoCandidate[];
 }
 
-const EMPTY_RESPONSE: OriginalVideoGetResponse = {
-  status: "none",
+const PENDING_RESPONSE: OriginalVideoGetResponse = {
+  status: "pending",
   videoIds: [],
   picked: null,
   candidates: [],
@@ -96,8 +96,10 @@ export function MusicVideoCard({
       `/api/queue/${joinCode}/original-video?entryId=${encodeURIComponent(entryId)}&from=host`,
       { cache: "no-store" }
     )
-      .then((r) => (r.ok ? (r.json() as Promise<OriginalVideoGetResponse>) : EMPTY_RESPONSE))
-      .catch(() => EMPTY_RESPONSE)
+      // Non-200 is transient, never "no match": right after an advance the server
+      // 404s until it catches up, and a screen may still be mid-search.
+      .then((r) => (r.ok ? (r.json() as Promise<OriginalVideoGetResponse>) : PENDING_RESPONSE))
+      .catch(() => PENDING_RESPONSE)
       .then((body) => {
         if (cancelled || pickVersionRef.current !== startVersion) return;
         setStatus(body.status);
