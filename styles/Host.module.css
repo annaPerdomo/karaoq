@@ -1,4 +1,6 @@
 .main {
+  /* Customize rail clearance: transport bar + footer row + gap. */
+  --rail-clear: calc(var(--host-now-h, 64px) + 40px);
   height: 100dvh;
   height: 100vh; /* fallback for older browsers */
   display: flex;
