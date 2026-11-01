@@ -28,6 +28,20 @@ Key facts:
 ## Main pages
 - [Home](https://www.karaoq.live/): Product overview, how it works, FAQ, and the flow to create or join a room.
 - [Most-sung karaoke songs](https://www.karaoq.live/songs): The most-sung karaoke songs on KaraoQ, ranked by real queue data and refreshed daily, with country-specific lists.
+- [What's new](https://www.karaoq.live/whats-new): Every new KaraoQ feature, newest first, with where to find it.
+
+## What's new
+- [A music video screen, your own logo and colors, and a karaoke video swap](https://www.karaoq.live/whats-new/music-video-screen-and-custom-branding) (2026-10-31): Play the original music video on a second screen in time with the karaoke, put your own logo and colors on every screen, and swap a wrong karaoke version in one tap.
+- [Song ideas from today's charts, by country, genre and voice](https://www.karaoq.live/whats-new/karaoke-song-ideas-from-the-charts) (2026-10-30): Song ideas now open on what's hot in your country today, with genre lists from local charts, voice-range lists in 10 languages, and random picks from any country.
+- [The most-sung karaoke songs, from real rooms](https://www.karaoq.live/whats-new/most-sung-karaoke-songs) (2026-10-22): See the songs people actually sing at karaoke, ranked from real KaraoQ queues and refreshed daily, with lists for individual countries.
+- [Run karaoke from a smart TV, no laptop needed](https://www.karaoq.live/whats-new/karaoke-on-a-smart-tv-without-a-laptop) (2026-09-24): Open KaraoQ in your smart TV's browser, press Start on this TV, and run the night from your phone. The display fits any TV and works with the remote.
+- [Auto-advance, a count-in, a song time limit and “let others go first”](https://www.karaoq.live/whats-new/auto-advance-count-in-and-song-time-limit) (2026-09-07): Let songs play one after another with a short break, count each singer in, cap songs at a set length, and let singers who aren't ready move their song back.
+- [Add any song by pasting a YouTube link](https://www.karaoq.live/whats-new/add-a-song-by-pasting-a-youtube-link) (2026-08-12): Found the perfect karaoke version on YouTube? Paste its link into KaraoQ's search box to add it to the queue. Search results now show each video's length and views too.
+- [See when it's your turn](https://www.karaoq.live/whats-new/karaoke-queue-wait-times) (2026-08-02): KaraoQ estimates when each song will play from song lengths and the breaks between singers, shows singers when they're up, and lets hosts set a wrap-up time.
+- [Customize your screens, pick a theme, and take turns fairly](https://www.karaoq.live/whats-new/customize-your-karaoke-screen-and-fair-rotation) (2026-07-26): Edit the host and display layouts in place, choose Classic, Minimal or Neon, and turn on fair rotation so singers take turns instead of one person queuing five songs.
+- [KaraoQ in 10 languages, plus sing-together posts and requests](https://www.karaoq.live/whats-new/karaoke-app-in-10-languages-with-duets) (2026-07-04): Use KaraoQ in English, Japanese, Filipino, Spanish, Korean, Portuguese, German, Indonesian, Czech or French, and find people in the room to sing a duet with.
+- [Bring on a co-host](https://www.karaoq.live/whats-new/karaoke-co-host-from-your-phone) (2026-06-03): Share a co-host link or QR code and a friend can search for songs, manage the queue and skip ahead from their own phone without interrupting the song.
+- [Cheers, a shared display and a printable join sign](https://www.karaoq.live/whats-new/karaoke-cheers-and-shared-display) (2026-05-07): Guests cheer the singer with emoji from their phones, the shared display shows the lyrics with a QR code to join, and hosts can print a join sign for the table.
 
 ## Optional
 - [Sitemap](https://www.karaoq.live/sitemap.xml): All pages, including every localized version.
