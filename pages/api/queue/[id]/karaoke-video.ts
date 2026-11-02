@@ -20,6 +20,7 @@ import { buildSearchQuery, hasSearchOperators, searchCacheKey } from "../../../.
 import { confirmDailyOut, searchQuotaSpent } from "../../../../lib/searchQuotaStatus";
 import formatSongTitle from "../../../../lib/songTitle";
 import { YoutubeApiError } from "../../../../lib/youtubeApi";
+import { allows, roomKeyFromRequest } from "../../../../lib/roomKeys";
 
 type CandidateStatus = "ok" | "none" | "quota" | "busy";
 
@@ -180,11 +181,15 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse) {
     const rooms = await getRoomsCollection();
     const room = await rooms.findOne(
       { id: roomId },
-      { projection: { queue: 1, activeVideoIndex: 1, isPlaying: 1, playStartedAt: 1, playPausedAt: 1 } }
+      { projection: { queue: 1, activeVideoIndex: 1, isPlaying: 1, playStartedAt: 1, playPausedAt: 1, keys: 1 } }
     );
     const index = room ? room.queue.findIndex((e) => e.id === entryId) : -1;
     if (!room || index === -1) {
       res.status(404).json({ code: 404, message: "Entry not found." });
+      return;
+    }
+    if (!allows(room, roomKeyFromRequest(req), ["host", "cohost"])) {
+      res.status(403).json({ code: 403, message: "room-key" });
       return;
     }
     if (index < room.activeVideoIndex) {

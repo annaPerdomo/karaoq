@@ -59,6 +59,7 @@ process.env.MONGODB_URI = "mongodb://test";
 process.env.MONGODB_DB = "test-db";
 
 import handler from "../../pages/api/queue/[id]/original-video";
+import { hashRoomKey } from "../../lib/roomKeys";
 
 function createRes() {
   let statusCode = 200;
@@ -453,6 +454,15 @@ describe("room.musicVideoAt bump", () => {
 });
 
 describe("POST /api/queue/[id]/original-video", () => {
+  it("refuses a keyed room without one of its keys", async () => {
+    mockRoomFindOne({ ...roomDoc, keys: [{ hash: hashRoomKey("host-key"), role: "host", createdAt: new Date() }] });
+    const res = createRes();
+    await handler(postReq({ entryId: "e0", offsetSeconds: 2 }), res);
+
+    expect(res.getStatus()).toBe(403);
+    expect(mockCollection.updateOne).not.toHaveBeenCalled();
+  });
+
   beforeEach(() => {
     mockCollection.updateOne.mockResolvedValue({ matchedCount: 1 });
   });

@@ -10,6 +10,7 @@ import {
   saveDraftLogo,
   sniffImageType,
 } from "../../../../lib/roomLogos";
+import { allows, roomKeyFromRequest } from "../../../../lib/roomKeys";
 
 export const config = { api: { bodyParser: { sizeLimit: "400kb" } } };
 
@@ -56,9 +57,13 @@ export default async function handler(
 
   try {
     const rooms = await getRoomsCollection();
-    const room = await rooms.findOne({ id: roomId }, { projection: { _id: 0, id: 1 } });
+    const room = await rooms.findOne({ id: roomId }, { projection: { _id: 0, id: 1, keys: 1 } });
     if (!room) {
       res.status(404).json({ code: 404, message: "Room not found." });
+      return;
+    }
+    if (!allows(room, roomKeyFromRequest(req), ["host", "cohost", "display"])) {
+      res.status(403).json({ code: 403, message: "room-key" });
       return;
     }
 

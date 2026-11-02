@@ -4,6 +4,7 @@ import { useT } from "../../lib/i18n/I18nProvider";
 import { QueueEntry } from "../../pages/api/types";
 import { OriginalVideoCandidate } from "../../lib/originalVideo";
 import { broadcastOriginalOffset } from "../../app/queue/roomChannel";
+import { notifyRoomKeyRejected, roomKeyHeaders } from "../../lib/roomKeyStore";
 import { MusicVideoScrubber, SongPlayback } from "./MusicVideoScrubber";
 import { MusicVideoSwapSheet, SwapSource } from "./MusicVideoSwapSheet";
 import { formatSongTitle } from "./utils";
@@ -155,10 +156,11 @@ export function MusicVideoCard({
     broadcastOriginalOffset(joinCode, { entryId, offsetSeconds: 0 });
     fetch(`/api/queue/${joinCode}/original-video`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...roomKeyHeaders(joinCode) },
       body: JSON.stringify({ entryId, videoId, source }),
     })
       .then((r) => {
+        if (r.status === 403) notifyRoomKeyRejected(joinCode);
         if (!r.ok) throw new Error("pick failed");
       })
       .catch(() => {
@@ -176,10 +178,11 @@ export function MusicVideoCard({
     const prev = lastSavedOffsetRef.current;
     fetch(`/api/queue/${joinCode}/original-video`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...roomKeyHeaders(joinCode) },
       body: JSON.stringify({ entryId: forEntryId, offsetSeconds: next }),
     })
       .then((r) => {
+        if (r.status === 403) notifyRoomKeyRejected(joinCode);
         if (!r.ok) throw new Error("offset failed");
         if (offsetSeqRef.current !== seq) return;
         lastSavedOffsetRef.current = next;

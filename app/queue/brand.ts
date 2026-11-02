@@ -1,3 +1,4 @@
+import { notifyRoomKeyRejected, roomKeyHeaders } from "../../lib/roomKeyStore";
 import type { RoomBrand } from "../../pages/api/types";
 
 export type BrandSurface = "host" | "display";
@@ -12,12 +13,13 @@ export async function uploadLogo(
   try {
     resp = await fetch(`/api/queue/${roomId}/logo`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...roomKeyHeaders(roomId) },
       body: JSON.stringify({ dataUrl }),
     });
   } catch {
     throw new Error("upload");
   }
+  if (resp.status === 403) notifyRoomKeyRejected(roomId);
   if (resp.status === 507) throw new Error("full");
   if (!resp.ok) throw new Error("upload");
   return resp.json();
@@ -33,12 +35,13 @@ export async function saveBrand(
   try {
     resp = await fetch(`/api/queue/${roomId}/brand`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...roomKeyHeaders(roomId) },
       body: JSON.stringify({ brand, surface }),
     });
   } catch {
     throw new Error("save");
   }
+  if (resp.status === 403) notifyRoomKeyRejected(roomId);
   if (!resp.ok) throw new Error("save");
   const body = (await resp.json()) as { brand: RoomBrand };
   return body.brand;

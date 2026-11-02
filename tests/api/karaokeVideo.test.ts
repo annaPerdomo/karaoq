@@ -60,6 +60,7 @@ vi.mock("../../lib/videoBlocklist", () => ({
 }));
 
 import handler from "../../pages/api/queue/[id]/karaoke-video";
+import { hashRoomKey } from "../../lib/roomKeys";
 
 function createRes() {
   let statusCode = 200;
@@ -181,6 +182,15 @@ describe("GET /api/queue/[id]/karaoke-video", () => {
 });
 
 describe("POST /api/queue/[id]/karaoke-video", () => {
+  it("refuses a keyed room without one of its keys", async () => {
+    rooms.findOne.mockResolvedValue({ ...roomDoc, keys: [{ hash: hashRoomKey("host-key"), role: "host", createdAt: new Date() }] });
+    const res = createRes();
+    await handler(postReq({ entryId: "e1", ...SWAP }), res);
+
+    expect(res.getStatus()).toBe(403);
+    expect(rooms.updateOne).not.toHaveBeenCalled();
+  });
+
   it("swaps the live song and restarts its clock", async () => {
     const res = createRes();
     await handler(postReq({ entryId: "e1", ...SWAP }), res);

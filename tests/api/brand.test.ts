@@ -26,6 +26,7 @@ process.env.MONGODB_DB = "test-db";
 import handler from "../../pages/api/queue/[id]/brand";
 import { __resetRateLimits } from "../../lib/limits";
 import { commitLogo, saveDraftLogo } from "../../lib/roomLogos";
+import { hashRoomKey } from "../../lib/roomKeys";
 
 function createRes() {
   let statusCode = 200;
@@ -67,6 +68,14 @@ beforeEach(() => {
 });
 
 describe("POST /api/queue/[id]/brand - save the room brand", () => {
+  it("refuses a keyed room without one of its keys", async () => {
+    room().keys = [{ hash: hashRoomKey("host-key"), role: "host", createdAt: new Date() }];
+    const res = await save({ brand: { accentA: "#112233" } });
+
+    expect(res.getStatus()).toBe(403);
+    expect(room().brand).toBeUndefined();
+  });
+
   it("commits the uploaded logo and writes the brand with a lastActivity bump", async () => {
     const old = await saveDraftLogo("ROOM1", JPEG, "image/jpeg");
     await commitLogo("ROOM1", old);

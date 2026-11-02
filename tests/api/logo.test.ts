@@ -26,6 +26,7 @@ process.env.MONGODB_DB = "test-db";
 import handler, { config } from "../../pages/api/queue/[id]/logo";
 import { __resetRateLimits, LOGO_MAX_BYTES, LOGO_STORE_BUDGET_BYTES } from "../../lib/limits";
 import { logoHash } from "../../lib/roomLogos";
+import { hashRoomKey } from "../../lib/roomKeys";
 
 function createRes() {
   let statusCode = 200;
@@ -86,6 +87,14 @@ beforeEach(() => {
 });
 
 describe("POST /api/queue/[id]/logo - upload a draft logo", () => {
+  it("refuses a keyed room without one of its keys", async () => {
+    db.rooms.docs[0].keys = [{ hash: hashRoomKey("host-key"), role: "host", createdAt: new Date() }];
+    const res = await upload({ dataUrl: dataUrl(PNG) });
+
+    expect(res.getStatus()).toBe(403);
+    expect(db.logos.docs).toHaveLength(0);
+  });
+
   it("raises the body limit past the 64 KB logo", () => {
     expect(config.api.bodyParser.sizeLimit).toBe("400kb");
   });

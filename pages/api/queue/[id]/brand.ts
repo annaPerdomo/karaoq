@@ -5,6 +5,7 @@ import { isValidRoomBrand, rateLimit } from "../../../../lib/limits";
 import { getRoomsCollection } from "../../../../lib/mongodb";
 import { normalizeRoomId, ROOM_CODE_PATTERN } from "../../../../lib/roomCode";
 import { confirmLogo, deleteOtherLogos } from "../../../../lib/roomLogos";
+import { allows, roomKeyFromRequest } from "../../../../lib/roomKeys";
 
 const SURFACES = ["host", "display"] as const;
 type Surface = (typeof SURFACES)[number];
@@ -56,13 +57,23 @@ export default async function handler(
   };
 
   try {
+    const collection = await getRoomsCollection();
+    const keyRoom = await collection.findOne({ id: roomId }, { projection: { keys: 1 } });
+    if (!keyRoom) {
+      res.status(404).json({ code: 404, message: "Room not found." });
+      return;
+    }
+    if (!allows(keyRoom, roomKeyFromRequest(req), ["host", "cohost", "display"])) {
+      res.status(403).json({ code: 403, message: "room-key" });
+      return;
+    }
+
     // Re-checked even when the hash is already live, in case its doc is gone.
     if (saved.logo && !(await confirmLogo(roomId, saved.logo))) {
       res.status(400).json({ code: 400, message: "Unknown logo." });
       return;
     }
 
-    const collection = await getRoomsCollection();
     const result = await collection.updateOne(
       { id: roomId },
       { $set: { brand: saved, lastActivity: new Date() } }

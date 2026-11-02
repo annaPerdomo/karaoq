@@ -1,3 +1,4 @@
+import { notifyRoomKeyRejected, roomKeyHeaders } from "../../lib/roomKeyStore";
 import type { OriginalVideoCandidate } from "../../lib/originalVideo";
 
 export type KaraokeSwapSource = "candidate" | "link" | "search";
@@ -13,7 +14,7 @@ export default async function swapKaraokeVideo(
   try {
     const resp = await fetch(`/api/queue/${roomId}/karaoke-video`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...roomKeyHeaders(roomId) },
       body: JSON.stringify({
         entryId,
         videoId: video.videoId,
@@ -22,6 +23,7 @@ export default async function swapKaraokeVideo(
         source,
       }),
     });
+    if (resp.status === 403) notifyRoomKeyRejected(roomId);
     if (!resp.ok) return false;
     const body = (await resp.json()) as { playStartedAt?: string | null };
     return body.playStartedAt ?? null;
