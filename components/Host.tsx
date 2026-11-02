@@ -89,6 +89,9 @@ import { ReactionOverlay } from "./host/ReactionOverlay";
 import { MobileFooter } from "./host/MobileFooter";
 import { CohostInviteModal } from "./host/CohostInviteModal";
 import FeedbackModal from "./feedback/FeedbackModal";
+import { ConnectTvLauncher } from "./host/ConnectTvLauncher";
+import { useConnectTv } from "./host/hooks/useConnectTv";
+import { usePairedToast } from "./host/hooks/usePairedToast";
 import { QrModal } from "./host/QrModal";
 import { ConfirmRemoveModal } from "./host/ConfirmRemoveModal";
 import { WelcomePrompt } from "./host/WelcomePrompt";
@@ -382,6 +385,9 @@ const Host = ({
     setModeMenuOpen(false);
     showToast(t('host.toast.displayOpened'));
   }
+
+  const { connectTvRef, onTvPaired } = useConnectTv({ joinCode, setPlayMode, rememberMode, showToast, message: t('pair.remoteNow') });
+  usePairedToast({ remote, joinCode, message: t('pair.remoteNow'), showToast });
 
   function copyCohostLink() {
     if (!joinCode) return;
@@ -1421,6 +1427,11 @@ const Host = ({
           setSettingsOpen(false);
           setFeedbackOpen(true);
         }}
+        onConnectTv={() => {
+          setSettingsOpen(false);
+          setModeMenuOpen(false);
+          connectTvRef.current?.open();
+        }}
         onOpenMusicVideo={openMusicVideoScreen}
         onCopyMusicVideoLink={copyMusicVideoLink}
         onBrandClick={() => router.push("/")}
@@ -1623,6 +1634,7 @@ const Host = ({
         />
       )}
 
+      {joinCode && <ConnectTvLauncher ref={connectTvRef} joinCode={joinCode} onPaired={onTvPaired} />}
       {feedbackOpen && (
         <FeedbackModal
           onClose={() => setFeedbackOpen(false)}
