@@ -8,6 +8,7 @@ import type { Locale } from "./i18n/config";
 import { asLocale, LOCALE_HEADER, type LocaleSource } from "./i18n/activeLocale";
 import { sanitizeEntry, sanitizeReferrerHost, sanitizeRef } from "./firstTouch";
 import { requestGeo } from "./platform";
+import type { ScreenHelpOption } from "./screenHelp";
 
 /** What the browser may send. "trending" was the shelf the idea shelves
  *  replaced; it survives in the type only for the events already stored. */
@@ -51,7 +52,9 @@ export type EventType =
   | "logo_upload_rejected"
   | "logo_uploaded"
   | "brand_saved"
-  | "tv_paired";
+  | "tv_paired"
+  | "screen_help_opened"
+  | "screen_help_option";
 
 // Music-video / brand telemetry retention: the Screens view's longest window.
 export const SCREEN_EVENT_TTL_MS = 90 * 24 * 60 * 60 * 1000;
@@ -167,6 +170,10 @@ export interface AnalyticsEvent {
   surface?: "host" | "display";
   // brand_saved: the logo was resized away from its default.
   resized?: boolean;
+  // screen_help_opened, screen_help_option: which device the sheet detected.
+  device?: "tv" | "mobile" | "desktop";
+  // screen_help_option: which route the host expanded.
+  option?: ScreenHelpOption;
 }
 
 // Heartbeat gap beyond which the next beat starts a fresh session; 30 min tolerates throttled background-tab timers.

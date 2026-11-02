@@ -9,11 +9,12 @@ export interface ConnectTvFormProps {
   onPaired: (r: { roomId: string }) => void;
   onNeedsRoom?: () => Promise<string | null>;
   inline?: boolean;
+  autoFocus?: boolean;
 }
 
 type ErrorKey = 'expired' | 'invalid' | 'generic' | 'rateLimited';
 
-export function ConnectTvForm({ roomId, onPaired, onNeedsRoom, inline }: ConnectTvFormProps) {
+export function ConnectTvForm({ roomId, onPaired, onNeedsRoom, inline, autoFocus }: ConnectTvFormProps) {
   const { t } = useT();
   const [code, setCode] = React.useState('');
   const [submitting, setSubmitting] = React.useState(false);
@@ -69,7 +70,7 @@ export function ConnectTvForm({ roomId, onPaired, onNeedsRoom, inline }: Connect
         aria-label={t('pair.connect')}
         maxLength={7}
         value={code}
-        autoFocus={inline}
+        autoFocus={autoFocus ?? inline}
         onChange={(e) => {
           setCode(e.target.value);
           setError(null);

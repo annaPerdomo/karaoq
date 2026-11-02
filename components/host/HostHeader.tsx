@@ -39,6 +39,7 @@ export function HostHeader({
   onPrintQr,
   onSendFeedback,
   onConnectTv,
+  onScreenHelp,
   onOpenMusicVideo,
   onCopyMusicVideoLink,
   onBrandClick,
@@ -72,6 +73,7 @@ export function HostHeader({
   onPrintQr: () => void;
   onSendFeedback: () => void;
   onConnectTv: () => void;
+  onScreenHelp: () => void;
   onOpenMusicVideo: () => void;
   onCopyMusicVideoLink: () => void;
   onBrandClick: () => void;
@@ -159,6 +161,12 @@ export function HostHeader({
                   {Icons.tv}
                   <div>
                     <div className={styles.spBtnTitle}>{t('pair.menuItem')}</div>
+                  </div>
+                </button>
+                <button className={styles.modeMenuItem} onClick={onScreenHelp}>
+                  {Icons.monitor}
+                  <div>
+                    <div className={styles.spBtnTitle}>{t('screenHelp.menuItem')}</div>
                   </div>
                 </button>
               </div>
