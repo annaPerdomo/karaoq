@@ -136,6 +136,32 @@ describe("Display edit brand draft", () => {
     expect(h.onSaved).not.toHaveBeenCalled();
   });
 
+  it("stays in edit and says why when the screen holds no room key", async () => {
+    fetchMock.mockResolvedValue({ ok: false, status: 403, json: async () => ({}) });
+    const h = editHarness({});
+    await act(async () => h.hook.enter());
+    await act(async () => h.hook.change({ theme: "neon" }));
+    await act(async () => h.hook.save());
+    expect(urls()).toEqual(["/api/queue/ROOM1/display-config"]);
+    expect(h.hook.editing).toBe(true);
+    expect(h.hook.saveForbidden).toBe(true);
+    expect(h.onSaved).not.toHaveBeenCalled();
+  });
+
+  it("reports a forbidden brand write as forbidden, not a generic failure", async () => {
+    fetchMock.mockImplementation(async (url: string) => ({
+      ok: !url.endsWith("/brand"),
+      status: url.endsWith("/brand") ? 403 : 200,
+      json: async () => ({}),
+    }));
+    const h = editHarness({});
+    await act(async () => h.hook.enter());
+    await act(async () => h.hook.brandControls.onChange({ accentA: "#abcdef" }));
+    await act(async () => h.hook.save());
+    expect(h.hook.editing).toBe(true);
+    expect(h.hook.saveForbidden).toBe(true);
+  });
+
   it("discard leaves the live brand", async () => {
     const h = editHarness({ logo: HASH });
     await act(async () => h.hook.enter());

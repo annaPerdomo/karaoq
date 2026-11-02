@@ -35,7 +35,6 @@ import { ConfigRail } from './edit/ConfigRail';
 import { displayRailToggles } from './display/edit/railToggles';
 import { EditOverlay } from './edit/EditOverlay';
 import { SAMPLE_QUEUE } from './display/edit/sampleContent';
-import { ConnectPhoneButton } from './display/ConnectPhoneButton';
 import { ConnectPhonePanel } from './display/ConnectPhonePanel';
 import { useConnectPhone } from './display/hooks/useConnectPhone';
 import DisplayHeader from './display/DisplayHeader';

@@ -54,7 +54,9 @@ export function useDisplayEdit(opts: {
       const boardsArg = boards.dirty ? boards.draft : undefined;
       const done = configWritten.current;
       if (!done || done.draft !== draft || done.boards !== boardsArg) {
-        if (!(await setDisplayConfig(code, draft, boardsArg))) return false;
+        // "forbidden" is truthy: compare to true so a 403 never reads as saved.
+        const written = await setDisplayConfig(code, draft, boardsArg);
+        if (written !== true) return written;
         configWritten.current = { draft, boards: boardsArg };
       }
       return !brand.dirty || saveBrandOk(code, brand.draft, 'display');

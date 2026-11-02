@@ -25,7 +25,8 @@ export async function uploadLogo(
   return resp.json();
 }
 
-/** Commits the brand (and its draft logo). Throws Error("save") on failure. */
+/** Commits the brand (and its draft logo). Throws Error("forbidden") on a
+ *  missing or wrong room key, Error("save") on any other failure. */
 export async function saveBrand(
   roomId: string,
   brand: RoomBrand,
@@ -41,7 +42,10 @@ export async function saveBrand(
   } catch {
     throw new Error("save");
   }
-  if (resp.status === 403) notifyRoomKeyRejected(roomId);
+  if (resp.status === 403) {
+    notifyRoomKeyRejected(roomId);
+    throw new Error("forbidden");
+  }
   if (!resp.ok) throw new Error("save");
   const body = (await resp.json()) as { brand: RoomBrand };
   return body.brand;
@@ -51,9 +55,9 @@ export function saveBrandOk(
   roomId: string,
   brand: RoomBrand,
   surface: BrandSurface
-): Promise<boolean> {
+): Promise<boolean | "forbidden"> {
   return saveBrand(roomId, brand, surface).then(
     () => true,
-    () => false
+    (e: Error) => (e.message === "forbidden" ? "forbidden" : false)
   );
 }
