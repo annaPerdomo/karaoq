@@ -12,21 +12,24 @@ import postReaction from '../app/queue/postReaction';
 import { REACTION_COOLDOWN_MS, isTextReaction } from '../app/queue/cheerConstants';
 import { startSessionTracking } from '../app/queue/trackSession';
 import { startVisiblePolling } from '../app/queue/pollWhileVisible';
+import { DORMANT_POLL_MS, isRoomDormant } from '../lib/roomDormancy';
 import { useSearchBackNotice } from '../app/queue/useSearchBackNotice';
 import SearchBackToast from './search/SearchBackToast';
-import { DisplayTheme, QueueEntry, Reaction, Room, normalizeDisplayConfig } from '../pages/api/types';
+import { DisplayTheme, QueueEntry, Reaction, Room, RoomBrand, roomTheme } from '../pages/api/types';
+import { brandStyle } from '../lib/brandStyle';
 import { useT } from '../lib/i18n/I18nProvider';
 import { getStoredName, setStoredName } from '../lib/username';
 import LanguageSwitcher from './LanguageSwitcher';
 import SingSidebar from './sing/SingSidebar';
 import SingFooter from './sing/SingFooter';
+import SingErrorCard from './sing/SingErrorCard';
 import MobileQueueDrawer from './sing/MobileQueueDrawer';
 import { myTurnState } from './sing/YourTurnCard';
 import postponeEntry from '../app/queue/postponeEntry';
 import { useRoomTiming } from './hooks/useRoomTiming';
 
 
-const POLL_INTERVAL = 5000;
+const POLL_INTERVAL = 8000;
 const NAME_STORAGE_KEY = 'karaoq_username';
 
 const THEME_CLASS: Record<DisplayTheme, string> = {
@@ -51,11 +54,13 @@ const Sing = (): React.ReactElement => {
   const [isPlaying, setIsPlaying] = React.useState(false);
   const [reactionsOn, setReactionsOn] = React.useState(true);
   const [theme, setTheme] = React.useState<DisplayTheme>('classic');
+  const [brand, setBrand] = React.useState<RoomBrand>({});
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [loadError, setLoadError] = React.useState(false);
   const [initNonce, setInitNonce] = React.useState(0);
   const notFoundPollsRef = React.useRef(0);
+  const dormantRef = React.useRef(false);
   const [reactionCooldown, setReactionCooldown] = React.useState(false);
   const [lastSentEmoji, setLastSentEmoji] = React.useState<string | null>(null);
   const [mobileQueueOpen, setMobileQueueOpen] = React.useState(false);
@@ -165,13 +170,15 @@ const Sing = (): React.ReactElement => {
 
   // animateReactions=false on the first load only seeds the seen-set.
   function adoptRoom(room: Room, animateReactions = true) {
+    dormantRef.current = isRoomDormant(room);
     setQueue(room.queue);
     applyBoards(room);
     setActiveIndex(room.activeVideoIndex);
     setIsPlaying(room.isPlaying ?? false);
     applyTiming(room);
     setReactionsOn(room.reactionsEnabled ?? true);
-    setTheme(normalizeDisplayConfig(room.displayConfig).theme);
+    setTheme(roomTheme(room));
+    setBrand(room.brand ?? {});
     applySearchBack(room);
     processReactions(room.reactions, animateReactions);
   }
@@ -181,7 +188,7 @@ const Sing = (): React.ReactElement => {
 
     let cancelled = false;
     async function init() {
-      const room = await getRoom(joinCode!);
+      const room = await getRoom(joinCode!, { wake: true });
       if (cancelled) return;
       if (room === "notFound") {
         setError(t('sing.error.notFound'));
@@ -212,7 +219,7 @@ const Sing = (): React.ReactElement => {
       adoptRoom(room);
       setLoadError(false);
       setLoading(false);
-    }, POLL_INTERVAL);
+    }, () => (dormantRef.current ? DORMANT_POLL_MS : POLL_INTERVAL));
   }, [joinCode, error, processReactions, applyBoards, applyTiming, applySearchBack]);
 
   function handleSongAdded(entry: QueueEntry) {
@@ -237,7 +244,7 @@ const Sing = (): React.ReactElement => {
     if (!ok) setLastSentEmoji(null);
   }
 
-  // The server decides the slot, and the next poll is up to 5s away — too long
+  // The server decides the slot, and the next poll is a full interval away — too long
   // to leave the card saying "up next".
   async function postpone(entryId: string, after: number | 'end'): Promise<boolean> {
     if (!joinCode) return false;
@@ -266,14 +273,11 @@ const Sing = (): React.ReactElement => {
   if (error) {
     return (
       <main className={mainClass}>
-        <div className={styles.errorCard}>
-          <div className={styles.errorIcon}>😕</div>
-          <h2>{t('sing.error.title')}</h2>
-          <p>{error}</p>
-          <button className={styles.btnPink} onClick={() => router.push('/')}>
-            {t('common.goHome')}
-          </button>
-        </div>
+        <SingErrorCard
+          variant="notFound"
+          message={error}
+          onGoHome={() => router.push('/')}
+        />
       </main>
     );
   }
@@ -281,21 +285,14 @@ const Sing = (): React.ReactElement => {
   if (loadError) {
     return (
       <main className={mainClass}>
-        <div className={styles.errorCard}>
-          <div className={styles.errorIcon}>📶</div>
-          <h2>{t('common.connectionErrorTitle')}</h2>
-          <p>{t('common.connectionErrorBody')}</p>
-          <button
-            className={styles.btnPink}
-            onClick={() => {
-              setLoadError(false);
-              setLoading(true);
-              setInitNonce((n) => n + 1);
-            }}
-          >
-            {t('common.retry')}
-          </button>
-        </div>
+        <SingErrorCard
+          variant="connection"
+          onRetry={() => {
+            setLoadError(false);
+            setLoading(true);
+            setInitNonce((n) => n + 1);
+          }}
+        />
       </main>
     );
   }
@@ -322,7 +319,7 @@ const Sing = (): React.ReactElement => {
   };
 
   return (
-    <main className={mainClass}>
+    <main className={mainClass} style={brandStyle(brand) as React.CSSProperties}>
       <SearchBackToast show={searchBack.show} onDismiss={searchBack.dismiss} />
       <header className={styles.header}>
         <div className={styles.brand} onClick={() => router.push('/')}>

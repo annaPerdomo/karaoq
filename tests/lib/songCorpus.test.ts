@@ -44,6 +44,7 @@ import {
   type CatalogEntry,
 } from "../../lib/suggestionCatalog";
 import { isCutOf, type MatchedVideo } from "../../lib/suggestionMatch";
+import { songKeyFor } from "../../lib/songEntry";
 
 const videos = () => collection("karaoke_videos");
 const songs = () => collection("karaoke_songs");
@@ -616,6 +617,49 @@ describe("recordSearchResults", () => {
       videosUpserted: 0,
       cutsAdded: 0,
       songKnown: true,
+    });
+  });
+
+  describe("a promoted song", () => {
+    const demandKey = songKeyFor("The Agadiers", "Mag Dungan Ta");
+
+    function seedDemandSong(): void {
+      songs().seed({
+        _id: demandKey,
+        title: "Mag Dungan Ta",
+        artist: "The Agadiers",
+        cuts: [],
+        addCount: 0,
+        addsByCountry: {},
+        demand: 3,
+        origin: "demand",
+      });
+    }
+
+    it("drops a result that doesn't name it, counting as no fill", async () => {
+      seedDemandSong();
+
+      const written = await recordSearchResults(demandKey, [
+        {
+          videoId: "wrong",
+          title: "Someone Else - A Different Song (Karaoke)",
+          thumbnailUrl: "t",
+        },
+      ]);
+
+      expect(written.cutsAdded).toBe(0);
+      expect(songs().get(demandKey)?.cuts).toEqual([]);
+    });
+
+    it("keeps a result the matcher vouches for", async () => {
+      seedDemandSong();
+
+      const written = await recordSearchResults(demandKey, [
+        { videoId: "right", title: "The Agadiers - Mag Dungan Ta (Karaoke)", thumbnailUrl: "t" },
+      ]);
+
+      expect(written.cutsAdded).toBe(1);
+      expect(songs().get(demandKey)?.cuts).toEqual(["right"]);
     });
   });
 });

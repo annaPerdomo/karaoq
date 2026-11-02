@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  output: 'standalone',
   // Sub-path locale routing (/, /ja, /es, …) so every supported language has a
   // crawlable, server-rendered landing URL for SEO. localeDetection is off:
   // we keep our own client-side detection on `/` (see I18nProvider) and let the

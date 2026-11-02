@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, onTestFinished } from "vitest";
 import { NextApiResponse } from "next";
 import { createMockReq } from "../helpers/mockRequest";
 import { fakeCollection, type FakeCollection } from "../helpers/fakeCollection";
@@ -28,7 +28,7 @@ process.env.MONGODB_DB = "test-db";
 process.env.ANALYTICS_SECRET = "s3cret";
 
 import handler from "../../pages/api/analytics/quota";
-import { SEARCH_DAY_QUOTA, ledgerDay } from "../../lib/corpusBudget";
+import { ledgerDay } from "../../lib/corpusBudget";
 
 function createRes() {
   let statusCode = 200;
@@ -92,7 +92,7 @@ describe("GET /api/analytics/quota", () => {
     const res = await get();
     expect(res.getStatus()).toBe(200);
     const body = res.getBody();
-    expect(body.quota).toBe(SEARCH_DAY_QUOTA);
+    expect(body.quota).toBe(4750);
     expect(body.today).toBe(today);
     expect(body.days).toHaveLength(7);
     expect(body.days[6].day).toBe(today);
@@ -102,6 +102,10 @@ describe("GET /api/analytics/quota", () => {
   });
 
   it("breaks each day's billed searches out per room, heaviest first, cache hits excluded", async () => {
+    // Midday Pacific: in the hour after the midnight reset, `hourAgo` would land on yesterday.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-21T19:00:00Z"));
+    onTestFinished(() => vi.useRealTimers());
     const now = Date.now();
     const hourAgo = new Date(now - 60 * 60 * 1000);
     const nineDaysAgo = new Date(now - 9 * 24 * 60 * 60 * 1000);
@@ -144,6 +148,59 @@ describe("GET /api/analytics/quota", () => {
       sources: { miss: 4, fresh: 1, coalesced: 0, stale: 0, corpus: 1 },
     });
     expect(body.sourcesByDay.find((d: any) => d.day === nineBack.day).sources.stale).toBe(1);
+  });
+
+  it("splits each ledger day by who billed it, and falls back to room events past it", async () => {
+    const now = Date.now();
+    const today = ledgerDay(now);
+    const songs = [{ title: "Dancing Queen", artist: "ABBA", outcome: "new", cutsAdded: 3 }];
+    collectionFor("cron_state").seed({
+      _id: `budget:${today}`,
+      searches: 100,
+      cronSearches: 70,
+      mopUpSearches: 30,
+      unloggedSearches: 2,
+      pages: 0,
+      lookups: 0,
+      dailyOutAt: new Date(now),
+      mopUp: { at: new Date(now), liveRooms: 0, budget: 30, searched: 30, filled: 1, songs, skipped: null, quotaSpent: false, error: null },
+    });
+    const twentyDaysAgo = new Date(now - 20 * 24 * 60 * 60 * 1000);
+    collectionFor("analytics_events").seed({
+      _id: "e1", type: "search_run", roomId: "ABCD", searchCache: "miss", timestamp: twentyDaysAgo,
+    });
+
+    const body = (await get()).getBody();
+
+    expect(body.billedByDay).toHaveLength(30);
+    expect(body.billedByDay[29]).toEqual({
+      day: today,
+      recorded: true,
+      out: true,
+      rooms: 28,
+      nightly: 40,
+      mopUp: 30,
+      unlogged: 2,
+      mopUpSongs: songs,
+    });
+    const old = body.billedByDay.find((d: any) => d.rooms === 1);
+    expect(old).toMatchObject({ recorded: false, nightly: 0, mopUp: 0 });
+  });
+
+  it("reads an older ledger doc's mop-up share from its outcome", async () => {
+    const now = Date.now();
+    collectionFor("cron_state").seed({
+      _id: `budget:${ledgerDay(now)}`,
+      searches: 90,
+      cronSearches: 77,
+      pages: 0,
+      lookups: 0,
+      mopUp: { at: new Date(now), liveRooms: 0, budget: 37, searched: 37, filled: 36, skipped: null, quotaSpent: false, error: null },
+    });
+
+    const body = (await get()).getBody();
+
+    expect(body.billedByDay[29]).toMatchObject({ rooms: 13, nightly: 40, mopUp: 37, unlogged: 0 });
   });
 
   it("405s on POST", async () => {

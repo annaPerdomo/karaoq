@@ -228,6 +228,40 @@
   opacity: 0.85;
 }
 
+.colCellClickable:not(.colCellSelected) .colStack {
+  opacity: 0.55;
+}
+
+.colCellClickable:not(.colCellSelected):hover .colStack,
+.colCellClickable:not(.colCellSelected):focus-visible .colStack {
+  opacity: 0.8;
+}
+
+.colRefLine {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-top: 1px dashed rgba(229, 103, 103, 0.7);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.colRefLabel {
+  position: absolute;
+  left: 0;
+  top: -0.95rem;
+  font-size: 0.65rem;
+  color: #e66767;
+  font-variant-numeric: tabular-nums;
+}
+
+.chartTipNote {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  max-width: 14rem;
+  white-space: normal;
+}
+
 .chartTipRow {
   display: inline-flex;
   align-items: center;

@@ -110,6 +110,36 @@ describe("POST /api/feedback", () => {
     expect(userAgent.startsWith("iPhone")).toBe(true);
   });
 
+  it("stores a sanitized ref", async () => {
+    mockInsertOne.mockResolvedValue({});
+    const res = createRes();
+
+    await handler(reqWith({ kind: "idea", message: "Add duets", ref: "Reddit!!" }), res);
+
+    expect(res.getStatus()).toBe(200);
+    expect(mockInsertOne.mock.calls[0][0]).toMatchObject({ ref: "reddit" });
+  });
+
+  it("drops an invalid ref rather than reject the submission", async () => {
+    mockInsertOne.mockResolvedValue({});
+    const res = createRes();
+
+    await handler(reqWith({ kind: "idea", message: "Add duets", ref: "   " }), res);
+
+    expect(res.getStatus()).toBe(200);
+    expect(mockInsertOne.mock.calls[0][0]).not.toHaveProperty("ref");
+  });
+
+  it("works with no ref at all", async () => {
+    mockInsertOne.mockResolvedValue({});
+    const res = createRes();
+
+    await handler(reqWith({ kind: "idea", message: "Add duets" }), res);
+
+    expect(res.getStatus()).toBe(200);
+    expect(mockInsertOne.mock.calls[0][0]).not.toHaveProperty("ref");
+  });
+
   it("rejects an empty message without writing", async () => {
     const res = createRes();
     await handler(reqWith({ kind: "bug", message: "   " }), res);

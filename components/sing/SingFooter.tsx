@@ -13,6 +13,11 @@ export default function SingFooter({ roomId }: { roomId: string }) {
 
   return (
     <footer className={styles.inlineFooter}>
+      <div className={styles.inlineFooterHost}>
+        <Link href="/?ref=guest-sing" className={styles.inlineFooterLink}>
+          {t('sing.hostOwn')}
+        </Link>
+      </div>
       <div className={styles.inlineFooterLegal}>
         <Link href="/privacy" className={styles.inlineFooterLink}>
           {t('footer.privacy')}

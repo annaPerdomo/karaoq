@@ -53,7 +53,7 @@ describe("POST /api/queue/[id]/boards-toggle - Toggle boards on display", () => 
     expect(res.getStatus()).toBe(200);
     expect(mockCollection.updateOne).toHaveBeenCalledWith(
       { id: "ROOM1" },
-      { $set: { boardsOnDisplay: true } }
+      { $set: { boardsOnDisplay: true, lastActivity: expect.any(Date) } }
     );
   });
 
@@ -71,7 +71,7 @@ describe("POST /api/queue/[id]/boards-toggle - Toggle boards on display", () => 
     expect(res.getStatus()).toBe(200);
     expect(mockCollection.updateOne).toHaveBeenCalledWith(
       { id: "ROOM1" },
-      { $set: { boardsOnDisplay: false } }
+      { $set: { boardsOnDisplay: false, lastActivity: expect.any(Date) } }
     );
   });
 

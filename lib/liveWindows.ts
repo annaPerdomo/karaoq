@@ -12,3 +12,7 @@ export const ADMIN_LIVE_WINDOW_MS = 10 * 60_000;
 /** Looser than the badge on purpose: a wrong answer here stutters a live party
  *  mid-song, so the cron waits out a long quiet stretch, not a typical one. */
 export const CORPUS_BUSY_WINDOW_MS = 45 * 60_000;
+
+/** The admin "right now" row's created/sang window — wide enough to span a
+ *  Reddit traffic lull without reaching into last night's rooms. */
+export const ADMIN_RIGHT_NOW_WINDOW_MS = 2 * 60 * 60_000;

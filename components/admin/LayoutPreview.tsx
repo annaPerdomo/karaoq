@@ -1,9 +1,10 @@
 import * as React from 'react';
 import styles from '../../styles/Analytics.module.css';
 import type { DisplayConfig, HostConfig } from '../../pages/api/types';
+import { TV_DESIGN_H, TV_DESIGN_W, TV_SIDEBAR_BOOST } from '../../lib/tvScale';
 
 // Nominal screens the stored pixel sizes are rendered as fractions of.
-const TV = { w: 1280, h: 720 };
+const TV = { w: TV_DESIGN_W, h: TV_DESIGN_H };
 const LAPTOP = { w: 1440, h: 900 };
 
 const MIN_SIDEBAR = 18;
@@ -197,7 +198,7 @@ const LayoutPreview = ({
           subtitle={`${displaySaves} save${displaySaves === 1 ? '' : 's'}`}
           theme={display.theme}
           side={display.sidebarPosition}
-          sidebarPct={proportion(display.sidebarWidth, TV.w, MIN_SIDEBAR, MAX_SIDEBAR)}
+          sidebarPct={proportion(display.sidebarWidth * TV_SIDEBAR_BOOST, TV.w, MIN_SIDEBAR, MAX_SIDEBAR)}
           sidebarPx={display.sidebarWidth}
           stageLabel="Video"
           barPct={

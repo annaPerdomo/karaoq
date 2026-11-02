@@ -32,6 +32,8 @@
 .boardsTitle {
   display: inline-flex;
   align-items: center;
+  flex: 1 1 auto;
+  min-width: 0;
   gap: 0.45rem;
   font-size: 0.65rem;
   letter-spacing: 1.5px;
@@ -41,11 +43,12 @@
 }
 
 .boardsCountBadge {
+  flex-shrink: 0;
   min-width: 1.1rem;
   padding: 0 0.3rem;
   border-radius: 999px;
-  background: rgba(0, 240, 255, 0.15);
-  color: #00f0ff;
+  background: rgba(var(--acc-b-rgb, 0, 240, 255), 0.15);
+  color: var(--acc-b, #00f0ff);
   font-size: 0.65rem;
   line-height: 1.1rem;
   letter-spacing: 0;
@@ -53,6 +56,7 @@
 }
 
 .boardsCaret {
+  flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -89,8 +93,8 @@
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #00f0ff;
-  box-shadow: 0 0 6px #00f0ff;
+  background: var(--acc-b, #00f0ff);
+  box-shadow: 0 0 6px var(--acc-b, #00f0ff);
   animation: pulse 1.5s ease-in-out infinite;
   flex-shrink: 0;
 }
@@ -106,5 +110,11 @@
   }
   50% {
     opacity: 0.4;
+  }
+}
+
+@media (max-width: 360px) {
+  .boardsTitle {
+    letter-spacing: 1px;
   }
 }

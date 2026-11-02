@@ -26,14 +26,17 @@ process.env.MONGODB_DB = "test-db";
 
 import {
   acquireRun,
-  estimateUnits,
+  estimateCalls,
   insideMopUpWindow,
   ledgerDay,
+  OUTSIDE_MOP_UP_WINDOW,
   recordMopUp,
   recordSpend,
   releaseRun,
   remaining,
+  searchesLeft,
   spentRecent,
+  LEDGER_KEEP_DAYS,
 } from "../../lib/corpusBudget";
 import { quotaResetsAtMs } from "../../lib/pacificTime";
 
@@ -123,6 +126,25 @@ describe("spentRecent", () => {
     expect(days[2]).toMatchObject({ searches: 3, cronSearches: 1 });
   });
 
+  it("tells a day the ledger holds from one it zero-filled", async () => {
+    const at = Date.parse("2026-09-10T20:00:00Z");
+    await recordSpend(at, { searches: 3, mopUpSearches: 2, unloggedSearches: 1 });
+
+    const [before, today] = await spentRecent(at, 2);
+
+    expect(before.recorded).toBe(false);
+    expect(today).toMatchObject({ recorded: true, mopUpSearches: 2, unloggedSearches: 1 });
+  });
+
+  it("keeps a day's ledger a month past cron_state's week-long TTL", async () => {
+    const at = Date.parse("2026-09-10T20:00:00Z");
+    await recordSpend(at, { searches: 1 });
+
+    const doc = state().get(`budget:${ledgerDay(at)}`);
+    const expiresAt = doc.cursorAt.getTime() + 7 * 24 * 60 * MINUTE;
+    expect(expiresAt - at).toBe(LEDGER_KEEP_DAYS * 24 * 60 * MINUTE);
+  });
+
   it("walks back over the 23-hour spring-forward day without skipping it", async () => {
     // 00:30 PDT on Mar 9, 2026; 24 clock hours earlier is still Mar 7.
     const at = Date.parse("2026-03-09T07:30:00Z");
@@ -133,10 +155,22 @@ describe("spentRecent", () => {
   });
 });
 
-describe("estimateUnits", () => {
-  it("bills a search at 100 plus its videos.list enrichment, everything else at 1", () => {
-    expect(estimateUnits({ searches: 2, cronSearches: 1, pages: 30, lookups: 4 })).toBe(236);
-    expect(estimateUnits({ searches: 0, cronSearches: 0, pages: 0, lookups: 0 })).toBe(0);
+describe("estimateCalls", () => {
+  it("bills a search at 2 calls (search.list plus its enrichment), everything else at 1", () => {
+    expect(estimateCalls({ searches: 2, cronSearches: 1, pages: 30, lookups: 4 })).toBe(38);
+    expect(estimateCalls({ searches: 0, cronSearches: 0, pages: 0, lookups: 0 })).toBe(0);
+  });
+});
+
+describe("searchesLeft", () => {
+  it("defaults to the day's call quota of 9,500", () => {
+    expect(searchesLeft({ searches: 0, cronSearches: 0, pages: 0, lookups: 0 })).toBe(4750);
+  });
+
+  it("charges searches at 2 calls and pages/lookups at 1", () => {
+    expect(
+      searchesLeft({ searches: 100, cronSearches: 0, pages: 800, lookups: 50 })
+    ).toBe(Math.floor((9500 - 200 - 800 - 50) / 2));
   });
 });
 
@@ -191,7 +225,7 @@ describe("recordMopUp", () => {
       error: null,
     });
 
-    // GitHub's retry ping landing after Vercel's real run, finding nothing left.
+    // The other mop-up slot landing after the real run, finding nothing left.
     await recordMopUp(at, {
       at: new Date(at),
       liveRooms: 0,
@@ -208,14 +242,101 @@ describe("recordMopUp", () => {
     });
   });
 
-  it("still overwrites when the later run actually searched something", async () => {
+  it("adds a later run that searched to the earlier one", async () => {
+    const at = Date.now();
+    const song = (title: string) => ({ title, artist: "A", outcome: "new" as const, cutsAdded: 1 });
+    const run = { at: new Date(at), liveRooms: 0, skipped: null, quotaSpent: false, error: null };
+    await recordMopUp(at, { ...run, budget: 10, searched: 3, filled: 1, songs: [song("one")] });
+
+    await recordMopUp(at, { ...run, budget: 7, searched: 5, filled: 2, songs: [song("two")] });
+
+    expect(state().get(`budget:${ledgerDay(at)}`).mopUp).toMatchObject({
+      budget: 17,
+      searched: 8,
+      filled: 3,
+      songs: [song("one"), song("two")],
+    });
+  });
+
+  it("keeps the earlier run when a retry found nothing to search", async () => {
+    const at = Date.now();
+    const run = { at: new Date(at), liveRooms: 0, skipped: null, quotaSpent: false, error: null };
+    await recordMopUp(at, { ...run, budget: 10, searched: 3, filled: 1 });
+
+    // Wanted and thin lists already exhausted: no skip reason, just nothing done.
+    await recordMopUp(at, { ...run, budget: 7, searched: 0, filled: 0 });
+
+    expect(state().get(`budget:${ledgerDay(at)}`).mopUp).toMatchObject({ searched: 3, filled: 1 });
+  });
+
+  it("replaces an earlier out-of-window skip with a later in-window zero outcome", async () => {
     const at = Date.now();
     await recordMopUp(at, {
       at: new Date(at),
       liveRooms: 0,
-      budget: 10,
-      searched: 3,
-      filled: 1,
+      budget: 0,
+      searched: 0,
+      filled: 0,
+      skipped: OUTSIDE_MOP_UP_WINDOW,
+      quotaSpent: false,
+      error: null,
+    });
+
+    await recordMopUp(at, {
+      at: new Date(at),
+      liveRooms: 0,
+      budget: 0,
+      searched: 0,
+      filled: 0,
+      skipped: null,
+      quotaSpent: false,
+      error: null,
+    });
+
+    expect(state().get(`budget:${ledgerDay(at)}`).mopUp).toMatchObject({
+      searched: 0,
+      filled: 0,
+      skipped: null,
+    });
+  });
+
+  it("replaces an earlier out-of-window skip with a later day's-quota-out outcome", async () => {
+    const at = Date.now();
+    await recordMopUp(at, {
+      at: new Date(at),
+      liveRooms: 0,
+      budget: 0,
+      searched: 0,
+      filled: 0,
+      skipped: OUTSIDE_MOP_UP_WINDOW,
+      quotaSpent: false,
+      error: null,
+    });
+
+    await recordMopUp(at, {
+      at: new Date(at),
+      liveRooms: 0,
+      budget: 0,
+      searched: 0,
+      filled: 0,
+      skipped: "day's quota already out",
+      quotaSpent: true,
+      error: null,
+    });
+
+    expect(state().get(`budget:${ledgerDay(at)}`).mopUp).toMatchObject({
+      skipped: "day's quota already out",
+    });
+  });
+
+  it("never lets an out-of-window skip replace an in-window zero outcome", async () => {
+    const at = Date.now();
+    await recordMopUp(at, {
+      at: new Date(at),
+      liveRooms: 0,
+      budget: 0,
+      searched: 0,
+      filled: 0,
       skipped: null,
       quotaSpent: false,
       error: null,
@@ -224,16 +345,77 @@ describe("recordMopUp", () => {
     await recordMopUp(at, {
       at: new Date(at),
       liveRooms: 0,
-      budget: 10,
-      searched: 5,
-      filled: 2,
+      budget: 0,
+      searched: 0,
+      filled: 0,
+      skipped: OUTSIDE_MOP_UP_WINDOW,
+      quotaSpent: false,
+      error: null,
+    });
+
+    expect(state().get(`budget:${ledgerDay(at)}`).mopUp).toMatchObject({ skipped: null });
+  });
+
+  it("keeps an earlier failure over a later empty run with no error", async () => {
+    const at = Date.now();
+    await recordMopUp(at, {
+      at: new Date(at),
+      liveRooms: 0,
+      budget: 0,
+      searched: 0,
+      filled: 0,
+      skipped: null,
+      quotaSpent: false,
+      error: "fetch failed",
+    });
+
+    await recordMopUp(at, {
+      at: new Date(at),
+      liveRooms: 0,
+      budget: 0,
+      searched: 0,
+      filled: 0,
       skipped: null,
       quotaSpent: false,
       error: null,
     });
 
-    expect(state().get(`budget:${ledgerDay(at)}`)).toMatchObject({
-      mopUp: { searched: 5, filled: 2 },
+    expect(state().get(`budget:${ledgerDay(at)}`).mopUp).toMatchObject({ error: "fetch failed" });
+  });
+
+  it("leaves a clean searched outcome after an earlier out-of-window skip", async () => {
+    const at = Date.now();
+    await recordMopUp(at, {
+      at: new Date(at),
+      liveRooms: 0,
+      budget: 0,
+      searched: 0,
+      filled: 0,
+      skipped: OUTSIDE_MOP_UP_WINDOW,
+      quotaSpent: false,
+      error: null,
+    });
+
+    await recordMopUp(at, {
+      at: new Date(at),
+      liveRooms: 2,
+      budget: 10,
+      searched: 8,
+      filled: 3,
+      skipped: null,
+      quotaSpent: false,
+      error: null,
+    });
+
+    expect(state().get(`budget:${ledgerDay(at)}`).mopUp).toEqual({
+      at: new Date(at),
+      liveRooms: 2,
+      budget: 10,
+      searched: 8,
+      filled: 3,
+      skipped: null,
+      quotaSpent: false,
+      error: null,
     });
   });
 });

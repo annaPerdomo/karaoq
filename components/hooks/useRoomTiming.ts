@@ -18,6 +18,8 @@ export interface RoomTiming {
   sessionEndsAt: number | null;
   /** ISO stamp of when the song on stage started, mirrored from the room. */
   playStartedAt: string | null;
+  /** ISO stamp of when the current pause began, mirrored from the room. */
+  playPausedAt: string | null;
   estimate: QueueEstimate;
   /** Adopt the timing fields off a room read (initial load and every poll). */
   adoptRoom: (room: Room) => void;
@@ -94,6 +96,7 @@ export function useRoomTiming({
   return {
     sessionEndsAt,
     playStartedAt,
+    playPausedAt,
     estimate,
     adoptRoom,
     setSessionEndsAt,

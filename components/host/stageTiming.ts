@@ -6,6 +6,8 @@ export const CHEER_HOLD_SECONDS = 6.5;
 /** Must match .cheer's fade-out in styles/Countdown.module.css. */
 export const CHEER_FADE_SECONDS = 0.5;
 const CHEER_MIN_SECONDS = BURST_SECONDS + 0.4;
+/** How long after a song ends the stage may still start its cheer. */
+export const CHEER_WINDOW_MS = (CHEER_HOLD_SECONDS + CHEER_FADE_SECONDS + 1) * 1000;
 
 export function cheerRevealSeconds(gapSeconds: number, counting: boolean): number {
   if (!counting) return CHEER_HOLD_SECONDS;

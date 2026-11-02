@@ -27,6 +27,13 @@ vi.mock("../../lib/songCorpus", () => ({
   recordAdd: (...args: unknown[]) => recordAddMock(...args),
 }));
 
+// The shared mock collection answers every findOne with the room, which would
+// make any key look like a corpus song.
+const corpusSongs = new Set<string>();
+vi.mock("../../lib/corpusRead", () => ({
+  isCorpusSong: async (key: string) => corpusSongs.has(key),
+}));
+
 process.env.MONGODB_URI = "mongodb://test";
 process.env.MONGODB_DB = "test-db";
 
@@ -92,6 +99,39 @@ describe("POST /api/queue/[id]/videos - Add song to queue", () => {
         $set: { lastActivity: expect.any(Date) },
       }
     );
+  });
+
+  it("sends the 200 response before the analytics insert resolves", async () => {
+    const room: Room = { id: "ROOM1", queue: [], activeVideoIndex: 0, isPlaying: false };
+    mockCollection.findOne.mockResolvedValue(room);
+    mockCollection.updateOne.mockResolvedValue({ matchedCount: 1, modifiedCount: 1 });
+
+    let resolveInsert!: () => void;
+    const deferred = new Promise<void>((resolve) => { resolveInsert = resolve; });
+    mockCollection.insertOne.mockImplementation(() => deferred.then(() => ({ insertedId: "x" })));
+
+    const req = createMockReq({
+      method: "POST",
+      query: { id: "ROOM1" },
+      body: {
+        entryId: "entry-1",
+        userName: "Anna",
+        videoId: "dQw4w9WgXcQ",
+        songTitle: "Never Gonna Give You Up",
+      },
+    });
+    const res = createRes();
+
+    let handlerDone = false;
+    const handlerPromise = handler(req, res).then(() => { handlerDone = true; });
+
+    await new Promise((r) => setTimeout(r, 0));
+    expect(res.getStatus()).toBe(200);
+    expect(handlerDone).toBe(false);
+
+    resolveInsert();
+    await handlerPromise;
+    expect(handlerDone).toBe(true);
   });
 
   // The queue-time estimate is only as good as what gets stored here.
@@ -533,6 +573,29 @@ describe("POST /api/queue/[id]/videos - Add song to queue", () => {
     it("ignores the flag on an add with no catalog key", async () => {
       expect(await addWith({ fromCorpus: true })).toBeUndefined();
       expect(await addWith({ suggestionKey: "not a song", fromCorpus: true })).toBeUndefined();
+    });
+
+    it("keeps a shelf song's key when the corpus holds it outside the catalog", async () => {
+      corpusSongs.add("tate mcrae housewife karaoke");
+      try {
+        expect(
+          await addWith({ suggestionKey: "tate mcrae housewife karaoke", fromCorpus: true })
+        ).toBe(true);
+        expect(mockCollection.insertOne.mock.calls[0][0].suggestionKey).toBe(
+          "tate mcrae housewife karaoke"
+        );
+      } finally {
+        corpusSongs.clear();
+      }
+    });
+
+    it("records the ideas surface beside a key, and never without one", async () => {
+      const key = Array.from(suggestionCatalog().keys())[0];
+      await addWith({ suggestionKey: key, fromCorpus: true, ideaSurface: "voice", ideaAway: true });
+      expect(mockCollection.insertOne.mock.calls[0][0]).toMatchObject({ ideaSurface: "voice", ideaAway: true });
+
+      await addWith({ ideaSurface: "voice", ideaAway: true });
+      expect(mockCollection.insertOne.mock.calls[0][0]).not.toHaveProperty("ideaSurface");
     });
 
     it("leaves a non-boolean flag absent rather than coercing it", async () => {

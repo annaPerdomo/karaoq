@@ -61,7 +61,7 @@ export default async function handler(
     }
     const result = await collection.updateOne(
       { id: roomId },
-      { $set: { hostConfig: config, lastActivity: new Date() } }
+      { $set: { hostConfig: config, "displayConfig.theme": config.theme, lastActivity: new Date() } }
     );
     if (result.matchedCount === 0) {
       res.status(404).json({ code: 404, message: "Room not found." });

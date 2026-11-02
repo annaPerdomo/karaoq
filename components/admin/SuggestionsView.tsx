@@ -9,6 +9,8 @@ import BarList from './charts/BarList';
 import { SERIES } from './charts/palette';
 import CorpusPicks from './suggestions/CorpusPicks';
 import WantedSongs from './suggestions/WantedSongs';
+import Proposals from './suggestions/Proposals';
+import IdeasImpact from './suggestions/IdeasImpact';
 
 /** Top picks are our own catalog titles, so this list isn't bound by the
  * 30-day YouTube retention window that caps the Pulse song ranking. */
@@ -36,9 +38,15 @@ export default function SuggestionsView({
         </div>
       </header>
 
+      <h2 className={styles.sectionHeading}>Is it working?</h2>
+
+      <IdeasImpact secret={secret} />
+
       <h2 className={styles.sectionHeading}>Filling the gaps</h2>
 
       <WantedSongs secret={secret} />
+
+      <Proposals secret={secret} />
 
       {suggestions.picks && (
         <CorpusPicks

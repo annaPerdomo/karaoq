@@ -134,6 +134,10 @@ input {
 @media (max-width: 600px) {
   .app-footer {
     padding: 0.4rem 1rem;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.2rem 0.75rem;
   }
   /* No room beside the credit and the link; the page header already shows it. */
   .app-footer-logo {

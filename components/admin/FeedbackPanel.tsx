@@ -14,6 +14,7 @@ export interface FeedbackRow {
   roomId?: string;
   role?: 'host' | 'singer';
   page?: string;
+  ref?: string;
   locale?: string;
   country?: string;
   userAgent?: string;
@@ -204,6 +205,7 @@ export function FeedbackPanel({
                 {row.roomId && <span>Room {row.roomId.toUpperCase()}</span>}
                 {row.role && <span>{row.role}</span>}
                 {row.page && <span>{row.page}</span>}
+                {row.ref && <span className={styles.fbRef}>{row.ref}</span>}
                 {row.locale && <span>{row.locale}</span>}
                 {row.country && <span>{row.country}</span>}
                 {device && <span>{device}</span>}

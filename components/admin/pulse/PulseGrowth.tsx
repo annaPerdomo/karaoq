@@ -5,6 +5,7 @@ import type { AnalyticsData, GrowthData } from '../types';
 import { bucketWeeks, fillDaysStacked, type StackedDatum } from '../chartData';
 import { VIA_LABELS, WINDOW } from '../format';
 import StackedColumnChart, { type StackedSeries } from '../charts/StackedColumnChart';
+import BarList from '../charts/BarList';
 import { SERIES } from '../charts/palette';
 
 type Metric = 'rooms' | 'songs';
@@ -119,6 +120,15 @@ export default function PulseGrowth({
           : `One bar per ${unit}, split by how each song was added.`}
         {win.weekly && ' The newest week ends today.'}
       </p>
+      {growth.sources && growth.sources.length > 0 && (
+        <>
+          <h2 className={styles.cardTitle}>Where new rooms came from · 7 days</h2>
+          <BarList
+            data={growth.sources.map((s) => ({ label: s._id, value: s.count }))}
+            maxRows={10}
+          />
+        </>
+      )}
     </section>
   );
 }

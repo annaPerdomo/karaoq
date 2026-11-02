@@ -9,6 +9,7 @@ import type {
   SingWithMeRow,
 } from './roomDetailLabels';
 import type { DaySpend, MopUpOutcome } from '../../lib/corpusBudget';
+import type { ResolvedSong } from '../../lib/corpusResolve';
 
 export type MopUpWire = Omit<MopUpOutcome, 'at'> & { at: string };
 export type DaySpendWire = Omit<DaySpend, 'mopUp'> & { mopUp?: MopUpWire };
@@ -150,6 +151,8 @@ export interface GrowthData {
   rooms: { _id: string; rooms: number; withSong: number }[];
   /** Keyed by via — see VIA_LABELS. */
   songs: { _id: string; via: Record<string, number> }[];
+  /** room_created by ref ?? referrer ?? room-link/direct/untracked (by entry path), last 7 days, top 10. Absent on an older deploy. */
+  sources?: { _id: string; count: number }[];
 }
 
 export interface SurfaceCustomization {
@@ -203,6 +206,13 @@ export interface RoomRow {
   localeMix?: LocaleCount[];
 }
 
+/** The rooms view's top row; null when an older deploy's response omits it. */
+export interface RightNow {
+  live: number;
+  created: number;
+  sang: number;
+}
+
 /** One raw error occurrence in a room, in chronological order. */
 export interface RoomErrorRow {
   message: string;
@@ -246,6 +256,28 @@ export interface WantedSongsData {
   rows: WantedSongRow[];
   matched: number;
   limit: number;
+}
+
+export interface ProposalRow {
+  id: string;
+  label: string;
+  candidates: { artist: string; title: string }[];
+  picked: { artist: string; title: string } | null;
+  rooms: number;
+  searchRooms: number;
+  countries: string[];
+  addCount: number;
+  searchCount: number;
+  videoIds: string[];
+  qualifies: boolean;
+  promotedSongId?: string;
+  status?: string;
+  updatedAt: string;
+}
+
+export interface ProposalsData {
+  rows: ProposalRow[];
+  thresholds: { minRooms: number; minCountries: number };
 }
 
 /** One failed /api/search attributed to this room. */
@@ -412,6 +444,20 @@ export interface DaySourcesWire {
   sources: Record<SearchSource, number>;
 }
 
+/** Unless `recorded`, only `rooms` is known, read from search_run events,
+ * which undercount. */
+export interface DayBilledWire {
+  day: string;
+  recorded: boolean;
+  out: boolean;
+  rooms: number;
+  nightly: number;
+  mopUp: number;
+  /** Billed because YouTube said the day was out before the ledger did. */
+  unlogged: number;
+  mopUpSongs?: ResolvedSong[];
+}
+
 /** Response contract of GET /api/analytics/quota. */
 export interface QuotaLedgerData {
   quota: number;
@@ -423,6 +469,8 @@ export interface QuotaLedgerData {
   roomsByDay?: DayRoomsWire[];
   /** Same days as `roomsByDay`. Absent from older deploys. */
   sourcesByDay?: DaySourcesWire[];
+  /** Same days as `roomsByDay`. Absent from older deploys. */
+  billedByDay?: DayBilledWire[];
 }
 
-export type AdminView = 'rooms' | 'quota' | 'errors' | 'suggestions' | 'pulse' | 'feedback';
+export type AdminView = 'rooms' | 'quota' | 'errors' | 'suggestions' | 'pulse' | 'screens' | 'feedback';

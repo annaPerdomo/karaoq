@@ -1,10 +1,18 @@
 import type { NextApiRequest } from "next";
+import type { IdeaSurface } from "./ideaSurface";
 import type { AutoAdvance, DisplayConfig, HostConfig } from "../pages/api/types";
 import { MAX_STORED_UA_LENGTH } from "./limits";
 import { getAnalyticsDb, getYoutubeSongDataCollection } from "./mongodb";
 import { splitYoutubeSongData } from "./youtubeRetention";
 import type { Locale } from "./i18n/config";
 import { asLocale, LOCALE_HEADER, type LocaleSource } from "./i18n/activeLocale";
+import { sanitizeEntry, sanitizeReferrerHost, sanitizeRef } from "./firstTouch";
+import { requestGeo } from "./platform";
+
+/** What the browser may send. "trending" was the shelf the idea shelves
+ *  replaced; it survives in the type only for the events already stored. */
+export const SUGGESTION_SOURCES = ["random", "song_pick", "genre_chip", "shelf"] as const;
+export type SuggestionSource = (typeof SUGGESTION_SOURCES)[number] | "trending";
 
 export type EventType =
   | "room_created"
@@ -29,7 +37,24 @@ export type EventType =
   | "search_failed"
   | "search_run"
   | "link_lookup"
+  | "original_video_resolved"
+  | "original_video_searched"
+  | "original_video_swapped"
+  | "original_video_nudged"
+  | "karaoke_video_swapped"
+  | "karaoke_swap_opened"
+  | "music_video_screen_opened"
+  | "music_video_screen_closed"
+  | "music_video_error"
+  | "music_video_offset"
+  | "music_video_link"
+  | "logo_upload_rejected"
+  | "logo_uploaded"
+  | "brand_saved"
   | "tv_paired";
+
+// Music-video / brand telemetry retention: the Screens view's longest window.
+export const SCREEN_EVENT_TTL_MS = 90 * 24 * 60 * 60 * 1000;
 
 export interface AnalyticsEvent {
   type: EventType;
@@ -45,7 +70,9 @@ export interface AnalyticsEvent {
   emoji?: string;
   role?: "host" | "singer" | "display";
   userAgent?: string;
-  suggestionSource?: "random" | "song_pick" | "genre_chip" | "trending";
+  suggestionSource?: SuggestionSource;
+  ideaSurface?: IdeaSurface;
+  ideaAway?: boolean;
   sectionId?: string;
   categoryId?: string;
   // Our own key, not a YouTube field, so it doesn't expire at 30 days.
@@ -102,11 +129,46 @@ export interface AnalyticsEvent {
   pairKind?: "screen" | "remote";
   lookupCache?: "fresh" | "miss";
   locale?: Locale;
+  // From the client's lib/firstTouch.ts headers via attributionFromRequest; room_created only.
+  ref?: string;
+  referrer?: string;
+  entry?: string;
   // Key of the youtube_song_data doc holding this event's title/video id until
   // it expires at 30 days. Absent on events from before the split.
   songDataId?: string;
-  // search_run only: 90 days, the search_demand retention. TTL index in lib/mongodb.ts.
+  // search_run and the screen telemetry: per-doc retention. TTL index in lib/mongodb.ts.
   expiresAt?: Date;
+  // original_video_resolved: whether the answer carried at least one video.
+  found?: boolean;
+  // original_video_resolved: how the response was reached. original_video_swapped,
+  // karaoke_video_swapped: where the host's pick came from.
+  source?: "cache" | "live" | "quota" | "busy" | "none" | "candidate" | "link" | "search";
+  // karaoke_video_swapped, karaoke_swap_opened: the song was on stage, playing.
+  live?: boolean;
+  // karaoke_video_swapped, live only: how far into the old cut the host gave up on it.
+  swapAtSeconds?: number;
+  // music_video_screen_closed.
+  durationSeconds?: number;
+  songsShown?: number;
+  songsUnavailable?: number;
+  // music_video_error: the YouTube onError code.
+  code?: number;
+  // music_video_offset: the manual nudge in effect when the song changed.
+  // original_video_nudged: the host's saved timing nudge.
+  offsetSeconds?: number;
+  // music_video_link: which gear-row button was used.
+  action?: "open" | "copy";
+  // logo_upload_rejected: from the logo route, and client-side validation via screen-event.
+  reason?: "type" | "size" | "storage_full";
+  // logo_uploaded.
+  bytes?: number;
+  // brand_saved: what the saved brand carries, and which Customize rail saved it.
+  logo?: boolean;
+  colors?: boolean;
+  cleared?: boolean;
+  surface?: "host" | "display";
+  // brand_saved: the logo was resized away from its default.
+  resized?: boolean;
 }
 
 // Heartbeat gap beyond which the next beat starts a fresh session; 30 min tolerates throttled background-tab timers.
@@ -144,10 +206,28 @@ export function localeFromRequest(req: NextApiRequest): Locale | null {
 /** Exported so a non-analytics write can attribute itself the same way an
  *  event does — one parsing of these headers, or the two drift. */
 export function extractGeo(req: NextApiRequest) {
+  return requestGeo(req);
+}
+
+const FIRST_TOUCH_REF_HEADER = "x-karaoq-ref";
+const FIRST_TOUCH_REFERRER_HEADER = "x-karaoq-referrer";
+const FIRST_TOUCH_ENTRY_HEADER = "x-karaoq-entry";
+
+export function attributionFromRequest(
+  req: NextApiRequest
+): { ref?: string; referrer?: string; entry?: string } {
+  const ref = sanitizeRef(headerString(req.headers[FIRST_TOUCH_REF_HEADER]));
+  const referrerHeader = headerString(req.headers[FIRST_TOUCH_REFERRER_HEADER]);
+  const referrer = referrerHeader
+    ? sanitizeReferrerHost(
+        referrerHeader.includes("://") ? referrerHeader : `https://${referrerHeader}`
+      )
+    : undefined;
+  const entry = sanitizeEntry(headerString(req.headers[FIRST_TOUCH_ENTRY_HEADER]));
   return {
-    country: headerString(req.headers["x-vercel-ip-country"]),
-    region: headerString(req.headers["x-vercel-ip-region"]),
-    city: headerString(req.headers["x-vercel-ip-city"]),
+    ...(ref ? { ref } : {}),
+    ...(referrer ? { referrer } : {}),
+    ...(entry ? { entry } : {}),
   };
 }
 

@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import * as React from 'react';
 import styles from '../../styles/Home.module.css';
 import { useT } from '../../lib/i18n/I18nProvider';
@@ -116,6 +117,15 @@ export default function FeaturesSection() {
           </div>
         </Reveal>
       </div>
+
+      <Reveal>
+        <p className={styles.featuresMore}>
+          <Link href="/whats-new" className={styles.featuresMoreLink}>
+            {t('whatsNew.readMore')}
+            <span aria-hidden="true"> →</span>
+          </Link>
+        </p>
+      </Reveal>
     </section>
   );
 }

@@ -59,6 +59,21 @@ describe("POST /api/queue/[id]/host-config - Save host config", () => {
     mockCollection.findOne.mockResolvedValue({ id: "ROOM1" });
   });
 
+  it("mirrors the theme onto the other surface so the room has one theme", async () => {
+    mockCollection.updateOne.mockResolvedValue({ matchedCount: 1 });
+    const req = createMockReq({
+      method: "POST",
+      query: { id: "ROOM1" },
+      body: { ...validConfig, theme: "neon" },
+    });
+    const res = createRes();
+    await handler(req, res);
+
+    expect(res.getStatus()).toBe(200);
+    const update = mockCollection.updateOne.mock.calls[0][1] as { $set: Record<string, unknown> };
+    expect(update.$set["displayConfig.theme"]).toBe("neon");
+  });
+
   it("stores the config and bumps lastActivity", async () => {
     mockCollection.updateOne.mockResolvedValue({ matchedCount: 1 });
 
@@ -77,6 +92,7 @@ describe("POST /api/queue/[id]/host-config - Save host config", () => {
         $set: {
           hostConfig: validConfig,
           lastActivity: expect.any(Date),
+          "displayConfig.theme": expect.any(String),
         },
       }
     );
@@ -180,6 +196,7 @@ describe("POST /api/queue/[id]/host-config - Save host config", () => {
         $set: {
           hostConfig: { ...validConfig, nowPlayingHeight: 64 },
           lastActivity: expect.any(Date),
+          "displayConfig.theme": expect.any(String),
         },
       }
     );
@@ -205,6 +222,7 @@ describe("POST /api/queue/[id]/host-config - Save host config", () => {
         $set: {
           hostConfig: { ...validConfig, showQueue: true, showTransport: true },
           lastActivity: expect.any(Date),
+          "displayConfig.theme": expect.any(String),
         },
       }
     );

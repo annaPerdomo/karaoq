@@ -142,6 +142,61 @@ describe("POST /api/queue/[id] - Room creation", () => {
     expect(stored).not.toHaveProperty("keys");
   });
 
+  it("records first-touch attribution on room_created", async () => {
+    mockCollection.findOne.mockResolvedValue(null);
+    mockCollection.insertOne.mockResolvedValue({ insertedId: "x" });
+
+    const req = createMockReq({
+      method: "POST",
+      query: { id: "ABC13" },
+      headers: { "x-karaoq-ref": "Reddit", "x-karaoq-entry": "/ROOM1" },
+    });
+    const res = createRes();
+    await handler(req, res);
+
+    expect(res.getStatus()).toBe(201);
+    const eventDoc = mockCollection.insertOne.mock.calls
+      .map(([doc]) => doc)
+      .find((doc) => doc.type === "room_created");
+    expect(eventDoc).toMatchObject({ ref: "reddit", entry: "/room1" });
+  });
+
+  it("sanitizes a malicious attribution header instead of failing the create", async () => {
+    mockCollection.findOne.mockResolvedValue(null);
+    mockCollection.insertOne.mockResolvedValue({ insertedId: "x" });
+
+    const req = createMockReq({
+      method: "POST",
+      query: { id: "ABC14" },
+      headers: { "x-karaoq-ref": "<script>".padEnd(500, "x") },
+    });
+    const res = createRes();
+    await handler(req, res);
+
+    expect(res.getStatus()).toBe(201);
+    const eventDoc = mockCollection.insertOne.mock.calls
+      .map(([doc]) => doc)
+      .find((doc) => doc.type === "room_created");
+    expect(eventDoc.ref).not.toMatch(/[<>]/);
+    expect(eventDoc.ref.length).toBeLessThanOrEqual(40);
+  });
+
+  it("records no attribution fields with no headers sent", async () => {
+    mockCollection.findOne.mockResolvedValue(null);
+    mockCollection.insertOne.mockResolvedValue({ insertedId: "x" });
+
+    const req = createMockReq({ method: "POST", query: { id: "ABC15" } });
+    const res = createRes();
+    await handler(req, res);
+
+    const eventDoc = mockCollection.insertOne.mock.calls
+      .map(([doc]) => doc)
+      .find((doc) => doc.type === "room_created");
+    expect(eventDoc.ref).toBeUndefined();
+    expect(eventDoc.referrer).toBeUndefined();
+    expect(eventDoc.entry).toBeUndefined();
+  });
+
   it("resets isPlaying when the device that was playing reconnects", async () => {
     const existing: Room = {
       id: "ABC12",
@@ -462,6 +517,128 @@ describe("GET /api/queue/[id] - Room retrieval", () => {
     await handler(req, res);
 
     expect((res.getBody() as Room).isPlaying).toBe(true);
+    // The only write is the display's own heartbeat — never a heal.
+    expect(mockCollection.updateOne).toHaveBeenCalledTimes(1);
+    expect(mockCollection.updateOne).toHaveBeenCalledWith(
+      { id: "XYZ99" },
+      { $set: { displayLastSeen: expect.any(Date) } }
+    );
+  });
+
+  it("a music video screen's read refreshes musicVideoAt at most once per window", async () => {
+    const base: Room = {
+      id: "XYZ99",
+      queue: [],
+      activeVideoIndex: 0,
+      isPlaying: false,
+      reactionsEnabled: true,
+    };
+    mockCollection.updateOne.mockResolvedValue({ matchedCount: 1 });
+
+    mockCollection.findOne.mockResolvedValue({ ...base, musicVideoAt: new Date(Date.now() - 6 * 60 * 1000) });
+    await handler(createMockReq({ method: "GET", query: { id: "XYZ99", musicVideo: "1" } }), createRes());
+    expect(mockCollection.updateOne).toHaveBeenCalledWith(
+      { id: "XYZ99" },
+      { $set: { musicVideoAt: expect.any(Date) } }
+    );
+
+    mockCollection.updateOne.mockClear();
+    mockCollection.findOne.mockResolvedValue({ ...base, musicVideoAt: new Date(Date.now() - 60 * 1000) });
+    await handler(createMockReq({ method: "GET", query: { id: "XYZ99", musicVideo: "1" } }), createRes());
+    expect(mockCollection.updateOne).not.toHaveBeenCalled();
+
+    mockCollection.findOne.mockResolvedValue({ ...base });
+    await handler(createMockReq({ method: "GET", query: { id: "XYZ99" } }), createRes());
+    expect(mockCollection.updateOne).not.toHaveBeenCalled();
+  });
+
+  it("never fails the read when the musicVideoAt write fails", async () => {
+    mockCollection.findOne.mockResolvedValue({
+      id: "XYZ99",
+      queue: [],
+      activeVideoIndex: 0,
+      isPlaying: false,
+      reactionsEnabled: true,
+    });
+    mockCollection.updateOne.mockRejectedValueOnce(new Error("write failed"));
+    const res = createRes();
+    await handler(createMockReq({ method: "GET", query: { id: "XYZ99", musicVideo: "1" } }), res);
+    expect(res.getStatus()).toBe(200);
+    expect((res.getBody() as Room).musicVideoAt).toBeTruthy();
+  });
+
+  it("wakes a dormant room when a screen first opens it", async () => {
+    const room: Room = {
+      id: "XYZ99",
+      queue: [],
+      activeVideoIndex: 0,
+      isPlaying: false,
+      reactionsEnabled: true,
+      lastActivity: new Date(Date.now() - 3 * 60 * 60 * 1000),
+    };
+    mockCollection.findOne.mockResolvedValue(room);
+
+    const res = createRes();
+    await handler(createMockReq({ method: "GET", query: { id: "XYZ99", wake: "1" } }), res);
+
+    expect(mockCollection.updateOne).toHaveBeenCalledWith(
+      { id: "XYZ99" },
+      { $set: { lastActivity: expect.any(Date) } }
+    );
+    const body = res.getBody() as Room;
+    expect(Date.now() - new Date(body.lastActivity!).getTime()).toBeLessThan(5_000);
+  });
+
+  it("leaves lastActivity alone on a wake read of a room that isn't dormant", async () => {
+    const room: Room = {
+      id: "XYZ99",
+      queue: [],
+      activeVideoIndex: 0,
+      isPlaying: false,
+      reactionsEnabled: true,
+      lastActivity: new Date(Date.now() - 60_000),
+    };
+    mockCollection.findOne.mockResolvedValue(room);
+
+    await handler(createMockReq({ method: "GET", query: { id: "XYZ99", wake: "1" } }), createRes());
+
+    expect(mockCollection.updateOne).not.toHaveBeenCalled();
+  });
+
+  it("refreshes a stale display heartbeat without bumping lastActivity", async () => {
+    const room: Room = {
+      id: "XYZ99",
+      queue: [],
+      activeVideoIndex: 0,
+      isPlaying: false,
+      reactionsEnabled: true,
+      displayLastSeen: new Date(Date.now() - 11_000),
+    };
+    mockCollection.findOne.mockResolvedValue(room);
+
+    await handler(createMockReq({ method: "GET", query: { id: "XYZ99", display: "1" } }), createRes());
+
+    expect(mockCollection.updateOne).toHaveBeenCalledWith(
+      { id: "XYZ99" },
+      { $set: { displayLastSeen: expect.any(Date) } }
+    );
+  });
+
+  it("skips the heartbeat write while it is still fresh, and for non-display readers", async () => {
+    const room: Room = {
+      id: "XYZ99",
+      queue: [],
+      activeVideoIndex: 0,
+      isPlaying: false,
+      reactionsEnabled: true,
+      displayLastSeen: new Date(Date.now() - 2_000),
+    };
+    mockCollection.findOne.mockResolvedValue(room);
+    await handler(createMockReq({ method: "GET", query: { id: "XYZ99", display: "1" } }), createRes());
+
+    mockCollection.findOne.mockResolvedValue({ ...room, displayLastSeen: undefined });
+    await handler(createMockReq({ method: "GET", query: { id: "XYZ99" } }), createRes());
+
     expect(mockCollection.updateOne).not.toHaveBeenCalled();
   });
 
@@ -583,6 +760,17 @@ describe("GET /api/queue/[id] - Room retrieval", () => {
     await handler(req, res);
 
     expect((res.getBody() as Room).displayConfig).toEqual(custom);
+  });
+
+  it("returns a room's brand on GET", async () => {
+    const brand = { logo: "0123456789abcdef", accentA: "#ff0080" };
+    mockCollection.findOne.mockResolvedValue({ id: "NEW01", queue: [], activeVideoIndex: 0, brand });
+
+    const req = createMockReq({ method: "GET", query: { id: "NEW01" } });
+    const res = createRes();
+    await handler(req, res);
+
+    expect((res.getBody() as Room).brand).toEqual(brand);
   });
 
   it("passes a live auto-start countdown through", async () => {

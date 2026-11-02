@@ -175,6 +175,16 @@ export const GUIDES: Guide[] = [
     published: '2026-07-04',
     updated: '2026-08-01',
   },
+  {
+    id: 'alternatives',
+    slug: 'free-karaoke-app-alternatives',
+    related: ['youtube', 'gear', 'tv'],
+    sectionCount: 7,
+    stepCount: 0,
+    faqCount: 4,
+    published: '2026-10-22',
+    updated: '2026-10-22',
+  },
 ];
 
 export const GUIDE_SLUGS = GUIDES.map((g) => g.slug);

@@ -84,6 +84,161 @@
         { "title": "Marikit", "artist": "Juan Caoile" },
         { "title": "Uhaw", "artist": "Dilaw" }
       ]
+    },
+    {
+      "id": "ph-rock",
+      "name": "Pinoy Rock & Bands",
+      "emoji": "🤘",
+      "songs": [
+        { "title": "Alapaap", "artist": "Eraserheads" },
+        { "title": "Overdrive", "artist": "Eraserheads" },
+        { "title": "Spoliarium", "artist": "Eraserheads" },
+        { "title": "Elesi", "artist": "Rivermaya" },
+        { "title": "Hinahanap-hanap Kita", "artist": "Rivermaya" },
+        { "title": "Halaga", "artist": "Parokya ni Edgar" },
+        { "title": "Noypi", "artist": "Bamboo" },
+        { "title": "Hallelujah", "artist": "Bamboo" },
+        { "title": "Masaya", "artist": "Bamboo" },
+        { "title": "Martyr Nyebera", "artist": "Kamikazee" },
+        { "title": "Burnout", "artist": "Sugarfree" },
+        { "title": "Stay", "artist": "Cueshé" },
+        { "title": "The Day You Said Goodnight", "artist": "Hale" },
+        { "title": "Sundo", "artist": "Imago" },
+        { "title": "First of Summer", "artist": "Urbandub" },
+        { "title": "Sige", "artist": "6cyclemind" },
+        { "title": "Nobela", "artist": "Join the Club" },
+        { "title": "Jeepney", "artist": "Sponge Cola" },
+        { "title": "Hanggang Kailan", "artist": "Orange & Lemons" },
+        { "title": "Salamat", "artist": "The Dawn" }
+      ]
+    },
+    {
+      "id": "ph-ppop",
+      "name": "P-Pop Hits",
+      "emoji": "✨",
+      "songs": [
+        { "title": "Gento", "artist": "SB19" },
+        { "title": "MAPA", "artist": "SB19" },
+        { "title": "Bazinga", "artist": "SB19" },
+        { "title": "What?", "artist": "SB19" },
+        { "title": "Go Up", "artist": "SB19" },
+        { "title": "Pantropiko", "artist": "BINI" },
+        { "title": "Salamin, Salamin", "artist": "BINI" },
+        { "title": "Karera", "artist": "BINI" },
+        { "title": "Na Na Na", "artist": "BINI" },
+        { "title": "Cherry on Top", "artist": "BINI" },
+        { "title": "Huwag Muna Tayong Umuwi", "artist": "BINI" },
+        { "title": "Tala", "artist": "Sarah Geronimo" },
+        { "title": "Kilometro", "artist": "Sarah Geronimo" },
+        { "title": "Ikot-Ikot", "artist": "Sarah Geronimo" },
+        { "title": "Amakabogera", "artist": "Maymay Entrata" },
+        { "title": "The Light", "artist": "BGYO" }
+      ]
+    },
+    {
+      "id": "ph-party",
+      "name": "Videoke Party Hits",
+      "emoji": "🍻",
+      "songs": [
+        { "title": "Otso Otso", "artist": "Bayani Agbayani" },
+        { "title": "Spaghetti Song", "artist": "Sexbomb Girls" },
+        { "title": "Totoy Bibbo", "artist": "Vhong Navarro" },
+        { "title": "Humanap Ka ng Panget", "artist": "Andrew E." },
+        { "title": "Mr. Suave", "artist": "Parokya ni Edgar" },
+        { "title": "Inuman Na", "artist": "Parokya ni Edgar" },
+        { "title": "Pinoy Ako", "artist": "Orange & Lemons" },
+        { "title": "Bonggahan", "artist": "Sampaguita" },
+        { "title": "Laklak", "artist": "Teeth" },
+        { "title": "Upuan", "artist": "Gloc-9" },
+        { "title": "Sirena", "artist": "Gloc-9" },
+        { "title": "Chinito", "artist": "Yeng Constantino" },
+        { "title": "Bilog na Naman ang Buwan", "artist": "Tropical Depression" },
+        { "title": "Manila", "artist": "Hotdog" },
+        { "title": "Ikaw ang Miss Universe ng Buhay Ko", "artist": "Hotdog" },
+        { "title": "Ang Boyfriend Kong Baduy", "artist": "Cinderella" },
+        { "title": "Isang Linggong Pag-ibig", "artist": "Imelda Papin" },
+        { "title": "Probinsyana", "artist": "Bamboo" }
+      ]
+    },
+    {
+      "id": "ph-voice-easy",
+      "name": "Easy to Sing",
+      "emoji": "😌",
+      "voice": "easy",
+      "songs": [
+        { "title": "With a Smile", "artist": "Eraserheads" },
+        { "title": "Ligaya", "artist": "Eraserheads" },
+        { "title": "Pagdating ng Panahon", "artist": "Aiza Seguerra" },
+        { "title": "Maging Sino Ka Man", "artist": "Rey Valera" },
+        { "title": "Pusong Bato", "artist": "Alon" },
+        { "title": "Tensionado", "artist": "Soapdish" },
+        { "title": "Hawak Kamay", "artist": "Yeng Constantino" },
+        { "title": "Buko", "artist": "Jireh Lim" },
+        { "title": "Handog", "artist": "Florante" },
+        { "title": "214", "artist": "Rivermaya" },
+        { "title": "Huling Sayaw", "artist": "Kamikazee" },
+        { "title": "Tuloy Pa Rin", "artist": "Neocolours" }
+      ]
+    },
+    {
+      "id": "ph-voice-low",
+      "name": "Low & Deep",
+      "emoji": "🫧",
+      "voice": "low",
+      "songs": [
+        { "title": "Anak", "artist": "Freddie Aguilar" },
+        { "title": "Ang Huling El Bimbo", "artist": "Eraserheads" },
+        { "title": "Kanlungan", "artist": "Noel Cabangon" },
+        { "title": "Tadhana", "artist": "Up Dharma Down" },
+        { "title": "Kathang Isip", "artist": "Ben&Ben" },
+        { "title": "Sana", "artist": "I Belong to the Zoo" },
+        { "title": "Kisapmata", "artist": "Rivermaya" },
+        { "title": "Hari ng Sablay", "artist": "Sugarfree" },
+        { "title": "Tagpuan", "artist": "Moira Dela Torre" },
+        { "title": "Pagtingin", "artist": "Ben&Ben" },
+        { "title": "Narda", "artist": "Kamikazee" },
+        { "title": "Jopay", "artist": "Mayonnaise" }
+      ]
+    },
+    {
+      "id": "ph-voice-mid",
+      "name": "Mid Range",
+      "emoji": "🎶",
+      "voice": "mid",
+      "songs": [
+        { "title": "Harana", "artist": "Parokya ni Edgar" },
+        { "title": "Pare Ko", "artist": "Eraserheads" },
+        { "title": "Kahit Maputi Na ang Buhok Ko", "artist": "Rey Valera" },
+        { "title": "Torete", "artist": "Moonstar88" },
+        { "title": "Hiling", "artist": "Silent Sanctuary" },
+        { "title": "Sa Ngalan ng Pag-ibig", "artist": "December Avenue" },
+        { "title": "Binibini", "artist": "Zack Tabudlo" },
+        { "title": "Bakit Ngayon Ka Lang", "artist": "Ogie Alcasid" },
+        { "title": "Beautiful Girl", "artist": "Jose Mari Chan" },
+        { "title": "Ikaw", "artist": "Yeng Constantino" },
+        { "title": "Akin Ka Na Lang", "artist": "Itchyworms" },
+        { "title": "Panalangin", "artist": "APO Hiking Society" }
+      ]
+    },
+    {
+      "id": "ph-voice-high",
+      "name": "High & Powerful",
+      "emoji": "🌟",
+      "voice": "high",
+      "songs": [
+        { "title": "Dadalhin", "artist": "Regine Velasquez" },
+        { "title": "Sana Maulit Muli", "artist": "Gary Valenciano" },
+        { "title": "Hanggang", "artist": "Wency Cornejo" },
+        { "title": "Magbalik", "artist": "Callalily" },
+        { "title": "Buwan", "artist": "Juan Karlos" },
+        { "title": "Forevermore", "artist": "Side A" },
+        { "title": "Bituing Walang Ningning", "artist": "Sharon Cuneta" },
+        { "title": "Ngayon at Kailanman", "artist": "Basil Valdez" },
+        { "title": "Kahit Isang Saglit", "artist": "Martin Nievera" },
+        { "title": "Pagsubok", "artist": "Orient Pearl" },
+        { "title": "Paalam Na", "artist": "Rachel Alejandro" },
+        { "title": "Kung Ako Na Lang Sana", "artist": "Bituin Escalante" }
+      ]
     }
   ]
 }

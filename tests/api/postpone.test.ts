@@ -188,4 +188,18 @@ describe("POST /api/queue/[id]/postpone - a singer pushes their own song back", 
     await handler(req, res);
     expect(res.getStatus()).toBe(404);
   });
+
+  it("preserves a host-chosen originalVideoId on the moved entry", async () => {
+    const r = room(["a", "b", "c", "d"], 0, true);
+    (r.queue[1] as unknown as { originalVideoId: string }).originalVideoId = "overridenvid";
+    mockCollection.findOne.mockResolvedValue(r);
+    const req = createMockReq({ method: "POST", query: { id: "ROOM1", entryId: "b", after: "2" } });
+    const res = createRes();
+    await handler(req, res);
+
+    expect(res.getStatus()).toBe(200);
+    const [, update] = mockCollection.updateOne.mock.calls[0];
+    const moved = update.$set.queue.find((e: { id: string }) => e.id === "b");
+    expect(moved.originalVideoId).toBe("overridenvid");
+  });
 });

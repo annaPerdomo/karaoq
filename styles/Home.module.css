@@ -2270,6 +2270,20 @@ html[data-tv] .dpNumB, html[data-tv] .dpCount3 { animation: none !important; opa
   gap: 1.5rem;
 }
 
+.featuresMore {
+  margin: 2.5rem 0 0;
+  text-align: center;
+}
+
+.featuresMoreLink {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #ff2d78;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.featuresMoreLink:hover { color: #00f0ff; }
+
 .featureCard {
   --accent: #a855f7;
   --accent-rgb: 168, 85, 247;

@@ -26,6 +26,7 @@ process.env.MONGODB_DB = "test-db";
 
 import { claimBankedVideos } from "../../lib/corpusClaim";
 import { songIdentityFromCatalog } from "../../lib/songCorpus";
+import { songKeyFor } from "../../lib/songEntry";
 import { suggestionCatalog, type CatalogEntry } from "../../lib/suggestionCatalog";
 import { isCutOf } from "../../lib/suggestionMatch";
 
@@ -195,5 +196,44 @@ describe("claimBankedVideos", () => {
     const { done } = await claimBankedVideos(soon(), 2);
 
     expect(done).toBe(false);
+  });
+
+  it("skips a retired song even though it still has cuts: []", async () => {
+    wanted({ retired: true });
+    banked("v1");
+
+    const { report } = await claimBankedVideos(soon());
+
+    expect(report).toMatchObject({ wanted: 0, songsFilled: 0 });
+    expect(songs().get(entry.key).cuts).toEqual([]);
+  });
+
+  it("fills a promoted (non-catalog) song from a banked video naming it", async () => {
+    const key = songKeyFor("The Agadiers", "Mag Dungan Ta");
+    songs().seed({
+      _id: key,
+      title: "Mag Dungan Ta",
+      artist: "The Agadiers",
+      cuts: [],
+      addCount: 0,
+      addsByCountry: {},
+      demand: 3,
+      origin: "demand",
+    });
+    videos().seed({
+      _id: "v1",
+      title: "The Agadiers - Mag Dungan Ta (Karaoke Version)",
+      thumbnailUrl: "thumb-v1",
+      durationSeconds: 200,
+      viewCount: 10,
+      sources: { adds: { count: 1, byCountry: {}, rooms: ["r1"], lastAt: FIRST_SEEN } },
+      firstSeenAt: FIRST_SEEN,
+      refreshedAt: FIRST_SEEN,
+    });
+
+    const { report } = await claimBankedVideos(soon());
+
+    expect(report).toMatchObject({ songsFilled: 1 });
+    expect(songs().get(key).cuts).toEqual(["v1"]);
   });
 });

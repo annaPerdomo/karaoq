@@ -1,3 +1,4 @@
+import { getSongIndex } from "./corpusLookup";
 import { getSearchDemandCollection } from "./mongodb";
 import type { SearchDemandOutcome } from "./searchDemand";
 
@@ -44,6 +45,10 @@ export interface WantedSearchQuery {
 export const DEFAULT_WANTED_LIMIT = 50;
 export const MAX_WANTED_LIMIT = 200;
 
+// A loosely matched row only surfaces once the exact $lookup and the sort have
+// already run, so the scan has to outrun the limit the caller asked for.
+const WANTED_SCAN_LIMIT = 2000;
+
 function outcome(name: SearchDemandOutcome) {
   return { $ifNull: [`$outcomes.${name}`, 0] };
 }
@@ -62,7 +67,9 @@ export async function wantedSearches(
       : { countryCount: -1 as const, rooms: -1 as const, count: -1 as const };
 
   const demand = await getSearchDemandCollection();
-  const derive = [
+  // Split so the $lookup only ever runs over the rows that survive the sort
+  // and the scan cap, not the whole ledger.
+  const sortFields = [
     {
       $addFields: {
         countryList: { $objectToArray: { $ifNull: ["$byCountry", {}] } },
@@ -70,6 +77,8 @@ export async function wantedSearches(
       },
     },
     { $addFields: { countryCount: { $size: "$countryList" } } },
+  ];
+  const withSong = [
     {
       $lookup: {
         from: "karaoke_songs",
@@ -93,60 +102,86 @@ export async function wantedSearches(
         },
       },
     },
-    ...(query.gapsOnly ? [{ $match: { hasCuts: false } }] : []),
   ];
 
-  const [result] = await demand
-    .aggregate<{
-      rows: RankedRow[];
-      matched: { n: number }[];
-      totals: RawTotals[];
-    }>([
-      {
-        $facet: {
-          rows: [
-            ...derive,
-            { $sort: sort },
-            { $limit: limit },
-            {
-              $project: {
-                label: 1,
-                count: 1,
-                countryList: 1,
-                rooms: 1,
-                catalogued: 1,
-                hasCuts: 1,
-                lastSeenAt: 1,
-                spent: outcome("spent"),
-                unmet: outcome("error"),
+  const [[totalsResult], [totalDerivedResult], [exactHitsResult], rawRows] = await Promise.all([
+    demand
+      .aggregate<{ totals: RawTotals[] }>([
+        {
+          $facet: {
+            // Deliberately its own group: the gap is a share of every search,
+            // not just the rows `withSong` happens to keep.
+            totals: [
+              {
+                $group: {
+                  _id: null,
+                  queries: { $sum: 1 },
+                  searches: { $sum: "$count" },
+                  served: { $sum: outcome("served") },
+                  spent: { $sum: outcome("spent") },
+                  stale: { $sum: outcome("stale") },
+                  corpus: { $sum: outcome("corpus") },
+                  error: { $sum: outcome("error") },
+                },
               },
-            },
-          ],
-          matched: [...derive, { $count: "n" }],
-          // Deliberately outside `derive`: the gap is a share of every search.
-          totals: [
-            {
-              $group: {
-                _id: null,
-                queries: { $sum: 1 },
-                searches: { $sum: "$count" },
-                served: { $sum: outcome("served") },
-                spent: { $sum: outcome("spent") },
-                stale: { $sum: outcome("stale") },
-                corpus: { $sum: outcome("corpus") },
-                error: { $sum: outcome("error") },
-              },
-            },
-          ],
+            ],
+          },
         },
-      },
-    ])
-    .toArray();
+      ])
+      .toArray(),
+    demand.aggregate<{ n: number }>([...sortFields, ...withSong, { $count: "n" }]).toArray(),
+    demand
+      .aggregate<{ n: number }>([...withSong, { $match: { hasCuts: true } }, { $count: "n" }])
+      .toArray(),
+    demand
+      .aggregate<RankedRow>([
+        ...sortFields,
+        { $sort: sort },
+        { $limit: WANTED_SCAN_LIMIT },
+        ...withSong,
+        {
+          $project: {
+            label: 1,
+            count: 1,
+            countryList: 1,
+            rooms: 1,
+            catalogued: 1,
+            hasCuts: 1,
+            lastSeenAt: 1,
+            spent: outcome("spent"),
+            unmet: outcome("error"),
+          },
+        },
+      ])
+      .toArray(),
+  ]);
+
+  const totalDerived = totalDerivedResult?.n ?? 0;
+  const exactHits = exactHitsResult?.n ?? 0;
+
+  // A row the exact $lookup missed can still be the corpus's song under a
+  // longer key; the loose index settles that the same way an exact hit would.
+  const index = await getSongIndex();
+  let looseHitsInScan = 0;
+  const enriched = rawRows.map((row) => {
+    if (row.catalogued) return row;
+    const songId = index.lookup(row.label ?? row._id);
+    if (!songId) return row;
+    looseHitsInScan++;
+    return { ...row, catalogued: true, hasCuts: true };
+  });
+  const candidates = query.gapsOnly ? enriched.filter((row) => !row.hasCuts) : enriched;
+
+  // Beyond the scan cap, a loosely matched gap can't be told from a real one,
+  // so a row the scan never reached is counted as a gap until proven otherwise.
+  const matched = query.gapsOnly
+    ? Math.max(totalDerived - exactHits - looseHitsInScan, 0)
+    : totalDerived;
 
   return {
-    totals: emptyTotals(result?.totals?.[0]),
-    rows: (result?.rows ?? []).map(wantedRowFrom),
-    matched: result?.matched?.[0]?.n ?? 0,
+    totals: emptyTotals(totalsResult?.totals?.[0]),
+    rows: candidates.slice(0, limit).map(wantedRowFrom),
+    matched,
     limit,
   };
 }
@@ -208,26 +243,40 @@ export const DEMAND_SCORE_LIMIT = 5000;
 /** Ordered as the resolver spends, so the cap only drops a tail it never reaches. */
 export async function searchDemandScores(): Promise<Map<string, SearchDemandScore>> {
   const scores = new Map<string, SearchDemandScore>();
+  const countryCodes = new Map<string, Set<string>>();
+  // A down index still leaves the ledger readable: every row just keys on
+  // itself, as it did before the loose index existed.
+  const index = await getSongIndex().catch(() => null);
   try {
     const demand = await getSearchDemandCollection();
     const rows = await demand
-      .aggregate<{ _id: string; searches: number; countries: number }>([
+      .aggregate<{ _id: string; label?: string; searches: number; countryCodes: string[] }>([
         {
           $project: {
+            label: 1,
             searches: { $ifNull: ["$count", 0] },
-            countries: {
-              $size: { $objectToArray: { $ifNull: ["$byCountry", {}] } },
+            countryCodes: {
+              $map: {
+                input: { $objectToArray: { $ifNull: ["$byCountry", {}] } },
+                in: "$$this.k",
+              },
             },
           },
         },
-        { $sort: { countries: -1, searches: -1 } },
+        { $addFields: { countryCount: { $size: "$countryCodes" } } },
+        { $sort: { countryCount: -1, searches: -1 } },
         { $limit: DEMAND_SCORE_LIMIT },
       ])
       .toArray();
     for (const row of rows) {
-      scores.set(row._id, {
-        searches: row.searches ?? 0,
-        countries: row.countries ?? 0,
+      // Folds a short and a long phrasing of one song onto a single key.
+      const key = index?.lookup(row.label ?? row._id) ?? row._id;
+      const codes = countryCodes.get(key) ?? new Set<string>();
+      for (const code of row.countryCodes ?? []) codes.add(code);
+      countryCodes.set(key, codes);
+      scores.set(key, {
+        searches: (scores.get(key)?.searches ?? 0) + (row.searches ?? 0),
+        countries: codes.size,
       });
     }
   } catch {

@@ -1,66 +1,102 @@
 import * as React from 'react';
 import styles from '../../../styles/Admin.module.css';
-import type { DayRoomsWire } from '../types';
-import ColumnChart from '../charts/ColumnChart';
+import type { DayBilledWire, DayRoomsWire } from '../types';
+import StackedColumnChart, { type StackedSeries } from '../charts/StackedColumnChart';
 import StatTile from '../charts/StatTile';
-import { SERIES_1 } from '../charts/palette';
+import { SERIES } from '../charts/palette';
 import { formatDay } from './day';
 
-function sum(days: DayRoomsWire[]): number {
-  return days.reduce((total, d) => total + d.searches, 0);
+const BILLED_SERIES: StackedSeries[] = [
+  { name: 'Rooms', color: SERIES[0] },
+  { name: 'Nightly corpus', color: SERIES[1] },
+  { name: 'Mop-up', color: SERIES[2] },
+  { name: 'Unlogged', color: SERIES[3] },
+];
+
+function total(d: DayBilledWire): number {
+  return d.rooms + d.nightly + d.mopUp + d.unlogged;
+}
+
+function sum(days: DayBilledWire[], pick: (d: DayBilledWire) => number): number {
+  return days.reduce((acc, d) => acc + pick(d), 0);
+}
+
+function fromRooms(roomsByDay: DayRoomsWire[]): DayBilledWire[] {
+  return roomsByDay.map((d) => ({
+    day: d.day,
+    recorded: false,
+    out: false,
+    rooms: d.searches,
+    nightly: 0,
+    mopUp: 0,
+    unlogged: 0,
+  }));
 }
 
 export default function QuotaHistory({
+  billedByDay,
   roomsByDay,
+  quota,
   selectedDay,
   onSelectDay,
 }: {
+  billedByDay: DayBilledWire[] | undefined;
   roomsByDay: DayRoomsWire[];
+  quota: number;
   selectedDay: string;
   onSelectDay: (day: string) => void;
 }): React.ReactElement {
-  const thisWeek = roomsByDay.slice(-7);
-  const lastWeek = roomsByDay.slice(-14, -7);
-  const busiest = roomsByDay.reduce(
-    (best, d) => (d.searches > best.searches ? d : best),
-    roomsByDay[0]
-  );
-  const activeDays = roomsByDay.filter((d) => d.searches > 0).length;
-  const selectedIndex = roomsByDay.findIndex((d) => d.day === selectedDay);
+  const days = billedByDay ?? fromRooms(roomsByDay);
+  const thisWeek = days.slice(-7);
+  const lastWeek = days.slice(-14, -7);
+  const corpus = (d: DayBilledWire) => d.nightly + d.mopUp;
+  const atQuota = days.filter((d) => d.out).length;
+  const recordedDays = days.filter((d) => d.recorded).length;
+  const selectedIndex = days.findIndex((d) => d.day === selectedDay);
 
   return (
     <section className={styles.card}>
-      <h2 className={styles.cardTitle}>Room searches, last 30 days</h2>
+      <h2 className={styles.cardTitle}>YouTube searches, last 30 days</h2>
       <p className={styles.cardNote}>
-        Searches singers ran from rooms, per day. Tap a day to see which rooms
-        ran them.
+        Every search YouTube billed, by who spent it. Rooms search first; the
+        corpus job resolves song suggestions at night, and the mop-up spends
+        what&rsquo;s left in the day&rsquo;s last 15 minutes. Tap a day to see
+        its rooms and what the mop-up found.
       </p>
       <div className={styles.cardChart}>
-        <ColumnChart
-          data={roomsByDay.map((d) => ({ label: formatDay(d.day), value: d.searches }))}
-          color={SERIES_1}
+        <StackedColumnChart
+          data={days.map((d) => ({
+            label: formatDay(d.day),
+            title: formatDay(d.day, true),
+            note: d.recorded
+              ? undefined
+              : 'Rooms only: the ledger no longer holds this day, and room events undercount.',
+            segments: [d.rooms, d.nightly, d.mopUp, d.unlogged],
+          }))}
+          series={BILLED_SERIES}
           height={140}
-          ariaLabel="Room searches per day, last 30 days"
+          reference={{ value: quota, label: `quota ${quota}` }}
+          ariaLabel="YouTube searches per day by source, last 30 days"
           selected={selectedIndex >= 0 ? selectedIndex : undefined}
-          onSelect={(i) => onSelectDay(roomsByDay[i].day)}
+          onSelect={(i) => onSelectDay(days[i].day)}
         />
       </div>
       <div className={styles.tileGrid}>
         <StatTile
           label="This week"
-          value={sum(thisWeek)}
-          sub={`${sum(lastWeek)} the week before`}
-          spark={thisWeek.map((d) => d.searches)}
+          value={sum(thisWeek, total)}
+          sub={`${sum(lastWeek, total)} the week before`}
+          spark={thisWeek.map(total)}
         />
         <StatTile
-          label="Busiest day"
-          value={busiest ? busiest.searches : 0}
-          sub={busiest ? formatDay(busiest.day, true) : '—'}
+          label="Corpus job this week"
+          value={sum(thisWeek, corpus)}
+          sub={`${sum(thisWeek, (d) => d.nightly)} nightly · ${sum(thisWeek, (d) => d.mopUp)} mop-up`}
         />
         <StatTile
-          label="Days with searches"
-          value={activeDays}
-          sub={`of the last ${roomsByDay.length}`}
+          label="Days at quota"
+          value={atQuota}
+          sub={`of the ${recordedDays} the ledger holds`}
         />
       </div>
     </section>

@@ -1,7 +1,12 @@
 .main {
   --acc-a: #ff2d78;
+  --acc-a-rgb: 255, 45, 120;
   --acc-b: #00f0ff;
   --acc-b-rgb: 0, 240, 255;
+  --acc-c: #9b1dff;
+  --acc-c-rgb: 155, 29, 255;
+  --acc-warm: #ff6b35;
+  --acc-warm-rgb: 255, 107, 53;
   height: 100dvh;
   height: 100vh; /* fallback for older browsers */
   display: flex;
@@ -17,8 +22,13 @@
 /* Theme presets; classic = the base vars, no class. */
 .themeMinimal {
   --acc-a: #aab0c0;
+  --acc-a-rgb: 170, 176, 192;
   --acc-b: #d7dae2;
   --acc-b-rgb: 215, 218, 226;
+  --acc-c: #b8bcc8;
+  --acc-c-rgb: 184, 188, 200;
+  --acc-warm: #c4c8d4;
+  --acc-warm-rgb: 196, 200, 212;
   --bg-primary: #0a0a0c;
   --bg-secondary: #151517;
 }
@@ -40,6 +50,11 @@
 }
 
 .themeNeon {
+  --acc-a-rgb: 255, 45, 120;
+  --acc-c: #9b1dff;
+  --acc-c-rgb: 155, 29, 255;
+  --acc-warm: #ff6b35;
+  --acc-warm-rgb: 255, 107, 53;
   --bg-primary: #050505;
   --bg-secondary: #0d0d14;
 }
@@ -85,7 +100,7 @@
   font-weight: 400;
   font-size: 1.4rem;
   letter-spacing: 2px;
-  background: linear-gradient(135deg, var(--acc-a, #ff2d78), var(--acc-b, #00f0ff));
+  background: linear-gradient(135deg, #ff2d78, #00f0ff);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -842,6 +857,11 @@
   margin-bottom: 1.5rem;
 }
 
+.errorCardLink {
+  display: inline-block;
+  margin-top: 0.75rem;
+}
+
 .mobileDrawer {
   display: none;
 }
@@ -859,7 +879,7 @@
   }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 640px), (max-height: 480px) {
   .header {
     padding: 0.6rem 1rem;
   }
@@ -1112,7 +1132,7 @@
   overflow: hidden;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 640px), (max-height: 480px) {
   .reactionOverlay {
     bottom: 7rem; /* clear the drawer + quick-cheer row */
   }
@@ -1184,7 +1204,7 @@
   font-weight: 400;
   font-size: 2.2rem;
   letter-spacing: 2px;
-  background: linear-gradient(135deg, var(--acc-a, #ff2d78), var(--acc-b, #00f0ff));
+  background: linear-gradient(135deg, #ff2d78, #00f0ff);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -1485,6 +1505,12 @@
   color: #ec4899;
 }
 
+.inlineFooterHost {
+  grid-column: 1 / -1;
+  justify-self: center;
+  text-align: center;
+}
+
 .inlineFooterLegal {
   grid-column: 1;
   justify-self: start;
@@ -1529,6 +1555,11 @@
   .inlineFooterFeedback {
     grid-column: auto;
     justify-self: auto;
+  }
+
+  .inlineFooterHost {
+    flex-basis: 100%;
+    order: -1;
   }
 }
 

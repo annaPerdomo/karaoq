@@ -2,6 +2,7 @@ import * as React from 'react';
 import { useT } from '../../lib/i18n/I18nProvider';
 import { DisplayTheme } from '../../pages/api/types';
 import { BannerCard, RailShell, ThemeCard, ToggleCard, useRailCardRefs } from './Rail';
+import BrandControls, { BrandControlsProps } from '../brand/BrandControls';
 
 /** One hideable section as the rail lists it. Surfaces resolve `on`/`flip`
  * themselves because not every toggle maps to a config field — the display's
@@ -14,13 +15,15 @@ export interface RailToggle<Id extends string> {
   flip: () => void;
 }
 
-/** The Customize rail for both surfaces: theme, then each surface's toggles,
- * then the banner. Host and display differ only in the toggle list they pass. */
+/** The Customize rail for both surfaces: theme, brand, then each surface's
+ * toggles, then the banner. Host and display differ only in the toggle list
+ * they pass — the brand section is rendered here so the two can't drift. */
 export function ConfigRail<Id extends string>({
   side,
   hintKey,
   theme,
   onPickTheme,
+  brand,
   toggles,
   bannerId,
   bannerLine,
@@ -32,6 +35,7 @@ export function ConfigRail<Id extends string>({
   hintKey: string;
   theme: DisplayTheme;
   onPickTheme: (theme: DisplayTheme) => void;
+  brand: Omit<BrandControlsProps, 'theme'>;
   toggles: RailToggle<Id>[];
   bannerId: Id;
   bannerLine: string;
@@ -54,6 +58,8 @@ export function ConfigRail<Id extends string>({
         selected={selected}
         onSelect={onSelect}
       />
+
+      <BrandControls {...brand} theme={theme} />
 
       {toggles.map(({ id, labelKey, descKey, on, flip }) => (
         <ToggleCard

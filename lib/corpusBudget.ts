@@ -1,6 +1,7 @@
 import { randomUUID } from "crypto";
 
-import { getCronStateCollection } from "./mongodb";
+import { CRON_STATE_TTL_SECONDS, getCronStateCollection } from "./mongodb";
+import type { ResolvedSong } from "./corpusResolve";
 import { pacificDayKey, quotaResetsAtMs } from "./pacificTime";
 
 // vercel.json invokes this cron more than once a day: a slot buys wall-clock and
@@ -12,16 +13,16 @@ const LOCK_ID = "run";
 /** The most searches one night's resolving may buy; not a share of the day. */
 export const SEARCH_PER_DAY = 40;
 
-/** Google's stated search.list quota; the ledger's ceiling. */
-export const SEARCH_DAY_QUOTA = 100;
+/** Google's 10,000 calls/day, less headroom for the sweep/harvest videos.list
+ *  calls the ledger never records; the ledger's ceiling. */
+export const DAY_CALL_QUOTA = 9_500;
 
 /** How far under Google's console the ledger runs by day's end: the sweep's
- *  videos.list (~40 units/run) and searches that reached YouTube but never
- *  billed. YouTube's "per day" refusal has landed at 85 of 100, so it is only
- *  believed inside this margin. */
-export const UNBILLED_SLACK_UNITS = 300;
+ *  videos.list calls and searches that reached YouTube but never billed.
+ *  YouTube's "per day" refusal is only believed inside this margin of calls. */
+export const UNBILLED_SLACK_CALLS = 300;
 
-/** ~835 units for 800 playlistItems.list pages — ~40,000 uploads a day. */
+/** 800 playlistItems.list pages, one call each — ~40,000 uploads a day. */
 export const CHANNEL_PAGES_PER_DAY = 800;
 
 /** A run past midnight bills tomorrow's quota to today; one much earlier
@@ -33,6 +34,10 @@ export function insideMopUpWindow(now: number): boolean {
   return untilReset > 0 && untilReset <= MOP_UP_WINDOW_MS;
 }
 
+// Vercel's Hobby cron fires within the hour, not the minute, so DST decides
+// which of vercel.json's two mop-up entries lands outside this window.
+export const OUTSIDE_MOP_UP_WINDOW = "outside mop-up window";
+
 export interface DailySpend {
   /** Every search.list call billed today, the rooms' and the cron's alike —
    *  the only number that says what the day actually cost. */
@@ -40,10 +45,18 @@ export interface DailySpend {
   /** The cron's own share of `searches`. Held apart so a busy day of singing
    *  doesn't read as the cron having already taken its nightly bite. */
   cronSearches: number;
+  /** The mop-up's share of `cronSearches`. Absent on days before it was kept. */
+  mopUpSearches?: number;
+  /** Searches billed on YouTube's word alone (lib/searchQuotaStatus
+   *  confirmDailyOut): spend that reached Google but no counter above saw. */
+  unloggedSearches?: number;
   pages: number;
   /** videos.list units bought outside the cron — today only the report endpoint.
    *  The sweep and the harvest spend units too and do not bill them here. */
   lookups: number;
+  /** Set once YouTube's daily refusal is confirmed; rooms read only this, since
+   *  the mop-up drains the ledger to zero most nights without Google refusing. */
+  dailyOutAt?: Date;
 }
 
 /** The Pacific day: that is the one YouTube resets the allowance on. Both cron
@@ -61,6 +74,14 @@ function ledgerId(at: number): string {
   return `${LEDGER_ID}:${ledgerDay(at)}`;
 }
 
+export const LEDGER_KEEP_DAYS = 31;
+
+/** cron_state's one TTL index runs on `cursorAt` with a week's expiry, so a
+ *  ledger doc outlives it by setting that clock the difference ahead. */
+function ledgerExpiryClock(at: number): Date {
+  return new Date(at + LEDGER_KEEP_DAYS * 86_400_000 - CRON_STATE_TTL_SECONDS * 1000);
+}
+
 export async function spentToday(at: number): Promise<DailySpend> {
   const state = await getCronStateCollection();
   const doc = await state.findOne({ _id: ledgerId(at) });
@@ -69,7 +90,17 @@ export async function spentToday(at: number): Promise<DailySpend> {
     cronSearches: doc?.cronSearches ?? 0,
     pages: doc?.pages ?? 0,
     lookups: doc?.lookups ?? 0,
+    ...(doc?.dailyOutAt ? { dailyOutAt: doc.dailyOutAt } : {}),
   };
+}
+
+export async function markDailyOut(at: number): Promise<void> {
+  const state = await getCronStateCollection();
+  await state.updateOne(
+    { _id: ledgerId(at) },
+    { $set: { dailyOutAt: new Date(at), cursorAt: ledgerExpiryClock(at), updatedAt: new Date(at) } },
+    { upsert: true }
+  );
 }
 
 /** Atomic, so a room searching while the cron resolves can't erase either
@@ -78,7 +109,14 @@ export async function recordSpend(
   at: number,
   spent: Partial<DailySpend>
 ): Promise<void> {
-  if (!spent.searches && !spent.cronSearches && !spent.pages && !spent.lookups) {
+  if (
+    !spent.searches &&
+    !spent.cronSearches &&
+    !spent.mopUpSearches &&
+    !spent.unloggedSearches &&
+    !spent.pages &&
+    !spent.lookups
+  ) {
     return;
   }
   const state = await getCronStateCollection();
@@ -88,13 +126,14 @@ export async function recordSpend(
       $inc: {
         searches: spent.searches ?? 0,
         cronSearches: spent.cronSearches ?? 0,
+        mopUpSearches: spent.mopUpSearches ?? 0,
+        unloggedSearches: spent.unloggedSearches ?? 0,
         pages: spent.pages ?? 0,
         lookups: spent.lookups ?? 0,
       },
-      // cursorAt, not updatedAt, is cron_state's TTL clock (lib/mongodb), and a
-      // day's ledger should indeed be collected a week after its last write —
-      // otherwise one doc per day accumulates forever.
-      $set: { cursorAt: new Date(at), updatedAt: new Date(at) },
+      // cursorAt, not updatedAt, is cron_state's TTL clock (lib/mongodb); without
+      // it one doc per day accumulates forever.
+      $set: { cursorAt: ledgerExpiryClock(at), updatedAt: new Date(at) },
     },
     { upsert: true }
   );
@@ -102,6 +141,8 @@ export async function recordSpend(
 
 export interface DaySpend extends DailySpend {
   day: string;
+  /** False for a day with no ledger doc: nothing billed, or already expired. */
+  recorded: boolean;
   mopUp?: MopUpOutcome;
 }
 
@@ -111,47 +152,67 @@ export interface MopUpOutcome {
   budget: number;
   searched: number;
   filled: number;
+  songs?: ResolvedSong[];
   skipped: string | null;
   quotaSpent: boolean;
   /** Distinguishes a step that threw from one that ran and found nothing. */
   error: string | null;
 }
 
-/** GitHub Actions and Vercel can both land inside the window; a skip must not
- *  clobber the real run's outcome. */
+// vercel.json can fire two mop-up entries the same Pacific day; this ranks
+// outcomes so a later write never downgrades what the ledger already holds.
+function mopUpRank(outcome: MopUpOutcome): 0 | 1 | 2 {
+  if (outcome.skipped === OUTSIDE_MOP_UP_WINDOW) return 0;
+  if (outcome.searched > 0) return 2;
+  return 1;
+}
+
 export async function recordMopUp(at: number, outcome: MopUpOutcome): Promise<void> {
   const state = await getCronStateCollection();
-  if (outcome.searched === 0 && outcome.skipped) {
-    const existing = await state.findOne({ _id: ledgerId(at) });
-    if (existing?.mopUp) return;
+  const earlier = (await state.findOne({ _id: ledgerId(at) }))?.mopUp;
+  const earlierRank = earlier ? mopUpRank(earlier) : -1;
+  const rank = mopUpRank(outcome);
+  if (earlierRank >= 0 && (rank === 0 || rank < earlierRank)) return;
+  if (earlier && rank === 1 && earlierRank === 1 && earlier.error && !outcome.error) {
+    return;
   }
+  const merged: MopUpOutcome =
+    earlier && rank === 2 && earlierRank === 2
+      ? {
+          ...outcome,
+          budget: earlier.budget + outcome.budget,
+          searched: earlier.searched + outcome.searched,
+          filled: earlier.filled + outcome.filled,
+          songs: [...(earlier.songs ?? []), ...(outcome.songs ?? [])],
+        }
+      : outcome;
   await state.updateOne(
     { _id: ledgerId(at) },
-    { $set: { mopUp: outcome, cursorAt: new Date(at), updatedAt: new Date(at) } },
+    { $set: { mopUp: merged, cursorAt: ledgerExpiryClock(at), updatedAt: new Date(at) } },
     { upsert: true }
   );
 }
 
-// Google bills search.list at 100 and videos.list at 1; each search also spends
-// one unit enriching its results (lib/youtubeSearch). The sweep and harvest
+// search.list and videos.list each cost 1 call; each search also spends one
+// call enriching its results (lib/youtubeSearch). The sweep and harvest
 // videos.list calls are never recorded, so this reads under Google's console.
-export const SEARCH_UNITS = 100;
-export function estimateUnits(spent: DailySpend): number {
-  return spent.searches * (SEARCH_UNITS + 1) + spent.pages + spent.lookups;
+export const SEARCH_CALLS = 2;
+export function estimateCalls(spent: DailySpend): number {
+  return spent.searches * SEARCH_CALLS + spent.pages + spent.lookups;
+}
+
+export function callsLeft(
+  spent: DailySpend,
+  quotaCalls: number = DAY_CALL_QUOTA
+): number {
+  return quotaCalls - estimateCalls(spent);
 }
 
 export function searchesLeft(
   spent: DailySpend,
-  quotaSearches: number = SEARCH_DAY_QUOTA
+  quotaCalls: number = DAY_CALL_QUOTA
 ): number {
-  return Math.max(0, Math.floor(unitsLeft(spent, quotaSearches) / (SEARCH_UNITS + 1)));
-}
-
-export function unitsLeft(
-  spent: DailySpend,
-  quotaSearches: number = SEARCH_DAY_QUOTA
-): number {
-  return quotaSearches * SEARCH_UNITS - estimateUnits(spent);
+  return Math.max(0, Math.floor(callsLeft(spent, quotaCalls) / SEARCH_CALLS));
 }
 
 export function dayKeyBefore(day: string, n: number): string {
@@ -159,8 +220,7 @@ export function dayKeyBefore(day: string, n: number): string {
   return new Date(Date.UTC(y, m - 1, d - n)).toISOString().slice(0, 10);
 }
 
-// Oldest first, zero-filled. Only a week is readable: cron_state's TTL
-// (lib/mongodb) collects older docs.
+// Oldest first, zero-filled. Only LEDGER_KEEP_DAYS are readable.
 export async function spentRecent(at: number, days: number): Promise<DaySpend[]> {
   const today = ledgerDay(at);
   const keys: string[] = [];
@@ -174,10 +234,14 @@ export async function spentRecent(at: number, days: number): Promise<DaySpend[]>
     const doc = byId.get(`${LEDGER_ID}:${day}`);
     return {
       day,
+      recorded: Boolean(doc),
       searches: doc?.searches ?? 0,
       cronSearches: doc?.cronSearches ?? 0,
+      mopUpSearches: doc?.mopUpSearches,
+      unloggedSearches: doc?.unloggedSearches,
       pages: doc?.pages ?? 0,
       lookups: doc?.lookups ?? 0,
+      dailyOutAt: doc?.dailyOutAt,
       mopUp: doc?.mopUp,
     };
   });

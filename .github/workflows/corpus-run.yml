@@ -1,0 +1,21 @@
+name: Corpus run (manual)
+on:
+  workflow_dispatch:
+    inputs:
+      query:
+        description: "Query string for /api/cron/suggestions (e.g. slot=manual, or slot=manual&mopUp=1)"
+        default: "slot=manual"
+        required: true
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run the corpus cron once
+        env:
+          QUERY: ${{ inputs.query }}
+        run: |
+          code=$(curl -sS --max-time 320 -o /tmp/out.json -w '%{http_code}' \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "https://www.karaoq.live/api/cron/suggestions?${QUERY}")
+          cat /tmp/out.json; echo
+          test "$code" = "200"

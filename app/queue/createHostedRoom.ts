@@ -1,3 +1,5 @@
+import { getActiveLocale, LOCALE_HEADER } from "../../lib/i18n/activeLocale";
+import { firstTouchHeaders } from "../../lib/firstTouch";
 import { rememberLastHostedRoom } from "../../lib/lastRoom";
 import { clearCohostLinkKey, setRoomKey } from "../../lib/roomKeyStore";
 import { ROOM_KEYS_HEADER } from "../../lib/roomKeysHeader";
@@ -7,7 +9,11 @@ export async function createHostedRoom(
   opts?: { custom?: boolean }
 ): Promise<"ok" | "in-use" | "error"> {
   try {
-    const headers: Record<string, string> = { [ROOM_KEYS_HEADER]: "1" };
+    const headers: Record<string, string> = {
+      [ROOM_KEYS_HEADER]: "1",
+      [LOCALE_HEADER]: getActiveLocale().locale,
+      ...firstTouchHeaders(),
+    };
     if (opts?.custom) headers["x-custom-code"] = "1";
     const resp = await fetch(`/api/queue/${code}`, { method: "POST", headers });
     if (resp.ok) {

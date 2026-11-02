@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { tvScale } from "../../lib/tvScale";
+import { TV_SIDEBAR_BOOST, tvScale } from "../../lib/tvScale";
+import { DEFAULT_DISPLAY_CONFIG } from "../../pages/api/types";
 import {
   BASE,
   DESKTOP_AGENT,
@@ -97,6 +98,20 @@ describe("display scales on a TV", () => {
     expect(Math.abs(r2 - r0) / r0).toBeLessThan(0.02);
   });
 
+  it.each(TV_VIEWPORTS)("keeps the sidebar at its boosted size at %o", async (viewport) => {
+    const { page, close } = await loadDisplay(viewport);
+    try {
+      const sidebar = page.locator('[class*="sidebar_"]').first();
+      await sidebar.waitFor({ timeout: 30_000 });
+      const box = await sidebar.boundingBox();
+      const expected =
+        DEFAULT_DISPLAY_CONFIG.sidebarWidth * tvScale(viewport.width, viewport.height) * TV_SIDEBAR_BOOST;
+      expect(Math.abs(box!.width - expected)).toBeLessThan(2);
+    } finally {
+      await close();
+    }
+  });
+
   it("keeps the QR proportional and visible across TV sizes", async () => {
     const ratios: number[] = [];
     for (const viewport of TV_VIEWPORTS) {
@@ -133,6 +148,26 @@ describe("display scales on a TV", () => {
     const [r0, r1, r2] = ratios;
     expect(Math.abs(r1 - r0) / r0).toBeLessThan(0.03);
     expect(Math.abs(r2 - r0) / r0).toBeLessThan(0.03);
+  });
+
+  // Tizen flashed these two layers empty mid-song while they were translucent.
+  it("paints the header and sidebar opaque, with no backdrop blur", async () => {
+    const { page, close } = await loadDisplay({ width: 1920, height: 1080 });
+    try {
+      const header = page.locator('[class*="header_"]').first();
+      const sidebar = page.locator('[class*="sidebar_"]').first();
+      await sidebar.waitFor({ timeout: 30_000 });
+      for (const el of [header, sidebar]) {
+        const style = await el.evaluate((n) => {
+          const cs = getComputedStyle(n);
+          return { blur: cs.backdropFilter, image: cs.backgroundImage };
+        });
+        expect(style.blur).toBe("none");
+        expect(style.image).toContain("linear-gradient");
+      }
+    } finally {
+      await close();
+    }
   });
 
   it("leaves desktop at its unscaled sidebar width and root font size", async () => {

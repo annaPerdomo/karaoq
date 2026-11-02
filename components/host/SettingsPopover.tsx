@@ -3,8 +3,6 @@ import styles from "../../styles/Host.module.css";
 import { useT } from "../../lib/i18n/I18nProvider";
 import { Icons } from "./icons";
 import { SessionEndSetting } from "./SessionEndSetting";
-import { AutoAdvanceSetting } from "./AutoAdvanceSetting";
-import { AutoAdvance } from "../../pages/api/types";
 
 export function SettingsPopover({
   isOpen,
@@ -14,10 +12,6 @@ export function SettingsPopover({
   onToggleReactions,
   fairMode,
   onToggleFairMode,
-  autoAdvance,
-  onChangeAutoAdvance,
-  songLimit,
-  onChangeSongLimit,
   sessionEndsAt,
   onChangeSessionEnd,
   hostName,
@@ -26,6 +20,8 @@ export function SettingsPopover({
   onPrintQr,
   onSendFeedback,
   onConnectTv,
+  onOpenMusicVideo,
+  onCopyMusicVideoLink,
 }: {
   isOpen: boolean;
   onClose: () => void;
@@ -34,10 +30,6 @@ export function SettingsPopover({
   onToggleReactions: () => void;
   fairMode: boolean;
   onToggleFairMode: () => void;
-  autoAdvance: AutoAdvance;
-  onChangeAutoAdvance: (patch: Partial<AutoAdvance>) => void;
-  songLimit: number | null;
-  onChangeSongLimit: (seconds: number | null) => void;
   sessionEndsAt: number | null;
   onChangeSessionEnd: (endsAt: number | null) => void;
   hostName: string;
@@ -46,6 +38,8 @@ export function SettingsPopover({
   onPrintQr: () => void;
   onSendFeedback: () => void;
   onConnectTv: () => void;
+  onOpenMusicVideo: () => void;
+  onCopyMusicVideoLink: () => void;
 }) {
   const { t } = useT();
   const ref = React.useRef<HTMLDivElement>(null);
@@ -115,13 +109,6 @@ export function SettingsPopover({
             </button>
           </div>
           <div className={styles.spSep} />
-          <AutoAdvanceSetting
-            autoAdvance={autoAdvance}
-            onChange={onChangeAutoAdvance}
-            songLimit={songLimit}
-            onChangeSongLimit={onChangeSongLimit}
-          />
-          <div className={styles.spSep} />
           <SessionEndSetting
             sessionEndsAt={sessionEndsAt}
             onChange={onChangeSessionEnd}
@@ -151,6 +138,19 @@ export function SettingsPopover({
                 <div className={styles.spBtnDesc}>{t('host.qr.printDesc')}</div>
               </div>
             </button>
+          </div>
+          <div className={styles.spSep} />
+          <div className={styles.spGroup}>
+            <div className={styles.spLabel}>{t('musicVideo.title')}</div>
+            <div className={styles.spBtnDesc}>{t('musicVideo.hint')}</div>
+            <div className={styles.spTimeRow}>
+              <button className={styles.spBtn} onClick={onOpenMusicVideo}>
+                <div className={styles.spBtnTitle}>{t('musicVideo.open')}</div>
+              </button>
+              <button className={styles.spBtn} onClick={onCopyMusicVideoLink}>
+                <div className={styles.spBtnTitle}>{t('musicVideo.copy')}</div>
+              </button>
+            </div>
           </div>
           <div className={styles.spSep} />
         </>

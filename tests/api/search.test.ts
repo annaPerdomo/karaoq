@@ -64,6 +64,11 @@ vi.mock("../../lib/corpusRead", () => ({
   readSongCuts: (...args: unknown[]) => readSongCutsMock(...args),
 }));
 
+const findSongForQueryMock = vi.fn(async (..._args: unknown[]) => null as unknown);
+vi.mock("../../lib/corpusLookup", () => ({
+  findSongForQuery: (...args: unknown[]) => findSongForQueryMock(...args),
+}));
+
 const sendQuotaAlertMock = vi.fn(async (..._args: unknown[]) => {});
 vi.mock("../../lib/alerts", () => ({
   sendQuotaAlertOnce: (...args: unknown[]) => sendQuotaAlertMock(...args),
@@ -157,6 +162,7 @@ beforeEach(() => {
     songKnown: true,
   });
   readSongCutsMock.mockResolvedValue(null);
+  findSongForQueryMock.mockResolvedValue(null);
   mockCollection.findOne.mockResolvedValue(null);
   mockCollection.updateOne.mockResolvedValue({});
   vi.stubGlobal("fetch", fetchMock);
@@ -543,6 +549,7 @@ describe("search_failed tracking", () => {
   it("answers a catalogued song from the corpus rather than an error", async () => {
     fetchMock.mockImplementation(async () => quotaFailure());
     const cuts = [{ title: "A cut", thumbnailUrl: "t", videoId: "c1", pinned: true }];
+    findSongForQueryMock.mockResolvedValue("abba dancing queen karaoke");
     readSongCutsMock.mockResolvedValue(cuts);
 
     const res = createRes();
@@ -557,8 +564,39 @@ describe("search_failed tracking", () => {
     });
   });
 
+  it("serves a corpus song found under a loose match of the short query", async () => {
+    fetchMock.mockImplementation(async () => quotaFailure());
+    const cuts = [{ title: "A cut", thumbnailUrl: "t", videoId: "c1", pinned: true }];
+    findSongForQueryMock.mockResolvedValue("the killers mr brightside karaoke");
+    readSongCutsMock.mockResolvedValue(cuts);
+
+    const res = createRes();
+    await handler(createMockReq({ query: { q: "mr brightside" } }), res);
+
+    expect(res.getStatus()).toBe(200);
+    expect(res.getBody()).toEqual(cuts);
+    expect(res.getHeader("x-karaoq-search-cache")).toBe("corpus");
+    expect(readSongCutsMock).toHaveBeenCalledWith("the killers mr brightside karaoke");
+  });
+
+  // A karaoke cut beats an error while quota is out, whether or not the
+  // singer's own query ever said the word "karaoke".
+  it("falls back to the corpus even with karaoke mode off", async () => {
+    fetchMock.mockImplementation(async () => quotaFailure());
+    findSongForQueryMock.mockResolvedValue("abba dancing queen karaoke");
+    readSongCutsMock.mockResolvedValue([
+      { title: "A cut", thumbnailUrl: "t", videoId: "c1", pinned: true },
+    ]);
+
+    const res = createRes();
+    await handler(createMockReq({ query: { q: "dancing queen" } }), res);
+
+    expect(res.getHeader("x-karaoq-search-cache")).toBe("corpus");
+  });
+
   it("never answers a filtered search from the corpus", async () => {
     fetchMock.mockImplementation(async () => quotaFailure());
+    findSongForQueryMock.mockResolvedValue("abba dancing queen karaoke");
     readSongCutsMock.mockResolvedValue([
       { title: "A cut", thumbnailUrl: "t", videoId: "c1" },
     ]);
@@ -570,6 +608,7 @@ describe("search_failed tracking", () => {
     );
 
     expect(res.getStatus()).toBe(503);
+    expect(findSongForQueryMock).not.toHaveBeenCalled();
     expect(readSongCutsMock).not.toHaveBeenCalled();
   });
 
@@ -1087,6 +1126,7 @@ describe("search demand ledger", () => {
 
   it("counts a corpus rescue apart from a search that answered", async () => {
     fetchMock.mockImplementation(async () => quotaFailure());
+    findSongForQueryMock.mockResolvedValue("abba dancing queen karaoke");
     readSongCutsMock.mockResolvedValue([
       { title: "A cut", thumbnailUrl: "t", videoId: "c1" },
     ]);

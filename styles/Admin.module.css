@@ -274,6 +274,17 @@
   max-width: 1180px;
 }
 
+.rightNowRow {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+.rightNowWarn {
+  color: #fcd34d;
+  font-weight: 700;
+}
+
 .viewHeader {
   display: flex;
   justify-content: space-between;
@@ -1441,6 +1452,34 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.proposalRow {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+}
+
+.proposalWrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.3rem;
+  white-space: normal;
+}
+
+.proposalWrap > button {
+  margin-left: 0;
+}
+
+/* .roomBadges carries RoomCard's grid-area at narrow widths; reset it here. */
+.proposalRow > .roomBadges {
+  grid-area: auto;
+}
+
+@media (max-width: 640px) {
+  .proposalRow {
+    grid-template-columns: 1fr;
+  }
 }
 
 .rankCount {

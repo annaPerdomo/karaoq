@@ -22,9 +22,12 @@ describe("Client API wrappers", () => {
       const result = await createRoom("ABC12");
 
       expect(result).toBe(true);
-      expect(mockFetch).toHaveBeenCalledWith("/api/queue/ABC12", {
+      // Locale header tags room_created with the host's language.
+      const [, init] = mockFetch.mock.calls[0];
+      expect(mockFetch).toHaveBeenCalledWith("/api/queue/ABC12", init);
+      expect(init).toMatchObject({
         method: "POST",
-        headers: { "x-karaoq-locale": "en", "x-room-keys": "1" },
+        headers: expect.objectContaining({ "x-karaoq-locale": "en", "x-room-keys": "1" }),
       });
     });
 
@@ -56,7 +59,10 @@ describe("Client API wrappers", () => {
       const result = await getRoom("XYZ99");
 
       expect(result).toEqual(roomData);
-      expect(mockFetch).toHaveBeenCalledWith("/api/queue/XYZ99", { cache: "no-store" });
+      expect(mockFetch).toHaveBeenCalledWith("/api/queue/XYZ99", {
+        cache: "no-store",
+        signal: expect.any(AbortSignal),
+      });
     });
 
     it("returns \"notFound\" only on a definitive 404", async () => {

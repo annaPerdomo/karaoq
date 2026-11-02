@@ -9,14 +9,22 @@ import { en } from "../../lib/i18n/messages";
 const GAP = 60;
 const REVEAL = cheerRevealSeconds(GAP, true);
 
-function Panel({ gapSeconds = GAP }: { gapSeconds?: number }) {
+function Panel({
+  gapSeconds = GAP,
+  showCheer = true,
+  songsSung = 1,
+}: {
+  gapSeconds?: number;
+  showCheer?: boolean;
+  songsSung?: number;
+}) {
   return (
     <AutoStartPanel
       secondsLeft={gapSeconds}
       gapSeconds={gapSeconds}
       autoEnabled
-      showCheer
-      songsSung={1}
+      showCheer={showCheer}
+      songsSung={songsSung}
       lastSinger="Ana"
       singerName="Bea"
       songTitle="Dancing Queen"
@@ -62,6 +70,26 @@ describe("AutoStartPanel hand-off", () => {
     rerender(<Panel gapSeconds={10} />);
     expect(screen.queryByText(cheerText)).toBeNull();
     expect(screen.getByText("Bea")).toBeInTheDocument();
+  });
+
+  it("holds a started cheer when Host's cheer window closes under it", () => {
+    const { rerender } = render(<Panel />);
+    advance(1);
+    rerender(<Panel showCheer={false} />);
+    expect(screen.getByText(cheerText)).toBeInTheDocument();
+  });
+
+  it("drops the cheer on a skip", () => {
+    const { rerender } = render(<Panel />);
+    advance(1);
+    rerender(<Panel showCheer={false} songsSung={2} />);
+    expect(screen.queryByText(cheerText)).toBeNull();
+    expect(screen.getByText("Bea")).toBeInTheDocument();
+  });
+
+  it("never cheers a panel that mounts after the window", () => {
+    render(<Panel showCheer={false} />);
+    expect(screen.queryByText(cheerText)).toBeNull();
   });
 
   it("hands over on a TV the moment the reveal is up, as no fade runs there", () => {

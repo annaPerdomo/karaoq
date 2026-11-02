@@ -3,6 +3,7 @@ import { isAnalyticsExempt, localeFromRequest } from "../../../lib/analytics";
 import { sanitizeClientError } from "../../../lib/clientErrors";
 import { MAX_STORED_UA_LENGTH, rateLimit } from "../../../lib/limits";
 import { getClientErrorsCollection } from "../../../lib/mongodb";
+import { requestGeo } from "../../../lib/platform";
 
 function headerString(value: string | string[] | undefined): string | undefined {
   if (Array.isArray(value)) return value[0];
@@ -48,12 +49,11 @@ export default async function handler(
   try {
     const collection = await getClientErrorsCollection();
     const locale = localeFromRequest(req);
+    const geo = requestGeo(req);
     await collection.insertOne({
       ...report,
       userAgent: headerString(req.headers["user-agent"])?.slice(0, MAX_STORED_UA_LENGTH),
-      country: headerString(req.headers["x-vercel-ip-country"]),
-      region: headerString(req.headers["x-vercel-ip-region"]),
-      city: headerString(req.headers["x-vercel-ip-city"]),
+      ...geo,
       ...(locale ? { locale } : {}),
       timestamp: new Date(),
     });

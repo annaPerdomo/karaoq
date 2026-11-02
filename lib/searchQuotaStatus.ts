@@ -1,17 +1,18 @@
 import {
-  SEARCH_DAY_QUOTA,
-  UNBILLED_SLACK_UNITS,
+  DAY_CALL_QUOTA,
+  UNBILLED_SLACK_CALLS,
+  callsLeft,
+  markDailyOut,
   recordSpend,
   searchesLeft,
   spentToday,
-  unitsLeft,
 } from "./corpusBudget";
 import { pacificDayKey, quotaResetsAt } from "./pacificTime";
 
-/** Env override shared with the cron (SUGGESTION_DAY_QUOTA), in searches. */
-function dayQuota(): number {
-  const n = Number(process.env.SUGGESTION_DAY_QUOTA);
-  return Number.isFinite(n) && n > 0 ? n : SEARCH_DAY_QUOTA;
+/** Env override shared with the cron (YOUTUBE_DAY_CALLS), calls per Pacific day. */
+export function dayQuota(): number {
+  const n = Number(process.env.YOUTUBE_DAY_CALLS);
+  return Number.isFinite(n) && n > 0 ? n : DAY_CALL_QUOTA;
 }
 
 // Room polls are the hottest path in the app, so the Mongo read behind this
@@ -27,12 +28,12 @@ export function resetSearchQuotaStatusCache(): void {
 }
 
 export async function searchQuotaSpent(): Promise<boolean> {
-  const out = searchesLeft(await spentToday(Date.now()), dayQuota()) === 0;
+  const out = Boolean((await spentToday(Date.now())).dailyOutAt);
   cache = { day: pacificDayKey(), out, at: Date.now() };
   return out;
 }
 
-/** A "per day" refusal is believed only within UNBILLED_SLACK_UNITS of the
+/** A "per day" refusal is believed only within UNBILLED_SLACK_CALLS of the
  *  line (ledger unreadable: YouTube's word stands). A believed one bills the
  *  shortfall — nothing else bills once every call is refused, and the memo
  *  would otherwise read "one left" until midnight. */
@@ -42,10 +43,11 @@ export async function confirmDailyOut(limit: "burst" | "daily" | null): Promise<
     const now = Date.now();
     const spent = await spentToday(now);
     const quota = dayQuota();
-    const out = unitsLeft(spent, quota) <= UNBILLED_SLACK_UNITS;
+    const out = callsLeft(spent, quota) <= UNBILLED_SLACK_CALLS;
     if (out) {
       const short = searchesLeft(spent, quota);
-      if (short > 0) await recordSpend(now, { searches: short });
+      if (short > 0) await recordSpend(now, { searches: short, unloggedSearches: short });
+      if (!spent.dailyOutAt) await markDailyOut(now);
     }
     cache = { day: pacificDayKey(), out, at: now };
     return out;

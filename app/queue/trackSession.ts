@@ -1,6 +1,9 @@
 import { getActiveLocale } from "../../lib/i18n/activeLocale";
+import { startVisiblePolling } from "./pollWhileVisible";
 
 const HEARTBEAT_INTERVAL = 60000;
+// Under lib/analytics SESSION_GAP_MS (30 min), so a hidden tab's sitting never splits.
+const HIDDEN_HEARTBEAT_INTERVAL = 25 * 60_000;
 
 function randomId(): string {
   try {
@@ -38,7 +41,7 @@ export function startSessionTracking(
   const send = () => {
     // Read locale per beat: detection resolves post-mount and can change mid-room; last write wins.
     const { locale, source } = getActiveLocale();
-    fetch("/api/analytics/session", {
+    return fetch("/api/analytics/session", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ roomId, userName, role, clientId, locale, localeSource: source }),
@@ -47,6 +50,13 @@ export function startSessionTracking(
 
   send();
 
-  const interval = setInterval(send, HEARTBEAT_INTERVAL);
-  return () => clearInterval(interval);
+  // Hidden tabs left open overnight billed real Vercel invocations; they get only the slow beat.
+  const stopVisible = startVisiblePolling(send, HEARTBEAT_INTERVAL);
+  const hiddenTimer = setInterval(() => {
+    if (typeof document !== "undefined" && document.visibilityState === "hidden") send();
+  }, HIDDEN_HEARTBEAT_INTERVAL);
+  return () => {
+    stopVisible();
+    clearInterval(hiddenTimer);
+  };
 }

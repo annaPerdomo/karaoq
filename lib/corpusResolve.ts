@@ -7,6 +7,15 @@ import { CATALOG_DURATION, CATALOG_SORT } from "./suggestionCatalog";
 import { YoutubeApiError, type YoutubeLimit } from "./youtubeApi";
 import { searchYoutubeApi } from "./youtubeSearch";
 
+export interface ResolvedSong {
+  title: string;
+  artist: string;
+  /** `new`: a song with no cuts gained some. `widened`: a thin song gained
+   *  more. `missed`: YouTube had nothing new. */
+  outcome: "new" | "widened" | "missed";
+  cutsAdded: number;
+}
+
 export interface ResolveStepReport {
   /** The whole wanted list, not the page of it this run could afford. */
   wanted: number;
@@ -20,6 +29,7 @@ export interface ResolveStepReport {
   quotaSpent: boolean;
   /** null unless quotaSpent; see YoutubeLimit for daily vs burst. */
   quotaLimit: YoutubeLimit | null;
+  songs: ResolvedSong[];
 }
 
 /** A song's _id is searchCacheKey() of exactly this query, so rebuilding it is
@@ -34,9 +44,12 @@ function songQuery(song: KaraokeSongDoc): string {
  *  song nobody has searched for belongs. */
 const RESOLVE_ORDER = { wantedIn: -1, demand: -1 } as const;
 
-/** Absent is eligible, so no backfill onto songs seeded before the field. */
+/** Absent is eligible, so no backfill onto songs seeded before the field.
+ *  retired (lib/songCorpus markResolveMiss) excludes a promoted song that
+ *  gave up after 3 misses. */
 function eligibleNow(now: Date): Filter<KaraokeSongDoc> {
   return {
+    retired: { $ne: true },
     $or: [{ nextResolveAt: { $exists: false } }, { nextResolveAt: { $lte: now } }],
   };
 }
@@ -47,6 +60,7 @@ interface PassResult {
   missed: number;
   quotaSpent: boolean;
   quotaLimit: YoutubeLimit | null;
+  songs: ResolvedSong[];
 }
 
 async function searchInto(
@@ -54,6 +68,7 @@ async function searchInto(
   budget: number,
   deadline: number,
   attempted: Set<string>,
+  widening: boolean,
   onSearch?: () => void
 ): Promise<PassResult> {
   const pass: PassResult = {
@@ -62,6 +77,7 @@ async function searchInto(
     missed: 0,
     quotaSpent: false,
     quotaLimit: null,
+    songs: [],
   };
   for (const song of wanted) {
     if (pass.calls >= budget || Date.now() >= deadline) break;
@@ -80,12 +96,22 @@ async function searchInto(
         results.length > 0
           ? await recordSearchResults(song._id, results)
           : { cutsAdded: 0 };
+      const named = {
+        title: song.nativeTitle ?? song.title,
+        artist: song.nativeArtist ?? song.artist,
+      };
       if (written.cutsAdded > 0) {
         pass.filled += 1;
+        pass.songs.push({
+          ...named,
+          outcome: widening ? "widened" : "new",
+          cutsAdded: written.cutsAdded,
+        });
         continue;
       }
       // The miss stops it being re-bought ahead of songs nobody has tried.
       pass.missed += 1;
+      pass.songs.push({ ...named, outcome: "missed", cutsAdded: 0 });
       await markResolveMiss(song._id);
     } catch (e: any) {
       // Only a spent quota ends the step and counts as a miss — our own
@@ -117,27 +143,39 @@ export async function resolveWantedSongs(
     widened: 0,
     quotaSpent: false,
     quotaLimit: null,
+    songs: [],
   };
   if (budget <= 0 || Date.now() >= deadline) return { done: false, report };
 
   const songs = await getKaraokeSongsCollection();
   const now = new Date();
   const ready = eligibleNow(now);
-  report.wanted = await songs.countDocuments({ cuts: [] });
+  report.wanted = await songs.countDocuments({ cuts: [], retired: { $ne: true } });
+  // Genre-chart songs only get what everything else leaves: their backlog
+  // runs to thousands, and would otherwise queue new Top 50 hits behind it.
   const wanted = await songs
-    .find({ cuts: [], ...ready })
+    .find({ cuts: [], genreChart: { $ne: true }, ...ready })
     .sort(RESOLVE_ORDER)
     .limit(budget)
     .toArray();
+  if (wanted.length < budget) {
+    const genre = await songs
+      .find({ cuts: [], genreChart: true, ...ready })
+      .sort(RESOLVE_ORDER)
+      .limit(budget - wanted.length)
+      .toArray();
+    wanted.push(...genre);
+  }
   report.eligible = wanted.length;
 
   const attempted = new Set<string>();
-  const first = await searchInto(wanted, budget, deadline, attempted, onSearch);
+  const first = await searchInto(wanted, budget, deadline, attempted, false, onSearch);
   report.searched = first.calls;
   report.filled = first.filled;
   report.missed = first.missed;
   report.quotaSpent = first.quotaSpent;
   report.quotaLimit = first.quotaLimit;
+  report.songs = first.songs;
 
   const remaining = budget - first.calls;
   if (!first.quotaSpent && remaining > 0 && Date.now() < deadline) {
@@ -151,12 +189,13 @@ export async function resolveWantedSongs(
     ).filter((song) => !attempted.has(song._id));
     report.thin = thin.length;
 
-    const second = await searchInto(thin, remaining, deadline, attempted, onSearch);
+    const second = await searchInto(thin, remaining, deadline, attempted, true, onSearch);
     report.widened = second.calls;
     report.filled += second.filled;
     report.missed += second.missed;
     report.quotaSpent = second.quotaSpent;
     report.quotaLimit = second.quotaLimit;
+    report.songs = report.songs.concat(second.songs);
   }
 
   const done =

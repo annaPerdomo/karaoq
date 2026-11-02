@@ -75,7 +75,7 @@ export default function DisplayStage({
       ) : currentSong && isPlaying && playsVideoHere ? (
         <iframe
           ref={videoRef}
-          key={currentSong.id}
+          key={`${currentSong.id}:${currentSong.videoId}`}
           className={styles.video}
           src={embedSrc(
             currentSong.videoId,
@@ -128,6 +128,7 @@ export default function DisplayStage({
               return <React.Fragment key={i}>{part}</React.Fragment>;
             })}
           </p>
+          <p className={styles.hostOwnLine}>{t('display.hostOwn')}</p>
         </div>
       )}
 

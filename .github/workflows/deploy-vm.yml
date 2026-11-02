@@ -1,0 +1,77 @@
+name: Deploy to VM (manual)
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Git ref to build and deploy"
+        default: "main"
+        required: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Resolve sha
+        id: sha
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Test
+        run: pnpm exec vitest run
+
+      - name: Build
+        env:
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
+          MONGODB_DB: ${{ secrets.MONGODB_DB }}
+          # Opts this build out of Vercel Analytics (pages/_app.tsx). No
+          # other NEXT_PUBLIC_* vars exist in the codebase today.
+          NEXT_PUBLIC_KARAOQ_SELF_HOST: "1"
+        run: pnpm build
+
+      - name: Assemble standalone bundle
+        run: |
+          cp -r .next/static .next/standalone/.next/static
+          cp -r public .next/standalone/public
+          tar -czf release.tar.gz -C .next/standalone .
+
+      - name: Set up SSH
+        env:
+          VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
+          VM_KNOWN_HOSTS: ${{ secrets.VM_KNOWN_HOSTS }}
+        run: |
+          install -m 600 -D /dev/null ~/.ssh/id_deploy
+          printf '%s\n' "$VM_SSH_KEY" > ~/.ssh/id_deploy
+          printf '%s\n' "$VM_KNOWN_HOSTS" > ~/.ssh/known_hosts
+
+      - name: Ship release to the VM
+        env:
+          VM_USER: ${{ secrets.VM_USER }}
+          VM_HOST: ${{ secrets.VM_HOST }}
+          SHA: ${{ steps.sha.outputs.sha }}
+        run: |
+          scp -i ~/.ssh/id_deploy -o UserKnownHostsFile=~/.ssh/known_hosts \
+            release.tar.gz \
+            "$VM_USER@$VM_HOST:/tmp/karaoq-$SHA.tar.gz"
+
+      - name: Activate
+        env:
+          VM_USER: ${{ secrets.VM_USER }}
+          VM_HOST: ${{ secrets.VM_HOST }}
+          SHA: ${{ steps.sha.outputs.sha }}
+        run: |
+          ssh -i ~/.ssh/id_deploy -o UserKnownHostsFile=~/.ssh/known_hosts \
+            "$VM_USER@$VM_HOST" \
+            "sudo /usr/local/sbin/karaoq-activate /tmp/karaoq-$SHA.tar.gz $SHA && rm -f /tmp/karaoq-$SHA.tar.gz"

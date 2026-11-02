@@ -33,6 +33,7 @@ export function fillDays(rows: DayCount[], days: number): { label: string; value
 export interface StackedDatum {
   label: string;
   title?: string;
+  note?: string;
   segments: number[];
 }
 

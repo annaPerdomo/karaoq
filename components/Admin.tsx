@@ -6,6 +6,7 @@ import QuotaView from './admin/quota/QuotaView';
 import ErrorsView from './admin/errors/ErrorsView';
 import SuggestionsView from './admin/SuggestionsView';
 import PulseView from './admin/pulse/PulseView';
+import ScreensView from './admin/screens/ScreensView';
 import FeedbackView from './admin/FeedbackView';
 import type { AdminView, AnalyticsData, ErrorsData } from './admin/types';
 import { viewerTimezone } from './admin/format';
@@ -164,6 +165,7 @@ const Admin = (): React.ReactElement => {
         <SuggestionsView data={data} secret={secret} onOpenRoom={openRoom} />
       )}
       {view === 'pulse' && <PulseView data={data} />}
+      {view === 'screens' && <ScreensView secret={secret} refreshToken={refreshToken} />}
       {view === 'feedback' && (
         <FeedbackView secret={secret} onUnhandledChange={setFeedbackUnhandled} />
       )}

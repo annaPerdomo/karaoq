@@ -9,11 +9,14 @@ import reportDisplayPaused from '../app/queue/setDisplayPaused';
 import setPlaying from '../app/queue/setPlaying';
 import { normalizeRoomId } from '../lib/roomCode';
 import { onRoomState, onDisplayPause, broadcastVideoEnded } from '../app/queue/roomChannel';
+import { ytCommand, parseYtMessage } from './player/ytCommand';
+import { usePlayheadBroadcast } from './display/hooks/usePlayheadBroadcast';
 import { useRoomTiming } from './hooks/useRoomTiming';
 import { startSessionTracking } from '../app/queue/trackSession';
 import { startVisiblePolling } from '../app/queue/pollWhileVisible';
+import { DORMANT_POLL_MS, isRoomDormant } from '../lib/roomDormancy';
 import { isTextReaction } from '../app/queue/cheerConstants';
-import { AutoAdvance, AUTO_ADVANCE_OFF, DEFAULT_DISPLAY_CONFIG, DisplayConfig, DisplayTheme, normalizeAutoAdvance, normalizeDisplayConfig, normalizeSongLimit, PlayMode, QueueEntry, Reaction, Room, SingWithMePost, SuggestedSong } from '../pages/api/types';
+import { AutoAdvance, AUTO_ADVANCE_OFF, DEFAULT_DISPLAY_CONFIG, DisplayConfig, DisplayTheme, normalizeAutoAdvance, normalizeDisplayConfig, normalizeSongLimit, PlayMode, roomTheme, QueueEntry, Reaction, Room, RoomBrand, SingWithMePost, SuggestedSong } from '../pages/api/types';
 import { useAutoStart } from './hooks/useAutoStart';
 import { useTvScale } from './display/hooks/useTvScale';
 import { useDisplayRemoteNav } from './display/hooks/useDisplayRemoteNav';
@@ -21,7 +24,6 @@ import { isTvDevice } from '../lib/calmMotion';
 import { autoStartEpoch, playerCurrentTime, songSecondsLeft, WRAP_UP_WARN_SECONDS } from '../lib/autoAdvance';
 import { useT } from '../lib/i18n/I18nProvider';
 import { renderWithHeart } from '../lib/i18n/renderWithHeart';
-import LanguageSwitcher from './LanguageSwitcher';
 import FullscreenToggle from './FullscreenToggle';
 import DisplaySidebar from './display/DisplaySidebar';
 import NowPlayingBar from './display/NowPlayingBar';
@@ -33,16 +35,19 @@ import { ConfigRail } from './edit/ConfigRail';
 import { displayRailToggles } from './display/edit/railToggles';
 import { EditOverlay } from './edit/EditOverlay';
 import { SAMPLE_QUEUE } from './display/edit/sampleContent';
-import { Icons } from './host/icons';
 import { ConnectPhoneButton } from './display/ConnectPhoneButton';
 import { ConnectPhonePanel } from './display/ConnectPhonePanel';
 import { useConnectPhone } from './display/hooks/useConnectPhone';
+import DisplayHeader from './display/DisplayHeader';
+import { brandStyle } from '../lib/brandStyle';
 
 const POLL_INTERVAL = 1500;
 // How long a refused embed's notice shows before the queue moves on.
 const FAILED_VIDEO_SKIP_MS = 6000;
 // Server treats a display as gone after ~75s without a heartbeat.
 const HEARTBEAT_INTERVAL = 10_000;
+// Must stay above DORMANT_POLL_MS.
+const POLL_HEARTBEAT_STALE_MS = 30_000;
 
 const THEME_CLASS: Record<DisplayTheme, string> = {
   classic: '',
@@ -59,6 +64,7 @@ const Display = (): React.ReactElement => {
   const [singWithMe, setSingWithMe] = React.useState<SingWithMePost[]>([]);
   const [suggestions, setSuggestions] = React.useState<SuggestedSong[]>([]);
   const [boardsOn, setBoardsOn] = React.useState(true);
+  const [brand, setBrand] = React.useState<RoomBrand>({});
   const [activeIndex, setActiveIndex] = React.useState(0);
   const [isPlaying, setIsPlaying] = React.useState(false);
   const timing = useRoomTiming({
@@ -67,7 +73,7 @@ const Display = (): React.ReactElement => {
     isPlaying,
   });
   const { adoptBroadcast } = timing;
-  const tvScaleFactor = useTvScale();
+  const { scale: tvScaleFactor, sidebarScale } = useTvScale();
   const [displayPaused, setDisplayPaused] = React.useState(false);
   // Unset playMode (legacy rooms) is treated like "tv".
   const [playMode, setPlayMode] = React.useState<PlayMode | null>(null);
@@ -75,6 +81,8 @@ const Display = (): React.ReactElement => {
   const [error, setError] = React.useState<string | null>(null);
   const [loadError, setLoadError] = React.useState(false);
   const notFoundPollsRef = React.useRef(0);
+  const dormantRef = React.useRef(false);
+  const lastPollOkRef = React.useRef(0);
   const [origin, setOrigin] = React.useState('');
   const [reactionsOn, setReactionsOn] = React.useState(true);
   const [displayConfig, setDisplayConfig] = React.useState<DisplayConfig>(DEFAULT_DISPLAY_CONFIG);
@@ -117,6 +125,15 @@ const Display = (): React.ReactElement => {
     if (!joinCode || error) return;
     const beat = () => postDisplaySeen(joinCode).catch(() => {});
     beat();
+    // The room GET heartbeats a visible display; beat anyway if polls stop landing.
+    const beatUnlessPollCarries = () => {
+      if (
+        document.visibilityState === 'hidden' ||
+        Date.now() - lastPollOkRef.current > POLL_HEARTBEAT_STALE_MS
+      ) {
+        beat();
+      }
+    };
 
     let stopTicker: () => void;
     try {
@@ -124,10 +141,10 @@ const Display = (): React.ReactElement => {
       const url = URL.createObjectURL(new Blob([src], { type: 'application/javascript' }));
       const worker = new Worker(url);
       URL.revokeObjectURL(url);
-      worker.onmessage = beat;
+      worker.onmessage = beatUnlessPollCarries;
       stopTicker = () => worker.terminate();
     } catch {
-      const interval = setInterval(beat, HEARTBEAT_INTERVAL);
+      const interval = setInterval(beatUnlessPollCarries, HEARTBEAT_INTERVAL);
       stopTicker = () => clearInterval(interval);
     }
 
@@ -181,10 +198,12 @@ const Display = (): React.ReactElement => {
   }
 
   function applyRoom(room: Room, animateReactions = true) {
+    dormantRef.current = isRoomDormant(room);
     setQueue(room.queue);
     setSingWithMe(room.singWithMe ?? []);
     setSuggestions(room.suggestions ?? []);
     setBoardsOn(room.boardsOnDisplay ?? true);
+    setBrand(room.brand ?? {});
     setActiveIndex(room.activeVideoIndex);
     setIsPlaying(room.isPlaying ?? false);
     timing.adoptRoom(room);
@@ -196,7 +215,7 @@ const Display = (): React.ReactElement => {
     setDisplayPaused(paused);
     setPlayMode(room.playMode ?? null);
     setReactionsOn(room.reactionsEnabled ?? true);
-    setDisplayConfig(normalizeDisplayConfig(room.displayConfig));
+    setDisplayConfig({ ...normalizeDisplayConfig(room.displayConfig), theme: roomTheme(room) });
     setAutoAdvance(normalizeAutoAdvance(room.autoAdvance));
     setSongLimit(normalizeSongLimit(room.songLimitSeconds));
     setAutoStartAt(autoStartEpoch(room.autoStartAt));
@@ -209,10 +228,13 @@ const Display = (): React.ReactElement => {
     joinCode,
     config: displayConfig,
     boardsOn,
+    brand,
     scale: tvScaleFactor,
-    onSaved: (nextConfig, nextBoards) => {
+    sidebarScale,
+    onSaved: (nextConfig, nextBoards, nextBrand) => {
       setDisplayConfig(nextConfig);
       setBoardsOn(nextBoards);
+      setBrand(nextBrand);
     },
   });
 
@@ -225,7 +247,7 @@ const Display = (): React.ReactElement => {
     let cancelled = false;
 
     async function init() {
-      let room = await getRoom(joinCode!, { display: true });
+      let room = await getRoom(joinCode!, { display: true, wake: true });
       if (cancelled) return;
       if (room === "notFound") {
         setError(t('display.errorTitle'));
@@ -257,7 +279,7 @@ const Display = (): React.ReactElement => {
       setIsPlaying(state.isPlaying);
       adoptBroadcast(state.playStartedAt ?? null, state.isPlaying);
       setReactionsOn(state.reactionsEnabled);
-      if (state.displayConfig) setDisplayConfig(normalizeDisplayConfig(state.displayConfig));
+      if (state.displayConfig) setDisplayConfig((prev) => ({ ...normalizeDisplayConfig(state.displayConfig), theme: prev.theme }));
       processReactions(state.reactions);
     });
     // adoptBroadcast is stable; depending on `timing` would resubscribe the
@@ -284,15 +306,20 @@ const Display = (): React.ReactElement => {
         return;
       }
       notFoundPollsRef.current = 0;
+      lastPollOkRef.current = Date.now();
       applyRoom(room);
       setLoadError(false);
       setLoading(false);
-    }, POLL_INTERVAL);
+    }, () => (dormantRef.current ? DORMANT_POLL_MS : POLL_INTERVAL));
   }, [joinCode, error]);
 
   const currentSongId = queue[activeIndex]?.id;
   const currentSongIdRef = React.useRef(currentSongId);
   currentSongIdRef.current = currentSongId;
+  const currentVideoId = queue[activeIndex]?.videoId;
+  const currentVideoIdRef = React.useRef(currentVideoId);
+  currentVideoIdRef.current = currentVideoId;
+  const reportPlayhead = usePlayheadBroadcast(joinCode, currentSongId, currentVideoId);
 
   // A replay of the same song (isPlaying toggle) needs its end reported again.
   React.useEffect(() => {
@@ -322,49 +349,50 @@ const Display = (): React.ReactElement => {
     }
 
     function onMessage(e: MessageEvent) {
-      if (e.origin !== 'https://www.youtube.com') return;
-      try {
-        const data = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
-        const state =
-          data.event === 'onStateChange'
-            ? data.info
-            : data.event === 'infoDelivery'
-              ? data.info?.playerState
-              : undefined;
-        const limitLeft = songSecondsLeft(playerCurrentTime(data), songLimitRef.current);
-        if (limitLeft !== null) {
-          setWrapUpIn(limitLeft <= WRAP_UP_WARN_SECONDS ? limitLeft : null);
-          if (limitLeft <= 0) {
-            reportVideoEnded();
-            return;
-          }
-        }
-        if (state === 0) {
+      const msg = parseYtMessage(e, videoRef.current);
+      if (!msg) return;
+      const state =
+        msg.event === 'onStateChange'
+          ? msg.info
+          : msg.event === 'infoDelivery'
+            ? msg.info?.playerState
+            : undefined;
+      const currentTime = playerCurrentTime(msg);
+      reportPlayhead(currentTime, state);
+
+      const limitLeft = songSecondsLeft(currentTime, songLimitRef.current);
+      if (limitLeft !== null) {
+        setWrapUpIn(limitLeft <= WRAP_UP_WARN_SECONDS ? limitLeft : null);
+        if (limitLeft <= 0) {
           reportVideoEnded();
-        } else if (state === 1 || state === 3) {
-          // Playing or buffering.
-          playbackConfirmedRef.current = true;
-          setNeedsTap(false);
-          if (pausedReportedRef.current) {
-            pausedReportedRef.current = false;
-            localPauseRef.current = { paused: false, at: Date.now() };
-            reportDisplayPaused(roomId, false);
-          }
-        } else if (state === 2) {
-          // Paused. Report once per pause, and only after playback confirmed —
-          // scrubbing and pre-start states also pass through 2.
-          if (playbackConfirmedRef.current && !pausedReportedRef.current) {
-            pausedReportedRef.current = true;
-            localPauseRef.current = { paused: true, at: Date.now() };
-            reportDisplayPaused(roomId, true);
-          }
+          return;
         }
-      } catch {}
+      }
+      if (state === 0) {
+        reportVideoEnded();
+      } else if (state === 1 || state === 3) {
+        // Playing or buffering.
+        playbackConfirmedRef.current = true;
+        setNeedsTap(false);
+        if (pausedReportedRef.current) {
+          pausedReportedRef.current = false;
+          localPauseRef.current = { paused: false, at: Date.now() };
+          reportDisplayPaused(roomId, false);
+        }
+      } else if (state === 2) {
+        // Paused. Report once per pause, and only after playback confirmed —
+        // scrubbing and pre-start states also pass through 2.
+        if (playbackConfirmedRef.current && !pausedReportedRef.current) {
+          pausedReportedRef.current = true;
+          localPauseRef.current = { paused: true, at: Date.now() };
+          reportDisplayPaused(roomId, true);
+        }
+      }
     }
 
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
-  }, [isPlaying, joinCode, activeIndex, playsVideoHere]);
+  }, [isPlaying, joinCode, activeIndex, playsVideoHere, reportPlayhead]);
 
   // If YouTube hasn't reported playing shortly after mount, autoplay was blocked.
   React.useEffect(() => {
@@ -386,18 +414,12 @@ const Display = (): React.ReactElement => {
   // (host paused/resumed from another device).
   React.useEffect(() => {
     if (!isPlaying || !playsVideoHere || !playbackConfirmedRef.current) return;
-    const player = videoRef.current?.contentWindow;
-    if (!player) return;
+    const iframe = videoRef.current;
+    if (!iframe) return;
     if (displayPaused && !pausedReportedRef.current) {
-      player.postMessage(
-        JSON.stringify({ event: 'command', func: 'pauseVideo', args: [] }),
-        'https://www.youtube.com'
-      );
+      ytCommand(iframe, 'pauseVideo');
     } else if (!displayPaused && pausedReportedRef.current) {
-      player.postMessage(
-        JSON.stringify({ event: 'command', func: 'playVideo', args: [] }),
-        'https://www.youtube.com'
-      );
+      ytCommand(iframe, 'playVideo');
     }
   }, [displayPaused, isPlaying, playsVideoHere]);
 
@@ -424,20 +446,21 @@ const Display = (): React.ReactElement => {
   function handlePlaybackFailed() {
     if (!autoAdvance.enabled) return;
     const failedId = currentSongIdRef.current;
+    const failedVideo = currentVideoIdRef.current;
     if (failedSkipRef.current) clearTimeout(failedSkipRef.current);
     failedSkipRef.current = setTimeout(() => {
-      // A host who skipped meanwhile must not have the next song reported ended.
-      if (currentSongIdRef.current === failedId) reportVideoEndedRef.current();
+      // A host who skipped, or swapped in a cut that plays, must not have the
+      // song reported ended.
+      if (currentSongIdRef.current === failedId && currentVideoIdRef.current === failedVideo) {
+        reportVideoEndedRef.current();
+      }
     }, FAILED_VIDEO_SKIP_MS);
   }
 
   // The tap grants sticky user activation — this song and all later ones can
   // now autoplay with sound.
   function unlockPlayback() {
-    videoRef.current?.contentWindow?.postMessage(
-      JSON.stringify({ event: 'command', func: 'playVideo', args: [] }),
-      'https://www.youtube.com'
-    );
+    ytCommand(videoRef.current, 'playVideo');
     setNeedsTap(false);
     if (unlockRetryRef.current) clearTimeout(unlockRetryRef.current);
     unlockRetryRef.current = setTimeout(() => {
@@ -504,34 +527,26 @@ const Display = (): React.ReactElement => {
       ref={pageRef}
       className={`${styles.main} ${themeClass} ${sideClass} ${editSideClass}`}
       style={{
-        '--sb-w': `calc(${view.sidebarWidth}px * var(--tv-scale, 1))`,
+        ...brandStyle(edit.brandView),
+        '--sb-w': `${view.sidebarWidth * sidebarScale}px`,
         '--now-h': `calc(${view.nowPlayingHeight}px * var(--tv-scale, 1))`,
         // CSS can't divide two px lengths into a unitless number, so the type
         // scale ratio is computed here.
         '--now-scale': `${view.nowPlayingHeight / DEFAULT_DISPLAY_CONFIG.nowPlayingHeight}`,
+        // Relative to the root rem, which already carries tvScale.
+        '--sb-boost': `${sidebarScale / tvScaleFactor}`,
+        '--sb-scale': `${Math.max(1, view.sidebarWidth / DEFAULT_DISPLAY_CONFIG.sidebarWidth) * (sidebarScale / tvScaleFactor)}`,
       } as React.CSSProperties}
       onClick={edit.editing ? () => edit.setSelected(null) : undefined}
     >
-      <header className={`${styles.header} ${sidebarCollapsed ? styles.headerNoSidebar : ''}`}>
-        <div className={styles.brand}>KaraoQ</div>
-        <div className={styles.headerActions}>
-          {!edit.editing && !loading && (
-            <button
-              className={styles.headerEdit}
-              onClick={edit.enter}
-              title={t('customize.button')}
-              data-remote="customize"
-            >
-              {Icons.brush}
-              <span>{t('customize.button')}</span>
-            </button>
-          )}
-          {!edit.editing && !loading && (
-            <ConnectPhoneButton isHost={connectPhone.isHost} onPress={connectPhone.openPanel} />
-          )}
-          <LanguageSwitcher className={styles.headerLang} />
-        </div>
-      </header>
+      <DisplayHeader
+        joinCode={joinCode}
+        logo={edit.brandView.logo} logoScale={edit.brandView.logoScale ?? 1}
+        onLogoScaleChange={(logoScale) => edit.brandControls.onChange({ ...edit.brandControls.brand, logoScale: logoScale === 1 ? undefined : logoScale })}
+        editing={edit.editing} sidebarCollapsed={sidebarCollapsed}
+        showCustomize={!edit.editing && !loading} onCustomize={edit.enter}
+        connectPhoneIsHost={connectPhone.isHost} onConnectPhone={connectPhone.openPanel}
+      />
 
       <div className={`${styles.videoArea} ${sidebarCollapsed ? styles.videoAreaNoSidebar : ''}`}>
         <DisplayStage
@@ -654,7 +669,7 @@ const Display = (): React.ReactElement => {
           singWithMe={singWithMe}
           suggestions={suggestions}
           displayConfig={view}
-          scale={tvScaleFactor}
+          scale={sidebarScale}
           edit={
             edit.editing
               ? {
@@ -679,6 +694,7 @@ const Display = (): React.ReactElement => {
               hintKey="customize.hint.display"
               theme={view.theme}
               onPickTheme={(theme) => edit.change({ theme })}
+              brand={{ roomId: joinCode, ...edit.brandControls }}
               toggles={displayRailToggles(
                 view,
                 edit.change,

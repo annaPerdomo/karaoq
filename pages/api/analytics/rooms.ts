@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { isAuthorizedAdmin } from "../../../lib/adminAuth";
-import { ADMIN_LIVE_WINDOW_MS } from "../../../lib/liveWindows";
+import { ADMIN_LIVE_WINDOW_MS, ADMIN_RIGHT_NOW_WINDOW_MS } from "../../../lib/liveWindows";
+import { liveRoomCount } from "../../../lib/liveRooms";
 import { getAnalyticsDb } from "../../../lib/mongodb";
 import { normalizeAutoAdvance } from "../types";
 
@@ -103,6 +104,37 @@ export default async function handler(
     const liveCountPromise = liveRoomIds.then((ids) =>
       events.countDocuments({ type: "room_created", roomId: { $in: ids } })
     );
+
+    // First page of an unsearched list only, so typing or scrolling can't
+    // re-run it; errors here cost the row, not the whole request.
+    const rightNowPromise: Promise<{ live: number; created: number; sang: number } | null> =
+      skip === 0 && !q
+        ? (async () => {
+            try {
+              const windowStart = new Date(Date.now() - ADMIN_RIGHT_NOW_WINDOW_MS);
+              const [live, createdRoomIds] = await Promise.all([
+                liveRoomCount(Date.now(), ADMIN_LIVE_WINDOW_MS),
+                events.distinct("roomId", {
+                  type: "room_created",
+                  timestamp: { $gte: windowStart },
+                }),
+              ]);
+              let sang = 0;
+              if (createdRoomIds.length > 0) {
+                const sangRoomIds = await events.distinct("roomId", {
+                  type: "song_added",
+                  roomId: { $in: createdRoomIds },
+                  timestamp: { $gte: windowStart },
+                });
+                sang = sangRoomIds.length;
+              }
+              return { live, created: createdRoomIds.length, sang };
+            } catch (e) {
+              console.error("Right-now query error:", e);
+              return null;
+            }
+          })()
+        : Promise.resolve(null);
 
     const roomsPromise = events
       .aggregate([
@@ -299,9 +331,10 @@ export default async function handler(
 
     // Awaited together so neither can be left dangling as an unhandled
     // rejection when the other fails.
-    const [docs, liveCount] = await Promise.all([
+    const [docs, liveCount, rightNow] = await Promise.all([
       roomsPromise,
       liveCountPromise,
+      rightNowPromise,
     ]);
 
     const hasMore = docs.length > limit;
@@ -309,7 +342,7 @@ export default async function handler(
       ...r,
       autoAdvance: normalizeAutoAdvance(r.autoAdvance),
     }));
-    res.status(200).json({ rooms, hasMore, liveCount });
+    res.status(200).json({ rooms, hasMore, liveCount, rightNow });
   } catch (e) {
     console.error("Rooms query error:", e);
     res.status(500).json({ code: 500, message: "Internal server error." });

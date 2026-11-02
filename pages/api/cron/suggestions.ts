@@ -3,12 +3,12 @@ import {
   acquireRun,
   CHANNEL_PAGES_PER_DAY,
   insideMopUpWindow,
+  OUTSIDE_MOP_UP_WINDOW,
   recordMopUp,
   recordSpend,
   releaseRun,
   remaining,
   searchesLeft,
-  SEARCH_DAY_QUOTA,
   SEARCH_PER_DAY,
   spentToday,
   type DailySpend,
@@ -19,10 +19,15 @@ import {
   CUTS_PER_SONG,
   harvestIntoCorpus,
 } from "../../../lib/corpusHarvest";
+import { feedCharts } from "../../../lib/chartFeed";
+import { feedGenreCharts } from "../../../lib/genreFeed";
+import { rematchMissedSongs } from "../../../lib/corpusRematch";
+import { syncCatalog } from "../../../lib/catalogSync";
 import { migrateToCorpus } from "../../../lib/corpusMigration";
+import { promoteDemand, repairDemandIdentities } from "../../../lib/corpusPromote";
 import { proposeUnmappedAdds, PROPOSAL_SCAN_LIMIT } from "../../../lib/corpusProposals";
 import { publishCorpus } from "../../../lib/corpusPublish";
-import { resolveWantedSongs } from "../../../lib/corpusResolve";
+import { type ResolvedSong, resolveWantedSongs } from "../../../lib/corpusResolve";
 import {
   REFRESH_AFTER_DAYS,
   SWEEP_PER_RUN,
@@ -31,24 +36,21 @@ import {
 import { CORPUS_BUSY_WINDOW_MS } from "../../../lib/liveWindows";
 import { liveRoomCount } from "../../../lib/liveRooms";
 import { quotaResetsAtMs } from "../../../lib/pacificTime";
-import { searchQuotaResetsAt } from "../../../lib/searchQuotaStatus";
+import { dayQuota, searchQuotaResetsAt } from "../../../lib/searchQuotaStatus";
 import { recordDemand } from "../../../lib/songCorpus";
 import { suggestionCatalog } from "../../../lib/suggestionCatalog";
 import { mergeDemand, suggestionDemand } from "../../../lib/suggestionDemand";
 import { searchDemandScores } from "../../../lib/searchDemandRead";
 import { CLAIM_SCAN_LIMIT, claimBankedVideos } from "../../../lib/corpusClaim";
+import { pruneOrphanLogos } from "../../../lib/roomLogos";
 
-// vercel.json invokes this three times because a full harvest outlasts the 300s
-// function — a later slot buys clock, not quota (lib/corpusBudget). The run's
-// deadline is held under the ceiling: being killed spends units and writes nothing.
-//
-// The slots sit late in the Pacific evening (04:15/05:15/06:15 UTC ≈
-// 21:15/22:15/23:15 PT) rather than just after the midnight reset, so the corpus
-// spends what the day's rooms left instead of taking its cut before anyone has
-// woken up. Whatever is still unspent by then expires at midnight anyway, which
-// is what makes this the cheap hour to buy in. More than one slot because any of
-// them may find rooms live and defer; the last carries ?mopUp=1, which trades
-// the nightly cap for the day's remainder (see the flag below).
+// vercel.json has four entries because a full harvest outlasts the 300s
+// function — a later slot buys clock, not quota (lib/corpusBudget). The slots
+// sit late in the Pacific evening so the corpus spends what the day's rooms
+// left rather than taking its cut before anyone has woken up; whatever is
+// still unspent then expires at midnight anyway. The 06:15 and 07:15 UTC
+// entries both carry ?mopUp=1 (see the flag below): one lands in the window
+// under PDT, the other under PST, so one of the pair covers each season.
 export const config = { maxDuration: 300 };
 const RUN_BUDGET_MS = 240_000;
 
@@ -110,22 +112,24 @@ export default async function handler(
     : started + RUN_BUDGET_MS;
 
   if (mopUp && !forced && !insideMopUpWindow(started)) {
-    const report = {
-      skipped: "outside mop-up window",
-      slot,
-      resetsInMs: quotaResetsAtMs(new Date(started)) - started,
-    };
+    const resetsInMs = quotaResetsAtMs(new Date(started)) - started;
+    const report = { skipped: OUTSIDE_MOP_UP_WINDOW, slot, resetsInMs };
     console.log("Corpus cron mop-up skipped:", JSON.stringify(report));
-    await recordMopUp(started, {
-      at: new Date(started),
-      liveRooms: 0,
-      budget: 0,
-      searched: 0,
-      filled: 0,
-      skipped: "outside mop-up window",
-      quotaSpent: false,
-      error: null,
-    }).catch(console.warn);
+    // Past midnight Pacific, resetsInMs jumps to nearly a day: that's the
+    // season's dead slot, not tonight's ledger, so it must not stamp the new
+    // day "outside mop-up window" before it has started.
+    if (resetsInMs < 6 * 60 * 60_000) {
+      await recordMopUp(started, {
+        at: new Date(started),
+        liveRooms: 0,
+        budget: 0,
+        searched: 0,
+        filled: 0,
+        skipped: OUTSIDE_MOP_UP_WINDOW,
+        quotaSpent: false,
+        error: null,
+      }).catch(console.warn);
+    }
     res.status(200).json(report);
     return;
   }
@@ -142,7 +146,7 @@ export default async function handler(
   // waste is what everyone has spent, and a quiet day is what makes the mop-up
   // worth running at all.
   const searchBudget = mopUp
-    ? searchesLeft(spent, envCount("SUGGESTION_DAY_QUOTA", SEARCH_DAY_QUOTA))
+    ? searchesLeft(spent, dayQuota())
     : remaining(
         envCount("SUGGESTION_RESOLVE_PER_DAY", SEARCH_PER_DAY),
         spent.cronSearches
@@ -162,9 +166,13 @@ export default async function handler(
         envCount("SUGGESTION_LIVE_ROOM_WINDOW_MS", CORPUS_BUSY_WINDOW_MS)
       );
 
-  const daySpent = forced ? false : (await searchQuotaResetsAt()) !== null;
+  // The ledger ceiling too: the cron mustn't spend past it before Google refuses.
+  const daySpent = forced
+    ? false
+    : searchesLeft(spent, dayQuota()) === 0 || (await searchQuotaResetsAt()) !== null;
 
   /** Cheap and user-visible first; search is last, since rooms compete for it. */
+  let resolvedSongs: ResolvedSong[] = [];
   const steps: StepSpec[] = [
     {
       name: "migrate",
@@ -223,6 +231,71 @@ export default async function handler(
           by,
           envCount("SUGGESTION_PROPOSAL_SCAN", PROPOSAL_SCAN_LIMIT)
         );
+        return { done, report: { ...report } };
+      },
+    },
+    {
+      // Guarded one-off, runs exactly once: repairs identities the first
+      // promote run got wrong, so promote right after re-evaluates them.
+      name: "repair",
+      budgetMs: 20_000,
+      floorMs: 0,
+      run: async (by) => {
+        const { done, report } = await repairDemandIdentities(by);
+        return { done, report: { ...report } };
+      },
+    },
+    {
+      // After propose, before claim: a song promoted here is one claim can
+      // fill in the same run. Our own rows, no units.
+      name: "promote",
+      budgetMs: 20_000,
+      floorMs: 5_000,
+      run: async (by) => {
+        const { done, report } = await promoteDemand(by);
+        return { done, report: { ...report } };
+      },
+    },
+    {
+      // After promote, before claim: a chart song inserted here is one claim
+      // can fill in the same run. Apple's feed, no YouTube units.
+      name: "charts",
+      budgetMs: 60_000,
+      floorMs: 5_000,
+      run: async (by) => {
+        const { done, report } = await feedCharts(by);
+        return { done, report: { ...report } };
+      },
+    },
+    {
+      // After charts, so a song both name is credited to the Top 50. No YouTube units.
+      name: "genres",
+      budgetMs: 60_000,
+      floorMs: 5_000,
+      run: async (by) => {
+        const { done, report } = await feedGenreCharts(by);
+        return { done, report: { ...report } };
+      },
+    },
+    {
+      // Before the resolver: a song added to a pack since the migration is
+      // cutless here tonight and resolved below. Our own rows, no units.
+      name: "catalog",
+      budgetMs: 10_000,
+      floorMs: 0,
+      run: async () => {
+        const { done, report } = await syncCatalog();
+        return { done, report: { ...report } };
+      },
+    },
+    {
+      // Guarded one-off: songs the old matcher missed get retried by the
+      // resolver below instead of sitting out their backoff. Our own rows.
+      name: "rematch",
+      budgetMs: 10_000,
+      floorMs: 0,
+      run: async () => {
+        const { done, report } = await rematchMissedSongs();
         return { done, report: { ...report } };
       },
     },
@@ -286,7 +359,10 @@ export default async function handler(
         const { done, report } = await resolveWantedSongs(by, searchBudget, () =>
           bill({ searches: 1 })
         );
-        return { done, report: { ...report } };
+        // Kept for the mop-up's ledger entry, out of the run log it would swamp.
+        const { songs, ...logged } = report;
+        resolvedSongs = songs;
+        return { done, report: logged };
       },
     },
   ];
@@ -300,9 +376,10 @@ export default async function handler(
       const by = Math.min(Date.now() + step.budgetMs, deadline - reserved);
       // A search the cron runs is both a call against the day and the cron's
       // own share of it, so it is billed to both counters (lib/corpusBudget).
-      const billed: DailySpend = {
+      const billed: DailySpend & { mopUpSearches: number } = {
         searches: 0,
         cronSearches: 0,
+        mopUpSearches: 0,
         pages: 0,
         lookups: 0,
       };
@@ -310,6 +387,7 @@ export default async function handler(
         const { done, report } = await step.run(by, (units) => {
           billed.searches += units.searches ?? 0;
           billed.cronSearches += units.searches ?? 0;
+          if (mopUp) billed.mopUpSearches += units.searches ?? 0;
           billed.pages += units.pages ?? 0;
         });
         ran[step.name] = { done, ...report };
@@ -334,6 +412,7 @@ export default async function handler(
   if (mopUp) {
     const resolved = (ran.resolve ?? {}) as {
       searched?: number;
+      widened?: number;
       filled?: number;
       quotaSpent?: boolean;
       skipped?: string;
@@ -343,8 +422,9 @@ export default async function handler(
       at: new Date(started),
       liveRooms,
       budget: searchBudget,
-      searched: resolved.searched ?? 0,
+      searched: (resolved.searched ?? 0) + (resolved.widened ?? 0),
       filled: resolved.filled ?? 0,
+      songs: resolvedSongs,
       skipped: resolved.skipped ?? null,
       quotaSpent: resolved.quotaSpent ?? false,
       error: resolved.error ?? null,
@@ -353,9 +433,21 @@ export default async function handler(
     });
   }
 
+  // Once a day, on the first slot only, and after the corpus work so it never
+  // takes that run's clock. A failure is logged and otherwise ignored.
+  let logosPruned: number | undefined;
+  if (req.query.slot === undefined) {
+    try {
+      logosPruned = await pruneOrphanLogos();
+    } catch (e: any) {
+      console.warn("Orphan logo prune failed:", e?.message);
+    }
+  }
+
   const report = {
     slot,
     steps: ran,
+    ...(logosPruned === undefined ? {} : { logosPruned }),
     budget: { searches: searchBudget, pages: pageBudget },
     // What the day had already cost before this run, so a skipped night still
     // leaves a record of why — and of what the account's real ceiling is.

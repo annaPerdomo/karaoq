@@ -1,23 +1,50 @@
 import * as React from 'react';
 
 import styles from '../../styles/SongSearch.module.css';
-import {
-  SongCategory,
-  SongSection,
-  SongSuggestion,
-} from '../../app/queue/songSuggestions';
+import { SongCategory, SongSection, SongSuggestion } from '../../app/queue/songSuggestions';
+import type { GenreShelf, IdeaShelf, ShelfSong } from '../../lib/shelfTypes';
 import { useT } from '../../lib/i18n/I18nProvider';
-import { labelWithFallback } from './labelWithFallback';
 import { buildDiscoveryData } from './discoveryData';
-import CategoryGrid from './CategoryGrid';
+import CategoryGroups from './CategoryGroups';
 import CategorySongList from './CategorySongList';
-import LanguagePicker from './LanguagePicker';
+import GenreShelfList from './GenreShelfList';
+import { HOT_TAB } from './constants';
+import HotTab from './HotTab';
+import IdeasLoading from './IdeasLoading';
+import LiveGenres from './LiveGenres';
+import PlacePicker from './PlacePicker';
+import type { PlaceLists } from './placeLists';
+
+/** Every tab follows the place: Hot shows its chart, the others its lists. */
+const TABS: { id: string; labelKey: string }[] = [
+  { id: HOT_TAB, labelKey: 'search.tab.hot' },
+  { id: 'genre', labelKey: 'section.genre' },
+  { id: 'voice-type', labelKey: 'section.voice-type' },
+];
 
 interface DiscoveryBrowserProps {
-  orderedSections: SongSection[];
-  langPacks: SongSection[];
-  regionalSection: SongSection | null;
-  trendingCategory: SongCategory | null;
+  allSections: SongSection[];
+  lists: PlaceLists;
+  /** The place every tab follows ("" = the singer's own, unknown place). */
+  place: string;
+  places: string[];
+  /** The singer's country (useCountry). */
+  home: string | null;
+  atHome: boolean;
+  /** The singer's own shelves; shown while they're at home. */
+  shelves: IdeaShelf[];
+  shelvesLoading: boolean;
+  /** The place's Genre/Voice lists haven't arrived yet. */
+  listsLoading: boolean;
+  placeShelves: IdeaShelf[] | null;
+  placeLoading: boolean;
+  onPlaceChange: (place: string) => void;
+  onShelfPick: (song: ShelfSong, shelf: IdeaShelf) => void;
+  liveGenres: GenreShelf[];
+  openGenre: GenreShelf | null;
+  onGenreOpen: (genre: GenreShelf) => void;
+  onGenreBack: () => void;
+  onGenrePick: (song: ShelfSong, genre: GenreShelf) => void;
   activeTab: string;
   onTabSelect: (tabId: string) => void;
   activeCategory: string | null;
@@ -27,14 +54,7 @@ interface DiscoveryBrowserProps {
   onCategoryBack: () => void;
   expandedCategory: boolean;
   onExpandCategory: () => void;
-  selectedLang: string | null;
-  onSelectedLangChange: (langId: string) => void;
-  onSongSelect: (
-    song: SongSuggestion,
-    sectionId: string,
-    categoryId: string,
-    source: 'song_pick' | 'trending'
-  ) => void;
+  onSongSelect: (song: SongSuggestion, sectionId: string, categoryId: string) => void;
   onSurpriseMe: () => void;
   /**
    * Rendered at the top of the scrollable browse area (above the "Song ideas"
@@ -45,10 +65,24 @@ interface DiscoveryBrowserProps {
 }
 
 const DiscoveryBrowser: React.FC<DiscoveryBrowserProps> = ({
-  orderedSections,
-  langPacks,
-  regionalSection,
-  trendingCategory,
+  allSections,
+  lists,
+  place,
+  places,
+  home,
+  atHome,
+  shelves,
+  shelvesLoading,
+  listsLoading,
+  placeShelves,
+  placeLoading,
+  onPlaceChange,
+  onShelfPick,
+  liveGenres,
+  openGenre,
+  onGenreOpen,
+  onGenreBack,
+  onGenrePick,
   activeTab,
   onTabSelect,
   activeCategory,
@@ -56,36 +90,15 @@ const DiscoveryBrowser: React.FC<DiscoveryBrowserProps> = ({
   onCategoryBack,
   expandedCategory,
   onExpandCategory,
-  selectedLang,
-  onSelectedLangChange,
   onSongSelect,
   onSurpriseMe,
   belowSearch,
 }) => {
   const { t } = useT();
-
-  const {
-    TAB_DEFS,
-    langSections,
-    isLangTab,
-    currentSection,
-    currentLang,
-    allVisibleCats,
-    expandedData,
-    parentSection,
-    songs,
-    visible,
-    hasMore,
-  } = buildDiscoveryData({
-    orderedSections,
-    langPacks,
-    regionalSection,
-    activeTab,
+  const { expandedData, parentSection, songs, visible, hasMore } = buildDiscoveryData({
+    allSections,
     activeCategory,
     expandedCategory,
-    selectedLang,
-    trendingCategory,
-    languageTabLabel: t('search.tab.language'),
   });
 
   return (
@@ -93,16 +106,14 @@ const DiscoveryBrowser: React.FC<DiscoveryBrowserProps> = ({
       {/* Rendered inside the scroll container so the room board and the
           idea tabs scroll together instead of the board pinning itself
           above a separately-scrolling ideas list. */}
-      {!expandedData && belowSearch}
-      {!expandedData && (
-        <div className={styles.discoveryHeading}>
-          <span className={styles.discoveryTitle}>{t('search.ideas.title')}</span>
-          <span className={styles.discoverySub}>
-            {t('search.ideas.sub')}
-          </span>
-        </div>
-      )}
-      {expandedData ? (
+      {!expandedData && !openGenre && belowSearch}
+      {openGenre ? (
+        <GenreShelfList
+          genre={openGenre}
+          onBack={onGenreBack}
+          onSelect={(song) => onGenrePick(song, openGenre)}
+        />
+      ) : expandedData ? (
         <CategorySongList
           category={expandedData}
           songs={songs}
@@ -112,44 +123,50 @@ const DiscoveryBrowser: React.FC<DiscoveryBrowserProps> = ({
           onBack={onCategoryBack}
           onExpand={onExpandCategory}
           onSongSelect={(song) =>
-            onSongSelect(
-              song,
-              parentSection?.id ?? activeTab,
-              activeCategory as string,
-              activeCategory === 'trending' ? 'trending' : 'song_pick'
-            )
+            onSongSelect(song, parentSection?.id ?? activeTab, activeCategory as string)
           }
         />
       ) : (
         <>
+          <PlacePicker
+            places={places}
+            value={place}
+            home={home}
+            onChange={onPlaceChange}
+            title={<span className={styles.discoveryTitle}>{t('search.ideas.title')}</span>}
+            sub={<span className={styles.discoverySub}>{t('search.ideas.sub')}</span>}
+          />
           <div className={styles.tabBar}>
-            {TAB_DEFS.map((s) => (
+            {TABS.map((tab) => (
               <button
-                key={s.id}
-                className={`${styles.tabBtn} ${activeTab === s.id ? styles.tabBtnActive : ''}`}
-                onClick={() => onTabSelect(s.id)}
+                key={tab.id}
+                className={`${styles.tabBtn} ${activeTab === tab.id ? styles.tabBtnActive : ''}`}
+                onClick={() => onTabSelect(tab.id)}
               >
-                {s.id === 'language' ? s.label : labelWithFallback(t, `section.${s.id}`, s.label)}
+                {t(tab.labelKey)}
               </button>
             ))}
           </div>
 
-          {isLangTab ? (
-            <>
-              <LanguagePicker
-                langSections={langSections}
-                currentLangId={currentLang?.id}
-                onChange={onSelectedLangChange}
-              />
-              <CategoryGrid
-                categories={currentLang?.categories ?? []}
-                onSelect={(cat) => onCategorySelect(cat, currentLang!.id)}
-              />
-            </>
+          {activeTab === HOT_TAB ? (
+            <HotTab
+              shelves={atHome ? shelves : placeShelves ?? []}
+              loading={atHome ? shelvesLoading : placeLoading}
+              onSongSelect={onShelfPick}
+            />
+          ) : listsLoading ? (
+            <IdeasLoading />
           ) : (
-            <CategoryGrid
-              categories={allVisibleCats}
-              onSelect={(cat) => onCategorySelect(cat, currentSection?.id)}
+            <CategoryGroups
+              groups={activeTab === 'voice-type' ? lists.voice : lists.genres}
+              place={place}
+              sections={allSections}
+              onSelect={(cat, sectionId) => onCategorySelect(cat, sectionId)}
+              afterLocal={
+                activeTab === 'genre' ? (
+                  <LiveGenres genres={liveGenres} onSelect={onGenreOpen} />
+                ) : undefined
+              }
             />
           )}
 

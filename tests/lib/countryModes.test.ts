@@ -8,7 +8,6 @@ import {
   orderSections,
   type SongSection,
 } from "../../app/queue/songSuggestions";
-import { cleanSongTitle } from "../../pages/api/suggestions/trending";
 
 const SECTION_IDS = SONG_SECTIONS.map((s) => s.id);
 const PACKS_DIR = path.join(__dirname, "../../public/suggestions");
@@ -148,26 +147,33 @@ describe("regional pack files", () => {
       expect(builtinSectionIds.has(pack.id)).toBe(false);
       for (const cat of pack.categories) {
         expect(builtinCatIds.has(cat.id), `${packId}/${cat.id}`).toBe(false);
-        expect(cat.id).not.toBe("trending");
       }
     }
   });
 });
 
-describe("cleanSongTitle", () => {
-  it("strips karaoke-video noise", () => {
-    expect(cleanSongTitle("Queen - Bohemian Rhapsody (Karaoke Version)")).toBe(
-      "Queen - Bohemian Rhapsody"
-    );
-    expect(cleanSongTitle("Africa - Toto [Karaoke with Lyrics HD]")).toBe(
-      "Africa - Toto"
-    );
-    expect(cleanSongTitle("Dancing Queen karaoke")).toBe("Dancing Queen");
+describe("song-ideas places", () => {
+  it("every language list is reachable from some charted place", async () => {
+    const { sectionIdForPlace } = await import("../../components/songsearch/placeLists");
+    const { CHART_COUNTRIES } = await import("../../lib/chartCountries");
+    const reachable = new Set(CHART_COUNTRIES.map((cc) => sectionIdForPlace(cc.toUpperCase())));
+    const ids = SONG_SECTIONS.filter((s) => ["spanish", "kpop", "japanese"].includes(s.id))
+      .map((s) => s.id)
+      .concat(LANGUAGE_PACKS.map((p) => loadPack(p.packId).id));
+    for (const id of ids) expect(reachable.has(id), id).toBe(true);
   });
 
-  it("leaves clean titles alone", () => {
-    expect(cleanSongTitle("Mr. Brightside - The Killers")).toBe(
-      "Mr. Brightside - The Killers"
-    );
+  it("every pack's language list names the file it's served from", async () => {
+    const { SECTION_PACK } = await import("../../components/songsearch/placeLists");
+    for (const p of LANGUAGE_PACKS) expect(SECTION_PACK[loadPack(p.packId).id], p.packId).toBe(p.packId);
+  });
+
+  it("every language list carries all four voice ranges", () => {
+    const sections = SONG_SECTIONS.filter((s) => ["spanish", "kpop", "japanese"].includes(s.id))
+      .concat(LANGUAGE_PACKS.map((p) => loadPack(p.packId)));
+    for (const section of sections) {
+      const ranges = section.categories.filter((c) => c.voice).map((c) => c.voice).sort();
+      expect(ranges, section.id).toEqual(["easy", "high", "low", "mid"]);
+    }
   });
 });

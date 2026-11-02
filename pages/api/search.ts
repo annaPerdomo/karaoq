@@ -1,11 +1,17 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { recordSpend } from "../../lib/corpusBudget";
-import { readCache, writeCache, SearchResult } from "../../lib/searchCache";
+import {
+  clearInFlightSearch,
+  getInFlightSearch,
+  searchWithBurstRetry,
+  setInFlightSearch,
+} from "../../lib/liveSearch";
+import { readCache, writeCache } from "../../lib/searchCache";
 import { YoutubeApiError } from "../../lib/youtubeApi";
-import { searchYoutubeApi } from "../../lib/youtubeSearch";
 import { catalogEntry, isCatalogFilters } from "../../lib/suggestionCatalog";
 import { bankSearchEvidence, recordSearchResults } from "../../lib/songCorpus";
 import { readSongCuts } from "../../lib/corpusRead";
+import { findSongForQuery } from "../../lib/corpusLookup";
 import { MAX_ENTRY_ID_LENGTH, markRateLimitNotified, rateLimit } from "../../lib/limits";
 import { normalizeRoomId } from "../../lib/roomCode";
 import {
@@ -35,29 +41,6 @@ const MAX_QUERY_LENGTH = 200;
 // A fortnight, not a day: at 100 searches/day a popular query re-spent 1% of the
 // pool every 24h. Held under the 21-day retention so a fallback window survives.
 const FRESH_CACHE_MS = 14 * 24 * 60 * 60 * 1000;
-
-// Per-instance, but Fluid Compute routes concurrent requests into one instance —
-// exactly the window in which two singers tapping one song burned two searches.
-const inFlightSearches = new Map<string, Promise<SearchResult[]>>();
-
-// YouTube bills no quota for the call it refused, so a burst retry costs the
-// wait and nothing else. A spent day is never retried: it cannot clear before
-// the Pacific reset.
-const BURST_RETRY_MS = 700;
-
-async function searchWithBurstRetry(
-  q: string,
-  duration: string,
-  sortBy: string
-): Promise<SearchResult[]> {
-  try {
-    return await searchYoutubeApi(q, duration, sortBy);
-  } catch (e: any) {
-    if (!(e instanceof YoutubeApiError) || e.limit !== "burst") throw e;
-    await new Promise((resolve) => setTimeout(resolve, BURST_RETRY_MS));
-    return searchYoutubeApi(q, duration, sortBy);
-  }
-}
 
 /** Cuts are appended, never overwritten, so a crafted operator query would answer
  *  its folded song for every room. Five catalog songs wear the punctuation
@@ -168,7 +151,7 @@ export default async function handler(
     cached && cached.results.length > 0 ? cached.results : null;
 
   // Before the rate limit, which only meters live spends.
-  const pending = inFlightSearches.get(cacheKey);
+  const pending = getInFlightSearch(cacheKey);
   if (pending) {
     try {
       const results = await pending;
@@ -211,7 +194,7 @@ export default async function handler(
   }
 
   const live = searchWithBurstRetry(normalizedQ, duration, sortBy);
-  inFlightSearches.set(cacheKey, live);
+  setInFlightSearch(cacheKey, live);
   try {
     const results = await live;
     writeCache(cacheKey, results);
@@ -266,7 +249,8 @@ export default async function handler(
     // The nightly resolver may already have bought this song's cuts out of a
     // quota that is gone by the time a singer types its name.
     if (isCatalogFilters(duration, sortBy)) {
-      const cuts = await readSongCuts(queryKey);
+      const songId = await findSongForQuery(normalizedQ);
+      const cuts = songId ? await readSongCuts(songId) : null;
       if (cuts) {
         await trackEvent(req, "search_failed", {
           roomId,
@@ -317,8 +301,6 @@ export default async function handler(
 
     res.status(502).json({ code: 502, message: "Search is temporarily unavailable." });
   } finally {
-    // A follower whose leader failed starts a fresh search under the same key;
-    // the leader's cleanup must not delete it.
-    if (inFlightSearches.get(cacheKey) === live) inFlightSearches.delete(cacheKey);
+    clearInFlightSearch(cacheKey, live);
   }
 }

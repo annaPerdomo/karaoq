@@ -23,3 +23,6 @@ export const SORT_OPTIONS: { value: SortOrder; tKey: string }[] = [
 export const LANG_IDS = ['spanish', 'kpop', 'japanese'];
 
 export const INITIAL_CATEGORY_SONGS = 8;
+
+/** The synthetic first tab holding the hot/rooms shelves (lib/shelves). */
+export const HOT_TAB = 'hot';

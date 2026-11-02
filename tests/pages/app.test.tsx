@@ -15,6 +15,7 @@ vi.mock("next/router", () => ({
     pathname: "/remote/[joinCode]",
     asPath: "/remote/ABCDE#k=super-secret-key",
     isReady: true,
+    events: { on: () => {}, off: () => {} },
   }),
 }));
 

@@ -115,13 +115,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       res.status(409).json({ code: 409, message: "Someone already claimed this one." });
       return;
     }
-    trackEvent(req, "suggestion_claimed", {
+    const suggestionClaimedTracked = trackEvent(req, "suggestion_claimed", {
       roomId,
       userName,
       songTitle: suggestion.songTitle,
       videoId: suggestion.videoId,
     });
-    trackEvent(req, "song_added", {
+    const songAddedTracked = trackEvent(req, "song_added", {
       roomId,
       userName,
       songTitle: suggestion.songTitle,
@@ -130,6 +130,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       singers: singerKeys(userName).length,
     });
     res.status(200).json({ code: 200, message: "Added to queue." });
+    await Promise.all([suggestionClaimedTracked, songAddedTracked]);
   } catch (e) {
     console.error(e);
     res.status(500).json({ code: 500, message: "Internal server error." });

@@ -33,6 +33,7 @@ import {
   demandKey,
   recordSearchDemand,
 } from "../../lib/searchDemand";
+import { resetSongIndexCache } from "../../lib/corpusLookup";
 import {
   searchDemandScores,
   wantedRowFrom,
@@ -42,10 +43,23 @@ import {
 const demand = () => collection("search_demand");
 const songs = () => collection("karaoke_songs");
 
+/** A song the loose index can actually resolve — title and artist set, unlike
+ *  the blank `held()` fixtures the exact-$lookup tests use below. */
+function titledSong(over: Record<string, unknown> = {}) {
+  songs().seed({
+    _id: "the killers mr brightside karaoke",
+    artist: "The Killers",
+    title: "Mr Brightside",
+    cuts: ["v1"],
+    ...over,
+  });
+}
+
 beforeEach(() => {
   // The instances go, not just their rows: tests below stub a method to force a
   // failure, and one left in place silently empties every test after it.
   collections.clear();
+  resetSongIndexCache();
 });
 
 const search = (query: string, over: Record<string, unknown> = {}) =>
@@ -369,6 +383,19 @@ describe("wantedSearches", () => {
     expect(report.matched).toBe(0);
     expect(report.totals.searches).toBe(0);
   });
+
+  it("leaves out a row the exact lookup missed but the loose index answers", async () => {
+    titledSong();
+    await asked("mr brightside", ["PH"]);
+    await asked("Totally Unknown Song", ["PH"]);
+
+    const report = await wantedSearches({ gapsOnly: true });
+
+    expect(report.rows.map((row) => row.key)).toEqual([
+      demandKey("Totally Unknown Song"),
+    ]);
+    expect(report.matched).toBe(1);
+  });
 });
 
 describe("searchDemandScores", () => {
@@ -389,6 +416,19 @@ describe("searchDemandScores", () => {
     });
   });
 
+  it("folds a short and a long search for one song onto the one score", async () => {
+    titledSong();
+    await search("mr brightside", { country: "PH", roomId: "R-PH" });
+    await search("the killers mr brightside", { country: "DE", roomId: "R-DE" });
+
+    const scores = await searchDemandScores();
+
+    expect(scores.get("the killers mr brightside karaoke")).toEqual({
+      searches: 2,
+      countries: 2,
+    });
+  });
+
   it("hands the resolver an empty map when the ledger cannot be read", async () => {
     const broken = demand();
     broken.aggregate = () => {
@@ -396,5 +436,20 @@ describe("searchDemandScores", () => {
     };
 
     await expect(searchDemandScores()).resolves.toEqual(new Map());
+  });
+
+  it("still scores the ledger by its own keys when the index can't be built", async () => {
+    const brokenSongs = songs();
+    brokenSongs.find = () => {
+      throw new Error("no");
+    };
+    await search("Mag Dungan Ta", { country: "PH", roomId: "R1" });
+
+    const scores = await searchDemandScores();
+
+    expect(scores.get(demandKey("Mag Dungan Ta"))).toEqual({
+      searches: 1,
+      countries: 1,
+    });
   });
 });

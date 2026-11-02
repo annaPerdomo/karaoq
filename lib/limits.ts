@@ -1,6 +1,8 @@
 import type { NextApiRequest } from "next";
-import type { DisplayConfig, FeedbackKind, HostConfig, QueueEntry, SingWithMePost, SuggestedSong } from "../pages/api/types";
+import type { DisplayConfig, FeedbackKind, HostConfig, QueueEntry, RoomBrand, SingWithMePost, SuggestedSong } from "../pages/api/types";
 import { DISPLAY_THEMES as DISPLAY_THEME_LIST, FEEDBACK_KINDS } from "../pages/api/types";
+import { sanitizeRef } from "./firstTouch";
+import { clientIp } from "./platform";
 import { VIDEO_ID_RE } from "./videoLink";
 
 // Server-side caps on anonymous writes: the UI enforces friendlier limits; these stop curl from
@@ -28,6 +30,7 @@ export interface SanitizedFeedback {
   roomId?: string;
   role?: "host" | "singer";
   page?: string;
+  ref?: string;
 }
 
 /** The message is the only field that can reject a submission; the rest fall
@@ -55,6 +58,7 @@ export function sanitizeFeedback(body: unknown): SanitizedFeedback | null {
     roomId: capped(e.roomId, MAX_ENTRY_ID_LENGTH),
     role: e.role === "host" || e.role === "singer" ? e.role : undefined,
     page: capped(e.page, MAX_FEEDBACK_PAGE_LENGTH),
+    ref: sanitizeRef(typeof e.ref === "string" ? e.ref : undefined),
   };
 }
 
@@ -281,6 +285,37 @@ export function isValidHostConfig(value: unknown): value is HostConfig {
   );
 }
 
+// Logos share the 512MB free tier with everything else (lib/roomLogos).
+export const LOGO_MAX_BYTES = 64 * 1024;
+export const LOGO_STORE_BUDGET_BYTES = 25 * 1024 * 1024;
+export const LOGO_HASH_RE = /^[0-9a-f]{16}$/;
+const BRAND_COLOR_RE = /^#[0-9a-f]{6}$/i;
+const ROOM_BRAND_KEYS = new Set(["logo", "accentA", "accentB", "logoScale"]);
+export const LOGO_SCALE_MIN = 0.5;
+export const LOGO_SCALE_MAX = 2;
+
+function isValidLogoScale(value: unknown): boolean {
+  return (
+    typeof value === "number" &&
+    Number.isFinite(value) &&
+    value >= LOGO_SCALE_MIN &&
+    value <= LOGO_SCALE_MAX &&
+    Math.round(value * 100) / 100 === value
+  );
+}
+
+export function isValidRoomBrand(b: unknown): b is RoomBrand {
+  if (!b || typeof b !== "object" || Array.isArray(b)) return false;
+  const e = b as Record<string, unknown>;
+  if (Object.keys(e).some((k) => !ROOM_BRAND_KEYS.has(k))) return false;
+  return (
+    (e.logo === undefined || (typeof e.logo === "string" && LOGO_HASH_RE.test(e.logo))) &&
+    (e.accentA === undefined || (typeof e.accentA === "string" && BRAND_COLOR_RE.test(e.accentA))) &&
+    (e.accentB === undefined || (typeof e.accentB === "string" && BRAND_COLOR_RE.test(e.accentB))) &&
+    (e.logoScale === undefined || isValidLogoScale(e.logoScale))
+  );
+}
+
 // In-memory, per serverless instance: the effective global limit is (limit × warm instances).
 // Abuse protection, not fairness.
 const buckets = new Map<string, { count: number; resetAt: number; notified?: boolean }>();
@@ -293,12 +328,7 @@ export function __resetRateLimits(): void {
 }
 
 function bucketKey(req: NextApiRequest, scope: string): string {
-  const forwarded = req.headers["x-forwarded-for"];
-  const ip =
-    (typeof forwarded === "string" ? forwarded.split(",")[0].trim() : null) ||
-    req.socket?.remoteAddress ||
-    "unknown";
-  return `${scope}:${ip}`;
+  return `${scope}:${clientIp(req)}`;
 }
 
 // True once per throttled window, for callers that want to *record* being

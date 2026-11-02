@@ -5,6 +5,7 @@ import QuotaToday from './QuotaToday';
 import QuotaCache from './QuotaCache';
 import QuotaHistory from './QuotaHistory';
 import QuotaRooms from './QuotaRooms';
+import QuotaMopUpSongs from './QuotaMopUpSongs';
 import QuotaLedger from './QuotaLedger';
 
 export default function QuotaView({
@@ -43,6 +44,7 @@ export default function QuotaView({
   const today = ledger?.today ?? '';
   const day = roomsByDay.find((d) => d.day === (selectedDay ?? today));
   const todayRooms = roomsByDay[roomsByDay.length - 1];
+  const billedDay = ledger?.billedByDay?.find((d) => d.day === (selectedDay ?? today));
 
   return (
     <div className={styles.view}>
@@ -77,12 +79,15 @@ export default function QuotaView({
           />
           {roomsByDay.length > 0 && (
             <QuotaHistory
+              billedByDay={ledger.billedByDay}
               roomsByDay={roomsByDay}
+              quota={ledger.quota}
               selectedDay={day?.day ?? today}
               onSelectDay={setSelectedDay}
             />
           )}
           {day && <QuotaRooms day={day} today={today} onOpenRoom={onOpenRoom} />}
+          {billedDay && <QuotaMopUpSongs day={billedDay} today={today} />}
           {ledger.sourcesByDay && <QuotaCache sourcesByDay={ledger.sourcesByDay} />}
           <QuotaLedger data={ledger} />
         </>

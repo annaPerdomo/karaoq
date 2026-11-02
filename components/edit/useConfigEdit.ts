@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { SidebarPosition } from '../../pages/api/types';
+import { DisplayTheme, SidebarPosition } from '../../pages/api/types';
 import { SIDEBAR_WIDTH_MIN, SIDEBAR_WIDTH_MAX } from '../../lib/limits';
 import { configsEqual } from './configEquality';
 import { useScalarDrag } from './hooks/useScalarDrag';
@@ -8,6 +8,7 @@ interface SurfaceLayout {
   sidebarPosition: SidebarPosition;
   sidebarWidth: number;
   nowPlayingHeight: number;
+  theme: DisplayTheme;
 }
 
 /** How long a fresh save outranks the server: the slowest poll (host's 3s) plus
@@ -24,6 +25,8 @@ export function useConfigEdit<C extends SurfaceLayout, Id extends string>(opts: 
   extraDirty?: boolean;
   onReset?: () => void;
   scale?: number;
+  // A TV renders the sidebar boosted, so its width drag converts at that scale.
+  sidebarScale?: number;
 }) {
   const {
     joinCode,
@@ -35,6 +38,7 @@ export function useConfigEdit<C extends SurfaceLayout, Id extends string>(opts: 
     extraDirty = false,
     onReset,
     scale = 1,
+    sidebarScale = scale,
   } = opts;
 
   const [editing, setEditing] = React.useState(false);
@@ -88,6 +92,8 @@ export function useConfigEdit<C extends SurfaceLayout, Id extends string>(opts: 
     return () => window.removeEventListener('beforeunload', warn);
   }, [dirty]);
 
+  const themeAtEnterRef = React.useRef(settled.theme);
+
   function reset() {
     setDraft(settled);
     setSelected(null);
@@ -98,6 +104,7 @@ export function useConfigEdit<C extends SurfaceLayout, Id extends string>(opts: 
 
   function enter() {
     reset();
+    themeAtEnterRef.current = settled.theme;
     setEditing(true);
   }
 
@@ -114,12 +121,18 @@ export function useConfigEdit<C extends SurfaceLayout, Id extends string>(opts: 
     if (!joinCode) return;
     setSaving(true);
     setSaveFailed(false);
+    // A draft that never touched the theme must not revert one another device
+    // saved while this edit sat open — send the live (settled) theme instead.
+    const outgoing =
+      draft.theme === themeAtEnterRef.current && draft.theme !== settled.theme
+        ? { ...draft, theme: settled.theme }
+        : draft;
     setSaveForbidden(false);
-    const result = await persist(joinCode, draft);
+    const result = await persist(joinCode, outgoing);
     setSaving(false);
     if (result === true) {
-      setJustSaved(draft);
-      onSaved(draft);
+      setJustSaved(outgoing);
+      onSaved(outgoing);
       setSelected(null);
       setEditing(false);
     } else {
@@ -152,7 +165,7 @@ export function useConfigEdit<C extends SurfaceLayout, Id extends string>(opts: 
     min: SIDEBAR_WIDTH_MIN,
     max: SIDEBAR_WIDTH_MAX,
     axis: 'x',
-    scale,
+    scale: sidebarScale,
     step: 20,
     invert: draft.sidebarPosition === 'right',
     onChange: (sidebarWidth) => change({ sidebarWidth } as Partial<C>),

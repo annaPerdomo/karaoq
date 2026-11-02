@@ -124,9 +124,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Lowering "singers needed" to at or below the number already joined makes
     // the post ready, and no further join is coming to notice that.
-    const queued = await queueSingWithMeIfReady(collection, roomId, postId, req);
+    const { queued, tracked } = await queueSingWithMeIfReady(collection, roomId, postId, req);
 
     res.status(200).json({ code: 200, message: "Updated.", queued });
+    await Promise.all(tracked);
   } catch (e) {
     console.error(e);
     res.status(500).json({ code: 500, message: "Internal server error." });

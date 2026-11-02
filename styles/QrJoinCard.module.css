@@ -39,10 +39,11 @@
   flex-shrink: 0;
 }
 
-/* --qr-scale is set inline from the host's dragged QR size. */
+/* --qr-scale is set inline from the host's dragged QR size; --sb-boost from the
+   display's TV sidebar boost (unset on host). */
 .label {
-  font-size: calc(0.65rem * var(--qr-scale, 1));
-  letter-spacing: calc(2px * var(--qr-scale, 1));
+  font-size: calc(0.65rem * var(--qr-scale, 1) * var(--sb-boost, 1));
+  letter-spacing: calc(2px * var(--qr-scale, 1) * var(--sb-boost, 1));
   color: #ffd700;
   text-transform: uppercase;
   font-weight: 700;
@@ -50,7 +51,7 @@
 }
 
 .alt {
-  font-size: calc(0.75rem * var(--qr-scale, 1));
+  font-size: calc(0.75rem * var(--qr-scale, 1) * var(--sb-boost, 1));
   color: var(--text-muted);
   line-height: 1.4;
 }

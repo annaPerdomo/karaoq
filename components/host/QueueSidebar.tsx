@@ -1,4 +1,5 @@
 import * as React from "react";
+import type { RoomTiming } from "../hooks/useRoomTiming";
 import { DragEndEvent } from "@dnd-kit/core";
 import styles from "../../styles/Host.module.css";
 import p from "../../styles/DisplayDesigner.module.css";
@@ -11,11 +12,13 @@ import { Icons } from "./icons";
 import { SidebarSections, HostSidebarEdit } from "./SidebarSections";
 import { UpNextTab } from "./UpNextTab";
 import { HistoryTab } from "./HistoryTab";
+import { MusicVideoCard, musicVideoCardVisible } from "./MusicVideoCard";
 import { QueueEstimate } from "../../lib/queueTime";
 
 export function QueueSidebar({
   remote,
   roomEmpty,
+  stageOffersAdd,
   sidebarCollapsed,
   onExpandSidebar,
   onCollapseSidebar,
@@ -43,6 +46,9 @@ export function QueueSidebar({
   reactionsOn,
   isPlaying,
   currentSong,
+  musicVideoAt,
+  songClock,
+  onSwapVideo,
   cheersOpen,
   onToggleCheers,
   onSendReaction,
@@ -66,6 +72,8 @@ export function QueueSidebar({
 }: {
   remote: boolean;
   roomEmpty: boolean;
+  /** EmptyStage shows its own Add; phones hide this one. */
+  stageOffersAdd: boolean;
   sidebarCollapsed: boolean;
   onExpandSidebar: () => void;
   onCollapseSidebar: () => void;
@@ -95,6 +103,11 @@ export function QueueSidebar({
   reactionsOn: boolean;
   isPlaying: boolean;
   currentSong: QueueEntry | undefined;
+  /** Room.musicVideoAt, as an ISO string — gates the music-video swap card. */
+  musicVideoAt: string | null;
+  songClock: Pick<RoomTiming, "playStartedAt" | "playPausedAt">;
+  /** Absent for co-hosts. */
+  onSwapVideo?: (entryId: string) => void;
   cheersOpen: boolean;
   onToggleCheers: () => void;
   onSendReaction: (emoji: string) => void;
@@ -153,11 +166,19 @@ export function QueueSidebar({
       </div>
 
       <button
-        className={`${styles.addSongBtn} ${searchOpen ? styles.addSongBtnActive : ""}`}
+        className={`${styles.addSongBtn} ${searchOpen ? styles.addSongBtnActive : ""} ${stageOffersAdd ? styles.addSongBtnStageDup : ""}`}
         onClick={onToggleSearch}
       >
         {Icons.plus} {t('host.sidebar.addSong')}
       </button>
+
+      {joinCode && musicVideoCardVisible(remote, musicVideoAt, currentSong) && (
+        <MusicVideoCard
+          joinCode={joinCode}
+          activeEntry={currentSong as QueueEntry}
+          playback={{ isPlaying, ...songClock }}
+        />
+      )}
 
       {sidebarTab === "queue" && (
         <UpNextTab
@@ -173,6 +194,7 @@ export function QueueSidebar({
           onMoveTop={onMoveTop}
           onToggleEdit={onToggleEdit}
           onEditSave={onEditSave}
+          onSwapVideo={onSwapVideo}
           onRequestRemove={onRequestRemove}
         />
       )}

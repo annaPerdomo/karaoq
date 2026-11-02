@@ -20,6 +20,16 @@ export default function HomeFooter() {
               </Link>
             </li>
           ))}
+          <li>
+            <Link href="/songs" prefetch={false} className={styles.footerGuidesLink}>
+              {t('songs.footerLink')}
+            </Link>
+          </li>
+          <li>
+            <Link href="/whats-new" className={styles.footerGuidesLink}>
+              {t('whatsNew.footerLink')}
+            </Link>
+          </li>
         </ul>
       </nav>
       <div className={styles.footerInner}>

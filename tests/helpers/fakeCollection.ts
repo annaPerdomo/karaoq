@@ -98,26 +98,6 @@ function compare(a: unknown, b: unknown): number {
   return (x as any) < (y as any) ? -1 : 1;
 }
 
-/** "$field" reads the doc, { $size: "$field" } counts it, { $ifNull: [a, b] }
- *  defaults it, anything else is a literal. */
-function exprValue(doc: Doc, node: any): any {
-  if (typeof node === "string" && node.charAt(0) === "$") return readPath(doc, node.slice(1));
-  if (node && typeof node === "object" && "$ifNull" in node) {
-    const [held, fallback] = node.$ifNull as [unknown, unknown];
-    const value = exprValue(doc, held);
-    return value === undefined || value === null ? exprValue(doc, fallback) : value;
-  }
-  if (node && typeof node === "object" && "$size" in node) {
-    const held = exprValue(doc, node.$size);
-    // Mongo errors on a $size over a missing field; a guard that means to
-    // tolerate one wraps it in $ifNull, so reaching here with a non-array is
-    // the test's bug and not something to paper over.
-    if (!Array.isArray(held)) throw new Error("$size over a non-array");
-    return held.length;
-  }
-  return node;
-}
-
 function matchesExpr(doc: Doc, expr: Doc): boolean {
   const entries = Object.entries(expr);
   if (entries.length !== 1) throw new Error("fakeCollection supports one $expr operator");
@@ -125,7 +105,9 @@ function matchesExpr(doc: Doc, expr: Doc): boolean {
   if (!Array.isArray(operands) || operands.length !== 2) {
     throw new Error(`fakeCollection supports only two-operand $expr, got ${op}`);
   }
-  const order = compare(exprValue(doc, operands[0]), exprValue(doc, operands[1]));
+  // Shared with the aggregation pipeline below, so a filter and a $project can
+  // use the same operators ($add, $setUnion, $map, …) without a second set.
+  const order = compare(aggValue(doc, operands[0]), aggValue(doc, operands[1]));
   switch (op) {
     case "$eq":
       return order === 0;
@@ -189,12 +171,14 @@ function matchesValue(value: unknown, condition: any): boolean {
   });
 }
 
-/** A path crossing an array reads the field off every element — how Mongo finds
- *  a cache entry by one of the rows it holds. */
+/** A path crossing an array reads the field off every element, as Mongo does
+ *  for a cache entry keyed by one of several rows. Exception: a trailing numeric
+ *  segment is a literal index, so "cuts.0" exists iff the array is non-empty. */
 function readMatchPath(doc: Doc, path: string): unknown {
   return path.split(".").reduce<any>((node, key) => {
     if (node == null) return node;
     if (Array.isArray(node)) {
+      if (/^\d+$/.test(key)) return node[Number(key)];
       const held = node.map((item) => item?.[key]).filter((v) => v !== undefined);
       return held.length > 0 ? held : undefined;
     }
@@ -265,6 +249,27 @@ function aggValue(doc: Doc, node: any): any {
       const [held, index] = operand as [unknown, number];
       const list = aggValue(doc, held);
       return Array.isArray(list) ? list[index] : undefined;
+    }
+    case "$add": {
+      const nums = (operand as unknown[]).map((h) => aggValue(doc, h));
+      return nums.reduce((sum: number, n) => sum + (Number(n) || 0), 0);
+    }
+    case "$setUnion": {
+      const arrays = (operand as unknown[]).map((h) => aggValue(doc, h));
+      const set = new Set<unknown>();
+      for (const arr of arrays) {
+        if (!Array.isArray(arr)) throw new Error("$setUnion over a non-array");
+        for (const v of arr) set.add(v);
+      }
+      return Array.from(set);
+    }
+    case "$map": {
+      // "$$this" is read through the normal "$"-prefixed path lookup, bound by
+      // stashing the element at doc.$this for the duration of `in`.
+      const { input, in: inExpr } = operand as { input: unknown; in: unknown };
+      const list = aggValue(doc, input);
+      if (!Array.isArray(list)) throw new Error("$map over a non-array");
+      return list.map((item) => aggValue({ ...doc, $this: item }, inExpr));
     }
     case "$gt":
     case "$gte":
@@ -491,6 +496,7 @@ export function fakeCollection(lookup?: LookupFrom) {
           projection = spec;
           return cursor;
         },
+        maxTimeMS: (_ms: number) => cursor,
         toArray: async () =>
           found.map((doc) => project(copy(doc), projection)),
       };
@@ -517,6 +523,19 @@ export function fakeCollection(lookup?: LookupFrom) {
         }
       }
       return apply(id, update, options);
+    },
+    replaceOne: async (filter: Doc, doc: Doc, options?: UpdateOptions) => {
+      const id = filter._id as string;
+      if (!docs.has(id) && !options?.upsert) {
+        return { matchedCount: 0, modifiedCount: 0, upsertedCount: 0 };
+      }
+      const existed = docs.has(id);
+      docs.set(id, copy({ ...doc, _id: id }));
+      return {
+        matchedCount: existed ? 1 : 0,
+        modifiedCount: existed ? 1 : 0,
+        upsertedCount: existed ? 0 : 1,
+      };
     },
     bulkWrite: async (
       ops: { updateOne: { filter: Doc; update: UpdateSpec; upsert?: boolean } }[]

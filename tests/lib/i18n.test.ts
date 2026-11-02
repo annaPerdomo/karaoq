@@ -120,4 +120,11 @@ describe("locale catalogs", () => {
       expect(catalog["footer.credit"], locale).toContain("♥");
     }
   );
+
+  it("en does not promise text cheers", () => {
+    for (const [key, value] of Object.entries(en as Record<string, string>)) {
+      if (!key.includes("cheer") && key !== "home.feature5.desc") continue;
+      expect(value.toLowerCase(), key).not.toMatch(/\bmessage|\bwords\b/);
+    }
+  });
 });

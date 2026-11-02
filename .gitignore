@@ -51,3 +51,5 @@ NEXT_STEPS.md
 
 # claude code local tooling (skills, settings, worktrees)
 /.claude/ 
+# prompt packs (local, reviewed in-editor)
+prompts/

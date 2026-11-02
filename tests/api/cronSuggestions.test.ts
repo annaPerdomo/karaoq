@@ -30,16 +30,48 @@ vi.mock("../../lib/suggestionDemand", async (importOriginal) => ({
   suggestionDemand: vi.fn(async () => new Map<string, number>()),
 }));
 
+// Apple's feed is its own step (tests/lib/chartFeed.test.ts); stubbed here so
+// the cron's wiring of it doesn't make a real network call.
+vi.mock("../../lib/chartFeed", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../lib/chartFeed")>()),
+  feedCharts: vi.fn(async () => ({
+    done: true,
+    report: { countries: [], fetched: 0, added: 0, alreadyKnown: 0, errors: [] },
+  })),
+}));
+
+vi.mock("../../lib/genreFeed", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../lib/genreFeed")>()),
+  feedGenreCharts: vi.fn(async () => ({
+    done: true,
+    report: { countries: [], fetched: 0, added: 0, alreadyKnown: 0, errors: [] },
+  })),
+}));
+
+// The real catalog is ~1,100 songs; seeding it here would bury every resolver
+// test's handful. lib/catalogSync has its own tests.
+vi.mock("../../lib/catalogSync", () => ({
+  syncCatalog: async () => ({ done: true, report: { catalog: 0, seeded: 0 } }),
+}));
+
+// The prune has its own tests (tests/lib/roomLogos.test.ts); here only its wiring.
+vi.mock("../../lib/roomLogos", () => ({
+  pruneOrphanLogos: vi.fn(async () => 0),
+}));
+
 process.env.MONGODB_URI = "mongodb://test";
 process.env.MONGODB_DB = "test-db";
 process.env.YOUTUBE_API_KEY = "test-key";
 
 import handler from "../../pages/api/cron/suggestions";
-import { ledgerDay, recordSpend, SEARCH_DAY_QUOTA } from "../../lib/corpusBudget";
+import { DAY_CALL_QUOTA, ledgerDay, recordSpend, SEARCH_CALLS } from "../../lib/corpusBudget";
 import { MIGRATION_ID } from "../../lib/corpusMigration";
+import { REPAIR_ID } from "../../lib/corpusPromote";
 import { pacificDayKey, quotaResetsAtMs } from "../../lib/pacificTime";
 import { resetQuotaAlertMemo } from "../../lib/alerts";
 import { resetSearchQuotaStatusCache } from "../../lib/searchQuotaStatus";
+import { pruneOrphanLogos } from "../../lib/roomLogos";
+import { songKeyFor } from "../../lib/songEntry";
 import { suggestionCatalog, type CatalogEntry } from "../../lib/suggestionCatalog";
 
 const songs = () => collection("karaoke_songs");
@@ -191,6 +223,12 @@ function migrationDone(): void {
   state().seed({ _id: MIGRATION_ID, done: true, updatedAt: new Date() });
 }
 
+/** The repair is a one-off; a test exercising some other step pre-marks it
+ *  done so it doesn't sweep up that test's own origin: "demand" fixtures. */
+function repairDone(): void {
+  state().seed({ _id: REPAIR_ID, done: true, updatedAt: new Date() });
+}
+
 const catalogEntries = Array.from(suggestionCatalog().values());
 
 /** Reachable with a plain "<artist> <title>" upload title, unlike the
@@ -261,7 +299,7 @@ beforeEach(() => {
   process.env.KARAOKE_CHANNELS = CHANNEL;
   delete process.env.KARAOKE_PLAYLISTS;
   delete process.env.SUGGESTION_RESOLVE_PER_DAY;
-  delete process.env.SUGGESTION_DAY_QUOTA;
+  delete process.env.YOUTUBE_DAY_CALLS;
 });
 
 afterEach(() => {
@@ -322,6 +360,7 @@ describe("GET /api/cron/suggestions - the run budget", () => {
 
   it("spends a tight budget on the sweep before the harvest starts", async () => {
     migrationDone();
+    repairDone();
     seedSong(PLAIN, ["live1"]);
     seedVideo("live1");
     api.uploads = [{ videoId: "up1", title: `${PLAIN.artist} ${PLAIN.title} (Karaoke)` }];
@@ -344,7 +383,10 @@ describe("GET /api/cron/suggestions - the run budget", () => {
 });
 
 describe("GET /api/cron/suggestions - one run at a time", () => {
-  beforeEach(migrationDone);
+  beforeEach(() => {
+    migrationDone();
+    repairDone();
+  });
 
   it("skips a slot that overlaps a run still holding the lease", async () => {
     state().seed({
@@ -376,6 +418,7 @@ describe("GET /api/cron/suggestions - one run at a time", () => {
 describe("GET /api/cron/suggestions - the daily quota ledger", () => {
   beforeEach(() => {
     migrationDone();
+    repairDone();
     process.env.SUGGESTION_RESOLVE_PER_DAY = "2";
     seedSong(catalogEntries[0], [], 30);
     seedSong(catalogEntries[1], [], 20);
@@ -452,8 +495,9 @@ describe("GET /api/cron/suggestions - the mop-up slot", () => {
 
   beforeEach(() => {
     migrationDone();
+    repairDone();
     process.env.SUGGESTION_RESOLVE_PER_DAY = "2";
-    process.env.SUGGESTION_DAY_QUOTA = "10";
+    process.env.YOUTUBE_DAY_CALLS = "18";
     for (const entry of catalogEntries.slice(0, 8)) seedSong(entry, [], 30);
     api.searchHits = [{ videoId: "hit1", title: "One (Karaoke)" }];
     fakeClock(quotaResetsAtMs(new Date()) - 10 * 60_000);
@@ -462,11 +506,39 @@ describe("GET /api/cron/suggestions - the mop-up slot", () => {
   it("buys the day's remainder rather than the nightly cap", async () => {
     await recordSpend(Date.now(), { searches: 4 });
 
-    // 10 searches' worth of units less the 4 the day has spent, where a normal
-    // slot would take 2. Five, not six: each search also costs its one
-    // enrichment unit (lib/corpusBudget estimateUnits).
+    // 18 calls minus the 4 searches already spent (8 calls) leaves 5.
     expect((await mop()).resolve).toMatchObject({ searched: 5 });
     expect(ledger()).toMatchObject({ searches: 9, cronSearches: 5 });
+  });
+
+  it("bills its searches as the mop-up's share and keeps what each one found", async () => {
+    await recordSpend(Date.now(), { searches: 4 });
+
+    await mop();
+
+    expect(ledger()).toMatchObject({ searches: 9, cronSearches: 5, mopUpSearches: 5 });
+    expect(ledger().mopUp.songs).toHaveLength(5);
+    expect(ledger().mopUp.songs[0]).toMatchObject({ outcome: "new", cutsAdded: 1 });
+  });
+
+  it("adds a retry's searches to the first run's instead of replacing them", async () => {
+    await recordSpend(Date.now(), { searches: 4 });
+    await mop();
+    const first = ledger().mopUp.songs;
+    process.env.YOUTUBE_DAY_CALLS = "24";
+
+    await mop();
+
+    // The chart's mop-up segment and the song list count the same searches.
+    const { mopUpSearches, mopUp } = ledger();
+    expect(mopUpSearches).toBeGreaterThan(first.length);
+    expect(mopUp.searched).toBe(mopUpSearches);
+    expect(mopUp.songs).toHaveLength(mopUpSearches);
+    expect(mopUp.songs.slice(0, first.length)).toEqual(first);
+  });
+
+  it("leaves the song list out of the run's log", async () => {
+    expect((await mop()).resolve.songs).toBeUndefined();
   });
 
   it("counts the rooms' searches against the remainder, not just its own", async () => {
@@ -498,6 +570,15 @@ describe("GET /api/cron/suggestions - the mop-up slot", () => {
     });
   });
 
+  it("writes nothing for a ping that lands after midnight Pacific", async () => {
+    fakeClock(quotaResetsAtMs(new Date()) + 53 * 60_000);
+
+    const body = (await request({ slot: "4", mopUp: "1" })).getBody();
+
+    expect(body).toMatchObject({ skipped: "outside mop-up window", slot: "4" });
+    expect(ledger()).toBeNull();
+  });
+
   it("lets a real run inside the window overwrite an earlier outside-window skip", async () => {
     fakeClock(quotaResetsAtMs(new Date()) - 3 * 60 * 60_000);
     await request({ slot: "3", mopUp: "1" });
@@ -520,12 +601,12 @@ describe("GET /api/cron/suggestions - the mop-up slot", () => {
   it("ignores live rooms inside its window and spends the whole remainder", async () => {
     collection("rooms").seed({ _id: "LIVE1", id: "LIVE1", lastActivity: new Date(Date.now()) });
     collection("rooms").seed({ _id: "LIVE2", id: "LIVE2", lastActivity: new Date(Date.now()) });
-    process.env.SUGGESTION_DAY_QUOTA = "20";
+    process.env.YOUTUBE_DAY_CALLS = "38";
     for (const entry of catalogEntries.slice(8, 20)) seedSong(entry, [], 30);
 
     const body = (await request({ slot: "3", mopUp: "1" })).getBody();
 
-    // 20 searches' worth of units affords 19 once each pays its enrichment unit.
+    // 38 calls is 19 searches' worth — one short of the 20 songs seeded.
     expect(body.steps.resolve).toMatchObject({ searched: 19 });
     expect(body.gates.liveRooms).toBe(2);
   });
@@ -563,6 +644,7 @@ describe("GET /api/cron/suggestions - the mop-up slot", () => {
 describe("GET /api/cron/suggestions - giving way to the rooms", () => {
   beforeEach(() => {
     migrationDone();
+    repairDone();
     process.env.SUGGESTION_RESOLVE_PER_DAY = "2";
     seedSong(catalogEntries[0], [], 30);
     seedSong(catalogEntries[1], [], 20);
@@ -580,7 +662,7 @@ describe("GET /api/cron/suggestions - giving way to the rooms", () => {
 
   /** The ledger can afford no more searches (lib/searchQuotaStatus). */
   function quotaOutToday(): Promise<void> {
-    return recordSpend(Date.now(), { searches: SEARCH_DAY_QUOTA });
+    return recordSpend(Date.now(), { searches: Math.ceil(DAY_CALL_QUOTA / SEARCH_CALLS) });
   }
 
   it("leaves the day's searches to a room that is mid-session", async () => {
@@ -654,7 +736,10 @@ describe("GET /api/cron/suggestions - giving way to the rooms", () => {
 });
 
 describe("GET /api/cron/suggestions - the run's clock", () => {
-  beforeEach(migrationDone);
+  beforeEach(() => {
+    migrationDone();
+    repairDone();
+  });
 
   it("caps the harvest so the search step is never handed a spent clock", async () => {
     seedSong(PLAIN, [], 30);
@@ -684,8 +769,71 @@ describe("GET /api/cron/suggestions - the run's clock", () => {
   });
 });
 
-describe("GET /api/cron/suggestions - sweep", () => {
+describe("GET /api/cron/suggestions - repair", () => {
+  const prevVercelEnv = process.env.VERCEL_ENV;
   beforeEach(migrationDone);
+  afterEach(() => {
+    process.env.VERCEL_ENV = prevVercelEnv;
+  });
+
+  it("runs before promote, and stays out of the mop-up slot", async () => {
+    const steps = await run({ search: "0" });
+    const order = Object.keys(steps);
+
+    expect(order.indexOf("repair")).toBeLessThan(order.indexOf("promote"));
+
+    const mopUpSteps = await run({ slot: "3", mopUp: "1", force: "1" });
+    expect(Object.keys(mopUpSteps)).not.toContain("repair");
+  });
+
+  it("does nothing outside production", async () => {
+    delete process.env.VERCEL_ENV;
+    const steps = await run({ search: "0" });
+    expect(steps.repair).toMatchObject({ skipped: "not production" });
+  });
+});
+
+describe("GET /api/cron/suggestions - promote", () => {
+  beforeEach(() => {
+    migrationDone();
+    repairDone();
+  });
+
+  it("runs between propose and claim, and stays out of the mop-up slot", async () => {
+    const steps = await run({ search: "0" });
+    const order = Object.keys(steps);
+
+    expect(order.indexOf("promote")).toBeGreaterThan(order.indexOf("propose"));
+    expect(order.indexOf("promote")).toBeLessThan(order.indexOf("claim"));
+
+    const mopUpSteps = await run({ slot: "3", mopUp: "1", force: "1" });
+    expect(Object.keys(mopUpSteps)).not.toContain("promote");
+  });
+});
+
+describe("GET /api/cron/suggestions - charts", () => {
+  beforeEach(() => {
+    migrationDone();
+    repairDone();
+  });
+
+  it("runs between promote and claim, and stays out of the mop-up slot", async () => {
+    const steps = await run({ search: "0" });
+    const order = Object.keys(steps);
+
+    expect(order.indexOf("charts")).toBeGreaterThan(order.indexOf("promote"));
+    expect(order.indexOf("charts")).toBeLessThan(order.indexOf("claim"));
+
+    const mopUpSteps = await run({ slot: "3", mopUp: "1", force: "1" });
+    expect(Object.keys(mopUpSteps)).not.toContain("charts");
+  });
+});
+
+describe("GET /api/cron/suggestions - sweep", () => {
+  beforeEach(() => {
+    migrationDone();
+    repairDone();
+  });
 
   it("drops what YouTube stopped serving and re-reads what it still does", async () => {
     seedSong(PLAIN, ["live1", "gone1", "blocked1"]);
@@ -849,6 +997,31 @@ describe("GET /api/cron/suggestions - sweep", () => {
     expect(videos().get("claimed").songKeys).toEqual([]);
   });
 
+  it("checks a promoted song's cuts against its own stored title and artist", async () => {
+    const key = songKeyFor("The Agadiers", "Mag Dungan Ta");
+    songs().seed({
+      _id: key,
+      title: "Mag Dungan Ta",
+      artist: "The Agadiers",
+      cuts: ["claimed"],
+      addCount: 0,
+      addsByCountry: {},
+      demand: 3,
+      origin: "demand",
+    });
+    seedVideo("claimed", STALE_AT, [key]);
+    videos().seed({
+      ...videos().get("claimed"),
+      sources: { adds: { count: 2, byCountry: {}, rooms: ["r1", "r2"], lastAt: STALE_AT } },
+    });
+    api.titles.set("claimed", "Someone Else's Song (Karaoke)");
+
+    const steps = await run({ search: "0" });
+
+    expect(steps.sweep).toMatchObject({ unproven: 1 });
+    expect(songs().get(key).cuts).toEqual([]);
+  });
+
   it("leaves a harvested cut alone whatever its title says", async () => {
     seedSong(PLAIN, ["harvested"]);
     seedVideo("harvested");
@@ -893,7 +1066,10 @@ describe("GET /api/cron/suggestions - sweep", () => {
 });
 
 describe("GET /api/cron/suggestions - publish", () => {
-  beforeEach(migrationDone);
+  beforeEach(() => {
+    migrationDone();
+    repairDone();
+  });
 
   /** Enough live cuts for the store to answer a tap with. */
   function seedResolved(entry: CatalogEntry, count = 10): string[] {
@@ -1016,7 +1192,10 @@ describe("GET /api/cron/suggestions - publish", () => {
 });
 
 describe("GET /api/cron/suggestions - harvest", () => {
-  beforeEach(migrationDone);
+  beforeEach(() => {
+    migrationDone();
+    repairDone();
+  });
 
   it("files a matching upload under its song and parks the channel's cursor", async () => {
     api.uploads = [{ videoId: "up1", title: `${PLAIN.artist} ${PLAIN.title} (Karaoke)` }];
@@ -1111,6 +1290,7 @@ describe("GET /api/cron/suggestions - resolve", () => {
 
   beforeEach(() => {
     migrationDone();
+    repairDone();
     seedSong(first, [], 30);
     seedSong(second, [], 20);
     seedSong(third, [], 10);
@@ -1210,5 +1390,43 @@ describe("GET /api/cron/suggestions - resolve", () => {
 
     expect(steps.resolve).toMatchObject({ widened: 1, filled: 0, missed: 1 });
     expect(songs().get(first.key).resolveMisses).toBe(1);
+  });
+});
+
+describe("GET /api/cron/suggestions - orphan logo prune", () => {
+  beforeEach(() => {
+    migrationDone();
+    repairDone();
+  });
+
+  it("prunes on the first slot and reports the count", async () => {
+    vi.mocked(pruneOrphanLogos).mockResolvedValueOnce(3);
+
+    const res = await request();
+
+    expect(pruneOrphanLogos).toHaveBeenCalledOnce();
+    expect(res.getStatus()).toBe(200);
+    expect(res.getBody().logosPruned).toBe(3);
+  });
+
+  it.each([{ slot: "2" }, { slot: "3", mopUp: "1", force: "1" }])(
+    "leaves the prune alone on %j",
+    async (query) => {
+      const res = await request(query);
+
+      expect(pruneOrphanLogos).not.toHaveBeenCalled();
+      expect(res.getBody()).not.toHaveProperty("logosPruned");
+    }
+  );
+
+  it("still finishes the run when the prune throws", async () => {
+    vi.mocked(pruneOrphanLogos).mockRejectedValueOnce(new Error("atlas down"));
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    const res = await request();
+
+    expect(res.getStatus()).toBe(200);
+    expect(res.getBody().steps).toBeDefined();
+    expect(res.getBody()).not.toHaveProperty("logosPruned");
   });
 });

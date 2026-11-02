@@ -1,7 +1,8 @@
-import { MongoClient, type Collection, type Db } from "mongodb";
+import { MongoClient, type Binary, type Collection, type Db } from "mongodb";
 import type { FeedbackEntry, Room } from "../pages/api/types";
 import type { EventType } from "./analytics";
 import { YOUTUBE_DATA_MAX_AGE_DAYS } from "./youtubeRetention";
+import type { GenreShelf, IdeaShelf } from "./shelfTypes";
 
 // Reuse one connected client per serverless instance instead of opening and
 // closing a fresh TCP+TLS connection on every request/tracked event. Stored on
@@ -104,14 +105,16 @@ export async function getSearchCacheCollection(): Promise<Collection<SearchCache
   return db.collection<SearchCacheDoc>("search_cache");
 }
 
-// Cached "trending on karaoq" aggregates, refreshed lazily (first request
-// after the doc goes stale recomputes it). TTL is a safety net well past the
-// 24h refresh window so unused country keys eventually disappear.
+// Cached idea shelves (lib/shelves), refreshed lazily (first request after the
+// doc goes stale recomputes it). Song names and keys only, no YouTube fields;
+// the TTL just lets unused country keys disappear.
 const SUGGESTION_CACHE_TTL_SECONDS = 7 * 24 * 60 * 60;
 
 export interface SuggestionCacheDoc {
   key: string;
-  items: { title: string; artist: string; count: number }[];
+  /** Absent on a place's genre doc ("genres:…"), which holds `genres`. */
+  shelves?: IdeaShelf[];
+  genres?: GenreShelf[];
   computedAt: Date;
 }
 
@@ -426,6 +429,20 @@ export interface KaraokeSongDoc {
   resolveMisses?: number;
   /** Backed off until here; absent means eligible. See markResolveMiss. */
   nextResolveAt?: Date;
+  /** Absent means "pack" — seeded from a static suggestion pack. */
+  origin?: "demand" | "chart";
+  promotedAt?: Date;
+  /** The song_proposals doc this was promoted from, if origin is "demand". */
+  proposalId?: string;
+  /** Countries whose chart named this song; only set when origin is "chart". */
+  chartCountries?: string[];
+  /** Added by a genre chart (lib/genreFeed) and not since by a Top 50 one: the
+   *  resolver takes these last, and their artists vouch for nothing. */
+  genreChart?: boolean;
+  /** Set after 3 straight resolve misses on a cutless promoted song, instead
+   *  of another backoff. The doc stays, so lib/corpusPromote's dedupe still
+   *  blocks it being re-added. */
+  retired?: boolean;
 }
 
 let karaokeSongIndexesEnsured = false;
@@ -447,10 +464,10 @@ export async function getKaraokeSongsCollection(): Promise<Collection<KaraokeSon
   return db.collection<KaraokeSongDoc>("karaoke_songs");
 }
 
-// A song real rooms are singing that no catalog entry claims. Curation input
-// only: nothing here creates a karaoke_songs doc, because the catalog is what
-// bounds the corpus (lib/suggestionCatalog) — approving one means adding it to
-// a pack and letting the migration seed it.
+// A song real rooms are singing that no catalog entry claims. The corpus is
+// bounded by the catalog plus promoted demand (lib/corpusPromote): a proposal
+// with enough breadth becomes a cutless karaoke_songs doc directly, rather than
+// waiting on a pack edit and a migration.
 const SONG_PROPOSAL_TTL_SECONDS = 90 * 24 * 60 * 60;
 
 export interface SongProposalDoc {
@@ -478,6 +495,12 @@ export interface SongProposalDoc {
   knownArtist?: string;
   /** Only ever set by a person. Absent means nobody has ruled on it yet. */
   status?: "approved" | "rejected";
+  /** Terminal, stamped by lib/corpusPromote on every outcome — including
+   *  "unnamed" — so a row it couldn't use is never rescanned either. */
+  promoteOutcome?: "promoted" | "duplicate" | "unnamed";
+  /** The matched or created song's id; absent when the outcome is "unnamed". */
+  promotedSongId?: string;
+  promotedAt?: Date;
   firstSeenAt: Date;
   /** Re-derived every run, so it also dates the evidence above. */
   updatedAt: Date;
@@ -589,7 +612,7 @@ export async function getSearchDemandCollection(): Promise<
 
 // Where each nightly step stopped, so a run that hits the 300s function cap
 // resumes. A cursor untouched for a week names a step that no longer runs.
-const CRON_STATE_TTL_SECONDS = 7 * 24 * 60 * 60;
+export const CRON_STATE_TTL_SECONDS = 7 * 24 * 60 * 60;
 
 export interface CronStateDoc {
   /** The step name, e.g. "sweep", "harvest", "migrate-v1". */
@@ -608,13 +631,20 @@ export interface CronStateDoc {
    *  One doc per day rather than one rolling doc, so every write is a plain
    *  $inc — rooms bill their searches here too now (see lib/corpusBudget), and
    *  a read-modify-write would lose them. They expire on the `cursorAt` clock
-   *  above, a week being long enough to read a spent day back. */
+   *  above, set ahead so the admin can chart a month (LEDGER_KEEP_DAYS). */
   searches?: number;
   cronSearches?: number;
+  mopUpSearches?: number;
+  unloggedSearches?: number;
   pages?: number;
   lookups?: number;
+  dailyOutAt?: Date;
   /** The mop-up's own outcome for that day; see lib/corpusBudget. */
   mopUp?: import("./corpusBudget").MopUpOutcome;
+  /** Only a "chart:<cc>" doc carries these; see lib/chartFeed. */
+  fetchedAt?: Date;
+  /** When that country's fetch last failed; cleared on the next success. */
+  failedAt?: Date;
   updatedAt: Date;
 }
 
@@ -642,6 +672,68 @@ export async function getCronStateCollection(): Promise<Collection<CronStateDoc>
       });
   }
   return db.collection<CronStateDoc>("cron_state");
+}
+
+// One doc per charted country: the latest Apple chart mapped onto
+// karaoke_songs ids, plus the fetch before it so a shelf can show movement.
+// Chart names are Apple's, not YouTube's, but a dead feed must not keep
+// passing week-old charts off as "right now" — hence the TTL.
+const CHART_SNAPSHOT_TTL_SECONDS = 14 * 24 * 60 * 60;
+
+export interface ChartRank {
+  /** karaoke_songs._id */
+  key: string;
+  rank: number;
+  /** When this song (re)entered this country's chart; absent when it was
+   *  already there on the first snapshot, so launch day doesn't mark all 50 new. */
+  since?: Date;
+}
+
+export interface ChartSnapshotDoc {
+  /** Lowercase country code, as CHART_COUNTRIES spells it. */
+  _id: string;
+  ranks: ChartRank[];
+  /** The previous day's chart; absent until a second fetch lands. */
+  prevRanks?: ChartRank[];
+  fetchedAt: Date;
+  /** When prevRanks was fetched — a same-day refetch keeps it rather than
+   *  comparing a chart against itself. */
+  prevFetchedAt?: Date;
+}
+
+let chartSnapshotIndexesEnsured = false;
+
+export async function getChartSnapshotsCollection(): Promise<Collection<ChartSnapshotDoc>> {
+  const client = await getMongoClient();
+  const db = client.db(process.env.MONGODB_DB);
+  if (!chartSnapshotIndexesEnsured) {
+    chartSnapshotIndexesEnsured = true;
+    db.collection("chart_snapshots")
+      .createIndex({ fetchedAt: 1 }, { expireAfterSeconds: CHART_SNAPSHOT_TTL_SECONDS })
+      .catch((e) => {
+        console.error("chart_snapshots index creation failed:", e);
+        chartSnapshotIndexesEnsured = false;
+      });
+  }
+  return db.collection<ChartSnapshotDoc>("chart_snapshots");
+}
+
+let genreSnapshotIndexesEnsured = false;
+
+/** _id "jp:anime". Apart from chart_snapshots so the hot shelf never pools them. */
+export async function getGenreSnapshotsCollection(): Promise<Collection<ChartSnapshotDoc>> {
+  const client = await getMongoClient();
+  const db = client.db(process.env.MONGODB_DB);
+  if (!genreSnapshotIndexesEnsured) {
+    genreSnapshotIndexesEnsured = true;
+    db.collection("genre_snapshots")
+      .createIndex({ fetchedAt: 1 }, { expireAfterSeconds: CHART_SNAPSHOT_TTL_SECONDS })
+      .catch((e) => {
+        console.error("genre_snapshots index creation failed:", e);
+        genreSnapshotIndexesEnsured = false;
+      });
+  }
+  return db.collection<ChartSnapshotDoc>("genre_snapshots");
 }
 
 // The pre-corpus harvest cursors; cron_state holds the live ones.
@@ -740,6 +832,36 @@ export async function getFeedbackCollection(): Promise<Collection<FeedbackEntry>
     });
   }
   return db.collection<FeedbackEntry>("feedback");
+}
+
+export interface RoomLogoDoc {
+  /** `${roomId}:${hash}` — one doc per room and image. */
+  _id: string;
+  roomId: string;
+  contentType: string;
+  size: number;
+  data: Binary;
+  createdAt: Date;
+  /** Set on drafts only; a committed logo lives as long as its room. */
+  expireAt?: Date;
+}
+
+let roomLogoIndexesEnsured = false;
+
+export async function getRoomLogosCollection(): Promise<Collection<RoomLogoDoc>> {
+  const client = await getMongoClient();
+  const db = client.db(process.env.MONGODB_DB);
+  if (!roomLogoIndexesEnsured) {
+    roomLogoIndexesEnsured = true;
+    Promise.all([
+      db.collection("room_logos").createIndex({ expireAt: 1 }, { expireAfterSeconds: 0 }),
+      db.collection("room_logos").createIndex({ roomId: 1 }),
+    ]).catch((e) => {
+      console.error("Room logo index creation failed:", e);
+      roomLogoIndexesEnsured = false;
+    });
+  }
+  return db.collection<RoomLogoDoc>("room_logos");
 }
 
 // Heartbeats are high-volume noise once a session is over; every other event

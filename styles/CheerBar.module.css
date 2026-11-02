@@ -2,7 +2,7 @@
 .cheerBar {
   padding: 0.75rem 1rem;
   border-top: 1px solid rgba(255, 215, 0, 0.15);
-  background: linear-gradient(135deg, rgba(255, 215, 0, 0.06), rgba(255, 45, 120, 0.06));
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.06), rgba(var(--acc-a-rgb, 255, 45, 120), 0.06));
   position: relative;
   overflow: hidden;
   animation: cheerSlideIn 0.35s ease;
@@ -81,7 +81,7 @@
   bottom: 0;
   left: 0;
   height: 2px;
-  background: linear-gradient(90deg, #ffd700, #ff2d78);
+  background: linear-gradient(90deg, #ffd700, var(--acc-a, #ff2d78));
   animation: cooldownShrink 3s linear forwards;
 }
 
