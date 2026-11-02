@@ -57,12 +57,12 @@ function dataUrl(buf: Buffer, type = "image/png"): string {
   return `data:${type};base64,${buf.toString("base64")}`;
 }
 
-async function upload(body: unknown, roomId = "ROOM1") {
+async function upload(body: unknown, roomId = "ROOM1", roomKey?: string) {
   const req = createMockReq({
     method: "POST",
     query: { id: roomId },
     // A production host — localhost would be analytics-exempt.
-    headers: { host: "karaoq.live" },
+    headers: { host: "karaoq.live", ...(roomKey ? { "x-room-key": roomKey } : {}) },
     body,
   });
   const res = createRes();
@@ -93,6 +93,13 @@ describe("POST /api/queue/[id]/logo - upload a draft logo", () => {
 
     expect(res.getStatus()).toBe(403);
     expect(db.logos.docs).toHaveLength(0);
+  });
+
+  it("lets a screen holding only a display key upload a logo", async () => {
+    db.rooms.docs[0].keys = [{ hash: hashRoomKey("display-key"), role: "display", createdAt: new Date() }];
+    const res = await upload({ dataUrl: dataUrl(PNG) }, "ROOM1", "display-key");
+
+    expect(res.getStatus()).toBe(200);
   });
 
   it("raises the body limit past the 64 KB logo", () => {

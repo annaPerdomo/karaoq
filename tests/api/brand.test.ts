@@ -43,12 +43,12 @@ function createRes() {
 const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1]);
 const JPEG = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 2]);
 
-async function save(body: unknown, roomId = "ROOM1") {
+async function save(body: unknown, roomId = "ROOM1", roomKey?: string) {
   const req = createMockReq({
     method: "POST",
     query: { id: roomId },
     // A production host — localhost would be analytics-exempt.
-    headers: { host: "karaoq.live" },
+    headers: { host: "karaoq.live", ...(roomKey ? { "x-room-key": roomKey } : {}) },
     body,
   });
   const res = createRes();
@@ -74,6 +74,14 @@ describe("POST /api/queue/[id]/brand - save the room brand", () => {
 
     expect(res.getStatus()).toBe(403);
     expect(room().brand).toBeUndefined();
+  });
+
+  it("lets a screen holding only a display key save the brand", async () => {
+    room().keys = [{ hash: hashRoomKey("host-key"), role: "host", createdAt: new Date() }, { hash: hashRoomKey("display-key"), role: "display", createdAt: new Date() }];
+    const res = await save({ brand: { accentA: "#112233" } }, "ROOM1", "display-key");
+
+    expect(res.getStatus()).toBe(200);
+    expect(room().brand).toEqual({ accentA: "#112233" });
   });
 
   it("commits the uploaded logo and writes the brand with a lastActivity bump", async () => {

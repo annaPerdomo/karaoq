@@ -191,6 +191,20 @@ describe("POST /api/queue/[id]/karaoke-video", () => {
     expect(rooms.updateOne).not.toHaveBeenCalled();
   });
 
+  it("lets a co-host swap but refuses a display key", async () => {
+    rooms.findOne.mockResolvedValue({ ...roomDoc, keys: [{ hash: hashRoomKey("cohost-key"), role: "cohost", createdAt: new Date() }, { hash: hashRoomKey("display-key"), role: "display", createdAt: new Date() }] });
+    const swap = (key: string) =>
+      createMockReq({ method: "POST", query: { id: "ROOM1" }, headers: { "x-room-key": key }, body: { entryId: "e1", ...SWAP } });
+
+    const shown = createRes();
+    await handler(swap("display-key"), shown);
+    expect(shown.getStatus()).toBe(403);
+
+    const cohost = createRes();
+    await handler(swap("cohost-key"), cohost);
+    expect(cohost.getStatus()).toBe(200);
+  });
+
   it("swaps the live song and restarts its clock", async () => {
     const res = createRes();
     await handler(postReq({ entryId: "e1", ...SWAP }), res);

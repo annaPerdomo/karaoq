@@ -463,6 +463,20 @@ describe("POST /api/queue/[id]/original-video", () => {
     expect(mockCollection.updateOne).not.toHaveBeenCalled();
   });
 
+  it("lets a co-host nudge the timing but refuses a display key", async () => {
+    mockRoomFindOne({ ...roomDoc, keys: [{ hash: hashRoomKey("cohost-key"), role: "cohost", createdAt: new Date() }, { hash: hashRoomKey("display-key"), role: "display", createdAt: new Date() }] });
+    const nudge = (key: string) =>
+      createMockReq({ method: "POST", query: { id: "ROOM1" }, headers: { "x-room-key": key }, body: { entryId: "e0", offsetSeconds: 2 } });
+
+    const shown = createRes();
+    await handler(nudge("display-key"), shown);
+    expect(shown.getStatus()).toBe(403);
+
+    const cohost = createRes();
+    await handler(nudge("cohost-key"), cohost);
+    expect(cohost.getStatus()).toBe(200);
+  });
+
   beforeEach(() => {
     mockCollection.updateOne.mockResolvedValue({ matchedCount: 1 });
   });

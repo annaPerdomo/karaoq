@@ -234,6 +234,27 @@ function isValidOffsetSeconds(value: unknown): value is number {
   );
 }
 
+// True when it answered: the room is missing, keyed without a host/co-host key, or the read failed.
+async function refuseWithoutKey(req: NextApiRequest, res: NextApiResponse, roomId: string): Promise<boolean> {
+  try {
+    const rooms = await getRoomsCollection();
+    const keyRoom = await rooms.findOne({ id: roomId }, { projection: { keys: 1 } });
+    if (!keyRoom) {
+      res.status(404).json({ code: 404, message: "Room not found." });
+      return true;
+    }
+    if (!allows(keyRoom, roomKeyFromRequest(req), ["host", "cohost"])) {
+      res.status(403).json({ code: 403, message: "room-key" });
+      return true;
+    }
+    return false;
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ code: 500, message: "Internal server error." });
+    return true;
+  }
+}
+
 async function handlePost(req: NextApiRequest, res: NextApiResponse) {
   const roomId = normalizeRoomId(req.query.id);
   if (typeof roomId !== "string") {
@@ -256,23 +277,6 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse) {
   const { entryId } = body;
   if (typeof entryId !== "string" || !entryId) {
     res.status(400).json({ code: 400, message: "Invalid request." });
-    return;
-  }
-
-  try {
-    const rooms = await getRoomsCollection();
-    const keyRoom = await rooms.findOne({ id: roomId }, { projection: { keys: 1 } });
-    if (!keyRoom) {
-      res.status(404).json({ code: 404, message: "Room not found." });
-      return;
-    }
-    if (!allows(keyRoom, roomKeyFromRequest(req), ["host", "cohost"])) {
-      res.status(403).json({ code: 403, message: "room-key" });
-      return;
-    }
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ code: 500, message: "Internal server error." });
     return;
   }
 
@@ -299,6 +303,7 @@ async function handleOffsetPost(
     res.status(429).json({ code: 429, message: "Too many changes, slow down." });
     return;
   }
+  if (await refuseWithoutKey(req, res, roomId)) return;
 
   try {
     const rooms = await getRoomsCollection();
@@ -345,6 +350,7 @@ async function handlePickPost(
     res.status(429).json({ code: 429, message: "Too many changes, slow down." });
     return;
   }
+  if (await refuseWithoutKey(req, res, roomId)) return;
 
   try {
     const rooms = await getRoomsCollection();
