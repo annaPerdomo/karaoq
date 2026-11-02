@@ -6,6 +6,7 @@ import { generateCode } from '../../lib/roomCode';
 import { createHostedRoom } from '../../app/queue/createHostedRoom';
 import setPlayMode from '../../app/queue/setPlayMode';
 import { isTvDevice } from '../../lib/calmMotion';
+import TvPairCard from './TvPairCard';
 
 export default function TvStartCard() {
   const { t } = useT();
@@ -13,6 +14,7 @@ export default function TvStartCard() {
   const [isTv, setIsTv] = React.useState(false);
   const [starting, setStarting] = React.useState(false);
   const [error, setError] = React.useState('');
+  const [pairing, setPairing] = React.useState(false);
 
   React.useEffect(() => {
     setIsTv(isTvDevice());
@@ -41,15 +43,20 @@ export default function TvStartCard() {
   return (
     <div className={styles.hostCard}>
       <span className={styles.hostCardKicker}>{t('home.tv.title')}</span>
-      <p className={styles.tvStartBody}>{t('home.tv.body')}</p>
-      <button
-        className={styles.btnPrimary}
-        onClick={start}
-        disabled={starting}
-        autoFocus
-      >
-        {starting ? t('home.tv.starting') : t('home.tv.start')}
-      </button>
+      {!pairing && <p className={styles.tvStartBody}>{t('home.tv.body')}</p>}
+      <div className={styles.tvBtnStack}>
+        {!pairing && (
+          <button
+            className={styles.btnPrimary}
+            onClick={start}
+            disabled={starting}
+            autoFocus
+          >
+            {starting ? t('home.tv.starting') : t('home.tv.start')}
+          </button>
+        )}
+        <TvPairCard onActiveChange={setPairing} />
+      </div>
       {error && <p className={styles.hostError}>{error}</p>}
     </div>
   );

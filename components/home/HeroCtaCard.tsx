@@ -1,6 +1,7 @@
 import * as React from 'react';
 import styles from '../../styles/Home.module.css';
 import { useT } from '../../lib/i18n/I18nProvider';
+import { isTvDevice } from '../../lib/calmMotion';
 
 export interface HeroCtaCardProps {
   hostName: string;
@@ -27,6 +28,37 @@ export default function HeroCtaCard(props: HeroCtaCardProps) {
     nameInputRef, onHostNameChange, onCustomCodeChange, onJoinCodeChange,
     onToggleCustom, onShowJoin, onHost, onJoin,
   } = props;
+  const [collapsedOnTv, setCollapsedOnTv] = React.useState(false);
+  const focusNameOnUnfold = React.useRef(false);
+
+  React.useEffect(() => {
+    setCollapsedOnTv(isTvDevice());
+  }, []);
+
+  React.useEffect(() => {
+    if (!collapsedOnTv && focusNameOnUnfold.current) {
+      focusNameOnUnfold.current = false;
+      nameInputRef.current?.focus();
+    }
+  }, [collapsedOnTv, nameInputRef]);
+
+  // The header's Join CTA opens the join row in here, so it must unfold the card.
+  if (collapsedOnTv && !showJoin) {
+    return (
+      <div className={styles.heroCta}>
+        <button
+          type="button"
+          className={`${styles.textToggle} ${styles.tvTypeName}`}
+          onClick={() => {
+            focusNameOnUnfold.current = true;
+            setCollapsedOnTv(false);
+          }}
+        >
+          {t('home.tv.typeName')}
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.heroCta}>
