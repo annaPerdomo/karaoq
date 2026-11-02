@@ -116,7 +116,7 @@ export const GUIDES: Guide[] = [
     demoStep: 1,
     faqCount: 5,
     published: '2026-07-04',
-    updated: '2026-09-03',
+    updated: '2026-11-02',
   },
   {
     id: 'youtube',

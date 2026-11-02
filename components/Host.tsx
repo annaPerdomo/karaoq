@@ -92,6 +92,9 @@ import FeedbackModal from "./feedback/FeedbackModal";
 import { ConnectTvLauncher } from "./host/ConnectTvLauncher";
 import { useConnectTv } from "./host/hooks/useConnectTv";
 import { usePairedToast } from "./host/hooks/usePairedToast";
+import { useScreenHelp } from "./host/hooks/useScreenHelp";
+import { ScreenHelpLink } from "./host/ScreenHelpLink";
+import { ScreenHelpSheet } from "./host/ScreenHelpSheet";
 import { QrModal } from "./host/QrModal";
 import { ConfirmRemoveModal } from "./host/ConfirmRemoveModal";
 import { WelcomePrompt } from "./host/WelcomePrompt";
@@ -387,6 +390,7 @@ const Host = ({
   }
 
   const { connectTvRef, onTvPaired } = useConnectTv({ joinCode, setPlayMode, rememberMode, showToast, message: t('pair.remoteNow') });
+  const screenHelp = useScreenHelp({ joinCode, setPlayMode, rememberMode });
   usePairedToast({ remote, joinCode, message: t('pair.remoteNow'), showToast });
 
   function copyCohostLink() {
@@ -1432,6 +1436,11 @@ const Host = ({
           setModeMenuOpen(false);
           connectTvRef.current?.open();
         }}
+        onScreenHelp={() => {
+          setSettingsOpen(false);
+          setModeMenuOpen(false);
+          screenHelp.open();
+        }}
         onOpenMusicVideo={openMusicVideoScreen}
         onCopyMusicVideoLink={copyMusicVideoLink}
         onBrandClick={() => router.push("/")}
@@ -1469,7 +1478,12 @@ const Host = ({
             autoEnabled={autoAdvance.enabled}
             onOpenPlaybackSettings={remote ? undefined : () => setPlaybackSheetOpen(true)}
             wrapUpIn={playsVideoHere ? wrapUpIn : null}
+            canPopOut={screenHelp.device !== null && screenHelp.device !== "mobile"}
           />
+
+          {!remote && !customizing && !(tvMode && displayConnected) && screenHelp.device !== "tv" && (
+            <ScreenHelpLink onClick={screenHelp.open} />
+          )}
 
           {!remote && reactionsOn && visibleReactions.length > 0 && (
             <ReactionOverlay reactions={visibleReactions} />
@@ -1635,6 +1649,19 @@ const Host = ({
       )}
 
       {joinCode && <ConnectTvLauncher ref={connectTvRef} joinCode={joinCode} onPaired={onTvPaired} />}
+      {joinCode && (
+        <ScreenHelpSheet
+          isOpen={screenHelp.isOpen}
+          onClose={screenHelp.close}
+          joinCode={joinCode}
+          displayHost={displayUrl}
+          onPaired={(r) => { screenHelp.close(); onTvPaired(r); }}
+          onOpenTvDisplay={() => { screenHelp.close(); openTvDisplay(); }}
+          onUseDisplayMode={() => { screenHelp.close(); screenHelp.useDisplayMode(); }}
+          onPlayHere={() => { screenHelp.close(); playHere(); }}
+          onOptionOpened={screenHelp.onOptionOpened}
+        />
+      )}
       {feedbackOpen && (
         <FeedbackModal
           onClose={() => setFeedbackOpen(false)}
