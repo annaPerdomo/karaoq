@@ -363,8 +363,9 @@ describe("MusicVideoScreen", () => {
       queue: [{ ...ROOM.queue[0], originalOffsetSeconds: 2 }, ROOM.queue[1]],
     };
     vi.stubGlobal("fetch", fetchMockFor(roomWithOffset));
-    render(<MusicVideoScreen />);
-    await waitFor(() => expect(screen.queryByText(/Video offset/)).toBeNull());
+    const { container } = render(<MusicVideoScreen />);
+    // A nudge before the entry loads is wiped by the reset on currentEntryId.
+    await waitFor(() => expect(container.querySelector("iframe")).toBeTruthy());
 
     act(() => {
       window.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight" }));
