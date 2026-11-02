@@ -1,4 +1,5 @@
 import { NextApiRequest, NextApiResponse } from "next";
+import { readFlagNow } from "../../../lib/featureFlags";
 import {
   acquireRun,
   CHANNEL_PAGES_PER_DAY,
@@ -48,9 +49,10 @@ import { pruneOrphanLogos } from "../../../lib/roomLogos";
 // function — a later slot buys clock, not quota (lib/corpusBudget). The slots
 // sit late in the Pacific evening so the corpus spends what the day's rooms
 // left rather than taking its cut before anyone has woken up; whatever is
-// still unspent then expires at midnight anyway. The 06:15 and 07:15 UTC
+// still unspent then expires at midnight anyway. The 06:47 and 07:47 UTC
 // entries both carry ?mopUp=1 (see the flag below): one lands in the window
-// under PDT, the other under PST, so one of the pair covers each season.
+// under PDT, the other under PST, so one of the pair covers each season. Pro
+// fires crons on the minute, so they must sit inside the 15-minute window.
 export const config = { maxDuration: 300 };
 const RUN_BUDGET_MS = 240_000;
 
@@ -103,10 +105,25 @@ export default async function handler(
   // `?force=1` is for running it by hand; it also bypasses the mop-up window.
   const forced = req.query.force === "1";
 
+  // Read uncached and fail closed: the nightly slots land on cold instances,
+  // where a cached read could fall back to "on" while the switch is off.
+  const cronEnabled = await readFlagNow("corpus_cron").catch((e) => {
+    console.error("Corpus cron skipped: corpus_cron flag unreadable", e);
+    return null;
+  });
+  if (cronEnabled === null) {
+    res.status(503).json({ skipped: "flag unreadable" });
+    return;
+  }
+  if (!cronEnabled) {
+    console.log("Corpus cron skipped: corpus_cron flag off", { slot, mopUp });
+    res.status(200).json({ skipped: "flag" });
+    return;
+  }
+
   const started = Date.now();
-  // Vercel only promises a cron within its hour, so this one can start at 23:59.
-  // Past the boundary the units come out of tomorrow's allowance while the
-  // ledger, keyed on the start, still bills them to today.
+  // A forced run can start at 23:59. Past the boundary the units come out of
+  // tomorrow's allowance while the ledger, keyed on the start, bills today.
   const deadline = mopUp
     ? Math.min(started + RUN_BUDGET_MS, quotaResetsAtMs(new Date(started)))
     : started + RUN_BUDGET_MS;

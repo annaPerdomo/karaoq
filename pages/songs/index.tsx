@@ -4,6 +4,7 @@ import type { GetStaticProps, NextPage } from 'next';
 import Head from 'next/head';
 
 import SongChartPage from '../../components/songs/SongChartPage';
+import { isFlagEnabled } from '../../lib/featureFlags';
 import { useT } from '../../lib/i18n/I18nProvider';
 import {
   SUPPORTED_LOCALES,
@@ -135,6 +136,10 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
 export const getStaticProps: GetStaticProps<
   SongsPageProps & { i18nLocale: Locale | null; i18nCatalog: Catalog | null }
 > = async ({ locale }) => {
+  if (!(await isFlagEnabled('songs_pages'))) {
+    return { notFound: true, revalidate: 300 };
+  }
+
   const pageLocale: Locale = isLocale(locale) ? locale : DEFAULT_LOCALE;
   let i18nCatalog: Catalog | null = null;
   if (pageLocale !== DEFAULT_LOCALE) {

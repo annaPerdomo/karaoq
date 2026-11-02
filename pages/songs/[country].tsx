@@ -4,6 +4,7 @@ import type { GetStaticPaths, GetStaticProps, NextPage } from 'next';
 import Head from 'next/head';
 
 import SongChartPage from '../../components/songs/SongChartPage';
+import { isFlagEnabled } from '../../lib/featureFlags';
 import { useT } from '../../lib/i18n/I18nProvider';
 import {
   SUPPORTED_LOCALES,
@@ -128,6 +129,10 @@ export const getStaticPaths: GetStaticPaths = async () => ({
 export const getStaticProps: GetStaticProps<
   SongsCountryPageProps & { i18nLocale: Locale | null; i18nCatalog: Catalog | null }
 > = async ({ params, locale }) => {
+  if (!(await isFlagEnabled('songs_pages'))) {
+    return { notFound: true, revalidate: 300 };
+  }
+
   const rawCountry = String(params?.country ?? '');
   const country = rawCountry.toLowerCase();
   if (rawCountry !== country || !SONG_CHART_COUNTRIES.includes(country)) {
