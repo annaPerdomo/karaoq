@@ -81,7 +81,6 @@ async function loadHost(
 ) {
   const { page, close } = await tvPage(userAgent, {
     viewport,
-    roomKey: { code: room.code, key: room.roomKey, role: "host" },
   });
   await page.goto(`${BASE}/host/${room.code}`, { waitUntil: "load", timeout: 60_000 });
   const ring = page.locator('[role="timer"]').first();
@@ -153,7 +152,6 @@ describe("host page fits a TV", () => {
     const { page, close } = await tvPage(DESKTOP_AGENT, {
       cpuThrottle: 1,
       viewport: { width: 1440, height: 900 },
-      roomKey: { code: room.code, key: room.roomKey, role: "host" },
     });
     try {
       await page.goto(`${BASE}/host/${room.code}`, { waitUntil: "load", timeout: 60_000 });
