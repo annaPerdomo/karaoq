@@ -34,8 +34,8 @@ export function insideMopUpWindow(now: number): boolean {
   return untilReset > 0 && untilReset <= MOP_UP_WINDOW_MS;
 }
 
-// Vercel's Hobby cron fires within the hour, not the minute, so DST decides
-// which of vercel.json's two mop-up entries lands outside this window.
+// DST decides which of vercel.json's two mop-up entries lands outside this
+// window.
 export const OUTSIDE_MOP_UP_WINDOW = "outside mop-up window";
 
 export interface DailySpend {

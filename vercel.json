@@ -10,11 +10,11 @@
     },
     {
       "path": "/api/cron/suggestions?slot=3&mopUp=1",
-      "schedule": "15 6 * * *"
+      "schedule": "47 6 * * *"
     },
     {
       "path": "/api/cron/suggestions?slot=4&mopUp=1",
-      "schedule": "15 7 * * *"
+      "schedule": "47 7 * * *"
     }
   ]
 }
