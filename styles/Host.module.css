@@ -3517,6 +3517,8 @@ html[data-tv] .tvStatsRow .queueEndRow {
   padding: 0;
   border-bottom: none;
   flex-wrap: nowrap;
+}
+
 /* Same condition as SongSearch's "one page-level scroll" block, which removes
    the nested scrollers this overlay then has to replace. */
 @media (max-width: 768px), (max-height: 480px) {
