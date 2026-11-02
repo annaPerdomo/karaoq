@@ -24,7 +24,6 @@ import HomeFooter from './home/HomeFooter';
 import GlobalReach from './home/GlobalReach';
 import Reveal from './home/Reveal';
 import TvStartCard from './home/TvStartCard';
-import ConnectTvHero from './home/ConnectTvHero';
 import { createRoomForPairing } from '../app/pairing/createRoomForPairing';
 import { EMPTY_STATS, type PublicStats } from '../lib/publicStats';
 import { generateCode } from '../lib/roomCode';
@@ -48,6 +47,7 @@ const Home = ({ stats = EMPTY_STATS }: HomeProps): React.ReactElement => {
   const { t } = useT();
   const [joinCode, setJoinCode] = React.useState('');
   const [showJoin, setShowJoin] = React.useState(false);
+  const [showConnectTv, setShowConnectTv] = React.useState(false);
   const [showCustom, setShowCustom] = React.useState(false);
   const [customCode, setCustomCode] = React.useState('');
   const [creating, setCreating] = React.useState(false);
@@ -60,6 +60,9 @@ const Home = ({ stats = EMPTY_STATS }: HomeProps): React.ReactElement => {
     songCount: number;
     late: boolean;
   } | null>(null);
+  // Only a confirmed 404 sets this: while the check is pending or errored,
+  // pairing must still target the stored room, not mint a fresh empty one.
+  const [lastRoomGone, setLastRoomGone] = React.useState(false);
 
   // Pre-fill the host's name from a previous session so returning hosts can
   // start a queue without retyping it.
@@ -85,6 +88,7 @@ const Home = ({ stats = EMPTY_STATS }: HomeProps): React.ReactElement => {
       // that would recreate the exact duplicate-room gap it exists to close.
       if (room === "notFound") {
         clearLastHostedRoom();
+        setLastRoomGone(true);
         return;
       }
       if (room === "error") return;
@@ -103,6 +107,12 @@ const Home = ({ stats = EMPTY_STATS }: HomeProps): React.ReactElement => {
   function dismissResume() {
     clearLastHostedRoom();
     setResumeRoom(null);
+    setLastRoomGone(true);
+  }
+
+  function connectTvRoomId(): string | undefined {
+    if (resumeRoom) return resumeRoom.code;
+    return lastRoomGone ? undefined : getLastHostedRoom()?.code;
   }
 
   async function handleHost(useCustom = false) {
@@ -161,8 +171,18 @@ const Home = ({ stats = EMPTY_STATS }: HomeProps): React.ReactElement => {
     handleHost(false);
   }
 
-  function handleJoinCta() {
+  function openJoin() {
+    setShowConnectTv(false);
     setShowJoin(true);
+  }
+
+  function openConnectTv() {
+    setShowJoin(false);
+    setShowConnectTv(true);
+  }
+
+  function handleJoinCta() {
+    openJoin();
     scrollToHero();
   }
 
@@ -219,6 +239,7 @@ const Home = ({ stats = EMPTY_STATS }: HomeProps): React.ReactElement => {
                 joinCode={joinCode}
                 showCustom={showCustom}
                 showJoin={showJoin}
+                showConnectTv={showConnectTv}
                 creating={creating}
                 hostError={hostError}
                 nameInputRef={nameInputRef}
@@ -235,14 +256,13 @@ const Home = ({ stats = EMPTY_STATS }: HomeProps): React.ReactElement => {
                   setShowCustom((v) => !v);
                   setHostError('');
                 }}
-                onShowJoin={() => setShowJoin(true)}
+                onShowJoin={openJoin}
+                onShowConnectTv={openConnectTv}
+                connectTvRoomId={connectTvRoomId()}
+                onConnectTvNeedsRoom={() => createRoomForPairing(hostName)}
+                onConnectTvPaired={(r) => router.push(`/host/${r.roomId}?paired=1`)}
                 onHost={handleHost}
                 onJoin={handleJoin}
-              />
-
-              <ConnectTvHero
-                onNeedsRoom={() => createRoomForPairing(hostName)}
-                onPaired={(r) => router.push(`/host/${r.roomId}?paired=1`)}
               />
             </div>
 

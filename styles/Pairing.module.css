@@ -6,6 +6,34 @@
   max-width: 320px;
 }
 
+.inline {
+  flex-direction: row;
+  flex-wrap: wrap;
+  max-width: none;
+  gap: 0.5rem;
+}
+.inline .codeInput {
+  flex: 1;
+  min-width: 0;
+  /* ≥16px or iOS Safari zooms in on focus — same rule as the join input. */
+  font-size: 1.05rem;
+  padding: 0.7rem 0.85rem;
+  border-radius: 50px;
+}
+.inline .codeInput:focus-visible {
+  outline: none;
+  border-color: rgba(0, 240, 255, 0.45);
+  box-shadow: 0 0 0 3px rgba(0, 240, 255, 0.1);
+}
+.inline .connectBtn {
+  padding: 0.7rem 1.4rem;
+  border-radius: 50px;
+}
+.inline .error {
+  flex-basis: 100%;
+  text-align: center;
+}
+
 .codeInput {
   padding: 0.7rem 0.85rem;
   font-size: 1.3rem;

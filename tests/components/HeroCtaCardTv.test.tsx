@@ -6,9 +6,12 @@ import HeroCtaCard, { type HeroCtaCardProps } from "../../components/home/HeroCt
 function props(overrides: Partial<HeroCtaCardProps> = {}): HeroCtaCardProps {
   return {
     hostName: "", customCode: "", joinCode: "", showCustom: false, showJoin: false,
-    creating: false, hostError: "", nameInputRef: React.createRef<HTMLInputElement>(),
+    showConnectTv: false, creating: false, hostError: "",
+    nameInputRef: React.createRef<HTMLInputElement>(),
     onHostNameChange: vi.fn(), onCustomCodeChange: vi.fn(), onJoinCodeChange: vi.fn(),
-    onToggleCustom: vi.fn(), onShowJoin: vi.fn(), onHost: vi.fn(), onJoin: vi.fn(),
+    onToggleCustom: vi.fn(), onShowJoin: vi.fn(), onShowConnectTv: vi.fn(),
+    onConnectTvNeedsRoom: vi.fn(async () => null), onConnectTvPaired: vi.fn(),
+    onHost: vi.fn(), onJoin: vi.fn(),
     ...overrides,
   };
 }
@@ -35,5 +38,27 @@ describe("HeroCtaCard on a TV", () => {
     document.documentElement.setAttribute("data-tv", "1");
     render(<HeroCtaCard {...props({ showJoin: true })} />);
     expect(await screen.findByRole("textbox", { name: /room code/i })).toBeInTheDocument();
+  });
+});
+
+describe("HeroCtaCard Connect a TV row", () => {
+  it("offers Connect a TV under Start a Room on a phone", () => {
+    const onShowConnectTv = vi.fn();
+    render(<HeroCtaCard {...props({ onShowConnectTv })} />);
+    fireEvent.click(screen.getByRole("button", { name: /open on your tv/i }));
+    expect(onShowConnectTv).toHaveBeenCalled();
+  });
+
+  it("swaps the row for the pairing code input when open", () => {
+    render(<HeroCtaCard {...props({ showConnectTv: true })} />);
+    expect(screen.getByRole("textbox", { name: /^connect$/i })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /open on your tv/i })).not.toBeInTheDocument();
+  });
+
+  it("hides the row on a TV, which shows its own code", async () => {
+    document.documentElement.setAttribute("data-tv", "1");
+    render(<HeroCtaCard {...props({ showJoin: true })} />);
+    await screen.findByRole("textbox", { name: /room code/i });
+    expect(screen.queryByRole("button", { name: /open on your tv/i })).not.toBeInTheDocument();
   });
 });

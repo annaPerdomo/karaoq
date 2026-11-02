@@ -8,11 +8,12 @@ export interface ConnectTvFormProps {
   roomId?: string;
   onPaired: (r: { roomId: string }) => void;
   onNeedsRoom?: () => Promise<string | null>;
+  inline?: boolean;
 }
 
 type ErrorKey = 'expired' | 'invalid' | 'generic' | 'rateLimited';
 
-export function ConnectTvForm({ roomId, onPaired, onNeedsRoom }: ConnectTvFormProps) {
+export function ConnectTvForm({ roomId, onPaired, onNeedsRoom, inline }: ConnectTvFormProps) {
   const { t } = useT();
   const [code, setCode] = React.useState('');
   const [submitting, setSubmitting] = React.useState(false);
@@ -59,7 +60,7 @@ export function ConnectTvForm({ roomId, onPaired, onNeedsRoom }: ConnectTvFormPr
   }
 
   return (
-    <form className={styles.form} onSubmit={submit}>
+    <form className={inline ? `${styles.form} ${styles.inline}` : styles.form} onSubmit={submit}>
       <input
         className={styles.codeInput}
         inputMode="numeric"
@@ -68,6 +69,7 @@ export function ConnectTvForm({ roomId, onPaired, onNeedsRoom }: ConnectTvFormPr
         aria-label={t('pair.connect')}
         maxLength={7}
         value={code}
+        autoFocus={inline}
         onChange={(e) => {
           setCode(e.target.value);
           setError(null);
