@@ -29,6 +29,7 @@ const GUIDE_SLUGS = [
 
 // A release page never changes after it ships: its lastmod is its date.
 const RELEASES = [
+  ['connect-your-phone-to-a-tv-with-a-code', '2026-11-01'],
   ['music-video-screen-and-custom-branding', '2026-10-31'],
   ['karaoke-song-ideas-from-the-charts', '2026-10-30'],
   ['most-sung-karaoke-songs', '2026-10-22'],

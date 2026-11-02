@@ -29,6 +29,18 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    id: 'tvpair',
+    slug: 'connect-your-phone-to-a-tv-with-a-code',
+    date: '2026-11-01',
+    highlightCount: 3,
+    guide: 'tv',
+    media: {
+      1: { kind: 'video', mp4: '/whats-new/tvpair-1.mp4', poster: '/whats-new/tvpair-1.webp', width: 1440, height: 810, seconds: 16.6 },
+      2: { kind: 'video', mp4: '/whats-new/tvpair-2.mp4', poster: '/whats-new/tvpair-2.webp', width: 640, height: 1386, seconds: 13.1 },
+      3: { kind: 'image', src: '/whats-new/tvpair-3.webp', width: 1280, height: 720 },
+    },
+  },
+  {
     id: 'musicvideo',
     slug: 'music-video-screen-and-custom-branding',
     date: '2026-10-31',

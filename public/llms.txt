@@ -31,6 +31,7 @@ Key facts:
 - [What's new](https://www.karaoq.live/whats-new): Every new KaraoQ feature, newest first, with where to find it.
 
 ## What's new
+- [Put your room on a TV with a 6-digit code](https://www.karaoq.live/whats-new/connect-your-phone-to-a-tv-with-a-code) (2026-11-01): Started karaoke on your phone? Show a code on the smart TV, type it on your phone, and your room moves to the big screen. No typing links with a remote.
 - [A music video screen, your own logo and colors, and a karaoke video swap](https://www.karaoq.live/whats-new/music-video-screen-and-custom-branding) (2026-10-31): Play the original music video on a second screen in time with the karaoke, put your own logo and colors on every screen, and swap a wrong karaoke version in one tap.
 - [Song ideas from today's charts, by country, genre and voice](https://www.karaoq.live/whats-new/karaoke-song-ideas-from-the-charts) (2026-10-30): Song ideas now open on what's hot in your country today, with genre lists from local charts, voice-range lists in 10 languages, and random picks from any country.
 - [The most-sung karaoke songs, from real rooms](https://www.karaoq.live/whats-new/most-sung-karaoke-songs) (2026-10-22): See the songs people actually sing at karaoke, ranked from real KaraoQ queues and refreshed daily, with lists for individual countries.
