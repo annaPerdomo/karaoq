@@ -2,6 +2,7 @@ import * as React from "react";
 import styles from "../../../styles/ScreenHelp.module.css";
 import { useT } from "../../../lib/i18n/I18nProvider";
 import { StepSignal, StepSpec } from "../../../lib/screenHelpSteps";
+import { GearLinks, LookFor } from "./StepExtras";
 
 const AUTO_ADVANCE_MS = 1400;
 
@@ -12,9 +13,10 @@ export interface StepFlowProps {
   renderAction: (step: StepSpec) => React.ReactNode;
   finish: React.ReactNode;
   onStuck: (step: StepSpec) => void;
+  onProgress?: () => void;
 }
 
-export function StepFlow({ steps, signalValue, renderText, renderAction, finish, onStuck }: StepFlowProps): React.ReactElement {
+export function StepFlow({ steps, signalValue, renderText, renderAction, finish, onStuck, onProgress }: StepFlowProps): React.ReactElement {
   const { t } = useT();
   const [index, setIndex] = React.useState(0);
   const [stuck, setStuck] = React.useState(false);
@@ -27,7 +29,10 @@ export function StepFlow({ steps, signalValue, renderText, renderAction, finish,
   if (enteredWithRef.current.index !== index) enteredWithRef.current = { index, value };
   else if (enteredWithRef.current.value === null && value !== null) enteredWithRef.current.value = value;
 
+  const onProgressRef = React.useRef(onProgress);
+  onProgressRef.current = onProgress;
   const goTo = React.useCallback((i: number) => {
+    onProgressRef.current?.();
     setIndex(i);
     setStuck(false);
     setDetected(false);
@@ -59,7 +64,9 @@ export function StepFlow({ steps, signalValue, renderText, renderAction, finish,
       <p className={styles.progress}>{t("screenHelp.step.progress", { n: index + 1, total: steps.length })}</p>
       <div className={styles.stepCard}>
         <div className={styles.stepText}>{renderText(current)}</div>
+        <LookFor visuals={current.look} />
         {renderAction(current)}
+        <GearLinks gear={current.gear} />
         {detected && <p className={styles.detected}>✓ {t("screenHelp.step.detected")}</p>}
         {alreadyDone && !detected && <p className={styles.detected}>✓ {t("screenHelp.step.alreadyDone")}</p>}
       </div>
@@ -67,6 +74,7 @@ export function StepFlow({ steps, signalValue, renderText, renderAction, finish,
         <div className={styles.fix} role="note">
           <p className={styles.fixTitle}>{t("screenHelp.step.tryThis")}</p>
           <p className={styles.fixBody}>{t(current.fix)}</p>
+          <GearLinks gear={current.fixGear} disclosure={!current.gear?.length} />
         </div>
       )}
       <div className={styles.stepButtons}>
@@ -82,6 +90,7 @@ export function StepFlow({ steps, signalValue, renderText, renderAction, finish,
             className={styles.stuckButton}
             onClick={() => {
               setStuck(true);
+              onProgress?.();
               onStuck(current);
             }}
           >

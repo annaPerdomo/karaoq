@@ -83,13 +83,19 @@ describe("screenHelpPlan", () => {
 });
 
 describe("connectMethods", () => {
-  it("offers AirPlay on a Mac and Windows wireless on Windows", () => {
-    expect(connectMethods("this", "mac")).toEqual(["cable", "airplay", "chromecast"]);
-    expect(connectMethods("this", "windows")).toEqual(["cable", "chromecast", "miracast"]);
-    expect(connectMethods("this", "other")).toEqual(["cable", "chromecast"]);
+  it("puts the cable last, offers AirPlay on a Mac and Windows wireless on Windows", () => {
+    expect(connectMethods("this", "mac")).toEqual(["airplay", "chromecast", "cable"]);
+    expect(connectMethods("this", "windows")).toEqual(["chromecast", "miracast", "cable"]);
+    expect(connectMethods("this", "other")).toEqual(["chromecast", "cable"]);
   });
 
   it("someone else's computer gets the OS-agnostic set regardless of the host's OS", () => {
-    expect(connectMethods("other", "windows")).toEqual(["cable", "airplay", "chromecast"]);
+    expect(connectMethods("other", "windows")).toEqual(["chromecast", "airplay", "cable"]);
+  });
+
+  it("moves a method detected nearby to the front", () => {
+    expect(connectMethods("this", "mac", { cast: true })).toEqual(["chromecast", "airplay", "cable"]);
+    expect(connectMethods("other", "other", { airplay: true })).toEqual(["airplay", "chromecast", "cable"]);
+    expect(connectMethods("this", "windows", { airplay: true })).toEqual(["chromecast", "miracast", "cable"]);
   });
 });

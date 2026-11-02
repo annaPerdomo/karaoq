@@ -44,12 +44,29 @@ export function screenHelpPlan(ua: string | null | undefined, touchPoints = 0): 
   return { device, options, mirror, os };
 }
 
-/** "other": the computer's OS is unknown, so Windows-only Miracast is left out. */
-export function connectMethods(scope: ConnectScope, os: ComputerOs): ConnectMethod[] {
-  if (scope === "other") return ["cable", "airplay", "chromecast"];
-  if (os === "mac") return ["cable", "airplay", "chromecast"];
-  if (os === "windows") return ["cable", "chromecast", "miracast"];
-  return ["cable", "chromecast"];
+/**
+ * Cable always last (product rule: it's the most work); a method detected nearby jumps to the front.
+ * "other": the computer's OS is unknown, so Windows-only Miracast is left out.
+ */
+export function connectMethods(
+  scope: ConnectScope,
+  os: ComputerOs,
+  nearby: { cast?: boolean; airplay?: boolean } = {}
+): ConnectMethod[] {
+  const base: ConnectMethod[] =
+    scope === "other"
+      ? ["chromecast", "airplay", "cable"]
+      : os === "mac"
+        ? ["airplay", "chromecast", "cable"]
+        : os === "windows"
+          ? ["chromecast", "miracast", "cable"]
+          : ["chromecast", "cable"];
+  const detected = base.filter((m) => isMethodNearby(m, nearby));
+  return [...detected, ...base.filter((m) => !detected.includes(m))];
+}
+
+export function isMethodNearby(m: ConnectMethod, nearby: { cast?: boolean; airplay?: boolean }): boolean {
+  return (m === "chromecast" && !!nearby.cast) || (m === "airplay" && !!nearby.airplay);
 }
 
 export const CONNECT_METHODS: readonly ConnectMethod[] = ["cable", "airplay", "chromecast", "miracast"];

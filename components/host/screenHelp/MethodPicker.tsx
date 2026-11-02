@@ -7,9 +7,11 @@ export function MethodPicker({
   methods,
   value,
   onChange,
+  nearby,
 }: {
   methods: ConnectMethod[];
   value: ConnectMethod;
+  nearby: (m: ConnectMethod) => boolean;
   onChange: (m: ConnectMethod) => void;
 }): React.ReactElement {
   const { t } = useT();
@@ -27,6 +29,8 @@ export function MethodPicker({
             onClick={() => onChange(m)}
           >
             {t(`screenHelp.connect.${m}`)}
+            {nearby(m) && " "}
+            {nearby(m) && <span className={styles.methodNearby}>{t("screenHelp.nearby.method")}</span>}
           </button>
         ))}
       </div>

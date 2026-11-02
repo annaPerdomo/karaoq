@@ -132,7 +132,8 @@ describe("ScreenHelpSheet", () => {
     render(<ScreenHelpSheet {...baseProps()} onOpenTvDisplay={onOpenTvDisplay} />);
 
     expect(screen.getByText(/connect this computer to the screen/i)).toBeInTheDocument();
-    expect(screen.getAllByRole("radio").map((r) => r.textContent)).toEqual(["HDMI cable", "AirPlay", "Chromecast"]);
+    expect(screen.getAllByRole("radio").map((r) => r.textContent)).toEqual(["AirPlay", "Chromecast", "HDMI cable"]);
+    fireEvent.click(screen.getByRole("radio", { name: "HDMI cable" }));
     expect(screen.getByText(/plug one end of an HDMI cable/i)).toBeInTheDocument();
     next();
     expect(screen.getByText(/press Input or Source/i)).toBeInTheDocument();
@@ -158,9 +159,9 @@ describe("ScreenHelpSheet", () => {
     stubUA(WINDOWS_UA);
     render(<ScreenHelpSheet {...baseProps()} />);
     fireEvent.click(screen.getByRole("radio", { name: "Windows wireless" }));
-    expect(screen.getByText(/windows key \+ k/i)).toBeInTheDocument();
+    expect(screen.getByText(/press the windows key \+ k/i)).toBeInTheDocument();
     next();
-    expect(screen.getByText(/windows key \+ p/i)).toBeInTheDocument();
+    expect(screen.getByText(/press the windows key \+ p/i)).toBeInTheDocument();
   });
 
   it("moves past the open step by itself once the display window actually opens", () => {
@@ -168,6 +169,7 @@ describe("ScreenHelpSheet", () => {
     stubUA(MAC_UA);
     let popup: Window | null = null;
     render(<ScreenHelpSheet {...baseProps()} getDisplayWindow={() => popup} />);
+    fireEvent.click(screen.getByRole("radio", { name: "HDMI cable" }));
     next();
     next();
     next();
@@ -196,6 +198,7 @@ describe("ScreenHelpSheet", () => {
     Object.defineProperty(window.screen, "isExtended", { value: true, configurable: true });
     try {
       render(<ScreenHelpSheet {...baseProps()} />);
+      fireEvent.click(screen.getByRole("radio", { name: "HDMI cable" }));
       act(() => {
         vi.advanceTimersByTime(3000);
       });
@@ -212,6 +215,7 @@ describe("ScreenHelpSheet", () => {
     const props = { ...baseProps(), onUseDisplayMode: vi.fn(), onSendTest: vi.fn(), onVerified: vi.fn() };
     const { rerender } = render(<ScreenHelpSheet {...props} />);
     openOption(/a laptop or tablet near the screen/i);
+    fireEvent.click(screen.getByRole("radio", { name: "HDMI cable" }));
     expect(screen.getByText("karaoq.live/display/ABCD")).toBeInTheDocument();
 
     rerender(<ScreenHelpSheet {...props} displayConnected={true} />);
@@ -283,6 +287,70 @@ describe("ScreenHelpSheet", () => {
     } finally {
       delete (window as unknown as Record<string, unknown>).WebKitPlaybackTargetAvailabilityEvent;
     }
+  });
+
+  it("desktop Chrome: a Chromecast on the network becomes the first way to connect", async () => {
+    stubUA(WINDOWS_UA);
+    (window as unknown as Record<string, unknown>).PresentationRequest = class {
+      getAvailability() {
+        return Promise.resolve({ value: true, onchange: null });
+      }
+      start() {
+        return Promise.resolve({});
+      }
+    };
+    try {
+      render(<ScreenHelpSheet {...baseProps()} />);
+      await act(async () => {});
+      const radios = screen.getAllByRole("radio");
+      expect(radios[0]).toHaveTextContent("Chromecast Nearby");
+      expect(radios[0]).toHaveAttribute("aria-checked", "true");
+      expect(screen.getByRole("button", { name: "Cast to a screen" })).toBeInTheDocument();
+    } finally {
+      delete (window as unknown as Record<string, unknown>).PresentationRequest;
+    }
+  });
+
+  it("a Chromecast found after the host started the steps doesn't reset them", async () => {
+    stubUA(MAC_UA);
+    const availability = { value: false, onchange: null as (() => void) | null };
+    (window as unknown as Record<string, unknown>).PresentationRequest = class {
+      getAvailability() {
+        return Promise.resolve(availability);
+      }
+      start() {
+        return Promise.resolve({});
+      }
+    };
+    try {
+      render(<ScreenHelpSheet {...baseProps()} />);
+      await act(async () => {});
+      next();
+      expect(screen.getByText("Step 2 of 7")).toBeInTheDocument();
+      act(() => {
+        availability.value = true;
+        availability.onchange?.();
+      });
+      expect(screen.getByText("Step 2 of 7")).toBeInTheDocument();
+      expect(screen.getByRole("radio", { name: "AirPlay" })).toHaveAttribute("aria-checked", "true");
+      expect(screen.getByRole("radio", { name: "Chromecast Nearby" })).toBeInTheDocument();
+    } finally {
+      delete (window as unknown as Record<string, unknown>).PresentationRequest;
+    }
+  });
+
+  it("shows the buttons a step names and links the gear it mentions on Amazon", () => {
+    stubUA(MAC_UA);
+    render(<ScreenHelpSheet {...baseProps()} />);
+    next();
+    expect(screen.getByText("Control Center")).toBeInTheDocument();
+    expect(screen.getByText("Screen Mirroring")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("radio", { name: "HDMI cable" }));
+    const adapter = screen.getByRole("link", { name: /usb-c to hdmi adapter/i });
+    expect(adapter.getAttribute("href")).toMatch(/^https:\/\/www\.amazon\.com\/s\?k=.*&tag=karaoq-20$/);
+    expect(adapter).toHaveAttribute("rel", "sponsored nofollow noopener");
+    expect(screen.getByText(/affiliate links/i)).toBeInTheDocument();
   });
 
   it("Samsung TV UA: only the onTv body renders, no buttons besides Done", () => {

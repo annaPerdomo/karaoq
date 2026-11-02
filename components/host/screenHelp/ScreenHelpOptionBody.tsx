@@ -2,7 +2,7 @@ import * as React from "react";
 import styles from "../../../styles/ScreenHelp.module.css";
 import { useT } from "../../../lib/i18n/I18nProvider";
 import { ConnectTvForm } from "../../pairing/ConnectTvForm";
-import { ConnectMethod, connectMethods, ScreenHelpOption, ScreenHelpPlan } from "../../../lib/screenHelp";
+import { ConnectMethod, connectMethods, isMethodNearby, ScreenHelpOption, ScreenHelpPlan } from "../../../lib/screenHelp";
 import { screenHelpFlow, StepSignal, StepSpec } from "../../../lib/screenHelpSteps";
 import { ScreenSignals } from "../hooks/useScreenSignals";
 import { MethodPicker } from "./MethodPicker";
@@ -39,9 +39,12 @@ export function ScreenHelpOptionBody(props: ScreenHelpOptionBodyProps): React.Re
   const { option, plan, joinCode, displayHost, signals, displayConnected } = props;
   const { t } = useT();
   const scope = option === "laptop" ? "other" : "this";
-  const methods = connectMethods(scope, plan.os);
+  const nearby = { cast: signals.castAvailable, airplay: signals.airplayNearby === true };
+  const methods = connectMethods(scope, plan.os, nearby);
   const hasMethods = option === "popout" || option === "laptop";
-  const [method, setMethod] = React.useState<ConnectMethod>(methods[0]);
+  // Follows detection only until the flow starts: cast/AirPlay availability flips at any time and would reset the steps.
+  const [picked, setPicked] = React.useState<ConnectMethod | null>(null);
+  const method = picked && methods.includes(picked) ? picked : methods[0];
   const flow = screenHelpFlow(option, plan, method, signals.castAvailable);
 
   if (option === "onTv" || !flow) {
@@ -117,7 +120,7 @@ export function ScreenHelpOptionBody(props: ScreenHelpOptionBodyProps): React.Re
     <div className={styles.optionBody}>
       {option === "popout" && <p className={styles.lead}>{t("screenHelp.popout.lead")}</p>}
       {option === "standalone" && <p className={styles.lead}>{t("screenHelp.standalone.lead")}</p>}
-      {hasMethods && <MethodPicker methods={methods} value={method} onChange={setMethod} />}
+      {hasMethods && <MethodPicker methods={methods} value={method} onChange={setPicked} nearby={(m) => isMethodNearby(m, nearby)} />}
       <StepFlow
         key={`${option}:${method}:${flow.steps.length}`}
         steps={flow.steps}
@@ -125,6 +128,7 @@ export function ScreenHelpOptionBody(props: ScreenHelpOptionBodyProps): React.Re
         renderText={renderText}
         renderAction={renderAction}
         finish={finish}
+        onProgress={() => hasMethods && setPicked((p) => p ?? method)}
         onStuck={(step) => props.onStepEvent({ option, method: eventMethod, step: step.id, outcome: "stuck" })}
       />
       {note && <p className={styles.note}>{note}</p>}
