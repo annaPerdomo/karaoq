@@ -11,7 +11,8 @@
     "tool": "vitest run --config vitest.tools.config.ts",
     "sitemap": "node scripts/gen-sitemap.mjs",
     "prepare": "husky",
-    "test:tv": "vitest run --config vitest.tv.config.ts"
+    "test:tv": "vitest run --config vitest.tv.config.ts",
+    "smoke": "node tests/e2e/smoke.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
