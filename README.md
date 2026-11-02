@@ -77,6 +77,8 @@ QueueEntry {
 }
 ```
 
+See [`docs/engineering/README.md`](docs/engineering/README.md) for deployment, environments, and operational runbooks.
+
 ## Tech Stack
 
 | Layer | Choice | Rationale |
