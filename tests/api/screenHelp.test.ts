@@ -132,6 +132,37 @@ describe("POST /api/analytics/screen-help", () => {
     expect(event.option).toBe("pair");
   });
 
+  it("stores screen_help_step with where the host got stuck", async () => {
+    const res = createRes();
+    await handler(post({ roomId: "room1", option: "popout", method: "cable", step: "drag", outcome: "stuck" }), res);
+
+    expect(res.getStatus()).toBe(200);
+    const event = mockInsertOne.mock.calls[0][0];
+    expect(event.type).toBe("screen_help_step");
+    expect(event).toMatchObject({ roomId: "ROOM1", option: "popout", method: "cable", step: "drag", outcome: "stuck" });
+  });
+
+  it("accepts the quick check's verdict without a method", async () => {
+    const res = createRes();
+    await handler(post({ roomId: "room1", option: "quickCheck", step: "verify", outcome: "verified" }), res);
+    expect(res.getStatus()).toBe(200);
+    expect(mockInsertOne.mock.calls[0][0].method).toBeUndefined();
+  });
+
+  it.each([
+    [{ option: "popout", step: "drag", outcome: "gave up" }],
+    [{ option: "popout", step: "Drag!", outcome: "stuck" }],
+    [{ option: "popout", method: "carrier pigeon", step: "drag", outcome: "stuck" }],
+    [{ step: "drag", outcome: "stuck" }],
+    [{ option: "quickCheck" }],
+    [{ option: "pair", method: "cable" }],
+  ])("rejects a malformed step event %o", async (extra) => {
+    const res = createRes();
+    await handler(post({ roomId: "room1", ...extra }), res);
+    expect(res.getStatus()).toBe(400);
+    expect(mockInsertOne).not.toHaveBeenCalled();
+  });
+
   it("rate limits after too many requests", async () => {
     for (let i = 0; i < 20; i++) {
       await handler(post({ roomId: "ROOM1" }), createRes());

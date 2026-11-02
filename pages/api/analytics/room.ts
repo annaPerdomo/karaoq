@@ -71,6 +71,7 @@ async function handleGet(
           "session_end_set",
           "screen_help_opened",
           "screen_help_option",
+          "screen_help_step",
         ],
       },
     })
