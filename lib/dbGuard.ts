@@ -1,0 +1,16 @@
+export function databaseRoleWarning(
+  env: NodeJS.ProcessEnv = process.env
+): string | null {
+  // NODE_ENV=production on Vercel previews and on a local `pnpm start` too, so
+  // only the deploy markers isProductionDeploy() reads count as production.
+  const nonProduction =
+    env.VERCEL_ENV !== "production" && env.KARAOQ_ENV !== "production";
+  if (
+    nonProduction &&
+    env.MONGODB_DB === "karaoq" &&
+    env.KARAOQ_ALLOW_PROD_DB !== "1"
+  ) {
+    return `Non-production process (NODE_ENV=${env.NODE_ENV ?? "unset"}, VERCEL_ENV=${env.VERCEL_ENV ?? "unset"}) is pointed at MONGODB_DB=karaoq, the production database. Set MONGODB_DB to a separate dev database (e.g. karaoq_dev), or set KARAOQ_ALLOW_PROD_DB=1 to proceed anyway.`;
+  }
+  return null;
+}
