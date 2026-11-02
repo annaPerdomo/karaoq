@@ -783,6 +783,35 @@ export async function getOpsAlertsCollection(): Promise<Collection<OpsAlertDoc>>
   return db.collection<OpsAlertDoc>("ops_alerts");
 }
 
+// Must outlive PAIR_TTL_MS, or a TV that polls just after a last-second claim gets a
+// 404 instead of "claimed". Expiry frees the numeric `_id` for reuse.
+const TV_PAIRING_TTL_SECONDS = 900;
+
+export interface TvPairingDoc {
+  _id: string;
+  secretHash: string;
+  createdAt: Date;
+  roomId?: string;
+  claimedAt?: Date;
+}
+
+let tvPairingIndexesEnsured = false;
+
+export async function getTvPairingsCollection(): Promise<Collection<TvPairingDoc>> {
+  const client = await getMongoClient();
+  const db = client.db(process.env.MONGODB_DB);
+  if (!tvPairingIndexesEnsured) {
+    tvPairingIndexesEnsured = true;
+    db.collection("tv_pairings")
+      .createIndex({ createdAt: 1 }, { expireAfterSeconds: TV_PAIRING_TTL_SECONDS })
+      .catch((e) => {
+        console.error("TV pairing index creation failed:", e);
+        tvPairingIndexesEnsured = false;
+      });
+  }
+  return db.collection<TvPairingDoc>("tv_pairings");
+}
+
 let feedbackIndexesEnsured = false;
 
 // No TTL on purpose: every other collection expires, but a bug report is the

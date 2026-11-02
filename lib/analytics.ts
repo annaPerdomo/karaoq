@@ -50,7 +50,8 @@ export type EventType =
   | "music_video_link"
   | "logo_upload_rejected"
   | "logo_uploaded"
-  | "brand_saved";
+  | "brand_saved"
+  | "tv_paired";
 
 // Music-video / brand telemetry retention: the Screens view's longest window.
 export const SCREEN_EVENT_TTL_MS = 90 * 24 * 60 * 60 * 1000;
