@@ -11,6 +11,8 @@ import { normalizeRoomId } from '../lib/roomCode';
 import { onRoomState, onDisplayPause, broadcastVideoEnded } from '../app/queue/roomChannel';
 import { ytCommand, parseYtMessage } from './player/ytCommand';
 import { usePlayheadBroadcast } from './display/hooks/usePlayheadBroadcast';
+import { useScreenTest } from './display/hooks/useScreenTest';
+import ScreenTestCard from './display/ScreenTestCard';
 import { useRoomTiming } from './hooks/useRoomTiming';
 import { startSessionTracking } from '../app/queue/trackSession';
 import { startVisiblePolling } from '../app/queue/pollWhileVisible';
@@ -58,6 +60,7 @@ const Display = (): React.ReactElement => {
   const router = useRouter();
   const { t } = useT();
   const joinCode = normalizeRoomId(router.query.joinCode) as string | undefined;
+  const screenTest = useScreenTest(joinCode);
 
   const [queue, setQueue] = React.useState<QueueEntry[]>([]);
   const [singWithMe, setSingWithMe] = React.useState<SingWithMePost[]>([]);
@@ -221,6 +224,7 @@ const Display = (): React.ReactElement => {
     setAutoStartAt(autoStartEpoch(room.autoStartAt));
     setHostJoined(!!room.hostJoinedAt);
     processReactions(room.reactions, animateReactions);
+    screenTest.adoptRoom(room);
   }
 
   const playsVideoHere = playMode !== 'here';
@@ -646,6 +650,8 @@ const Display = (): React.ReactElement => {
           {renderWithHeart(t('footer.credit'), styles.footerHeart)}
         </a>
       </div>
+
+      {screenTest.showing && <ScreenTestCard />}
 
       {!edit.editing && (
         <FullscreenToggle

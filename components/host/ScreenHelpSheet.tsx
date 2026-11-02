@@ -4,7 +4,9 @@ import styles from "../../styles/ScreenHelp.module.css";
 import { useT } from "../../lib/i18n/I18nProvider";
 import { localePath } from "../../lib/i18n/config";
 import { screenHelpPlan, ScreenHelpOption } from "../../lib/screenHelp";
-import { ScreenHelpOptionBody } from "./screenHelp/ScreenHelpOptionBody";
+import { ScreenHelpOptionBody, StepEvent } from "./screenHelp/ScreenHelpOptionBody";
+import { useScreenSignals } from "./hooks/useScreenSignals";
+import { VerifyStep } from "./screenHelp/VerifyStep";
 
 export interface ScreenHelpSheetProps {
   isOpen: boolean;
@@ -16,6 +18,12 @@ export interface ScreenHelpSheetProps {
   onUseDisplayMode: () => void;
   onPlayHere: () => void;
   onOptionOpened?: (option: ScreenHelpOption) => void;
+  displayConnected: boolean;
+  verified: boolean;
+  getDisplayWindow: () => Window | null;
+  onSendTest: () => void;
+  onStepEvent: (e: StepEvent) => void;
+  onVerified: () => void;
 }
 
 const DESKTOP_PLAN = screenHelpPlan(null);
@@ -30,29 +38,50 @@ export function ScreenHelpSheet({
   onUseDisplayMode,
   onPlayHere,
   onOptionOpened,
+  displayConnected,
+  verified,
+  getDisplayWindow,
+  onSendTest,
+  onStepEvent,
+  onVerified,
 }: ScreenHelpSheetProps): React.ReactElement | null {
   const { t, locale } = useT();
   const [plan, setPlan] = React.useState<typeof DESKTOP_PLAN | null>(null);
   const [expanded, setExpanded] = React.useState<ScreenHelpOption | null>(null);
   const openedRef = React.useRef<Set<ScreenHelpOption>>(new Set());
+  // Only a display that was already open when the sheet opened gets the quick check; one that comes
+  // up mid-route is confirmed by that route's own last step.
+  const [connectedAtOpen, setConnectedAtOpen] = React.useState(false);
+  // Once the person picks an option themselves, detection must not yank them to another one.
+  const touchedRef = React.useRef(false);
+  const absDisplayUrl = typeof window === "undefined" ? "" : `${window.location.origin}/display/${joinCode}`;
+  const { signals, startCast } = useScreenSignals({ active: isOpen, getDisplayWindow, displayUrl: absDisplayUrl });
 
   const activePlan = plan ?? DESKTOP_PLAN;
   const activeExpanded = expanded ?? activePlan.options[0] ?? null;
 
   React.useEffect(() => {
     if (!isOpen) return;
-    const nextPlan = screenHelpPlan(navigator.userAgent);
+    const nextPlan = screenHelpPlan(navigator.userAgent, navigator.maxTouchPoints);
     setPlan(nextPlan);
     setExpanded(nextPlan.options[0] ?? null);
+    setConnectedAtOpen(displayConnected);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- a snapshot at open, not a live value
   }, [isOpen]);
 
   React.useEffect(() => {
     if (!isOpen) {
       openedRef.current = new Set();
+      touchedRef.current = false;
       setPlan(null);
       setExpanded(null);
     }
   }, [isOpen]);
+
+  const airplayNearby = signals.airplayNearby === true && activePlan.mirror === "airplay";
+  React.useEffect(() => {
+    if (airplayNearby && !touchedRef.current && plan?.options.includes("mirror")) setExpanded("mirror");
+  }, [airplayNearby, plan]);
 
   React.useEffect(() => {
     // plan === null: the placeholder desktop plan before the UA effect runs; not a real opened option.
@@ -85,6 +114,24 @@ export function ScreenHelpSheet({
         <div className={sheetStyles.sheetHandle} />
         <h3 className={styles.title}>{t("screenHelp.title")}</h3>
         <p className={styles.intro}>{t("screenHelp.intro")}</p>
+        {connectedAtOpen && displayConnected && !verified && (
+          <section className={styles.quickCheck}>
+            <p className={styles.quickCheckTitle}>{t("screenHelp.quickCheck.title")}</p>
+            <VerifyStep
+              kind="test"
+              displayLive={true}
+              popup={signals.popup.open ? signals.popup : undefined}
+              fix="screenHelp.fix.verify.quick"
+              onSendTest={onSendTest}
+              onAnswer={(sawIt) => {
+                onStepEvent({ option: "quickCheck", step: "verify", outcome: sawIt ? "verified" : "failed" });
+                if (!sawIt) return;
+                onUseDisplayMode();
+                onVerified();
+              }}
+            />
+          </section>
+        )}
         <div className={styles.optionList}>
           {activePlan.options.map((option, i) => {
             const isExpanded = activeExpanded === option;
@@ -93,11 +140,20 @@ export function ScreenHelpSheet({
                 <button
                   className={styles.optionHeader}
                   aria-expanded={isExpanded}
-                  onClick={() => setExpanded(option)}
+                  onClick={() => {
+                    touchedRef.current = true;
+                    setExpanded(option);
+                  }}
                 >
                   <span className={styles.optionHeaderTitle}>
                     {t(`screenHelp.${option}.title`)}
-                    {i === 0 && <span className={styles.chip}>{t("screenHelp.recommended")}</span>}
+                    {option === "mirror" && airplayNearby ? (
+                      <span className={styles.chip}>{t("screenHelp.nearby.airplay")}</span>
+                    ) : option === "popout" && signals.castAvailable ? (
+                      <span className={styles.chip}>{t("screenHelp.nearby.cast")}</span>
+                    ) : (
+                      i === 0 && !airplayNearby && <span className={styles.chip}>{t("screenHelp.recommended")}</span>
+                    )}
                   </span>
                 </button>
                 {isExpanded && (
@@ -106,10 +162,18 @@ export function ScreenHelpSheet({
                     plan={activePlan}
                     joinCode={joinCode}
                     displayHost={displayHost}
+                    signals={signals}
+                    displayConnected={displayConnected}
                     onPaired={onPaired}
                     onOpenTvDisplay={onOpenTvDisplay}
+                    onStartCast={async () => {
+                      if (await startCast()) onUseDisplayMode();
+                    }}
                     onUseDisplayMode={onUseDisplayMode}
                     onPlayHere={onPlayHere}
+                    onSendTest={onSendTest}
+                    onStepEvent={onStepEvent}
+                    onVerified={onVerified}
                   />
                 )}
               </section>

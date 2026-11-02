@@ -1,19 +1,21 @@
 import * as React from "react";
-import sheetStyles from "../../../styles/Host.module.css";
 import styles from "../../../styles/ScreenHelp.module.css";
 import { useT } from "../../../lib/i18n/I18nProvider";
 import { ConnectTvForm } from "../../pairing/ConnectTvForm";
-import { ScreenHelpOption, ScreenHelpPlan } from "../../../lib/screenHelp";
+import { ConnectMethod, connectMethods, ScreenHelpOption, ScreenHelpPlan } from "../../../lib/screenHelp";
+import { screenHelpFlow, StepSignal, StepSpec } from "../../../lib/screenHelpSteps";
+import { ScreenSignals } from "../hooks/useScreenSignals";
+import { MethodPicker } from "./MethodPicker";
+import { StepFlow } from "./StepFlow";
+import { VerifyStep } from "./VerifyStep";
+import { withStrong } from "./withStrong";
 
-function withStrong(text: string, placeholder: string, value: string): React.ReactNode {
-  const pattern = new RegExp(`(\\{${placeholder}\\})`);
-  return text.split(pattern).map((part, i) =>
-    part === `{${placeholder}}` ? (
-      <strong key={i}>{value}</strong>
-    ) : (
-      <React.Fragment key={i}>{part}</React.Fragment>
-    )
-  );
+export interface StepEvent {
+  /** "quickCheck": the confirm card shown above the options when a display is already live. */
+  option: ScreenHelpOption | "quickCheck";
+  method?: ConnectMethod;
+  step: string;
+  outcome: "stuck" | "verified" | "failed";
 }
 
 export interface ScreenHelpOptionBodyProps {
@@ -21,92 +23,111 @@ export interface ScreenHelpOptionBodyProps {
   plan: ScreenHelpPlan;
   joinCode: string;
   displayHost: string;
+  signals: ScreenSignals;
+  displayConnected: boolean;
   onPaired: (r: { roomId: string }) => void;
   onOpenTvDisplay: () => void;
+  onStartCast: () => void;
   onUseDisplayMode: () => void;
   onPlayHere: () => void;
+  onSendTest: () => void;
+  onStepEvent: (e: StepEvent) => void;
+  onVerified: () => void;
 }
 
-export function ScreenHelpOptionBody({
-  option,
-  plan,
-  joinCode,
-  displayHost,
-  onPaired,
-  onOpenTvDisplay,
-  onUseDisplayMode,
-  onPlayHere,
-}: ScreenHelpOptionBodyProps): React.ReactElement {
+export function ScreenHelpOptionBody(props: ScreenHelpOptionBodyProps): React.ReactElement {
+  const { option, plan, joinCode, displayHost, signals, displayConnected } = props;
   const { t } = useT();
+  const scope = option === "laptop" ? "other" : "this";
+  const methods = connectMethods(scope, plan.os);
+  const hasMethods = option === "popout" || option === "laptop";
+  const [method, setMethod] = React.useState<ConnectMethod>(methods[0]);
+  const flow = screenHelpFlow(option, plan, method, signals.castAvailable);
 
-  if (option === "pair") {
+  if (option === "onTv" || !flow) {
     return (
       <div className={styles.optionBody}>
-        <ol className={styles.steps}>
-          <li>{withStrong(t("screenHelp.pair.step1"), "url", displayHost)}</li>
-          <li>{t("screenHelp.pair.step2")}</li>
-          <li>{t("screenHelp.pair.step3")}</li>
-        </ol>
-        <ConnectTvForm inline autoFocus={false} roomId={joinCode} onPaired={onPaired} />
+        <p className={styles.note}>{t("screenHelp.onTv.body")}</p>
       </div>
     );
   }
 
-  if (option === "mirror") {
-    const step1 = plan.mirror === "airplay" ? "screenHelp.mirror.airplay.step1" : "screenHelp.mirror.cast.step1";
-    const step2 = plan.mirror === "airplay" ? "screenHelp.mirror.airplay.step2" : "screenHelp.mirror.cast.step2";
+  const displayUrl = `${displayHost}/display/${joinCode}`;
+  const eventMethod = hasMethods ? method : undefined;
+
+  const signalValue = (signal: StepSignal): boolean | null => {
+    switch (signal) {
+      case "extended":
+        return signals.extended;
+      case "popupOpen":
+        return signals.popup.open;
+      case "popupOtherScreen":
+        return signals.popup.otherScreen;
+      case "popupFullscreen":
+        return signals.popup.fullscreen;
+      case "displayConnected":
+        return displayConnected;
+    }
+  };
+
+  const renderText = (step: StepSpec) =>
+    withStrong(t(step.text), "url", option === "pair" ? displayHost : displayUrl);
+
+  const renderAction = (step: StepSpec): React.ReactNode => {
+    if (step.action === "pairForm") {
+      return <ConnectTvForm inline autoFocus={false} roomId={joinCode} onPaired={props.onPaired} />;
+    }
+    if (!step.action) return null;
+    const isCast = step.action === "cast";
     return (
-      <div className={styles.optionBody}>
-        <ol className={styles.steps}>
-          <li>{t(step1)}</li>
-          <li>{t(step2)}</li>
-          <li>{t("screenHelp.mirror.step3")}</li>
-        </ol>
-        <button className={sheetStyles.switchModeLink} onClick={onPlayHere}>
-          {t("screenHelp.mirror.playHere")}
+      <div className={styles.stepAction}>
+        <button type="button" className={styles.actionButton} onClick={isCast ? props.onStartCast : props.onOpenTvDisplay}>
+          {t(isCast ? "screenHelp.popout.castButton" : "host.status.openDisplay")}
         </button>
-        <p className={styles.note}>{t("screenHelp.mirror.note")}</p>
       </div>
     );
-  }
+  };
 
-  if (option === "laptop") {
-    const url = `${displayHost}/display/${joinCode}`;
-    return (
-      <div className={styles.optionBody}>
-        <ol className={styles.steps}>
-          <li>{t("screenHelp.laptop.step1")}</li>
-          <li>{withStrong(t("screenHelp.laptop.step2"), "url", url)}</li>
-          <li>{t("screenHelp.laptop.step3")}</li>
-        </ol>
-        <button className={sheetStyles.switchModeLink} onClick={onUseDisplayMode}>
-          {t("screenHelp.laptop.useIt")}
-        </button>
-      </div>
+  const finish =
+    flow.finish === "paired" ? null : (
+      <VerifyStep
+        kind={flow.finish}
+        displayLive={flow.needsDisplay ? displayConnected : null}
+        popup={option === "popout" && method !== "chromecast" ? signals.popup : undefined}
+        fix={flow.verifyFix}
+        onSendTest={props.onSendTest}
+        onAnswer={(sawIt) => {
+          props.onStepEvent({ option, method: eventMethod, step: "verify", outcome: sawIt ? "verified" : "failed" });
+          if (!sawIt) return;
+          if (option === "laptop" || option === "standalone") props.onUseDisplayMode();
+          props.onVerified();
+        }}
+        successAction={flow.finish === "mirror" ? { label: t("screenHelp.mirror.playHere"), onClick: props.onPlayHere } : undefined}
+      />
     );
-  }
 
-  if (option === "popout") {
-    return (
-      <div className={styles.optionBody}>
-        <ol className={styles.steps}>
-          <li>
-            {t("screenHelp.popout.step1")}
-            <div className={styles.stepAction}>
-              <button className={sheetStyles.switchModeLink} onClick={onOpenTvDisplay}>
-                {t("host.status.openDisplay")}
-              </button>
-            </div>
-          </li>
-          <li>{t("screenHelp.popout.step2")}</li>
-        </ol>
-      </div>
-    );
-  }
+  const note =
+    option === "standalone"
+      ? t("screenHelp.standalone.note")
+      : method === "chromecast" && hasMethods && !(option === "popout" && signals.castAvailable)
+        ? t("screenHelp.connect.chromecast.chromeOnly")
+        : null;
 
   return (
     <div className={styles.optionBody}>
-      <p className={styles.note}>{t("screenHelp.onTv.body")}</p>
+      {option === "popout" && <p className={styles.lead}>{t("screenHelp.popout.lead")}</p>}
+      {option === "standalone" && <p className={styles.lead}>{t("screenHelp.standalone.lead")}</p>}
+      {hasMethods && <MethodPicker methods={methods} value={method} onChange={setMethod} />}
+      <StepFlow
+        key={`${option}:${method}:${flow.steps.length}`}
+        steps={flow.steps}
+        signalValue={signalValue}
+        renderText={renderText}
+        renderAction={renderAction}
+        finish={finish}
+        onStuck={(step) => props.onStepEvent({ option, method: eventMethod, step: step.id, outcome: "stuck" })}
+      />
+      {note && <p className={styles.note}>{note}</p>}
     </div>
   );
 }

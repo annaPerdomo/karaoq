@@ -380,7 +380,16 @@ const Host = ({
 
   // Keep the window handle — its `.closed` is the fast fallback signal.
   function openTvDisplay() {
-    displayWindowRef.current = window.open(`/display/${joinCode}`, "_blank");
+    launchTvDisplay();
+  }
+
+  // The help sheet asks for a real window: a tab is hard to drag onto a second screen.
+  function openTvDisplayWindow() {
+    launchTvDisplay("popup");
+  }
+
+  function launchTvDisplay(features?: string) {
+    displayWindowRef.current = window.open(`/display/${joinCode}`, "_blank", features);
     fallbackFiredRef.current = false;
     setDisplayWindowNonce((n) => n + 1);
     setPlayMode("tv");
@@ -390,7 +399,7 @@ const Host = ({
   }
 
   const { connectTvRef, onTvPaired } = useConnectTv({ joinCode, setPlayMode, rememberMode, showToast, message: t('pair.remoteNow') });
-  const screenHelp = useScreenHelp({ joinCode, setPlayMode, rememberMode });
+  const screenHelp = useScreenHelp({ joinCode, setPlayMode, rememberMode, displayConnected });
   usePairedToast({ remote, joinCode, message: t('pair.remoteNow'), showToast });
 
   function copyCohostLink() {
@@ -1481,8 +1490,9 @@ const Host = ({
             canPopOut={screenHelp.device !== null && screenHelp.device !== "mobile"}
           />
 
-          {!remote && !customizing && !(tvMode && displayConnected) && screenHelp.device !== "tv" && (
-            <ScreenHelpLink onClick={screenHelp.open} />
+          {/* A live display isn't proof it reached the big screen; the link stays until someone confirms. */}
+          {!remote && !customizing && !(tvMode && displayConnected && screenHelp.verified) && screenHelp.device !== "tv" && (
+            <ScreenHelpLink onClick={screenHelp.open} checking={tvMode && displayConnected} />
           )}
 
           {!remote && reactionsOn && visibleReactions.length > 0 && (
@@ -1655,11 +1665,17 @@ const Host = ({
           onClose={screenHelp.close}
           joinCode={joinCode}
           displayHost={displayUrl}
-          onPaired={(r) => { screenHelp.close(); onTvPaired(r); }}
-          onOpenTvDisplay={() => { screenHelp.close(); openTvDisplay(); }}
-          onUseDisplayMode={() => { screenHelp.close(); screenHelp.useDisplayMode(); }}
+          onPaired={(r) => { if (r.roomId === joinCode) screenHelp.markVerified(); screenHelp.close(); onTvPaired(r); }}
+          onOpenTvDisplay={openTvDisplayWindow}
+          onUseDisplayMode={screenHelp.useDisplayMode}
           onPlayHere={() => { screenHelp.close(); playHere(); }}
           onOptionOpened={screenHelp.onOptionOpened}
+          displayConnected={displayConnected}
+          verified={screenHelp.verified}
+          getDisplayWindow={() => displayWindowRef.current}
+          onSendTest={screenHelp.sendTest}
+          onStepEvent={screenHelp.onStepEvent}
+          onVerified={screenHelp.markVerified}
         />
       )}
       {feedbackOpen && (

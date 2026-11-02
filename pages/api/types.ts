@@ -321,6 +321,8 @@ export interface Room {
   /** Display heartbeat (~10s); the room GET clears playing state with no
    * recent heartbeat so host controls never show a phantom song. */
   displayLastSeen?: Date;
+  /** Last time the host asked displays to flash the screen-help test card. */
+  screenTestAt?: Date;
   /** Grace window for a display to load before orphan-healing kicks in. */
   playStartedAt?: Date;
   /** When the current pause began. Freezes the queue-time estimate while the

@@ -133,3 +133,19 @@ export function onVideoEnded(
   ch.onmessage = () => callback();
   return () => ch.close();
 }
+
+// Screen-help test card (Host → Display). The display also picks it up from its room poll
+// (screenTestAt); the broadcast lets a same-browser display window flash it instantly.
+export function broadcastScreenTest(roomId: string) {
+  if (typeof BroadcastChannel === "undefined") return;
+  const ch = new BroadcastChannel(`karaoq-screen-test:${roomId}`);
+  ch.postMessage(Date.now());
+  ch.close();
+}
+
+export function onScreenTest(roomId: string, callback: () => void): () => void {
+  if (typeof BroadcastChannel === "undefined") return () => {};
+  const ch = new BroadcastChannel(`karaoq-screen-test:${roomId}`);
+  ch.onmessage = () => callback();
+  return () => ch.close();
+}
