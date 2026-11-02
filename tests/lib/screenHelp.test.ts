@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { screenHelpPlan, SCREEN_HELP_OPTIONS } from "../../lib/screenHelp";
+import { connectMethods, screenHelpPlan, SCREEN_HELP_OPTIONS } from "../../lib/screenHelp";
 
 const IPHONE_UA =
   "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.6 Mobile/15E148 Safari/604.1";
@@ -17,7 +17,8 @@ describe("screenHelpPlan", () => {
     expect(screenHelpPlan(IPHONE_UA)).toEqual({
       device: "mobile",
       mirror: "airplay",
-      options: ["pair", "mirror", "laptop"],
+      options: ["pair", "mirror", "laptop", "standalone"],
+      os: "other",
     });
   });
 
@@ -25,7 +26,8 @@ describe("screenHelpPlan", () => {
     expect(screenHelpPlan(ANDROID_PHONE_UA)).toEqual({
       device: "mobile",
       mirror: "cast",
-      options: ["pair", "mirror", "laptop"],
+      options: ["pair", "mirror", "laptop", "standalone"],
+      os: "other",
     });
   });
 
@@ -34,6 +36,7 @@ describe("screenHelpPlan", () => {
       device: "desktop",
       mirror: "airplay",
       options: ["popout", "pair", "mirror"],
+      os: "mac",
     });
   });
 
@@ -42,6 +45,7 @@ describe("screenHelpPlan", () => {
       device: "desktop",
       mirror: "cast",
       options: ["popout", "pair", "mirror"],
+      os: "windows",
     });
   });
 
@@ -50,7 +54,18 @@ describe("screenHelpPlan", () => {
       device: "tv",
       mirror: "cast",
       options: ["onTv"],
+      os: "other",
     });
+  });
+
+  it("reads a touch-capable Mac UA as an iPad", () => {
+    expect(screenHelpPlan(MAC_UA, 5)).toEqual({
+      device: "mobile",
+      mirror: "airplay",
+      options: ["pair", "mirror", "laptop", "standalone"],
+      os: "other",
+    });
+    expect(screenHelpPlan(MAC_UA, 0).device).toBe("desktop");
   });
 
   it("falls back to desktop for a null UA", () => {
@@ -64,5 +79,17 @@ describe("screenHelpPlan", () => {
     for (const option of options) {
       expect(SCREEN_HELP_OPTIONS).toContain(option);
     }
+  });
+});
+
+describe("connectMethods", () => {
+  it("offers AirPlay on a Mac and Windows wireless on Windows", () => {
+    expect(connectMethods("this", "mac")).toEqual(["cable", "airplay", "chromecast"]);
+    expect(connectMethods("this", "windows")).toEqual(["cable", "chromecast", "miracast"]);
+    expect(connectMethods("this", "other")).toEqual(["cable", "chromecast"]);
+  });
+
+  it("someone else's computer gets the OS-agnostic set regardless of the host's OS", () => {
+    expect(connectMethods("other", "windows")).toEqual(["cable", "airplay", "chromecast"]);
   });
 });

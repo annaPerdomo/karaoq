@@ -16,7 +16,7 @@ function setup(joinCode: string | undefined) {
   const setPlayMode = vi.fn();
   const rememberMode = vi.fn();
   const { result } = renderHook(() =>
-    useScreenHelp({ joinCode, setPlayMode, rememberMode })
+    useScreenHelp({ joinCode, setPlayMode, rememberMode, displayConnected: false })
   );
   return { result, setPlayMode, rememberMode };
 }
@@ -96,11 +96,32 @@ describe("useScreenHelp", () => {
   it("is null before the UA effect runs", () => {
     let deviceOnFirstRender: "tv" | "mobile" | "desktop" | null | undefined;
     function Capture() {
-      const screenHelp = useScreenHelp({ joinCode: "ROOM1", setPlayMode: vi.fn(), rememberMode: vi.fn() });
+      const screenHelp = useScreenHelp({ joinCode: "ROOM1", setPlayMode: vi.fn(), rememberMode: vi.fn(), displayConnected: false });
       if (deviceOnFirstRender === undefined) deviceOnFirstRender = screenHelp.device;
       return null;
     }
     render(React.createElement(Capture));
     expect(deviceOnFirstRender).toBeNull();
+  });
+
+  it("remembers a confirmed screen for the room until that display goes away", () => {
+    sessionStorage.clear();
+    const props = { joinCode: "ROOM9", setPlayMode: vi.fn(), rememberMode: vi.fn(), displayConnected: true };
+    const { result, rerender } = renderHook((p: typeof props) => useScreenHelp(p), { initialProps: props });
+    expect(result.current.verified).toBe(false);
+
+    act(() => result.current.markVerified());
+    expect(result.current.verified).toBe(true);
+    expect(sessionStorage.getItem("karaoq_screen_ok:ROOM9")).toBe("1");
+
+    rerender({ ...props, displayConnected: false });
+    expect(result.current.verified).toBe(false);
+    expect(sessionStorage.getItem("karaoq_screen_ok:ROOM9")).toBeNull();
+  });
+
+  it("sendTest posts the room's screen test", () => {
+    const { result } = setup("ROOM1");
+    act(() => result.current.sendTest());
+    expect(fetchMock).toHaveBeenCalledWith("/api/queue/ROOM1/screen-test", { method: "POST" });
   });
 });
