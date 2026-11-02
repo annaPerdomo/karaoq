@@ -1,0 +1,38 @@
+name: Database backup
+
+on:
+  schedule:
+    - cron: "30 10 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-24.04
+    env:
+      BACKUP_MONGODB_URI: ${{ secrets.BACKUP_MONGODB_URI }}
+      R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+      R2_BUCKET: karaoq-backups
+      AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: auto
+    steps:
+      - uses: actions/checkout@v4
+        if: env.BACKUP_MONGODB_URI != ''
+
+      - name: Install MongoDB database tools
+        if: env.BACKUP_MONGODB_URI != ''
+        run: |
+          curl -fsSL -o /tmp/tools.deb https://fastdl.mongodb.org/tools/db/mongodb-database-tools-ubuntu2404-x86_64-100.13.0.deb
+          sudo apt-get install -y /tmp/tools.deb
+
+      # The R2 bucket's lifecycle rule also expires mongo/ after 30 days.
+      - name: Dump and upload
+        if: env.BACKUP_MONGODB_URI != ''
+        run: scripts/ops/mongo-backup.sh
+
+      - name: Skip notice
+        if: env.BACKUP_MONGODB_URI == ''
+        run: echo "BACKUP_MONGODB_URI is not set; skipping the backup."
