@@ -64,4 +64,25 @@ describe("TvStartCard", () => {
 
     vi.unstubAllGlobals();
   });
+
+  it("keeps Start focused and swaps itself for the code when pairing is chosen", async () => {
+    document.documentElement.setAttribute("data-tv", "1");
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ code: "482917", secret: "s3cr3t", expiresAt: Date.now() + 600_000 }),
+    } as Response));
+
+    render(<TvStartCard />);
+    const start = await screen.findByRole("button", { name: /start on this tv/i });
+    expect(start).toHaveFocus();
+
+    fireEvent.click(screen.getByRole("button", { name: /already started on your phone/i }));
+    await waitFor(() => expect(screen.getByText("482 917")).toBeInTheDocument());
+    expect(screen.queryByRole("button", { name: /start on this tv/i })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /cancel/i }));
+    expect(await screen.findByRole("button", { name: /start on this tv/i })).toBeInTheDocument();
+
+    vi.unstubAllGlobals();
+  });
 });

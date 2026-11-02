@@ -1,0 +1,52 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  width: 100%;
+  max-width: 320px;
+}
+
+.codeInput {
+  padding: 0.7rem 0.85rem;
+  font-size: 1.3rem;
+  letter-spacing: 0.1em;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.04);
+  color: #fff;
+}
+
+.codeInput:focus-visible,
+html[data-tv] .codeInput:focus {
+  outline: 3px solid #00f0ff;
+  outline-offset: 2px;
+}
+
+.connectBtn {
+  padding: 0.7rem 1rem;
+  border-radius: 12px;
+  border: none;
+  background: #7c5cff;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.connectBtn:focus-visible,
+html[data-tv] .connectBtn:focus {
+  outline: 3px solid #00f0ff;
+  outline-offset: 2px;
+}
+
+.connectBtn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.error {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #ff8a8a;
+}

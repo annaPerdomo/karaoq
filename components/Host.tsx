@@ -74,6 +74,7 @@ import {
 import { brandStyle } from "../lib/brandStyle";
 import { v4 as uuidv4 } from "uuid";
 import { useT } from "../lib/i18n/I18nProvider";
+import { isTvDevice } from "../lib/calmMotion";
 import { POLL_INTERVAL, DISPLAY_GONE_CONFIRM_MS } from "./host/constants";
 import { formatSongTitle, includesCurrentInSidebar, shouldClaimPlayback, uniqueSingerCount } from "./host/utils";
 import {
@@ -88,6 +89,9 @@ import { ReactionOverlay } from "./host/ReactionOverlay";
 import { MobileFooter } from "./host/MobileFooter";
 import { CohostInviteModal } from "./host/CohostInviteModal";
 import FeedbackModal from "./feedback/FeedbackModal";
+import { ConnectTvLauncher } from "./host/ConnectTvLauncher";
+import { useConnectTv } from "./host/hooks/useConnectTv";
+import { usePairedToast } from "./host/hooks/usePairedToast";
 import { QrModal } from "./host/QrModal";
 import { ConfirmRemoveModal } from "./host/ConfirmRemoveModal";
 import { WelcomePrompt } from "./host/WelcomePrompt";
@@ -303,9 +307,10 @@ const Host = ({
     if (!joinCode) return;
     try {
       const saved = localStorage.getItem(qrHiddenStorageKey(joinCode));
-      setQrShelfOpen(saved === null ? window.innerWidth > 1024 : saved !== "1");
+      // Ignores width on a TV: the QR is the display's job there, not the host's.
+      setQrShelfOpen(saved === null ? !isTvDevice() && window.innerWidth > 1024 : saved !== "1");
     } catch {
-      setQrShelfOpen(window.innerWidth > 1024);
+      setQrShelfOpen(!isTvDevice() && window.innerWidth > 1024);
     }
   }, [joinCode]);
 
@@ -380,6 +385,9 @@ const Host = ({
     setModeMenuOpen(false);
     showToast(t('host.toast.displayOpened'));
   }
+
+  const { connectTvRef, onTvPaired } = useConnectTv({ joinCode, setPlayMode, rememberMode, showToast, message: t('pair.remoteNow') });
+  usePairedToast({ remote, joinCode, message: t('pair.remoteNow'), showToast });
 
   function copyCohostLink() {
     if (!joinCode) return;
@@ -1419,6 +1427,11 @@ const Host = ({
           setSettingsOpen(false);
           setFeedbackOpen(true);
         }}
+        onConnectTv={() => {
+          setSettingsOpen(false);
+          setModeMenuOpen(false);
+          connectTvRef.current?.open();
+        }}
         onOpenMusicVideo={openMusicVideoScreen}
         onCopyMusicVideoLink={copyMusicVideoLink}
         onBrandClick={() => router.push("/")}
@@ -1621,6 +1634,7 @@ const Host = ({
         />
       )}
 
+      {joinCode && <ConnectTvLauncher ref={connectTvRef} joinCode={joinCode} onPaired={onTvPaired} />}
       {feedbackOpen && (
         <FeedbackModal
           onClose={() => setFeedbackOpen(false)}
