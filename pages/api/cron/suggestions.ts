@@ -21,6 +21,9 @@ import {
   harvestIntoCorpus,
 } from "../../../lib/corpusHarvest";
 import { feedCharts } from "../../../lib/chartFeed";
+import { feedGenreCharts } from "../../../lib/genreFeed";
+import { rematchMissedSongs } from "../../../lib/corpusRematch";
+import { syncCatalog } from "../../../lib/catalogSync";
 import { migrateToCorpus } from "../../../lib/corpusMigration";
 import { promoteDemand, repairDemandIdentities } from "../../../lib/corpusPromote";
 import { proposeUnmappedAdds, PROPOSAL_SCAN_LIMIT } from "../../../lib/corpusProposals";
@@ -40,6 +43,7 @@ import { suggestionCatalog } from "../../../lib/suggestionCatalog";
 import { mergeDemand, suggestionDemand } from "../../../lib/suggestionDemand";
 import { searchDemandScores } from "../../../lib/searchDemandRead";
 import { CLAIM_SCAN_LIMIT, claimBankedVideos } from "../../../lib/corpusClaim";
+import { pruneOrphanLogos } from "../../../lib/roomLogos";
 
 // vercel.json has four entries because a full harvest outlasts the 300s
 // function — a later slot buys clock, not quota (lib/corpusBudget). The slots
@@ -263,10 +267,42 @@ export default async function handler(
       // After promote, before claim: a chart song inserted here is one claim
       // can fill in the same run. Apple's feed, no YouTube units.
       name: "charts",
-      budgetMs: 30_000,
+      budgetMs: 60_000,
       floorMs: 5_000,
       run: async (by) => {
         const { done, report } = await feedCharts(by);
+        return { done, report: { ...report } };
+      },
+    },
+    {
+      // After charts, so a song both name is credited to the Top 50. No YouTube units.
+      name: "genres",
+      budgetMs: 60_000,
+      floorMs: 5_000,
+      run: async (by) => {
+        const { done, report } = await feedGenreCharts(by);
+        return { done, report: { ...report } };
+      },
+    },
+    {
+      // Before the resolver: a song added to a pack since the migration is
+      // cutless here tonight and resolved below. Our own rows, no units.
+      name: "catalog",
+      budgetMs: 10_000,
+      floorMs: 0,
+      run: async () => {
+        const { done, report } = await syncCatalog();
+        return { done, report: { ...report } };
+      },
+    },
+    {
+      // Guarded one-off: songs the old matcher missed get retried by the
+      // resolver below instead of sitting out their backoff. Our own rows.
+      name: "rematch",
+      budgetMs: 10_000,
+      floorMs: 0,
+      run: async () => {
+        const { done, report } = await rematchMissedSongs();
         return { done, report: { ...report } };
       },
     },
@@ -404,9 +440,21 @@ export default async function handler(
     });
   }
 
+  // Once a day, on the first slot only, and after the corpus work so it never
+  // takes that run's clock. A failure is logged and otherwise ignored.
+  let logosPruned: number | undefined;
+  if (req.query.slot === undefined) {
+    try {
+      logosPruned = await pruneOrphanLogos();
+    } catch (e: any) {
+      console.warn("Orphan logo prune failed:", e?.message);
+    }
+  }
+
   const report = {
     slot,
     steps: ran,
+    ...(logosPruned === undefined ? {} : { logosPruned }),
     budget: { searches: searchBudget, pages: pageBudget },
     // What the day had already cost before this run, so a skipped night still
     // leaves a record of why — and of what the account's real ceiling is.

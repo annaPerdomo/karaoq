@@ -69,6 +69,9 @@ async function handleGet(
           "display_config_saved",
           "host_config_saved",
           "session_end_set",
+          "screen_help_opened",
+          "screen_help_option",
+          "screen_help_step",
         ],
       },
     })

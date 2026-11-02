@@ -637,6 +637,36 @@ html[data-tv] .dpNumB, html[data-tv] .dpCount3 { animation: none !important; opa
   line-height: 1.4;
 }
 
+.pairCode {
+  font-size: 2.6rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+  text-align: center;
+}
+
+.pairCountdown {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #707080;
+  text-align: center;
+}
+
+.tvBtnStack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.tvBtnStack > button { width: 100%; }
+
+/* Doubled class: .textToggle's align-self: center comes later in this file. */
+.textToggle.tvTypeName {
+  align-self: auto;
+  width: 100%;
+  max-width: 380px;
+}
+
 .heroNote {
   margin: 0.85rem 0 0;
   max-width: 380px;
@@ -843,6 +873,10 @@ html[data-tv] .dpNumB, html[data-tv] .dpCount3 { animation: none !important; opa
 }
 .textToggle:hover {
   color: #c0c0d0;
+}
+
+.tvPrompt {
+  text-align: center;
 }
 
 /* Secondary "join with a code" prompt, separated from the host block. */
@@ -2245,6 +2279,20 @@ html[data-tv] .dpNumB, html[data-tv] .dpCount3 { animation: none !important; opa
   grid-template-columns: repeat(3, 1fr);
   gap: 1.5rem;
 }
+
+.featuresMore {
+  margin: 2.5rem 0 0;
+  text-align: center;
+}
+
+.featuresMoreLink {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #ff2d78;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.featuresMoreLink:hover { color: #00f0ff; }
 
 .featureCard {
   --accent: #a855f7;

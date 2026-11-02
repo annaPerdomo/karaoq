@@ -58,8 +58,8 @@ export function usePlaybackError({
   /** The endpoint accepts a report only for a room that has the video queued —
    *  that guard is what keeps its re-verification from being free to buy. */
   roomId: string | undefined;
-  /** The queue entry the iframe is keyed on. Two entries can hold the same
-   *  video, and each mounts an iframe that needs its own player. */
+  /** With videoId, the iframe's key: destroy() removes its iframe, so each
+   *  entry/video pairing (a host swap keeps the entry) needs its own. */
   entryId: string | undefined;
   videoId: string | undefined;
   active: boolean;
@@ -89,7 +89,7 @@ export function usePlaybackError({
           onError: (e: { data?: number }) => {
             const code = Number(e?.data);
             if (UNPLAYABLE_PLAYER_CODES.indexOf(code) < 0) return;
-            setFailedEntry(entryId);
+            setFailedEntry(`${entryId}:${videoId}`);
             if (!roomId || reportedRef.current.has(videoId)) return;
             reportedRef.current.add(videoId);
             postUnplayableVideo(roomId, videoId, code);
@@ -114,5 +114,5 @@ export function usePlaybackError({
     };
   }, [videoRef, roomId, entryId, videoId, active]);
 
-  return active && failedEntry === entryId;
+  return active && failedEntry === `${entryId}:${videoId}`;
 }

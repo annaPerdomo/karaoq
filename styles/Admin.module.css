@@ -1454,6 +1454,34 @@
   white-space: nowrap;
 }
 
+.proposalRow {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+}
+
+.proposalWrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.3rem;
+  white-space: normal;
+}
+
+.proposalWrap > button {
+  margin-left: 0;
+}
+
+/* .roomBadges carries RoomCard's grid-area at narrow widths; reset it here. */
+.proposalRow > .roomBadges {
+  grid-area: auto;
+}
+
+@media (max-width: 640px) {
+  .proposalRow {
+    grid-template-columns: 1fr;
+  }
+}
+
 .rankCount {
   color: var(--text-secondary);
   font-size: 0.8rem;

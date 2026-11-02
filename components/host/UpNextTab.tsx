@@ -34,6 +34,7 @@ export function UpNextTab({
   onMoveTop,
   onToggleEdit,
   onEditSave,
+  onSwapVideo,
   onRequestRemove,
 }: {
   upNext: QueueEntry[];
@@ -48,6 +49,7 @@ export function UpNextTab({
   onMoveTop: (id: string) => void;
   onToggleEdit: (id: string) => void;
   onEditSave: (id: string, name: string) => void;
+  onSwapVideo?: (id: string) => void;
   onRequestRemove: (id: string) => void;
 }) {
   const { t, tn } = useT();
@@ -60,31 +62,34 @@ export function UpNextTab({
 
   return (
     <>
-      <div className={styles.queueStats}>
-        {upNext.length > 0 && (
-          <>
-            <span>{tn("host.stats.songs", upNext.length)}</span>
-            <span className={styles.statDot} />
-            <span>{tn("host.stats.singers", uniqueSingers)}</span>
-          </>
-        )}
-        <button
-          className={`${styles.fairToggle} ${fairMode ? styles.fairToggleOn : ""}`}
-          onClick={onToggleFairMode}
-          aria-pressed={fairMode}
-          title={fairMode ? t("host.settings.fairOn") : t("host.settings.fairOff")}
-        >
-          {Icons.shuffle}
-          {t("host.settings.fair")}
-          <span
-            className={`${styles.fairSwitch} ${fairMode ? styles.fairSwitchOn : ""}`}
+      {/* Unstyled outside html[data-tv], which lays these two rows on one line. */}
+      <div className={styles.tvStatsRow}>
+        <div className={styles.queueStats}>
+          {upNext.length > 0 && (
+            <>
+              <span>{tn("host.stats.songs", upNext.length)}</span>
+              <span className={styles.statDot} />
+              <span>{tn("host.stats.singers", uniqueSingers)}</span>
+            </>
+          )}
+          <button
+            className={`${styles.fairToggle} ${fairMode ? styles.fairToggleOn : ""}`}
+            onClick={onToggleFairMode}
+            aria-pressed={fairMode}
+            title={fairMode ? t("host.settings.fairOn") : t("host.settings.fairOff")}
           >
-            <span className={styles.fairSwitchThumb} />
-          </span>
-        </button>
-      </div>
+            {Icons.shuffle}
+            {t("host.settings.fair")}
+            <span
+              className={`${styles.fairSwitch} ${fairMode ? styles.fairSwitchOn : ""}`}
+            >
+              <span className={styles.fairSwitchThumb} />
+            </span>
+          </button>
+        </div>
 
-      <QueueTimeLine estimate={estimate} sessionEndsAt={sessionEndsAt} />
+        <QueueTimeLine estimate={estimate} sessionEndsAt={sessionEndsAt} />
+      </div>
 
       {upNext.length > 0 ? (
         <DndContext
@@ -115,6 +120,7 @@ export function UpNextTab({
                     onEdit={() => onToggleEdit(item.id)}
                     onEditSave={(name) => onEditSave(item.id, name)}
                     onRemove={() => onRequestRemove(item.id)}
+                    onSwapVideo={onSwapVideo && (() => onSwapVideo(item.id))}
                   />
                 );
               })}

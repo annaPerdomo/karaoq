@@ -9,6 +9,7 @@ interface SearchBarProps {
   onSearch: () => void;
   searching: boolean;
   karaokeMode: boolean;
+  className?: string;
 }
 
 const SearchBar: React.FC<SearchBarProps> = ({
@@ -17,11 +18,12 @@ const SearchBar: React.FC<SearchBarProps> = ({
   onSearch,
   searching,
   karaokeMode,
+  className,
 }) => {
   const { t } = useT();
 
   return (
-    <div className={styles.searchBar}>
+    <div className={className ? `${styles.searchBar} ${className}` : styles.searchBar}>
       <input
         className={styles.searchInput}
         type="text"

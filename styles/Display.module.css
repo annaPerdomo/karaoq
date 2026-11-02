@@ -1,7 +1,12 @@
 .main {
   --acc-a: #ff2d78;
+  --acc-a-rgb: 255, 45, 120;
   --acc-b: #00f0ff;
   --acc-b-rgb: 0, 240, 255;
+  --acc-c: #9b1dff;
+  --acc-c-rgb: 155, 29, 255;
+  --acc-warm: #ff6b35;
+  --acc-warm-rgb: 255, 107, 53;
   /* RGB triplet (no alpha) — themes retint all the chrome by overriding just this. */
   --disp-surface-rgb: 10, 10, 25;
   height: 100dvh;
@@ -20,8 +25,13 @@
 /* Theme presets; classic = the base vars, no class. */
 .themeMinimal {
   --acc-a: #aab0c0;
+  --acc-a-rgb: 170, 176, 192;
   --acc-b: #d7dae2;
   --acc-b-rgb: 215, 218, 226;
+  --acc-c: #b8bcc8;
+  --acc-c-rgb: 184, 188, 200;
+  --acc-warm: #c4c8d4;
+  --acc-warm-rgb: 196, 200, 212;
   --bg-primary: #0a0a0c;
   --bg-secondary: #151517;
   --disp-surface-rgb: 10, 10, 12;
@@ -30,12 +40,6 @@
 .themeMinimal .nowGlow {
   background: var(--acc-a);
   animation: none;
-}
-
-.themeMinimal .waitingTitle {
-  background: none;
-  -webkit-text-fill-color: var(--text-primary);
-  color: var(--text-primary);
 }
 
 .themeMinimal .readyTag {
@@ -52,24 +56,33 @@
 }
 
 .themeNeon {
+  --acc-a-rgb: 255, 45, 120;
+  --acc-c: #9b1dff;
+  --acc-c-rgb: 155, 29, 255;
+  --acc-warm: #ff6b35;
+  --acc-warm-rgb: 255, 107, 53;
   --bg-primary: #050505;
   --bg-secondary: #0d0d14;
   --disp-surface-rgb: 5, 5, 10;
   /* Picked up by the count-in's sung lyric (styles/Countdown.module.css). */
-  --cd-glow: drop-shadow(0 0 10px rgba(0, 240, 255, 0.55));
+  --cd-glow: drop-shadow(0 0 10px rgba(var(--acc-b-rgb, 0, 240, 255), 0.55));
 }
 
 .themeNeon .brand {
   text-shadow: 0 0 16px rgba(255, 45, 120, 0.55), 0 0 32px rgba(0, 240, 255, 0.35);
 }
 
-.themeNeon .readySinger,
 .themeNeon .nowSinger {
-  text-shadow: 0 0 20px rgba(0, 240, 255, 0.6);
+  text-shadow: 0 0 20px rgba(var(--acc-b-rgb, 0, 240, 255), 0.6);
+}
+
+/* drop-shadow: a text-shadow would show through the gradient's transparent fill. */
+.themeNeon .readySinger {
+  filter: drop-shadow(0 0 20px rgba(var(--acc-b-rgb, 0, 240, 255), 0.6));
 }
 
 .themeNeon .upNextTitle {
-  text-shadow: 0 0 10px rgba(255, 45, 120, 0.6);
+  text-shadow: 0 0 10px rgba(var(--acc-a-rgb, 255, 45, 120), 0.6);
 }
 
 .themeNeon .nowGlow {
@@ -155,10 +168,30 @@
   font-weight: 400;
   font-size: 1.4rem;
   letter-spacing: calc(2px * var(--tv-scale, 1));
-  background: linear-gradient(135deg, var(--acc-a), var(--acc-b));
+  background: linear-gradient(135deg, #ff2d78, #00f0ff);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+.logoWrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.clubLogo {
+  height: min(calc(1.9rem * var(--logo-scale, 1)), calc(56px * var(--tv-scale, 1) - 16px));
+  max-width: calc(9rem * var(--logo-scale, 1));
+  object-fit: contain;
+}
+
+.clubDivider {
+  width: 1px;
+  height: 1.4rem;
+  margin: 0 0.8rem;
+  background: rgba(255, 255, 255, 0.25);
 }
 
 .videoArea {
@@ -343,8 +376,8 @@
 }
 
 @keyframes tapPulse {
-  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 45, 120, 0.5); }
-  50% { transform: scale(1.06); box-shadow: 0 0 0 16px rgba(255, 45, 120, 0); }
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(var(--acc-a-rgb, 255, 45, 120), 0.5); }
+  50% { transform: scale(1.06); box-shadow: 0 0 0 16px rgba(var(--acc-a-rgb, 255, 45, 120), 0); }
 }
 
 .tapTitle {
@@ -383,7 +416,7 @@
   font-family: var(--font-brand);
   font-weight: 400;
   font-size: 3rem;
-  background: linear-gradient(135deg, var(--acc-a), var(--acc-b));
+  background: linear-gradient(135deg, #ff2d78, #00f0ff);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -424,7 +457,7 @@
   color: var(--acc-a);
   font-weight: 700;
   text-transform: uppercase;
-  text-shadow: 0 0 12px rgba(255, 45, 120, 0.5);
+  text-shadow: 0 0 12px rgba(var(--acc-a-rgb, 255, 45, 120), 0.5);
 }
 
 .readySinger {
@@ -432,6 +465,10 @@
   font-size: clamp(2.5rem, 6vw, 4.5rem);
   font-weight: 700;
   color: var(--acc-b);
+  background: linear-gradient(135deg, var(--acc-a), var(--acc-b));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
   text-align: center;
   letter-spacing: -0.02em;
   line-height: 1.2;
@@ -502,7 +539,7 @@
   align-items: center;
   padding: 0 2rem;
   background: rgba(var(--disp-surface-rgb), 0.97);
-  border-top: 1px solid rgba(255, 45, 120, 0.15);
+  border-top: 1px solid rgba(var(--acc-a-rgb, 255, 45, 120), 0.15);
   z-index: 10;
   overflow: hidden;
 }
@@ -513,7 +550,7 @@
   left: 0;
   width: 100%;
   height: 2px;
-  background: linear-gradient(90deg, var(--acc-a), #ff6b35, var(--acc-b), var(--acc-a));
+  background: linear-gradient(90deg, var(--acc-a), var(--acc-warm, #ff6b35), var(--acc-b), var(--acc-a));
   background-size: 200% 100%;
   animation: glowSlide 4s linear infinite;
 }
@@ -542,7 +579,7 @@
   height: calc(8px * var(--now-scale, 1) * var(--tv-scale, 1));
   border-radius: 50%;
   background: var(--acc-a);
-  box-shadow: 0 0 8px var(--acc-a), 0 0 20px rgba(255, 45, 120, 0.3);
+  box-shadow: 0 0 8px var(--acc-a), 0 0 20px rgba(var(--acc-a-rgb, 255, 45, 120), 0.3);
   animation: pulse 1.5s ease-in-out infinite;
   flex-shrink: 0;
 }
@@ -734,7 +771,7 @@
 .upNextCount {
   font-size: calc(0.6rem * var(--sb-scale, 1));
   font-weight: 700;
-  background: rgba(255, 45, 120, 0.2);
+  background: rgba(var(--acc-a-rgb, 255, 45, 120), 0.2);
   color: var(--acc-a);
   padding: 0.1rem 0.4rem;
   border-radius: calc(10px * var(--tv-scale, 1));
@@ -789,7 +826,7 @@
   justify-content: center;
   text-align: center;
   flex-shrink: 0;
-  background: rgba(255, 45, 120, 0.12);
+  background: rgba(var(--acc-a-rgb, 255, 45, 120), 0.12);
   border-radius: calc(6px * var(--tv-scale, 1));
 }
 
@@ -868,6 +905,11 @@
     margin-left: 0;
   }
 
+  /* Exactly 50vh: the fixed nowBar and fullscreen button below are placed by it. */
+  html:not([data-tv]) .videoArea:not(.videoAreaNoSidebar) {
+    flex: none;
+  }
+
   html:not([data-tv]) .sidebar,
   html:not([data-tv]) .sidebarLeft .sidebar {
     width: 100%;
@@ -879,10 +921,18 @@
     max-height: 50vh;
   }
 
+  /* Bottom of the video half, not the viewport: the stacked sidebar sits there. */
   html:not([data-tv]) .nowBar,
   html:not([data-tv]) .sidebarLeft .nowBar {
     right: 0;
     left: 0;
+    top: max(0px, calc(50vh - var(--now-h, 132px)));
+    bottom: auto;
+  }
+
+  html:not([data-tv]) .main:has(.videoAreaNoSidebar) .nowBar {
+    top: auto;
+    bottom: 0;
   }
 
   html:not([data-tv]) .sidebarLeft .header,
@@ -917,8 +967,14 @@
 
   html:not([data-tv]) .videoFullscreen {
     right: 12px;
-    bottom: 4rem;
+    top: calc(50vh - 52px);
+    bottom: auto;
     z-index: 21;
+  }
+
+  html:not([data-tv]) .main:has(.videoAreaNoSidebar) .videoFullscreen {
+    top: auto;
+    bottom: 4rem;
   }
 
   html:not([data-tv]) .reactionOverlay {

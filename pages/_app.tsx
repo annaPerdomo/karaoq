@@ -49,7 +49,7 @@ function MyApp({ Component, pageProps }: AppProps) {
   // get 28px of its bottom row covered — /remote shipped that way, painting over
   // the sidebar's boards card. Room, display, admin and capture routes all carry
   // their own footer; /demo is a capture canvas where any chrome lands in the film.
-  const FOOTER_ROUTES = ['/guide', '/privacy', '/terms'];
+  const FOOTER_ROUTES = ['/guide', '/whats-new', '/privacy', '/terms'];
   const showFooter = FOOTER_ROUTES.some((route) =>
     router.pathname.startsWith(route)
   );

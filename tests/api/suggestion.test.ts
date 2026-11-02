@@ -72,6 +72,35 @@ describe("POST /api/analytics/suggestion", () => {
     expect(res.getStatus()).toBe(200);
   });
 
+  it("tracks a shelf pick", async () => {
+    mockInsertOne.mockResolvedValue({});
+    const req = createMockReq({
+      method: "POST",
+      body: { roomId: "ROOM1", suggestionSource: "shelf", sectionId: "hot", categoryId: "US" },
+    });
+    const res = createRes();
+
+    await handler(req, res);
+
+    expect(res.getStatus()).toBe(200);
+    expect(mockInsertOne.mock.calls[0][0]).toMatchObject({
+      suggestionSource: "shelf",
+      sectionId: "hot",
+    });
+  });
+
+  it("no longer accepts the retired trending source", async () => {
+    const req = createMockReq({
+      method: "POST",
+      body: { roomId: "ROOM1", suggestionSource: "trending" },
+    });
+    const res = createRes();
+
+    await handler(req, res);
+
+    expect(res.getStatus()).toBe(400);
+  });
+
   it("rejects non-POST methods", async () => {
     const req = createMockReq({ method: "GET" });
     const res = createRes();

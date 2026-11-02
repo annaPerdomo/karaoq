@@ -1,5 +1,7 @@
 import * as React from "react";
 import { useRouter } from "next/router";
+import { parseYtMessage, ytCommand } from "./player/ytCommand";
+import { usePlayheadBroadcast } from "./display/hooks/usePlayheadBroadcast";
 import { DragEndEvent } from "@dnd-kit/core";
 import { arrayMove } from "@dnd-kit/sortable";
 import styles from "../styles/Host.module.css";
@@ -12,12 +14,14 @@ import updatePosition from "../app/queue/updatePosition";
 import reorderQueue from "../app/queue/reorderQueue";
 import removeFromQueue from "../app/queue/removeFromQueue";
 import renameQueueEntry from "../app/queue/renameQueueEntry";
+import swapKaraokeVideo from "../app/queue/swapKaraokeVideo";
 import setPlaying from "../app/queue/setPlaying";
 import savePlayMode from "../app/queue/setPlayMode";
 import saveDisplayPaused from "../app/queue/setDisplayPaused";
 import {
   broadcastRoomState,
   broadcastDisplayPause,
+  broadcastOriginalOffset,
   onVideoEnded,
 } from "../app/queue/roomChannel";
 import setReactionsEnabled from "../app/queue/setReactionsEnabled";
@@ -39,12 +43,14 @@ import {
 import setSessionEnd from "../app/queue/setSessionEnd";
 import { formatClockTime } from "../lib/queueTime";
 import { useRoomTiming } from "./hooks/useRoomTiming";
-import { fairInsertIndex, singerKeys } from "../lib/fairQueue";
+import { fairInsertIndex } from "../lib/fairQueue";
 import postReaction from "../app/queue/postReaction";
 import { REACTION_COOLDOWN_MS } from "../app/queue/cheerConstants";
 import { startSessionTracking } from "../app/queue/trackSession";
 import { startVisiblePolling } from "../app/queue/pollWhileVisible";
 import { DORMANT_POLL_MS, isRoomDormant } from "../lib/roomDormancy";
+import { createMusicVideoLink } from "./host/musicVideoLink";
+import { copyLinkOrShow } from "./host/clipboard";
 import { useSearchBackNotice } from "../app/queue/useSearchBackNotice";
 import SearchBackToast from "./search/SearchBackToast";
 import {
@@ -63,11 +69,14 @@ import {
   QueueEntry,
   Reaction,
   Room,
+  RoomBrand,
 } from "../pages/api/types";
+import { brandStyle } from "../lib/brandStyle";
 import { v4 as uuidv4 } from "uuid";
 import { useT } from "../lib/i18n/I18nProvider";
+import { isTvDevice } from "../lib/calmMotion";
 import { POLL_INTERVAL, DISPLAY_GONE_CONFIRM_MS } from "./host/constants";
-import { formatSongTitle, shouldClaimPlayback } from "./host/utils";
+import { formatSongTitle, includesCurrentInSidebar, shouldClaimPlayback, uniqueSingerCount } from "./host/utils";
 import {
   playModeStorageKey,
   readStoredPlayToken,
@@ -80,10 +89,17 @@ import { ReactionOverlay } from "./host/ReactionOverlay";
 import { MobileFooter } from "./host/MobileFooter";
 import { CohostInviteModal } from "./host/CohostInviteModal";
 import FeedbackModal from "./feedback/FeedbackModal";
+import { ConnectTvLauncher } from "./host/ConnectTvLauncher";
+import { useConnectTv } from "./host/hooks/useConnectTv";
+import { usePairedToast } from "./host/hooks/usePairedToast";
+import { useScreenHelp } from "./host/hooks/useScreenHelp";
+import { ScreenHelpLink } from "./host/ScreenHelpLink";
+import { ScreenHelpSheet } from "./host/ScreenHelpSheet";
 import { QrModal } from "./host/QrModal";
 import { ConfirmRemoveModal } from "./host/ConfirmRemoveModal";
 import { WelcomePrompt } from "./host/WelcomePrompt";
 import { HostHeader } from "./host/HostHeader";
+import { HostErrorState } from "./host/HostErrorState";
 import { SongStage } from "./host/SongStage";
 import { TransportBar } from "./host/TransportBar";
 import { QueueSidebar } from "./host/QueueSidebar";
@@ -93,6 +109,9 @@ import { hostRailToggles } from "./host/edit/railToggles";
 import { EditOverlay } from "./edit/EditOverlay";
 import { HideButton, Spot } from "./edit/EditChrome";
 import p from "../styles/DisplayDesigner.module.css";
+import type { OriginalVideoCandidate } from "../lib/originalVideo";
+import type { SwapSource } from "./host/VideoSwapPanel";
+import { KaraokeSwapSheet } from "./host/KaraokeSwapSheet";
 
 const HOST_THEME_CLASS: Record<DisplayTheme, string> = {
   classic: "",
@@ -129,6 +148,7 @@ const Host = ({
   const dormantRef = React.useRef(false);
   const [origin, setOrigin] = React.useState("");
   const [confirmRemove, setConfirmRemove] = React.useState<string | null>(null);
+  const [swapEntryId, setSwapEntryId] = React.useState<string | null>(null);
   const [reactionsOn, setReactionsOn] = React.useState(true);
   const [boardsOnDisplay, setBoardsOnDisplayState] = React.useState(true);
   const [fairMode, setFairModeState] = React.useState(false);
@@ -148,6 +168,8 @@ const Host = ({
   const { sessionEndsAt, estimate } = timing;
   const [displayConfig, setDisplayConfigState] = React.useState<DisplayConfig>(DEFAULT_DISPLAY_CONFIG);
   const [hostConfig, setHostConfigState] = React.useState<HostConfig>(DEFAULT_HOST_CONFIG);
+  const [brand, setBrand] = React.useState<RoomBrand>({});
+  const [musicVideoAt, setMusicVideoAt] = React.useState<string | null>(null);
   const [reactionCooldown, setReactionCooldown] = React.useState(false);
   const [lastSentEmoji, setLastSentEmoji] = React.useState<string | null>(null);
   const [visibleReactions, setVisibleReactions] = React.useState<
@@ -288,9 +310,10 @@ const Host = ({
     if (!joinCode) return;
     try {
       const saved = localStorage.getItem(qrHiddenStorageKey(joinCode));
-      setQrShelfOpen(saved === null ? window.innerWidth > 1024 : saved !== "1");
+      // Ignores width on a TV: the QR is the display's job there, not the host's.
+      setQrShelfOpen(saved === null ? !isTvDevice() && window.innerWidth > 1024 : saved !== "1");
     } catch {
-      setQrShelfOpen(window.innerWidth > 1024);
+      setQrShelfOpen(!isTvDevice() && window.innerWidth > 1024);
     }
   }, [joinCode]);
 
@@ -332,6 +355,8 @@ const Host = ({
     });
   }
 
+  const { openMusicVideoScreen, copyMusicVideoLink } = createMusicVideoLink(joinCode, origin, showToast, t('musicVideo.copied'), () => setSettingsOpen(false));
+
   // Persisted on the room (every host device agrees) and in localStorage
   // (fallback for rooms predating server-stored modes).
   function rememberMode(mode: PlayMode) {
@@ -355,7 +380,16 @@ const Host = ({
 
   // Keep the window handle — its `.closed` is the fast fallback signal.
   function openTvDisplay() {
-    displayWindowRef.current = window.open(`/display/${joinCode}`, "_blank");
+    launchTvDisplay();
+  }
+
+  // The help sheet asks for a real window: a tab is hard to drag onto a second screen.
+  function openTvDisplayWindow() {
+    launchTvDisplay("popup");
+  }
+
+  function launchTvDisplay(features?: string) {
+    displayWindowRef.current = window.open(`/display/${joinCode}`, "_blank", features);
     fallbackFiredRef.current = false;
     setDisplayWindowNonce((n) => n + 1);
     setPlayMode("tv");
@@ -364,16 +398,14 @@ const Host = ({
     showToast(t('host.toast.displayOpened'));
   }
 
-  async function copyCohostLink() {
+  const { connectTvRef, onTvPaired } = useConnectTv({ joinCode, setPlayMode, rememberMode, showToast, message: t('pair.remoteNow') });
+  const screenHelp = useScreenHelp({ joinCode, setPlayMode, rememberMode, displayConnected });
+  usePairedToast({ remote, joinCode, message: t('pair.remoteNow'), showToast });
+
+  function copyCohostLink() {
     if (!joinCode) return;
     const base = origin || window.location.origin;
-    const url = `${base}/remote/${joinCode}`;
-    try {
-      await navigator.clipboard.writeText(url);
-      showToast(t('host.toast.cohostCopied'));
-    } catch {
-      showToast(url);
-    }
+    copyLinkOrShow(`${base}/remote/${joinCode}`, showToast, t('host.toast.cohostCopied'));
   }
 
   React.useEffect(() => {
@@ -436,6 +468,8 @@ const Host = ({
     timing.adoptRoom(room);
     setDisplayConfigState(normalizeDisplayConfig(room.displayConfig));
     setHostConfigState(normalizeHostConfig(room.hostConfig));
+    setBrand(room.brand ?? {});
+    setMusicVideoAt((room.musicVideoAt as unknown as string | null) ?? null);
     if (room.playMode) setPlayMode(room.playMode);
   }
 
@@ -444,7 +478,11 @@ const Host = ({
   const hostEdit = useHostEdit({
     joinCode,
     config: hostConfig,
-    onSaved: setHostConfigState,
+    brand,
+    onSaved: (config, nextBrand) => {
+      setHostConfigState(config);
+      setBrand(nextBrand);
+    },
   });
   const hostView = hostEdit.view;
 
@@ -620,6 +658,9 @@ const Host = ({
   // commits, which would advance twice and skip a singer's song.
   const endedHandledRef = React.useRef(false);
   const currentQueueSongId = queue[activeIndex]?.id;
+  const reportPlayhead = usePlayheadBroadcast(playsVideoHere && !tvMode ? joinCode : undefined, currentQueueSongId, queue[activeIndex]?.videoId);
+  const reportPlayheadRef = React.useRef(reportPlayhead);
+  reportPlayheadRef.current = reportPlayhead;
   React.useEffect(() => {
     endedHandledRef.current = false;
     setWrapUpIn(null);
@@ -656,7 +697,8 @@ const Host = ({
     if (remote || !playsVideoHere || tvMode) return;
 
     function onMessage(e: MessageEvent) {
-      if (e.origin !== "https://www.youtube.com") return;
+      // Source-checked: the music video card's preview player posts the same events.
+      if (!parseYtMessage(e, videoRef.current)) return;
       try {
         const data = typeof e.data === "string" ? JSON.parse(e.data) : e.data;
         const state =
@@ -665,6 +707,7 @@ const Host = ({
             : data.event === "infoDelivery"
               ? data.info?.playerState
               : undefined;
+        reportPlayheadRef.current(playerCurrentTime(data), state);
         const limitLeft = songSecondsLeft(playerCurrentTime(data), songLimitRef.current);
         if (limitLeft !== null) {
           setWrapUpIn(limitLeft <= WRAP_UP_WARN_SECONDS ? limitLeft : null);
@@ -772,14 +815,7 @@ const Host = ({
   // The click is the user gesture that lets a blocked player start with sound.
   function toggleHereVideo() {
     const playing = hereVideoPlaying;
-    videoRef.current?.contentWindow?.postMessage(
-      JSON.stringify({
-        event: "command",
-        func: playing ? "pauseVideo" : "playVideo",
-        args: [],
-      }),
-      "https://www.youtube.com",
-    );
+    ytCommand(videoRef.current, playing ? "pauseVideo" : "playVideo");
     setHereVideoPlaying(!playing);
   }
 
@@ -1168,13 +1204,44 @@ const Host = ({
     if (!ok) await resyncAfterFailedWrite();
   }
 
+  // A live swap restarts the song, so it waits for the server: a rejected one
+  // must not restart anything, and the clock takes the server's stamp.
+  const closeSwapSheet = () => setSwapEntryId(null);
+
+  async function swapKaraoke(id: string, video: OriginalVideoCandidate, source: SwapSource) {
+    if (!joinCode) return;
+    pausePolling();
+    const live = isPlaying && queue[activeIndex]?.id === id;
+    const apply = (startedAt: string | null) => {
+      const newQueue = queue.map((e) => {
+        if (e.id !== id) return e;
+        const { originalOffsetSeconds: _offset, durationSeconds: _duration, ...rest } = e;
+        return { ...rest, videoId: video.videoId, songTitle: video.title, ...(video.durationSeconds ? { durationSeconds: video.durationSeconds } : {}) };
+      });
+      setQueue(newQueue);
+      if (startedAt) {
+        timing.adoptBroadcast(startedAt, true);
+        setDisplayPaused(false);
+        broadcastDisplayPause(joinCode, false);
+      }
+      broadcast(newQueue, activeIndex, isPlaying, startedAt ?? timing.playStartedAt);
+      broadcastOriginalOffset(joinCode, { entryId: id, offsetSeconds: 0 });
+    };
+    if (!live) apply(null);
+    const result = await swapKaraokeVideo(joinCode, id, video, source);
+    if (result === false) {
+      if (live) showToast(t("host.toast.saveFailed"));
+      else await resyncAfterFailedWrite();
+      return;
+    }
+    if (live) apply(result ?? timing.markStarted());
+  }
+
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
 
-    // Match the rendered list: when paused the on-stage song is part of the sidebar.
-    const includesCurrent = !!(queue[activeIndex] && !isPlaying);
-    const start = includesCurrent ? activeIndex : activeIndex + 1;
+    const start = includesCurrentInSidebar(!!queue[activeIndex], isPlaying) ? activeIndex : activeIndex + 1;
     const upNext = queue.slice(start);
     const oldIndex = upNext.findIndex((e) => e.id === active.id);
     const newIndex = upNext.findIndex((e) => e.id === over.id);
@@ -1185,17 +1252,17 @@ const Host = ({
   }
 
   const currentSong = queue[activeIndex];
-  // The waiting current song stays in the sidebar while paused.
-  const includesCurrent = !!(currentSong && !isPlaying);
-  const upNext = includesCurrent
+  const swapEntry = swapEntryId
+    ? queue.slice(activeIndex).find((e) => e.id === swapEntryId)
+    : undefined;
+  const upNext = includesCurrentInSidebar(!!currentSong, isPlaying)
     ? queue.slice(activeIndex)
     : queue.slice(activeIndex + 1);
   const historyItems = queue.slice(0, activeIndex);
 
   const roomEmpty = queue.length === 0;
 
-  // Counted the way the rotation groups people — a duet entry counts each member.
-  const uniqueSingers = new Set(upNext.flatMap((s) => singerKeys(s.userName))).size;
+  const uniqueSingers = uniqueSingerCount(upNext);
 
   // hostView is the staged draft while customizing, the room's config otherwise.
   const customizing = !remote && hostEdit.editing;
@@ -1262,10 +1329,13 @@ const Host = ({
       onNext={playNext}
       autoAdvance={autoAdvance}
       onChangeAutoAdvance={remote ? undefined : updateAutoAdvance}
+      songLimit={songLimit}
+      onChangeSongLimit={updateSongLimit}
       modeOpen={playbackSheetOpen}
       onModeOpenChange={setPlaybackSheetOpen}
       autoStartIn={autoStartIn}
       onCancelAutoStart={remote ? undefined : cancelPendingAutoStart}
+      onSwapVideo={remote || !queue[activeIndex] ? undefined : () => setSwapEntryId(queue[activeIndex].id)}
     />
   );
 
@@ -1288,38 +1358,17 @@ const Host = ({
 
   if (!joinCode) return <div className={styles.loading}>{t('host.loading')}</div>;
 
-  if (error) {
+  if (error || loadError) {
     return (
-      <main className={styles.main}>
-        <div className={styles.errorCard}>
-          <h2>{t('host.error.title')}</h2>
-          <p>{error}</p>
-          <button className={styles.btn} onClick={() => router.push("/")}>
-            {t('common.goHome')}
-          </button>
-        </div>
-      </main>
-    );
-  }
-
-  if (loadError) {
-    return (
-      <main className={styles.main}>
-        <div className={styles.errorCard}>
-          <h2>{t('common.connectionErrorTitle')}</h2>
-          <p>{t('common.connectionErrorBody')}</p>
-          <button
-            className={styles.btn}
-            onClick={() => {
-              setLoadError(false);
-              setLoading(true);
-              setInitNonce((n) => n + 1);
-            }}
-          >
-            {t('common.retry')}
-          </button>
-        </div>
-      </main>
+      <HostErrorState
+        error={error}
+        onGoHome={() => router.push("/")}
+        onRetry={() => {
+          setLoadError(false);
+          setLoading(true);
+          setInitNonce((n) => n + 1);
+        }}
+      />
     );
   }
 
@@ -1328,6 +1377,7 @@ const Host = ({
       className={`${styles.main} ${HOST_THEME_CLASS[hostView.theme]} ${customizing ? styles.mainCustomizing : ""}`}
       style={
         {
+          ...brandStyle(hostEdit.brandView),
           "--host-sb-w": `${hostView.sidebarWidth}px`,
           "--host-now-h": `${hostView.nowPlayingHeight}px`,
           // CSS can't divide px by px into a plain number, so the type-scale
@@ -1339,6 +1389,10 @@ const Host = ({
     >
       <SearchBackToast show={searchBack.show} onDismiss={searchBack.dismiss} />
       <HostHeader
+        roomId={joinCode}
+        logo={hostEdit.brandView.logo}
+        logoScale={hostEdit.brandView.logoScale ?? 1}
+        onLogoScaleChange={(logoScale) => hostEdit.brandControls.onChange({ ...hostEdit.brandControls.brand, logoScale: logoScale === 1 ? undefined : logoScale })}
         remote={remote}
         tvMode={tvMode}
         customizing={customizing}
@@ -1366,10 +1420,6 @@ const Host = ({
         onToggleReactions={toggleReactions}
         fairMode={fairMode}
         onToggleFairMode={toggleFairMode}
-        autoAdvance={autoAdvance}
-        onChangeAutoAdvance={updateAutoAdvance}
-        songLimit={songLimit}
-        onChangeSongLimit={updateSongLimit}
         sessionEndsAt={sessionEndsAt}
         onChangeSessionEnd={updateSessionEnd}
         hostName={hostName}
@@ -1390,6 +1440,18 @@ const Host = ({
           setSettingsOpen(false);
           setFeedbackOpen(true);
         }}
+        onConnectTv={() => {
+          setSettingsOpen(false);
+          setModeMenuOpen(false);
+          connectTvRef.current?.open();
+        }}
+        onScreenHelp={() => {
+          setSettingsOpen(false);
+          setModeMenuOpen(false);
+          screenHelp.open();
+        }}
+        onOpenMusicVideo={openMusicVideoScreen}
+        onCopyMusicVideoLink={copyMusicVideoLink}
         onBrandClick={() => router.push("/")}
       />
 
@@ -1425,7 +1487,13 @@ const Host = ({
             autoEnabled={autoAdvance.enabled}
             onOpenPlaybackSettings={remote ? undefined : () => setPlaybackSheetOpen(true)}
             wrapUpIn={playsVideoHere ? wrapUpIn : null}
+            canPopOut={screenHelp.device !== null && screenHelp.device !== "mobile"}
           />
+
+          {/* A live display isn't proof it reached the big screen; the link stays until someone confirms. */}
+          {!remote && !customizing && !(tvMode && displayConnected && screenHelp.verified) && screenHelp.device !== "tv" && (
+            <ScreenHelpLink onClick={screenHelp.open} checking={tvMode && displayConnected} />
+          )}
 
           {!remote && reactionsOn && visibleReactions.length > 0 && (
             <ReactionOverlay reactions={visibleReactions} />
@@ -1496,8 +1564,6 @@ const Host = ({
           onToggleSearch={() => setSearchOpen(!searchOpen)}
           onCloseSearch={() => setSearchOpen(false)}
           onOpenBoards={() => setSearchOpen(true)}
-          queue={queue}
-          activeVideoIndex={activeIndex}
           upNext={upNext}
           historyItems={historyItems}
           uniqueSingers={uniqueSingers}
@@ -1515,7 +1581,8 @@ const Host = ({
           onReplayFromHistory={replayFromHistory}
           reactionsOn={reactionsOn}
           isPlaying={isPlaying}
-          currentSong={currentSong}
+          currentSong={currentSong} musicVideoAt={musicVideoAt} songClock={timing}
+          onSwapVideo={remote ? undefined : setSwapEntryId}
           cheersOpen={cheersOpen}
           onToggleCheers={toggleCheers}
           onSendReaction={sendReaction}
@@ -1555,6 +1622,7 @@ const Host = ({
               hintKey="customize.hint.host"
               theme={hostView.theme}
               onPickTheme={(theme) => hostEdit.change({ theme })}
+              brand={{ roomId: joinCode, ...hostEdit.brandControls }}
               toggles={hostRailToggles(hostView, hostEdit.change)}
               bannerId="banner"
               bannerLine={hostView.bannerLine}
@@ -1590,6 +1658,26 @@ const Host = ({
         />
       )}
 
+      {joinCode && <ConnectTvLauncher ref={connectTvRef} joinCode={joinCode} onPaired={onTvPaired} />}
+      {joinCode && (
+        <ScreenHelpSheet
+          isOpen={screenHelp.isOpen}
+          onClose={screenHelp.close}
+          joinCode={joinCode}
+          displayHost={displayUrl}
+          onPaired={(r) => { if (r.roomId === joinCode) screenHelp.markVerified(); screenHelp.close(); onTvPaired(r); }}
+          onOpenTvDisplay={openTvDisplayWindow}
+          onUseDisplayMode={screenHelp.useDisplayMode}
+          onPlayHere={() => { screenHelp.close(); playHere(); }}
+          onOptionOpened={screenHelp.onOptionOpened}
+          displayConnected={displayConnected}
+          verified={screenHelp.verified}
+          getDisplayWindow={() => displayWindowRef.current}
+          onSendTest={screenHelp.sendTest}
+          onStepEvent={screenHelp.onStepEvent}
+          onVerified={screenHelp.markVerified}
+        />
+      )}
       {feedbackOpen && (
         <FeedbackModal
           onClose={() => setFeedbackOpen(false)}
@@ -1614,6 +1702,17 @@ const Host = ({
           queue={queue}
           onCancel={() => setConfirmRemove(null)}
           onConfirm={removeSong}
+        />
+      )}
+
+      {joinCode && swapEntry && (
+        <KaraokeSwapSheet
+          joinCode={joinCode}
+          entry={swapEntry}
+          live={isPlaying && swapEntry.id === queue[activeIndex]?.id}
+          roomPlaying={isPlaying}
+          onClose={closeSwapSheet}
+          onSwap={swapKaraoke}
         />
       )}
 

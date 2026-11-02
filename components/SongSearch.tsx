@@ -14,6 +14,7 @@ import ConfirmModal from './songsearch/ConfirmModal';
 import { useSongSearchState } from './songsearch/hooks/useSongSearchState';
 import { useDiscoveryBrowse } from './songsearch/hooks/useDiscoveryBrowse';
 import { useSongAddFlow } from './songsearch/hooks/useSongAddFlow';
+import type { GenreShelf, IdeaShelf, ShelfSong } from '../lib/shelfTypes';
 
 interface SongSearchProps {
   roomId: string;
@@ -55,7 +56,7 @@ const SongSearch: React.FC<SongSearchProps> = ({
   belowSearch,
 }) => {
   const country = useCountry();
-  const { t } = useT();
+  const { t, locale } = useT();
 
   const {
     query,
@@ -84,25 +85,38 @@ const SongSearch: React.FC<SongSearchProps> = ({
   } = useSongSearchState({ roomId, role });
 
   const {
-    orderedSections,
     activeTab,
     activeCategory,
     expandedCategory,
-    regionalSection,
-    langPacks,
-    selectedLang,
-    trendingCategory,
+    allSections,
+    lists,
+    place,
+    places,
+    atHome,
+    placeShelves,
+    placeLoading,
+    pickPlace,
+    ideaOrigin,
+    shelves,
+    shelvesLoading,
+    listsLoading,
     searchSuggestion,
+    showSongCuts,
+    trackShelfPick,
+    liveGenres,
+    openGenre,
+    handleGenreOpen,
+    handleGenreBack,
+    trackGenrePick,
     handleSurpriseMe,
     handleTabSelect,
     handleCategorySelect,
-    handleSelectedLangChange,
     handleCategoryBack,
     handleExpandCategory,
   } = useDiscoveryBrowse({
     country,
+    locale,
     roomId,
-    t,
     filters,
     karaokeMode,
     setQuery,
@@ -132,7 +146,21 @@ const SongSearch: React.FC<SongSearchProps> = ({
     via: resultsVia,
     suggestionKey: resultsSuggestionKey,
     fromCorpus: resultsFromCorpus,
+    idea: ideaOrigin,
   });
+
+  // Every idea opens on its versions, served from the corpus with the "Most
+  // sung" one pinned first. A shelf song passes its own key, which needn't
+  // match what its displayed name would re-key to.
+  function handleShelfPick(song: ShelfSong, shelf: IdeaShelf) {
+    trackShelfPick(song, shelf);
+    showSongCuts(song, song.key);
+  }
+
+  function handleGenrePick(song: ShelfSong, genre: GenreShelf) {
+    trackGenrePick(song, genre);
+    showSongCuts(song, song.key);
+  }
 
   return (
     <div className={styles.container}>
@@ -200,10 +228,24 @@ const SongSearch: React.FC<SongSearchProps> = ({
 
       {!hasSearched && results.length === 0 && !justAdded && (
         <DiscoveryBrowser
-          orderedSections={orderedSections}
-          langPacks={langPacks}
-          regionalSection={regionalSection}
-          trendingCategory={trendingCategory}
+          allSections={allSections}
+          lists={lists}
+          place={place}
+          places={places}
+          home={country}
+          atHome={atHome}
+          shelves={shelves}
+          shelvesLoading={shelvesLoading}
+          listsLoading={listsLoading}
+          placeShelves={placeShelves}
+          placeLoading={placeLoading}
+          onPlaceChange={pickPlace}
+          onShelfPick={handleShelfPick}
+          liveGenres={liveGenres}
+          openGenre={openGenre}
+          onGenreOpen={handleGenreOpen}
+          onGenreBack={handleGenreBack}
+          onGenrePick={handleGenrePick}
           activeTab={activeTab}
           onTabSelect={handleTabSelect}
           activeCategory={activeCategory}
@@ -211,8 +253,6 @@ const SongSearch: React.FC<SongSearchProps> = ({
           onCategoryBack={handleCategoryBack}
           expandedCategory={expandedCategory}
           onExpandCategory={handleExpandCategory}
-          selectedLang={selectedLang}
-          onSelectedLangChange={handleSelectedLangChange}
           onSongSelect={searchSuggestion}
           onSurpriseMe={handleSurpriseMe}
           belowSearch={belowSearch}

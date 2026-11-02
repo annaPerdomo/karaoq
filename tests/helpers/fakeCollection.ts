@@ -524,6 +524,19 @@ export function fakeCollection(lookup?: LookupFrom) {
       }
       return apply(id, update, options);
     },
+    replaceOne: async (filter: Doc, doc: Doc, options?: UpdateOptions) => {
+      const id = filter._id as string;
+      if (!docs.has(id) && !options?.upsert) {
+        return { matchedCount: 0, modifiedCount: 0, upsertedCount: 0 };
+      }
+      const existed = docs.has(id);
+      docs.set(id, copy({ ...doc, _id: id }));
+      return {
+        matchedCount: existed ? 1 : 0,
+        modifiedCount: existed ? 1 : 0,
+        upsertedCount: existed ? 0 : 1,
+      };
+    },
     bulkWrite: async (
       ops: { updateOne: { filter: Doc; update: UpdateSpec; upsert?: boolean } }[]
     ) => {

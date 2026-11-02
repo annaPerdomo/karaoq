@@ -66,6 +66,56 @@ export function onDisplayPause(
   return () => ch.close();
 }
 
+// Karaoke playhead (Display → music-video screen, same browser only). Lets a
+// second window on the same machine sync tighter than the 3s room poll allows.
+export interface PlayheadMessage {
+  entryId: string;
+  seconds: number;
+  playing: boolean;
+  /** serverNow() at send time. */
+  sentAt: number;
+}
+
+export function broadcastPlayhead(roomId: string, msg: PlayheadMessage) {
+  if (typeof BroadcastChannel === "undefined") return;
+  const ch = new BroadcastChannel(`karaoq-playhead:${roomId}`);
+  ch.postMessage(msg);
+  ch.close();
+}
+
+export function onPlayhead(
+  roomId: string,
+  callback: (msg: PlayheadMessage) => void
+): () => void {
+  if (typeof BroadcastChannel === "undefined") return () => {};
+  const ch = new BroadcastChannel(`karaoq-playhead:${roomId}`);
+  ch.onmessage = (e: MessageEvent<PlayheadMessage>) => callback(e.data);
+  return () => ch.close();
+}
+
+// Host timing nudges (Host → music-video screen, same browser only).
+export interface OriginalOffsetMessage {
+  entryId: string;
+  offsetSeconds: number;
+}
+
+export function broadcastOriginalOffset(roomId: string, msg: OriginalOffsetMessage) {
+  if (typeof BroadcastChannel === "undefined") return;
+  const ch = new BroadcastChannel(`karaoq-original-offset:${roomId}`);
+  ch.postMessage(msg);
+  ch.close();
+}
+
+export function onOriginalOffset(
+  roomId: string,
+  callback: (msg: OriginalOffsetMessage) => void
+): () => void {
+  if (typeof BroadcastChannel === "undefined") return () => {};
+  const ch = new BroadcastChannel(`karaoq-original-offset:${roomId}`);
+  ch.onmessage = (e: MessageEvent<OriginalOffsetMessage>) => callback(e.data);
+  return () => ch.close();
+}
+
 // Video-ended events (Display → Host for TV mode)
 export function broadcastVideoEnded(roomId: string) {
   if (typeof BroadcastChannel === "undefined") return;
@@ -80,6 +130,22 @@ export function onVideoEnded(
 ): () => void {
   if (typeof BroadcastChannel === "undefined") return () => {};
   const ch = new BroadcastChannel(`karaoq-video-ended:${roomId}`);
+  ch.onmessage = () => callback();
+  return () => ch.close();
+}
+
+// Screen-help test card (Host → Display). The display also picks it up from its room poll
+// (screenTestAt); the broadcast lets a same-browser display window flash it instantly.
+export function broadcastScreenTest(roomId: string) {
+  if (typeof BroadcastChannel === "undefined") return;
+  const ch = new BroadcastChannel(`karaoq-screen-test:${roomId}`);
+  ch.postMessage(Date.now());
+  ch.close();
+}
+
+export function onScreenTest(roomId: string, callback: () => void): () => void {
+  if (typeof BroadcastChannel === "undefined") return () => {};
+  const ch = new BroadcastChannel(`karaoq-screen-test:${roomId}`);
   ch.onmessage = () => callback();
   return () => ch.close();
 }

@@ -297,6 +297,16 @@ export function normalizeAutoAdvance(stored: unknown): AutoAdvance {
   };
 }
 
+export interface RoomBrand {
+  /** Hash of a committed logo in room_logos; absent = no logo. */
+  logo?: string;
+  /** "#rrggbb"; absent = the theme's own accent. */
+  accentA?: string;
+  accentB?: string;
+  /** Absent = 1 (unscaled). */
+  logoScale?: number;
+}
+
 export interface Room {
   id: string;
   queue: QueueEntry[];
@@ -311,6 +321,8 @@ export interface Room {
   /** Display heartbeat (~10s); the room GET clears playing state with no
    * recent heartbeat so host controls never show a phantom song. */
   displayLastSeen?: Date;
+  /** Last time the host asked displays to flash the screen-help test card. */
+  screenTestAt?: Date;
   /** Grace window for a display to load before orphan-healing kicks in. */
   playStartedAt?: Date;
   /** When the current pause began. Freezes the queue-time estimate while the
@@ -333,6 +345,8 @@ export interface Room {
   fairMode?: boolean;
   displayConfig?: DisplayConfig;
   hostConfig?: HostConfig;
+  /** Room-level, not part of either config: host and Display share one brand. */
+  brand?: RoomBrand;
   /** Wall-clock end of the booked slot / the night. Absent = open-ended. */
   sessionEndsAt?: Date;
   /** Absent = the room predates the setting and stays off; see AUTO_ADVANCE_OFF. */
@@ -348,6 +362,9 @@ export interface Room {
   endedEntryId?: string;
   /** A phone opened the host link from the TV's QR; the TV then hides it. */
   hostJoinedAt?: Date;
+  /** Last time a music-video screen asked for a video; bumped at most once
+   * per 5 minutes. Gates the host's swap card. */
+  musicVideoAt?: Date;
   createdAt?: Date;
   /** Bumped on every write; drives the TTL index. */
   lastActivity?: Date;
@@ -365,4 +382,15 @@ export interface QueueEntry {
   /** Epoch ms at queue time — the order fair-mode-off restores, since fair
    * rotation destroys array-position-as-arrival. Absent on legacy entries. */
   addedAt?: number;
+  /** Host-chosen override for the music-video screen's resolved video. */
+  originalVideoId?: string;
+  /** Host-chosen timing nudge for the music-video screen, seconds. Absent = 0. */
+  originalOffsetSeconds?: number;
+}
+
+/** One theme for the whole room: the host's. Both config routes mirror a save
+ *  onto the other config; rooms saved before that may disagree, and the host's
+ *  wins on every screen. */
+export function roomTheme(room: Pick<Room, "hostConfig">): DisplayTheme {
+  return normalizeHostConfig(room.hostConfig).theme;
 }

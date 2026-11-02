@@ -1,10 +1,10 @@
 import * as React from "react";
+import type { RoomTiming } from "../hooks/useRoomTiming";
 import { DragEndEvent } from "@dnd-kit/core";
 import styles from "../../styles/Host.module.css";
 import p from "../../styles/DisplayDesigner.module.css";
 import BoardsPanel from "../BoardsPanel";
 import SongSearch from "../SongSearch";
-import RecapShareButton from "../RecapShareButton";
 import { HostConfig, QueueEntry } from "../../pages/api/types";
 import { Boards } from "../../app/queue/useBoards";
 import { useT } from "../../lib/i18n/I18nProvider";
@@ -12,6 +12,7 @@ import { Icons } from "./icons";
 import { SidebarSections, HostSidebarEdit } from "./SidebarSections";
 import { UpNextTab } from "./UpNextTab";
 import { HistoryTab } from "./HistoryTab";
+import { MusicVideoCard, musicVideoCardVisible } from "./MusicVideoCard";
 import { QueueEstimate } from "../../lib/queueTime";
 
 export function QueueSidebar({
@@ -27,8 +28,6 @@ export function QueueSidebar({
   onToggleSearch,
   onCloseSearch,
   onOpenBoards,
-  queue,
-  activeVideoIndex,
   upNext,
   historyItems,
   uniqueSingers,
@@ -47,6 +46,9 @@ export function QueueSidebar({
   reactionsOn,
   isPlaying,
   currentSong,
+  musicVideoAt,
+  songClock,
+  onSwapVideo,
   cheersOpen,
   onToggleCheers,
   onSendReaction,
@@ -81,8 +83,6 @@ export function QueueSidebar({
   onToggleSearch: () => void;
   onCloseSearch: () => void;
   onOpenBoards: () => void;
-  queue: QueueEntry[];
-  activeVideoIndex: number;
   upNext: QueueEntry[];
   historyItems: QueueEntry[];
   uniqueSingers: number;
@@ -103,6 +103,11 @@ export function QueueSidebar({
   reactionsOn: boolean;
   isPlaying: boolean;
   currentSong: QueueEntry | undefined;
+  /** Room.musicVideoAt, as an ISO string — gates the music-video swap card. */
+  musicVideoAt: string | null;
+  songClock: Pick<RoomTiming, "playStartedAt" | "playPausedAt">;
+  /** Absent for co-hosts. */
+  onSwapVideo?: (entryId: string) => void;
   cheersOpen: boolean;
   onToggleCheers: () => void;
   onSendReaction: (emoji: string) => void;
@@ -167,6 +172,14 @@ export function QueueSidebar({
         {Icons.plus} {t('host.sidebar.addSong')}
       </button>
 
+      {joinCode && musicVideoCardVisible(remote, musicVideoAt, currentSong) && (
+        <MusicVideoCard
+          joinCode={joinCode}
+          activeEntry={currentSong as QueueEntry}
+          playback={{ isPlaying, ...songClock }}
+        />
+      )}
+
       {sidebarTab === "queue" && (
         <UpNextTab
           upNext={upNext}
@@ -181,6 +194,7 @@ export function QueueSidebar({
           onMoveTop={onMoveTop}
           onToggleEdit={onToggleEdit}
           onEditSave={onEditSave}
+          onSwapVideo={onSwapVideo}
           onRequestRemove={onRequestRemove}
         />
       )}
@@ -191,8 +205,6 @@ export function QueueSidebar({
           onReplayFromHistory={onReplayFromHistory}
         />
       )}
-
-      <RecapShareButton queue={queue} activeVideoIndex={activeVideoIndex} />
     </>
   );
 

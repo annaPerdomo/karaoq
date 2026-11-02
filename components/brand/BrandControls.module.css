@@ -1,0 +1,68 @@
+.logoRow {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.thumb {
+  flex-shrink: 0;
+  width: calc(56px * var(--tv-scale, 1));
+  height: calc(56px * var(--tv-scale, 1));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  border-radius: calc(8px * var(--tv-scale, 1));
+  background: rgba(255, 255, 255, 0.04);
+  overflow: hidden;
+}
+
+.thumb img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.logoActions {
+  flex: 1;
+  flex-wrap: wrap;
+}
+
+.fileInput {
+  display: none;
+}
+
+.error {
+  margin-top: 0.4rem;
+  font-size: 0.72rem;
+  color: #ff6b81;
+}
+
+.colorRow {
+  display: flex;
+  gap: 0.6rem;
+  margin-top: 0.7rem;
+}
+
+.colorField {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+}
+
+.colorField input {
+  width: calc(32px * var(--tv-scale, 1));
+  height: calc(32px * var(--tv-scale, 1));
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 6px;
+  background: none;
+  cursor: pointer;
+}
+
+.resetRow {
+  margin-top: 0.5rem;
+}

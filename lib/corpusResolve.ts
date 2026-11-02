@@ -151,11 +151,21 @@ export async function resolveWantedSongs(
   const now = new Date();
   const ready = eligibleNow(now);
   report.wanted = await songs.countDocuments({ cuts: [], retired: { $ne: true } });
+  // Genre-chart songs only get what everything else leaves: their backlog
+  // runs to thousands, and would otherwise queue new Top 50 hits behind it.
   const wanted = await songs
-    .find({ cuts: [], ...ready })
+    .find({ cuts: [], genreChart: { $ne: true }, ...ready })
     .sort(RESOLVE_ORDER)
     .limit(budget)
     .toArray();
+  if (wanted.length < budget) {
+    const genre = await songs
+      .find({ cuts: [], genreChart: true, ...ready })
+      .sort(RESOLVE_ORDER)
+      .limit(budget - wanted.length)
+      .toArray();
+    wanted.push(...genre);
+  }
   report.eligible = wanted.length;
 
   const attempted = new Set<string>();

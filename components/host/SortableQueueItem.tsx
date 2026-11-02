@@ -6,6 +6,7 @@ import { QueueEntry } from "../../pages/api/types";
 import { useT } from "../../lib/i18n/I18nProvider";
 import { Icons } from "./icons";
 import { formatSongTitle } from "./utils";
+import { SwapButton } from "./SwapButton";
 
 export function SortableQueueItem({
   item,
@@ -18,6 +19,7 @@ export function SortableQueueItem({
   onEdit,
   onEditSave,
   onRemove,
+  onSwapVideo,
 }: {
   item: QueueEntry;
   index: number;
@@ -31,6 +33,7 @@ export function SortableQueueItem({
   onEdit: () => void;
   onEditSave: (name: string) => void;
   onRemove: () => void;
+  onSwapVideo?: () => void;
 }) {
   const { t } = useT();
   const {
@@ -120,6 +123,9 @@ export function SortableQueueItem({
           >
             {Icons.moveTop}
           </button>
+        )}
+        {onSwapVideo && (
+          <SwapButton label={t('karaokeVideo.swap')} onClick={onSwapVideo} size="row" />
         )}
         <button
           className={`${styles.actionBtn} ${editing ? styles.actionBtnActive : ""}`}

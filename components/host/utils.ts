@@ -1,7 +1,19 @@
+import { singerKeys } from "../../lib/fairQueue";
+import { QueueEntry } from "../../pages/api/types";
+
 export { default as formatSongTitle } from "../../lib/songTitle";
 
 export function isTextReaction(emoji: string): boolean {
   return emoji.length > 2 && /[a-zA-Z]/.test(emoji);
+}
+
+export function includesCurrentInSidebar(hasCurrent: boolean, isPlaying: boolean): boolean {
+  return !!(hasCurrent && !isPlaying);
+}
+
+/** Counted the way the rotation groups people — a duet entry counts each member. */
+export function uniqueSingerCount(entries: QueueEntry[]): number {
+  return new Set(entries.flatMap((s) => singerKeys(s.userName))).size;
 }
 
 /**

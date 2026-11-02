@@ -3,7 +3,7 @@ import { ApiError, DEFAULT_AUTO_ADVANCE, DEFAULT_DISPLAY_CONFIG, Room } from "..
 import { attributionFromRequest, trackEvent } from "../../../../lib/analytics";
 import { rateLimit } from "../../../../lib/limits";
 import { getRoomsCollection } from "../../../../lib/mongodb";
-import { normalizeRoomId } from "../../../../lib/roomCode";
+import { normalizeRoomId, ROOM_CODE_PATTERN } from "../../../../lib/roomCode";
 import { AUTO_START_STALE_MS } from "../../../../lib/autoAdvance";
 import { pruneRoomYoutubeData, roomPruneUpdate } from "../../../../lib/youtubeRetention";
 import { searchQuotaResetsAt } from "../../../../lib/searchQuotaStatus";
@@ -11,15 +11,12 @@ import { isRoomDormant } from "../../../../lib/roomDormancy";
 
 const REACTION_TTL_MS = 30000;
 
-// Also protects server-side invariants that assume well-formed ids — e.g. the analytics sessionKey
-// `roomId:clientId:role`, where a ":" in a roomId would collide.
-const ROOM_CODE_PATTERN = /^[A-Z0-9]{3,12}$/;
-
 // Displays heartbeat ~10s from a Web Worker; the window still survives a worst-case once-per-minute
 // throttled beat so a hidden-but-playing display is never mistaken for a dead one.
 const DISPLAY_LIVE_MS = 75_000;
 // A visible display's poll is its heartbeat; Display only POSTs display-seen while hidden.
 const DISPLAY_SEEN_REFRESH_MS = 10_000;
+const MUSIC_VIDEO_SEEN_REFRESH_MS = 5 * 60 * 1000;
 // Time for a display to load and start heartbeating after play — and, in here-mode, for a host page
 // to claim the surface — before playback counts as orphaned. A host mid-drag re-arms its polling
 // hold, so a co-host's Play during a long reorder can expire this and appear to do nothing.
@@ -192,6 +189,17 @@ export default async function handler(
             now - new Date(room.displayLastSeen).getTime() >= DISPLAY_SEEN_REFRESH_MS)
         ) {
           await collection.updateOne({ id: roomId }, { $set: { displayLastSeen: new Date(now) } });
+        }
+
+        if (
+          req.query.musicVideo === "1" &&
+          (!room.musicVideoAt ||
+            now - new Date(room.musicVideoAt).getTime() >= MUSIC_VIDEO_SEEN_REFRESH_MS)
+        ) {
+          room.musicVideoAt = new Date(now);
+          collection
+            .updateOne({ id: roomId }, { $set: { musicVideoAt: room.musicVideoAt } })
+            .catch(() => {});
         }
 
         // In-memory filter only — persisting the cleanup would turn every poll into a write; the

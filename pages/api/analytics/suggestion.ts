@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from "next";
-import { trackEvent } from "../../../lib/analytics";
+import { SUGGESTION_SOURCES, trackEvent, type SuggestionSource } from "../../../lib/analytics";
 import { MAX_ENTRY_ID_LENGTH, MAX_TITLE_LENGTH, rateLimit } from "../../../lib/limits";
+import { ideaFields } from "../../../lib/ideaSurface";
 
 export default async function handler(
   req: NextApiRequest,
@@ -18,6 +19,8 @@ export default async function handler(
     categoryId?: string;
     songTitle?: string;
     songArtist?: string;
+    ideaSurface?: unknown;
+    ideaAway?: unknown;
   };
   try {
     body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
@@ -35,7 +38,7 @@ export default async function handler(
     typeof roomId !== "string" ||
     roomId.length > MAX_ENTRY_ID_LENGTH ||
     typeof suggestionSource !== "string" ||
-    !["random", "song_pick", "genre_chip", "trending"].includes(suggestionSource)
+    !(SUGGESTION_SOURCES as readonly string[]).includes(suggestionSource)
   ) {
     res.status(400).json({ code: 400, message: "Invalid request." });
     return;
@@ -51,11 +54,12 @@ export default async function handler(
 
   await trackEvent(req, "suggestion_used", {
     roomId,
-    suggestionSource: suggestionSource as "random" | "song_pick" | "genre_chip" | "trending",
+    suggestionSource: suggestionSource as SuggestionSource,
     sectionId: capped(sectionId, MAX_ENTRY_ID_LENGTH),
     categoryId: capped(categoryId, MAX_ENTRY_ID_LENGTH),
     songTitle: capped(songTitle, MAX_TITLE_LENGTH),
     songArtist: capped(songArtist, MAX_TITLE_LENGTH),
+    ...ideaFields(body),
   });
 
   res.status(200).json({ ok: true });

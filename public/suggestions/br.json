@@ -84,6 +84,162 @@
         { "title": "Baile de Favela", "artist": "MC João" },
         { "title": "Ela Só Quer Paz", "artist": "Projota" }
       ]
+    },
+    {
+      "id": "br-rock",
+      "name": "Rock Nacional",
+      "emoji": "🤘",
+      "songs": [
+        { "title": "Que País É Este", "artist": "Legião Urbana" },
+        { "title": "Será", "artist": "Legião Urbana" },
+        { "title": "Faroeste Caboclo", "artist": "Legião Urbana" },
+        { "title": "Pro Dia Nascer Feliz", "artist": "Barão Vermelho" },
+        { "title": "Bete Balanço", "artist": "Barão Vermelho" },
+        { "title": "Sonífera Ilha", "artist": "Titãs" },
+        { "title": "Flores", "artist": "Titãs" },
+        { "title": "Pra Ser Sincero", "artist": "Engenheiros do Hawaii" },
+        { "title": "Infinita Highway", "artist": "Engenheiros do Hawaii" },
+        { "title": "Ela Disse Adeus", "artist": "Os Paralamas do Sucesso" },
+        { "title": "Vou Deixar", "artist": "Skank" },
+        { "title": "É Uma Partida de Futebol", "artist": "Skank" },
+        { "title": "Só os Loucos Sabem", "artist": "Charlie Brown Jr." },
+        { "title": "Proibida pra Mim", "artist": "Charlie Brown Jr." },
+        { "title": "Céu Azul", "artist": "Charlie Brown Jr." },
+        { "title": "Natasha", "artist": "Capital Inicial" },
+        { "title": "À Sua Maneira", "artist": "Capital Inicial" },
+        { "title": "Mulher de Fases", "artist": "Raimundos" },
+        { "title": "Do Seu Lado", "artist": "Jota Quest" }
+      ]
+    },
+    {
+      "id": "br-forro",
+      "name": "Forró & Piseiro",
+      "emoji": "🪗",
+      "songs": [
+        { "title": "Xote dos Milagres", "artist": "Falamansa" },
+        { "title": "Xote da Alegria", "artist": "Falamansa" },
+        { "title": "Esperando na Janela", "artist": "Gilberto Gil" },
+        { "title": "Anunciação", "artist": "Alceu Valença" },
+        { "title": "Morena Tropicana", "artist": "Alceu Valença" },
+        { "title": "Isso Aqui Tá Bom Demais", "artist": "Dominguinhos" },
+        { "title": "Xote das Meninas", "artist": "Luiz Gonzaga" },
+        { "title": "Espumas ao Vento", "artist": "Flávio José" },
+        { "title": "Você Não Vale Nada", "artist": "Calcinha Preta" },
+        { "title": "Chupa Que É de Uva", "artist": "Aviões do Forró" },
+        { "title": "Camarote", "artist": "Wesley Safadão" },
+        { "title": "Ar-Condicionado no 15", "artist": "Wesley Safadão" },
+        { "title": "Basta Você Me Ligar", "artist": "Barões da Pisadinha" },
+        { "title": "Recairei", "artist": "Barões da Pisadinha" },
+        { "title": "Investe em Mim", "artist": "Jonas Esticado" },
+        { "title": "Meu Pedaço de Pecado", "artist": "João Gomes" },
+        { "title": "Dengo", "artist": "João Gomes" },
+        { "title": "Letícia", "artist": "Zé Vaqueiro" }
+      ]
+    },
+    {
+      "id": "br-samba",
+      "name": "Samba & Pagode",
+      "emoji": "🪘",
+      "songs": [
+        { "title": "Mulheres", "artist": "Martinho da Vila" },
+        { "title": "Conto de Areia", "artist": "Clara Nunes" },
+        { "title": "O Mundo É um Moinho", "artist": "Cartola" },
+        { "title": "Deixa a Vida Me Levar", "artist": "Zeca Pagodinho" },
+        { "title": "Vou Festejar", "artist": "Beth Carvalho" },
+        { "title": "O Show Tem Que Continuar", "artist": "Fundo de Quintal" },
+        { "title": "Mineirinho", "artist": "Só Pra Contrariar" },
+        { "title": "Que Se Chama Amor", "artist": "Só Pra Contrariar" },
+        { "title": "Cigana", "artist": "Raça Negra" },
+        { "title": "Me Apaixonei Pela Pessoa Errada", "artist": "Exaltasamba" },
+        { "title": "Tá Vendo Aquela Lua", "artist": "Exaltasamba" },
+        { "title": "Cilada", "artist": "Molejo" },
+        { "title": "Insegurança", "artist": "Pixote" },
+        { "title": "Até Que Durou", "artist": "Péricles" },
+        { "title": "Ousadia & Alegria", "artist": "Thiaguinho" },
+        { "title": "Pirata e Tesouro", "artist": "Ferrugem" },
+        { "title": "Péssimo Negócio", "artist": "Dilsinho" },
+        { "title": "Assim Você Mata o Papai", "artist": "Sorriso Maroto" }
+      ]
+    },
+    {
+      "id": "br-voice-easy",
+      "name": "Easy to Sing",
+      "emoji": "😌",
+      "voice": "easy",
+      "songs": [
+        { "title": "Ai Se Eu Te Pego", "artist": "Michel Teló" },
+        { "title": "Aquarela", "artist": "Toquinho" },
+        { "title": "Velha Infância", "artist": "Tribalistas" },
+        { "title": "País Tropical", "artist": "Jorge Ben Jor" },
+        { "title": "Pelados em Santos", "artist": "Mamonas Assassinas" },
+        { "title": "Garota Nacional", "artist": "Skank" },
+        { "title": "Tá Escrito", "artist": "Grupo Revelação" },
+        { "title": "Asa Branca", "artist": "Luiz Gonzaga" },
+        { "title": "Do Leme ao Pontal", "artist": "Tim Maia" },
+        { "title": "Lança Perfume", "artist": "Rita Lee" },
+        { "title": "É Preciso Saber Viver", "artist": "Titãs" },
+        { "title": "Ilariê", "artist": "Xuxa" }
+      ]
+    },
+    {
+      "id": "br-voice-low",
+      "name": "Low & Deep",
+      "emoji": "🫧",
+      "voice": "low",
+      "songs": [
+        { "title": "Trem das Onze", "artist": "Adoniran Barbosa" },
+        { "title": "Garota de Ipanema", "artist": "Tom Jobim" },
+        { "title": "Detalhes", "artist": "Roberto Carlos" },
+        { "title": "Eduardo e Mônica", "artist": "Legião Urbana" },
+        { "title": "Ideologia", "artist": "Cazuza" },
+        { "title": "Lanterna dos Afogados", "artist": "Os Paralamas do Sucesso" },
+        { "title": "Infiel", "artist": "Marília Mendonça" },
+        { "title": "Mas Que Nada", "artist": "Jorge Ben Jor" },
+        { "title": "Eu Sei Que Vou Te Amar", "artist": "Tom Jobim" },
+        { "title": "Como Uma Onda", "artist": "Lulu Santos" },
+        { "title": "Epitáfio", "artist": "Titãs" },
+        { "title": "Ainda Bem", "artist": "Marisa Monte" }
+      ]
+    },
+    {
+      "id": "br-voice-mid",
+      "name": "Mid Range",
+      "emoji": "🎶",
+      "voice": "mid",
+      "songs": [
+        { "title": "Tempo Perdido", "artist": "Legião Urbana" },
+        { "title": "Exagerado", "artist": "Cazuza" },
+        { "title": "Águas de Março", "artist": "Elis Regina" },
+        { "title": "Emoções", "artist": "Roberto Carlos" },
+        { "title": "Sozinho", "artist": "Caetano Veloso" },
+        { "title": "Anna Júlia", "artist": "Los Hermanos" },
+        { "title": "Deixa Acontecer", "artist": "Grupo Revelação" },
+        { "title": "Propaganda", "artist": "Jorge & Mateus" },
+        { "title": "O Que É, O Que É?", "artist": "Gonzaguinha" },
+        { "title": "Andança", "artist": "Beth Carvalho" },
+        { "title": "Flor de Lis", "artist": "Djavan" },
+        { "title": "Meu Erro", "artist": "Os Paralamas do Sucesso" }
+      ]
+    },
+    {
+      "id": "br-voice-high",
+      "name": "High & Powerful",
+      "emoji": "🌟",
+      "voice": "high",
+      "songs": [
+        { "title": "Evidências", "artist": "Chitãozinho & Xororó" },
+        { "title": "É o Amor", "artist": "Zezé Di Camargo & Luciano" },
+        { "title": "Whisky a Go Go", "artist": "Roupa Nova" },
+        { "title": "Oceano", "artist": "Djavan" },
+        { "title": "Como Nossos Pais", "artist": "Elis Regina" },
+        { "title": "Quando a Chuva Passar", "artist": "Ivete Sangalo" },
+        { "title": "Cheia de Manias", "artist": "Raça Negra" },
+        { "title": "Alma Gêmea", "artist": "Fábio Jr." },
+        { "title": "Medo Bobo", "artist": "Maiara & Maraisa" },
+        { "title": "Primeiros Erros", "artist": "Capital Inicial" },
+        { "title": "Cuida Bem Dela", "artist": "Henrique & Juliano" },
+        { "title": "Fio de Cabelo", "artist": "Chitãozinho & Xororó" }
+      ]
     }
   ]
 }

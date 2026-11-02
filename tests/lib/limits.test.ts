@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   isValidDisplayConfig,
   isValidQueueEntry,
+  isValidRoomBrand,
   markRateLimitNotified,
   MAX_BANNER_LENGTH,
   MAX_FEEDBACK_CONTACT_LENGTH,
@@ -257,5 +258,41 @@ describe("sanitizeFeedback", () => {
       role: undefined,
       page: undefined,
     });
+  });
+});
+
+describe("isValidRoomBrand", () => {
+  it.each([
+    {},
+    { logo: "0123456789abcdef", accentA: "#ff00AA", accentB: "#000000" },
+    { accentB: "#123abc" },
+    { logoScale: 1 },
+    { logoScale: 0.5 },
+    { logoScale: 2 },
+    { logoScale: 1.23 },
+  ])("accepts %j", (brand) => {
+    expect(isValidRoomBrand(brand)).toBe(true);
+  });
+
+  it.each([
+    ["an unknown key", { accentA: "#ffffff", font: "Comic Sans" }],
+    ["short hex", { accentA: "#fff" }],
+    ["hex without #", { accentB: "ffffff" }],
+    ["a named colour", { accentA: "red" }],
+    ["a CSS injection", { accentA: "#ffffff; background: url(x)" }],
+    ["an uppercase hash", { logo: "0123456789ABCDEF" }],
+    ["a short hash", { logo: "0123456789abcde" }],
+    ["a non-string hash", { logo: 42 }],
+    ["null", null],
+    ["a string", "#ffffff"],
+    ["an array", []],
+    ["logoScale below the floor", { logoScale: 0.49 }],
+    ["logoScale above the ceiling", { logoScale: 2.01 }],
+    ["logoScale with more than 2 decimals", { logoScale: 1.234 }],
+    ["logoScale as a string", { logoScale: "1.2" }],
+    ["logoScale as NaN", { logoScale: NaN }],
+    ["logoScale as Infinity", { logoScale: Infinity }],
+  ])("rejects %s", (_name, brand) => {
+    expect(isValidRoomBrand(brand)).toBe(false);
   });
 });

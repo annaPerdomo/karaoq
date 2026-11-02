@@ -1,0 +1,325 @@
+.main {
+  --acc-a: #ff2d78;
+  --acc-a-rgb: 255, 45, 120;
+  --acc-b: #00f0ff;
+  --acc-b-rgb: 0, 240, 255;
+  --disp-surface-rgb: 10, 10, 25;
+  height: 100dvh;
+  height: 100vh; /* fallback for older browsers */
+  width: 100vw;
+  background: var(--bg-primary);
+  overflow: hidden;
+  position: relative;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+
+  @supports (height: 100dvh) {
+    height: 100dvh;
+  }
+}
+
+.loading {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-primary);
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(255, 255, 255, 0.2);
+  border-top-color: var(--text-primary);
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.errorState {
+  text-align: center;
+  color: var(--text-primary);
+  padding: 24px;
+}
+
+/* YouTube's terms forbid overlaying or cropping the embedded player, so it is
+   letterboxed in the middle band and all chrome lives in the bars. */
+.topBar,
+.bottomBar {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 24px;
+}
+
+.topBar {
+  grid-template-columns: 1fr auto 1fr;
+  min-height: 80px;
+}
+
+.bottomBar {
+  grid-template-columns: 1fr auto;
+}
+
+.topBarSide {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.topBarEnd {
+  justify-content: flex-end;
+}
+
+.stage {
+  position: relative;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  container-type: size;
+}
+
+.videoFrame {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.video {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: none;
+  background: #000;
+}
+
+@supports (width: 1cqw) {
+  .video {
+    width: min(100cqw, calc(100cqh * 16 / 9));
+  }
+}
+
+.idle {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  color: var(--text-primary);
+  text-align: center;
+  padding: 24px;
+}
+
+.idle.idleWithThumb {
+  gap: 8px;
+}
+
+.idleSong {
+  max-width: min(70vw, 1100px);
+  font-family: var(--font-headline);
+  font-size: clamp(1.4rem, 3.2vw, 3rem);
+  font-weight: 600;
+  line-height: 1.2;
+  text-wrap: balance;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-shadow: 0 2px 16px rgba(0, 0, 0, 0.9);
+}
+
+.idleText {
+  font-size: 0.95rem;
+  opacity: 0.6;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.85);
+}
+
+.idle > .idleThumb {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.idle > .idleThumbShown {
+  opacity: 1;
+}
+
+/* hqdefault is 4:3 with the 16:9 frame letterboxed into its middle 75%: oversized
+   like .video but for a 4:3 source, so the content, not the baked-in bars, covers the viewport. */
+.idle > .idleThumbCropped {
+  inset: 0;
+  margin: auto;
+  width: max(100vw, 177.78vh);
+  height: max(75vw, 133.33vh);
+}
+
+.idle > .idleThumbScrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(var(--disp-surface-rgb), 0.55);
+  z-index: 0;
+}
+
+.offsetPill {
+  background: rgba(0, 0, 0, 0.6);
+  color: var(--text-primary);
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+}
+
+.qrCorner {
+  justify-self: start;
+  padding: 8px;
+  border-radius: 14px;
+  background: rgba(var(--disp-surface-rgb), 0.6);
+  pointer-events: none;
+  max-width: calc(50vw - 36px);
+  overflow-wrap: break-word;
+}
+
+.clubLogo {
+  max-width: calc(12vw * var(--logo-scale, 1));
+  max-height: calc(9vh * var(--logo-scale, 1));
+  object-fit: contain;
+  opacity: 0.6;
+}
+
+.karaoqBadge {
+  justify-self: end;
+  padding: 8px 18px;
+  border-radius: 14px;
+  background: rgba(var(--disp-surface-rgb), 0.6);
+}
+
+
+.wordmark {
+  font-family: var(--font-brand);
+  font-weight: 400;
+  font-size: 2rem;
+  line-height: 1.1;
+  letter-spacing: 2px;
+  background: linear-gradient(135deg, #ff2d78, #00f0ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Mirrors the Display's theme blocks so a second TV matches the first. */
+.themeMinimal {
+  --acc-a: #aab0c0;
+  --acc-a-rgb: 170, 176, 192;
+  --acc-b: #d7dae2;
+  --acc-b-rgb: 215, 218, 226;
+  --bg-primary: #0a0a0c;
+  --disp-surface-rgb: 10, 10, 12;
+}
+
+.themeNeon {
+  --bg-primary: #050505;
+  --disp-surface-rgb: 5, 5, 10;
+}
+
+.main .idle::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse at 50% 40%,
+    rgba(var(--acc-a-rgb), 0.16),
+    rgba(var(--acc-b-rgb), 0.06) 45%,
+    transparent 75%
+  );
+  pointer-events: none;
+}
+
+.themeMinimal .idle::before,
+.idle.idleWithThumb::before {
+  display: none;
+}
+
+.themeNeon .idle::before {
+  background: radial-gradient(
+    ellipse at 50% 40%,
+    rgba(var(--acc-a-rgb), 0.28),
+    rgba(var(--acc-b-rgb), 0.12) 45%,
+    transparent 75%
+  );
+}
+
+.themeNeon .wordmark {
+  text-shadow: 0 0 16px rgba(255, 45, 120, 0.55), 0 0 32px rgba(0, 240, 255, 0.35);
+}
+
+.idle > * {
+  position: relative;
+}
+
+.idleLabel {
+  font-size: clamp(0.8rem, 1.2vw, 1.1rem);
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--acc-a);
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.9);
+}
+
+.idleSinger {
+  max-width: min(70vw, 1100px);
+  font-family: var(--font-headline);
+  font-size: clamp(2.4rem, 6.5vw, 6rem);
+  font-weight: 700;
+  line-height: 1.05;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: linear-gradient(135deg, var(--acc-a), var(--acc-b));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 2px 14px rgba(0, 0, 0, 0.75));
+}
+
+.onStage {
+  max-width: min(46vw, 900px);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 22px;
+  border-radius: 999px;
+  background: rgba(var(--disp-surface-rgb), 0.6);
+}
+
+.onStageTag {
+  flex-shrink: 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.25em;
+  color: var(--acc-a);
+}
+
+.onStageName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-headline);
+  font-size: clamp(1.2rem, 2.2vw, 2rem);
+  font-weight: 700;
+  color: var(--text-primary);
+}

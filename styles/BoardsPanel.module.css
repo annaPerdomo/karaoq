@@ -47,8 +47,8 @@
   min-width: 1.1rem;
   padding: 0 0.3rem;
   border-radius: 999px;
-  background: rgba(0, 240, 255, 0.15);
-  color: #00f0ff;
+  background: rgba(var(--acc-b-rgb, 0, 240, 255), 0.15);
+  color: var(--acc-b, #00f0ff);
   font-size: 0.65rem;
   line-height: 1.1rem;
   letter-spacing: 0;
@@ -93,8 +93,8 @@
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #00f0ff;
-  box-shadow: 0 0 6px #00f0ff;
+  background: var(--acc-b, #00f0ff);
+  box-shadow: 0 0 6px var(--acc-b, #00f0ff);
   animation: pulse 1.5s ease-in-out infinite;
   flex-shrink: 0;
 }

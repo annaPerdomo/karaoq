@@ -12,6 +12,7 @@ export function useScalarDrag(opts: {
   scale?: number;
   invert?: boolean;
   step?: number;
+  round?: (n: number) => number;
   onChange: (next: number) => void;
   onEnd?: () => void;
 }) {
@@ -23,6 +24,7 @@ export function useScalarDrag(opts: {
     scale = 1,
     invert = false,
     step = 8,
+    round = Math.round,
     onChange,
     onEnd,
   } = opts;
@@ -35,7 +37,7 @@ export function useScalarDrag(opts: {
     onMove: (dx, dy) => {
       const travel = axis === 'x' ? dx : axis === 'y' ? dy : (dx + dy) / 2;
       const delta = (invert ? -travel : travel) / scale;
-      onChange(clamp(Math.round(base.current + delta), min, max));
+      onChange(clamp(round(base.current + delta), min, max));
     },
     onEnd: () => onEnd?.(),
   });
@@ -50,8 +52,8 @@ export function useScalarDrag(opts: {
     let next: number;
     if (e.key === 'Home') next = min;
     else if (e.key === 'End') next = max;
-    else if (increasing.includes(e.key)) next = clamp(value + (invert ? -step : step), min, max);
-    else if (decreasing.includes(e.key)) next = clamp(value - (invert ? -step : step), min, max);
+    else if (increasing.includes(e.key)) next = clamp(round(value + (invert ? -step : step)), min, max);
+    else if (decreasing.includes(e.key)) next = clamp(round(value - (invert ? -step : step)), min, max);
     else return;
 
     e.preventDefault();

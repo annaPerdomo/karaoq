@@ -17,11 +17,12 @@ export default async function getRoom(
   roomId: string,
   // Display pages identify themselves: a read from a display proves a display
   // exists, so the server must never orphan-heal (stop) playback on it.
-  opts?: { display?: boolean; wake?: boolean }
+  opts?: { display?: boolean; wake?: boolean; musicVideo?: boolean }
 ): Promise<GetRoomResult> {
   const params = new URLSearchParams();
   if (opts?.display) params.set("display", "1");
   if (opts?.wake) params.set("wake", "1");
+  if (opts?.musicVideo) params.set("musicVideo", "1");
   const query = params.toString();
   const suffix = query ? `?${query}` : "";
   // A hung read blocks the poller, and a display's poll is its heartbeat.

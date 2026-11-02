@@ -75,7 +75,7 @@ export default function DisplayStage({
       ) : currentSong && isPlaying && playsVideoHere ? (
         <iframe
           ref={videoRef}
-          key={currentSong.id}
+          key={`${currentSong.id}:${currentSong.videoId}`}
           className={styles.video}
           src={embedSrc(
             currentSong.videoId,

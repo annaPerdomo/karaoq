@@ -1,6 +1,8 @@
 import * as React from 'react';
 import styles from '../../styles/Home.module.css';
 import { useT } from '../../lib/i18n/I18nProvider';
+import { isTvDevice } from '../../lib/calmMotion';
+import { ConnectTvForm } from '../pairing/ConnectTvForm';
 
 export interface HeroCtaCardProps {
   hostName: string;
@@ -8,6 +10,7 @@ export interface HeroCtaCardProps {
   joinCode: string;
   showCustom: boolean;
   showJoin: boolean;
+  showConnectTv: boolean;
   creating: boolean;
   hostError: string;
   nameInputRef: React.RefObject<HTMLInputElement>;
@@ -16,6 +19,10 @@ export interface HeroCtaCardProps {
   onJoinCodeChange: (value: string) => void;
   onToggleCustom: () => void;
   onShowJoin: () => void;
+  onShowConnectTv: () => void;
+  connectTvRoomId?: string;
+  onConnectTvNeedsRoom: () => Promise<string | null>;
+  onConnectTvPaired: (r: { roomId: string }) => void;
   onHost: (useCustom: boolean) => void;
   onJoin: () => void;
 }
@@ -23,10 +30,45 @@ export interface HeroCtaCardProps {
 export default function HeroCtaCard(props: HeroCtaCardProps) {
   const { t } = useT();
   const {
-    hostName, customCode, joinCode, showCustom, showJoin, creating, hostError,
-    nameInputRef, onHostNameChange, onCustomCodeChange, onJoinCodeChange,
-    onToggleCustom, onShowJoin, onHost, onJoin,
+    hostName, customCode, joinCode, showCustom, showJoin, showConnectTv, creating,
+    hostError, nameInputRef, onHostNameChange, onCustomCodeChange, onJoinCodeChange,
+    onToggleCustom, onShowJoin, onShowConnectTv, connectTvRoomId,
+    onConnectTvNeedsRoom, onConnectTvPaired, onHost, onJoin,
   } = props;
+  const [isTv, setIsTv] = React.useState(false);
+  const [collapsedOnTv, setCollapsedOnTv] = React.useState(false);
+  const focusNameOnUnfold = React.useRef(false);
+
+  React.useEffect(() => {
+    const tv = isTvDevice();
+    setIsTv(tv);
+    setCollapsedOnTv(tv);
+  }, []);
+
+  React.useEffect(() => {
+    if (!collapsedOnTv && focusNameOnUnfold.current) {
+      focusNameOnUnfold.current = false;
+      nameInputRef.current?.focus();
+    }
+  }, [collapsedOnTv, nameInputRef]);
+
+  // The header's Join CTA opens the join row in here, so it must unfold the card.
+  if (collapsedOnTv && !showJoin) {
+    return (
+      <div className={styles.heroCta}>
+        <button
+          type="button"
+          className={`${styles.textToggle} ${styles.tvTypeName}`}
+          onClick={() => {
+            focusNameOnUnfold.current = true;
+            setCollapsedOnTv(false);
+          }}
+        >
+          {t('home.tv.typeName')}
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.heroCta}>
@@ -77,6 +119,28 @@ export default function HeroCtaCard(props: HeroCtaCardProps) {
               >
                 {creating ? t('home.creating') : t('home.host.create')}
               </button>
+            </div>
+          )}
+
+          {/* Hidden on a TV: the TV shows the pairing code itself. */}
+          {!isTv && (
+            <div className={styles.tvPrompt}>
+              {!showConnectTv ? (
+                <button
+                  type="button"
+                  className={styles.joinLink}
+                  onClick={onShowConnectTv}
+                >
+                  {t('pair.heroPrompt')} <span>{t('pair.heroLink')}</span>
+                </button>
+              ) : (
+                <ConnectTvForm
+                  inline
+                  roomId={connectTvRoomId}
+                  onNeedsRoom={onConnectTvNeedsRoom}
+                  onPaired={onConnectTvPaired}
+                />
+              )}
             </div>
           )}
 

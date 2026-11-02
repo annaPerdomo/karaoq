@@ -1,8 +1,9 @@
-import { MongoClient, type Collection, type Db } from "mongodb";
+import { MongoClient, type Binary, type Collection, type Db } from "mongodb";
 import type { FeedbackEntry, Room } from "../pages/api/types";
 import type { EventType } from "./analytics";
 import { databaseRoleWarning } from "./dbGuard";
 import { YOUTUBE_DATA_MAX_AGE_DAYS } from "./youtubeRetention";
+import type { GenreShelf, IdeaShelf } from "./shelfTypes";
 
 // Reuse one connected client per serverless instance instead of opening and
 // closing a fresh TCP+TLS connection on every request/tracked event. Stored on
@@ -111,14 +112,16 @@ export async function getSearchCacheCollection(): Promise<Collection<SearchCache
   return db.collection<SearchCacheDoc>("search_cache");
 }
 
-// Cached "trending on karaoq" aggregates, refreshed lazily (first request
-// after the doc goes stale recomputes it). TTL is a safety net well past the
-// 24h refresh window so unused country keys eventually disappear.
+// Cached idea shelves (lib/shelves), refreshed lazily (first request after the
+// doc goes stale recomputes it). Song names and keys only, no YouTube fields;
+// the TTL just lets unused country keys disappear.
 const SUGGESTION_CACHE_TTL_SECONDS = 7 * 24 * 60 * 60;
 
 export interface SuggestionCacheDoc {
   key: string;
-  items: { title: string; artist: string; count: number }[];
+  /** Absent on a place's genre doc ("genres:…"), which holds `genres`. */
+  shelves?: IdeaShelf[];
+  genres?: GenreShelf[];
   computedAt: Date;
 }
 
@@ -440,6 +443,9 @@ export interface KaraokeSongDoc {
   proposalId?: string;
   /** Countries whose chart named this song; only set when origin is "chart". */
   chartCountries?: string[];
+  /** Added by a genre chart (lib/genreFeed) and not since by a Top 50 one: the
+   *  resolver takes these last, and their artists vouch for nothing. */
+  genreChart?: boolean;
   /** Set after 3 straight resolve misses on a cutless promoted song, instead
    *  of another backoff. The doc stays, so lib/corpusPromote's dedupe still
    *  blocks it being re-added. */
@@ -675,6 +681,68 @@ export async function getCronStateCollection(): Promise<Collection<CronStateDoc>
   return db.collection<CronStateDoc>("cron_state");
 }
 
+// One doc per charted country: the latest Apple chart mapped onto
+// karaoke_songs ids, plus the fetch before it so a shelf can show movement.
+// Chart names are Apple's, not YouTube's, but a dead feed must not keep
+// passing week-old charts off as "right now" — hence the TTL.
+const CHART_SNAPSHOT_TTL_SECONDS = 14 * 24 * 60 * 60;
+
+export interface ChartRank {
+  /** karaoke_songs._id */
+  key: string;
+  rank: number;
+  /** When this song (re)entered this country's chart; absent when it was
+   *  already there on the first snapshot, so launch day doesn't mark all 50 new. */
+  since?: Date;
+}
+
+export interface ChartSnapshotDoc {
+  /** Lowercase country code, as CHART_COUNTRIES spells it. */
+  _id: string;
+  ranks: ChartRank[];
+  /** The previous day's chart; absent until a second fetch lands. */
+  prevRanks?: ChartRank[];
+  fetchedAt: Date;
+  /** When prevRanks was fetched — a same-day refetch keeps it rather than
+   *  comparing a chart against itself. */
+  prevFetchedAt?: Date;
+}
+
+let chartSnapshotIndexesEnsured = false;
+
+export async function getChartSnapshotsCollection(): Promise<Collection<ChartSnapshotDoc>> {
+  const client = await getMongoClient();
+  const db = client.db(process.env.MONGODB_DB);
+  if (!chartSnapshotIndexesEnsured) {
+    chartSnapshotIndexesEnsured = true;
+    db.collection("chart_snapshots")
+      .createIndex({ fetchedAt: 1 }, { expireAfterSeconds: CHART_SNAPSHOT_TTL_SECONDS })
+      .catch((e) => {
+        console.error("chart_snapshots index creation failed:", e);
+        chartSnapshotIndexesEnsured = false;
+      });
+  }
+  return db.collection<ChartSnapshotDoc>("chart_snapshots");
+}
+
+let genreSnapshotIndexesEnsured = false;
+
+/** _id "jp:anime". Apart from chart_snapshots so the hot shelf never pools them. */
+export async function getGenreSnapshotsCollection(): Promise<Collection<ChartSnapshotDoc>> {
+  const client = await getMongoClient();
+  const db = client.db(process.env.MONGODB_DB);
+  if (!genreSnapshotIndexesEnsured) {
+    genreSnapshotIndexesEnsured = true;
+    db.collection("genre_snapshots")
+      .createIndex({ fetchedAt: 1 }, { expireAfterSeconds: CHART_SNAPSHOT_TTL_SECONDS })
+      .catch((e) => {
+        console.error("genre_snapshots index creation failed:", e);
+        genreSnapshotIndexesEnsured = false;
+      });
+  }
+  return db.collection<ChartSnapshotDoc>("genre_snapshots");
+}
+
 // The pre-corpus harvest cursors; cron_state holds the live ones.
 export interface HarvestCursorDoc {
   _id: string;
@@ -737,6 +805,35 @@ export async function getFeatureFlagsCollection(): Promise<
   return db.collection<FeatureFlagDoc>("feature_flags");
 }
 
+// Must outlive PAIR_TTL_MS, or a TV that polls just after a last-second claim gets a
+// 404 instead of "claimed". Expiry frees the numeric `_id` for reuse.
+const TV_PAIRING_TTL_SECONDS = 900;
+
+export interface TvPairingDoc {
+  _id: string;
+  secretHash: string;
+  createdAt: Date;
+  roomId?: string;
+  claimedAt?: Date;
+}
+
+let tvPairingIndexesEnsured = false;
+
+export async function getTvPairingsCollection(): Promise<Collection<TvPairingDoc>> {
+  const client = await getMongoClient();
+  const db = client.db(process.env.MONGODB_DB);
+  if (!tvPairingIndexesEnsured) {
+    tvPairingIndexesEnsured = true;
+    db.collection("tv_pairings")
+      .createIndex({ createdAt: 1 }, { expireAfterSeconds: TV_PAIRING_TTL_SECONDS })
+      .catch((e) => {
+        console.error("TV pairing index creation failed:", e);
+        tvPairingIndexesEnsured = false;
+      });
+  }
+  return db.collection<TvPairingDoc>("tv_pairings");
+}
+
 let feedbackIndexesEnsured = false;
 
 // No TTL on purpose: every other collection expires, but a bug report is the
@@ -756,6 +853,36 @@ export async function getFeedbackCollection(): Promise<Collection<FeedbackEntry>
     });
   }
   return db.collection<FeedbackEntry>("feedback");
+}
+
+export interface RoomLogoDoc {
+  /** `${roomId}:${hash}` — one doc per room and image. */
+  _id: string;
+  roomId: string;
+  contentType: string;
+  size: number;
+  data: Binary;
+  createdAt: Date;
+  /** Set on drafts only; a committed logo lives as long as its room. */
+  expireAt?: Date;
+}
+
+let roomLogoIndexesEnsured = false;
+
+export async function getRoomLogosCollection(): Promise<Collection<RoomLogoDoc>> {
+  const client = await getMongoClient();
+  const db = client.db(process.env.MONGODB_DB);
+  if (!roomLogoIndexesEnsured) {
+    roomLogoIndexesEnsured = true;
+    Promise.all([
+      db.collection("room_logos").createIndex({ expireAt: 1 }, { expireAfterSeconds: 0 }),
+      db.collection("room_logos").createIndex({ roomId: 1 }),
+    ]).catch((e) => {
+      console.error("Room logo index creation failed:", e);
+      roomLogoIndexesEnsured = false;
+    });
+  }
+  return db.collection<RoomLogoDoc>("room_logos");
 }
 
 // Heartbeats are high-volume noise once a session is over; every other event

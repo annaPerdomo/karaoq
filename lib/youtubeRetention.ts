@@ -21,6 +21,7 @@ export const YOUTUBE_DERIVED_EVENTS: EventType[] = [
   "singwithme_posted",
   "singwithme_joined",
   "singwithme_queued",
+  "karaoke_video_swapped",
 ];
 
 // suggestion_used is the exception: a "song_pick" or "genre_chip" title is from

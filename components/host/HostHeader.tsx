@@ -3,9 +3,17 @@ import { useT } from "../../lib/i18n/I18nProvider";
 import LanguageSwitcher from "../LanguageSwitcher";
 import { Icons } from "./icons";
 import { SettingsPopover } from "./SettingsPopover";
-import { AutoAdvance } from "../../pages/api/types";
+import ClubLogo from "../brand/ClubLogo";
+import { CornerHandle } from "../edit/EditChrome";
+import { useScalarDrag } from "../edit/hooks/useScalarDrag";
+import { roundLogoScale } from "../../lib/brandStyle";
+import { LOGO_SCALE_MAX, LOGO_SCALE_MIN } from "../../lib/limits";
 
 export function HostHeader({
+  roomId,
+  logo,
+  logoScale,
+  onLogoScaleChange,
   remote,
   tvMode,
   customizing,
@@ -23,10 +31,6 @@ export function HostHeader({
   onToggleReactions,
   fairMode,
   onToggleFairMode,
-  autoAdvance,
-  onChangeAutoAdvance,
-  songLimit,
-  onChangeSongLimit,
   sessionEndsAt,
   onChangeSessionEnd,
   hostName,
@@ -34,8 +38,16 @@ export function HostHeader({
   onInviteCohost,
   onPrintQr,
   onSendFeedback,
+  onConnectTv,
+  onScreenHelp,
+  onOpenMusicVideo,
+  onCopyMusicVideoLink,
   onBrandClick,
 }: {
+  roomId: string;
+  logo: string | undefined;
+  logoScale: number;
+  onLogoScaleChange: (scale: number) => void;
   remote: boolean;
   tvMode: boolean;
   customizing: boolean;
@@ -53,10 +65,6 @@ export function HostHeader({
   onToggleReactions: () => void;
   fairMode: boolean;
   onToggleFairMode: () => void;
-  autoAdvance: AutoAdvance;
-  onChangeAutoAdvance: (patch: Partial<AutoAdvance>) => void;
-  songLimit: number | null;
-  onChangeSongLimit: (seconds: number | null) => void;
   sessionEndsAt: number | null;
   onChangeSessionEnd: (endsAt: number | null) => void;
   hostName: string;
@@ -64,11 +72,34 @@ export function HostHeader({
   onInviteCohost: () => void;
   onPrintQr: () => void;
   onSendFeedback: () => void;
+  onConnectTv: () => void;
+  onScreenHelp: () => void;
+  onOpenMusicVideo: () => void;
+  onCopyMusicVideoLink: () => void;
   onBrandClick: () => void;
 }) {
   const { t } = useT();
+  const logoDrag = useScalarDrag({
+    value: logoScale,
+    min: LOGO_SCALE_MIN,
+    max: LOGO_SCALE_MAX,
+    scale: 80,
+    step: 0.1,
+    round: roundLogoScale,
+    onChange: onLogoScaleChange,
+  });
   return (
     <header className={styles.header}>
+      <span className={styles.logoWrap}>
+        <ClubLogo roomId={roomId} logo={logo} className={styles.clubLogo} dividerClassName={styles.clubDivider} />
+        {customizing && logo && (
+          <CornerHandle
+            title={t('customize.dragResize')}
+            ariaLabel={t('edit.handle.logoSize')}
+            dragProps={logoDrag}
+          />
+        )}
+      </span>
       <div className={styles.brand} onClick={onBrandClick}>
         KaraoQ
         {remote && <span className={styles.cohostBadge}>{t('host.role.cohost')}</span>}
@@ -125,6 +156,19 @@ export function HostHeader({
                   </div>
                   {tvMode && <span className={styles.modeCheck}>✓</span>}
                 </button>
+                <div className={styles.spSep} />
+                <button className={styles.modeMenuItem} onClick={onConnectTv}>
+                  {Icons.tv}
+                  <div>
+                    <div className={styles.spBtnTitle}>{t('pair.menuItem')}</div>
+                  </div>
+                </button>
+                <button className={styles.modeMenuItem} onClick={onScreenHelp}>
+                  {Icons.monitor}
+                  <div>
+                    <div className={styles.spBtnTitle}>{t('screenHelp.menuItem')}</div>
+                  </div>
+                </button>
               </div>
             </>
           )}
@@ -161,10 +205,6 @@ export function HostHeader({
         onToggleReactions={onToggleReactions}
         fairMode={fairMode}
         onToggleFairMode={onToggleFairMode}
-        autoAdvance={autoAdvance}
-        onChangeAutoAdvance={onChangeAutoAdvance}
-        songLimit={songLimit}
-        onChangeSongLimit={onChangeSongLimit}
         sessionEndsAt={sessionEndsAt}
         onChangeSessionEnd={onChangeSessionEnd}
         hostName={hostName}
@@ -172,6 +212,8 @@ export function HostHeader({
         onInviteCohost={onInviteCohost}
         onPrintQr={onPrintQr}
         onSendFeedback={onSendFeedback}
+        onOpenMusicVideo={onOpenMusicVideo}
+        onCopyMusicVideoLink={onCopyMusicVideoLink}
       />
     </header>
   );

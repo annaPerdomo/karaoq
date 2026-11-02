@@ -25,6 +25,11 @@ export default function HomeFooter() {
               {t('songs.footerLink')}
             </Link>
           </li>
+          <li>
+            <Link href="/whats-new" className={styles.footerGuidesLink}>
+              {t('whatsNew.footerLink')}
+            </Link>
+          </li>
         </ul>
       </nav>
       <div className={styles.footerInner}>

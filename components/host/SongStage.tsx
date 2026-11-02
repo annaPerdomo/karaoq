@@ -39,6 +39,7 @@ export function SongStage({
   autoEnabled,
   onOpenPlaybackSettings,
   wrapUpIn,
+  canPopOut,
 }: {
   loading: boolean;
   currentSong: QueueEntry | undefined;
@@ -72,6 +73,7 @@ export function SongStage({
   onOpenPlaybackSettings?: () => void;
   /** Seconds until the song limit cuts the song; null outside the warning window. */
   wrapUpIn: number | null;
+  canPopOut: boolean;
 }) {
   const { t } = useT();
   const playbackFailed = usePlaybackError({
@@ -104,7 +106,7 @@ export function SongStage({
       )}
       {/* Only offer to (re)open while no display is live — opening a
           second one on top of a connected display double-plays the song. */}
-      {!displayConnected && (
+      {!displayConnected && canPopOut && (
         <button
           className={styles.switchModeLink}
           onClick={onOpenTvDisplay}
@@ -214,7 +216,7 @@ export function SongStage({
       <>
         <iframe
           ref={videoRef}
-          key={currentSong.id}
+          key={`${currentSong.id}:${currentSong.videoId}`}
           className={styles.video}
           src={embedSrc(currentSong.videoId, "autoplay=1&rel=0&enablejsapi=1")}
           allow="autoplay; encrypted-media"
