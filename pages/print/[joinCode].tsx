@@ -16,7 +16,7 @@ const PrintPage: NextPage = () => {
     setOrigin(window.location.origin);
   }, []);
 
-  const joinUrl = origin ? `${origin}/sing/${joinCode}` : '';
+  const joinUrl = origin ? `${origin}/sing/${joinCode}?via=qr` : '';
   const displayUrl = (origin || 'karaoq.live').replace(/^https?:\/\/(www\.)?/, '');
 
   function handlePrint() {
