@@ -50,6 +50,8 @@ interface DisplaySidebarProps {
   singWithMe: SingWithMePost[];
   suggestions: SuggestedSong[];
   displayConfig: DisplayConfig;
+  cheerFor?: string;
+  cheerNudge?: boolean;
   edit?: SidebarEdit;
   scale?: number;
 }
@@ -64,6 +66,8 @@ const DisplaySidebar = ({
   singWithMe,
   suggestions,
   displayConfig,
+  cheerFor,
+  cheerNudge,
   edit,
   scale = 1,
 }: DisplaySidebarProps): React.ReactElement => {
@@ -73,9 +77,8 @@ const DisplaySidebar = ({
 
   const change = (patch: Partial<DisplayConfig>) => edit?.onChange(patch);
 
-  // Widest QR the sidebar can hold: 40px card padding + 16px row gap + 96px label
-  // column. Rendering clamps too, covering configs saved when the sidebar was wider.
-  const qrPxFit = Math.max(QR_PX_MIN, Math.min(QR_PX_MAX, view.sidebarWidth - 40 - 16 - 96));
+  // 40px of card padding; the verbs wrap under a full-width QR. Render clamps too, for configs saved at a wider sidebar.
+  const qrPxFit = Math.max(QR_PX_MIN, Math.min(QR_PX_MAX, view.sidebarWidth - 40));
   const qrPxShown = Math.min(qrPx, qrPxFit);
 
   const qrDrag = useScalarDrag({
@@ -149,6 +152,8 @@ const DisplaySidebar = ({
         size={nearestQrSize(qrPx)}
         sizePx={qrPxShown}
         renderScale={scale}
+        cheerFor={cheerFor}
+        nudge={cheerNudge}
         resizeHandle={
           edit && (
             <CornerHandle

@@ -18,18 +18,20 @@
   padding: 2rem;
 }
 
-.cardLarge .label {
-  font-size: 0.85rem;
+.cardLarge .verb {
+  font-size: 1.25rem;
 }
 
 .cardLarge .alt {
-  font-size: 1rem;
+  font-size: 0.9rem;
 }
 
+/* Wrap, never shrink the QR: the verbs drop below it in a narrow column. */
 .top {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 1rem;
+  gap: 0.85rem 1rem;
 }
 
 /* Position context for Customize mode's corner resize grip. */
@@ -41,31 +43,114 @@
 
 /* --qr-scale is set inline from the host's dragged QR size; --sb-boost from the
    display's TV sidebar boost (unset on host). */
+.verbs {
+  flex: 1 1 130px;
+  display: flex;
+  flex-direction: column;
+  gap: calc(0.3rem * var(--qr-scale, 1) * var(--sb-boost, 1));
+  min-width: 0;
+}
+
 .label {
-  font-size: calc(0.65rem * var(--qr-scale, 1) * var(--sb-boost, 1));
+  font-size: calc(0.6rem * var(--qr-scale, 1) * var(--sb-boost, 1));
   letter-spacing: calc(2px * var(--qr-scale, 1) * var(--sb-boost, 1));
-  color: #ffd700;
+  color: var(--text-muted);
   text-transform: uppercase;
   font-weight: 700;
-  text-shadow: 0 0 10px rgba(191, 90, 242, 0.4);
+  margin-bottom: calc(0.1rem * var(--qr-scale, 1) * var(--sb-boost, 1));
 }
 
-.alt {
-  font-size: calc(0.75rem * var(--qr-scale, 1) * var(--sb-boost, 1));
+.verb {
+  display: flex;
+  align-items: center;
+  gap: calc(0.4rem * var(--qr-scale, 1) * var(--sb-boost, 1));
+  font-size: calc(0.88rem * var(--qr-scale, 1) * var(--sb-boost, 1));
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--text-primary);
+  transition: color 0.3s ease, opacity 0.3s ease;
+}
+
+.verbText {
+  min-width: 0;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+.verbIcon {
+  flex-shrink: 0;
+  font-size: calc(1rem * var(--qr-scale, 1) * var(--sb-boost, 1));
+  line-height: 1;
+}
+
+.verbIdle {
   color: var(--text-muted);
-  line-height: 1.4;
-}
-
-.alt strong {
-  color: var(--text-secondary);
   font-weight: 600;
 }
 
-.code {
+.verbLive {
+  color: #ffd700;
+  text-shadow: 0 0 10px rgba(255, 215, 0, 0.35);
+  animation: verbPulse 2.4s ease-in-out infinite;
+}
+
+@keyframes verbPulse {
+  0%, 100% { text-shadow: 0 0 6px rgba(255, 215, 0, 0.25); }
+  50% { text-shadow: 0 0 16px rgba(255, 215, 0, 0.6); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .verbLive,
+  .verbNudge {
+    animation: none;
+  }
+}
+
+/* Twin of the prefers-reduced-motion block above: smart TVs never report that
+   preference. tests/lib/calmCss.test.ts fails if the two drift. */
+/* @calm-twin-start */
+html[data-tv] .verbLive,
+html[data-tv] .verbNudge {
+  animation: none;
+}
+/* @calm-twin-end */
+
+.alt {
+  display: flex;
+  align-items: center;
+  gap: 0.45em;
+  font-size: calc(0.72rem * var(--qr-scale, 1) * var(--sb-boost, 1));
+  color: var(--text-muted);
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.alt strong {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.altSep {
+  opacity: 0.6;
+}
+
+.alt .code {
   font-family: var(--font-mono);
   font-weight: 700;
   letter-spacing: 2px;
-  color: #ffd700;
+  color: var(--text-secondary);
+}
+
+.verbNudge {
+  animation: verbNudge 1.1s ease-in-out infinite;
+}
+
+@keyframes verbNudge {
+  0%, 100% { text-shadow: 0 0 8px rgba(255, 215, 0, 0.4); transform: translateX(0); }
+  50% { text-shadow: 0 0 22px rgba(255, 215, 0, 0.95), 0 0 40px rgba(255, 215, 0, 0.4); transform: translateX(3px); }
 }
 
 .actions {
@@ -78,7 +163,24 @@
   transition: opacity 0.15s;
 }
 
-.card:hover .actions {
+.card:hover /* The quiet-song nudge: outlined gold so it reads as a sign, not as someone's cheer. */
+.nudge {
+  align-self: flex-start;
+  padding: calc(0.35rem * var(--qr-scale, 1) * var(--sb-boost, 1)) calc(0.7rem * var(--qr-scale, 1) * var(--sb-boost, 1));
+  border: 1px solid rgba(255, 215, 0, 0.6);
+  border-radius: 999px;
+  font-size: calc(0.78rem * var(--qr-scale, 1) * var(--sb-boost, 1));
+  font-weight: 700;
+  color: #ffd700;
+  animation: nudgeIn 0.4s ease;
+}
+
+@keyframes nudgeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.actions {
   opacity: 1;
 }
 
