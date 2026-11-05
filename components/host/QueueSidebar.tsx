@@ -52,7 +52,6 @@ export function QueueSidebar({
   cheersOpen,
   onToggleCheers,
   onSendReaction,
-  reactionCooldown,
   lastSentEmoji,
   joinCode,
   boards,
@@ -111,7 +110,6 @@ export function QueueSidebar({
   cheersOpen: boolean;
   onToggleCheers: () => void;
   onSendReaction: (emoji: string) => void;
-  reactionCooldown: boolean;
   lastSentEmoji: string | null;
   joinCode: string | undefined;
   boards: Boards;
@@ -251,7 +249,6 @@ export function QueueSidebar({
             cheersOpen={cheersOpen}
             onToggleCheers={onToggleCheers}
             onSendReaction={onSendReaction}
-            reactionCooldown={reactionCooldown}
             lastSentEmoji={lastSentEmoji}
             joinCode={joinCode}
             boards={boards}

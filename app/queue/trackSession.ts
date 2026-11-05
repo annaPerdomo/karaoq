@@ -16,7 +16,7 @@ function randomId(): string {
 let fallbackClientId: string | null = null;
 
 // Stable per-browser id so name edits don't upsert new analytics_sessions docs.
-function getClientId(): string {
+export function getClientId(): string {
   try {
     const KEY = "karaoq_client_id";
     let id = localStorage.getItem(KEY);
@@ -31,10 +31,19 @@ function getClientId(): string {
   }
 }
 
+// Missing on direct links and on clients from before the field.
+export const JOIN_VIAS = ["qr", "code"] as const;
+export type JoinVia = (typeof JOIN_VIAS)[number];
+
+export function asJoinVia(value: unknown): JoinVia | undefined {
+  return (JOIN_VIAS as readonly unknown[]).includes(value) ? (value as JoinVia) : undefined;
+}
+
 export function startSessionTracking(
   roomId: string,
   userName: string,
-  role: "host" | "singer" | "display"
+  role: "host" | "singer" | "display",
+  via?: JoinVia
 ): () => void {
   const clientId = getClientId();
 
@@ -44,7 +53,7 @@ export function startSessionTracking(
     return fetch("/api/analytics/session", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ roomId, userName, role, clientId, locale, localeSource: source }),
+      body: JSON.stringify({ roomId, userName, role, clientId, locale, localeSource: source, via }),
     }).catch(() => {});
   };
 

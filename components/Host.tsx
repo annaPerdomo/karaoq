@@ -45,7 +45,6 @@ import { formatClockTime } from "../lib/queueTime";
 import { useRoomTiming } from "./hooks/useRoomTiming";
 import { fairInsertIndex } from "../lib/fairQueue";
 import postReaction from "../app/queue/postReaction";
-import { REACTION_COOLDOWN_MS } from "../app/queue/cheerConstants";
 import { startSessionTracking } from "../app/queue/trackSession";
 import { startVisiblePolling } from "../app/queue/pollWhileVisible";
 import { DORMANT_POLL_MS, isRoomDormant } from "../lib/roomDormancy";
@@ -170,8 +169,8 @@ const Host = ({
   const [hostConfig, setHostConfigState] = React.useState<HostConfig>(DEFAULT_HOST_CONFIG);
   const [brand, setBrand] = React.useState<RoomBrand>({});
   const [musicVideoAt, setMusicVideoAt] = React.useState<string | null>(null);
-  const [reactionCooldown, setReactionCooldown] = React.useState(false);
   const [lastSentEmoji, setLastSentEmoji] = React.useState<string | null>(null);
+  const sentEmojiTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const [visibleReactions, setVisibleReactions] = React.useState<
     (Reaction & { key: string; left: number; sway: number })[]
   >([]);
@@ -840,13 +839,13 @@ const Host = ({
   }, [joinCode, tvMode, remote]);
 
   async function sendReaction(emoji: string) {
-    if (!joinCode || reactionCooldown) return;
-    setReactionCooldown(true);
+    if (!joinCode) return;
     setLastSentEmoji(emoji);
-    setTimeout(() => setLastSentEmoji(null), 1500);
-    setTimeout(() => setReactionCooldown(false), REACTION_COOLDOWN_MS);
+    // One timer across rapid taps, so an earlier tap's can't clear a later "Sent!".
+    if (sentEmojiTimer.current) clearTimeout(sentEmojiTimer.current);
+    sentEmojiTimer.current = setTimeout(() => setLastSentEmoji(null), 1500);
     const id = uuidv4();
-    await postReaction(joinCode, id, emoji, hostName || "Host");
+    await postReaction(joinCode, id, emoji, hostName || "Host", undefined, "host");
   }
 
   async function toggleReactions() {
@@ -1339,7 +1338,7 @@ const Host = ({
     />
   );
 
-  const joinUrl = origin ? `${origin}/sing/${joinCode}` : "";
+  const joinUrl = origin ? `${origin}/sing/${joinCode}?via=qr` : "";
   const cohostUrl = origin ? `${origin}/remote/${joinCode}` : "";
   const displayUrl = (origin || "karaoq.live").replace(
     /^https?:\/\/(www\.)?/,
@@ -1586,7 +1585,6 @@ const Host = ({
           cheersOpen={cheersOpen}
           onToggleCheers={toggleCheers}
           onSendReaction={sendReaction}
-          reactionCooldown={reactionCooldown}
           lastSentEmoji={lastSentEmoji}
           joinCode={joinCode}
           boards={boards}

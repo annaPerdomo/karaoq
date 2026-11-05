@@ -256,7 +256,7 @@ export default function MusicVideoScreen(): React.ReactElement {
   }
 
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
-  const joinUrl = `${origin || 'https://karaoq.live'}/sing/${joinCode}`;
+  const joinUrl = `${origin || 'https://karaoq.live'}/sing/${joinCode}?via=qr`;
 
   return (
     <main className={`${styles.main} ${THEME_CLASS[theme]}`} style={brandStyle(brand) as React.CSSProperties}>

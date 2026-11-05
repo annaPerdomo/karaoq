@@ -148,7 +148,7 @@ const Home = ({ stats = EMPTY_STATS }: HomeProps): React.ReactElement => {
   function handleJoin() {
     const code = joinCode.trim().toUpperCase();
     if (code) {
-      router.push(`/sing/${code}`);
+      router.push(`/sing/${code}?via=code`);
     }
   }
 

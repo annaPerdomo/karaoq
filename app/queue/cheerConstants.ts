@@ -4,10 +4,11 @@ export const CHEER_EMOJIS = [
   '\u{1F3B5}', '\u{1F3B6}',
 ];
 
-export const REACTION_COOLDOWN_MS = 3000;
-
 /** Distinguishes message reactions from emoji ones for styling. Text cheers
     can no longer be sent, but ones already stored server-side still render. */
 export function isTextReaction(emoji: string): boolean {
   return emoji.length > 2 && /[a-zA-Z]/.test(emoji);
 }
+
+export const CHEER_SOURCES = ['welcome', 'quick', 'bar', 'host'] as const;
+export type CheerSource = (typeof CHEER_SOURCES)[number];

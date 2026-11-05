@@ -29,7 +29,6 @@ interface SidebarSectionsProps {
   cheersOpen: boolean;
   onToggleCheers: () => void;
   onSendReaction: (emoji: string) => void;
-  reactionCooldown: boolean;
   lastSentEmoji: string | null;
   joinCode: string | undefined;
   boards: Boards;
@@ -60,7 +59,6 @@ export function SidebarSections({
   cheersOpen,
   onToggleCheers,
   onSendReaction,
-  reactionCooldown,
   lastSentEmoji,
   joinCode,
   boards,
@@ -341,7 +339,6 @@ export function SidebarSections({
             <div className={styles.cheersLive}>
               <CheerBar
                 onReaction={onSendReaction}
-                cooldown={reactionCooldown}
                 lastSentEmoji={lastSentEmoji}
                 compact
               />

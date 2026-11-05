@@ -113,6 +113,14 @@ describe("exempt requests skip analytics writes", () => {
     await trackSessionHeartbeat(req, "ROOM1", "Anna", "host", "client-1");
     expect(mockUpdateOne).toHaveBeenCalledOnce();
   });
+
+  it("trackSessionHeartbeat records a guest who skipped the name prompt", async () => {
+    mockUpdateOne.mockResolvedValue({});
+    const req = createMockReq({ headers: { host: "karaoq.live" } });
+    await trackSessionHeartbeat(req, "ROOM1", "", "singer", "c1");
+    const [, pipeline] = mockUpdateOne.mock.calls[0];
+    expect(pipeline[0].$set).toMatchObject({ userName: { $literal: "" } });
+  });
 });
 
 describe("language capture", () => {
@@ -155,6 +163,26 @@ describe("language capture", () => {
       locale: { $literal: "ko" },
       localeSource: { $literal: "switch" },
     });
+  });
+
+  it("records how the guest arrived, keeping it for the sitting like firstSeen", async () => {
+    mockUpdateOne.mockResolvedValue({});
+    const req = createMockReq({ headers: { host: "karaoq.live" } });
+    await trackSessionHeartbeat(req, "ROOM1", "", "singer", "c1", undefined, undefined, "qr");
+    const [, pipeline] = mockUpdateOne.mock.calls[0];
+    const via = pipeline[0].$set.via;
+    // Within the gap a stored value survives; a new sitting takes the new route.
+    expect(via.$cond[1]).toBe("$via");
+    expect(via.$cond[2]).toEqual({ $literal: "qr" });
+    expect(JSON.stringify(via.$cond[0])).toContain("$lastSeen");
+  });
+
+  it("leaves via unset for a direct link", async () => {
+    mockUpdateOne.mockResolvedValue({});
+    const req = createMockReq({ headers: { host: "karaoq.live" } });
+    await trackSessionHeartbeat(req, "ROOM1", "", "singer", "c1");
+    const [, pipeline] = mockUpdateOne.mock.calls[0];
+    expect(pipeline[0].$set).not.toHaveProperty("via");
   });
 
   it("leaves session language fields unset when the client sends none", async () => {

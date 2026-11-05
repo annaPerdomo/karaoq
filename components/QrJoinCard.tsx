@@ -14,13 +14,14 @@ interface QrJoinCardProps {
   sizePx?: number;
   renderScale?: number;
   resizeHandle?: React.ReactNode;
+  cheerFor?: string;
+  nudge?: boolean;
 }
 
-const QrJoinCard = ({ joinUrl, joinCode, origin, onClose, onPrint, size = "normal", sizePx, renderScale = 1, resizeHandle }: QrJoinCardProps): React.ReactElement => {
+// Both verbs stay up all night: swapping one out while a song plays hid "add a song" for most of the session.
+const QrJoinCard = ({ joinUrl, joinCode, origin, onClose, onPrint, size = "normal", sizePx, renderScale = 1, resizeHandle, cheerFor, nudge }: QrJoinCardProps): React.ReactElement => {
   const { t } = useT();
   const displayUrl = (origin || 'karaoq.live').replace(/^https?:\/\/(www\.)?/, '');
-
-  const altParts = t('qr.orVisit').split(/(\{url\}|\{code\})/);
 
   // The coarse size buckets remain for displays running code that predates
   // fine-grained (sizePx) sizing.
@@ -42,14 +43,24 @@ const QrJoinCard = ({ joinUrl, joinCode, origin, onClose, onPrint, size = "norma
           />
           {resizeHandle}
         </span>
-        <span className={styles.label}>{t('qr.scanToJoin')}</span>
+        <div className={styles.verbs}>
+          <span className={styles.label}>{t('qr.scanTo')}</span>
+          <span className={styles.verb}>
+            <span className={styles.verbIcon} aria-hidden="true">🎤</span>
+            <span className={styles.verbText}>{t('qr.addSong')}</span>
+          </span>
+          <span className={`${styles.verb} ${cheerFor ? styles.verbLive : styles.verbIdle} ${nudge && cheerFor ? styles.verbNudge : ''}`}>
+            <span className={styles.verbIcon} aria-hidden="true">🔥</span>
+            <span className={styles.verbText}>
+              {cheerFor ? t('qr.cheerSinger', { name: cheerFor }) : t('qr.cheerIdle')}
+            </span>
+          </span>
+        </div>
       </div>
       <span className={styles.alt}>
-        {altParts.map((part, i) => {
-          if (part === '{url}') return <strong key={i}>{displayUrl}</strong>;
-          if (part === '{code}') return <strong key={i} className={styles.code}>{joinCode.toUpperCase()}</strong>;
-          return <React.Fragment key={i}>{part}</React.Fragment>;
-        })}
+        <strong>{displayUrl}</strong>
+        <span className={styles.altSep} aria-hidden="true">·</span>
+        <strong className={styles.code}>{joinCode.toUpperCase()}</strong>
       </span>
       {(onPrint || onClose) && (
         <div className={styles.actions}>

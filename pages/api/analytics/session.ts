@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { trackSessionHeartbeat } from "../../../lib/analytics";
 import { asLocale, isLocaleSource } from "../../../lib/i18n/activeLocale";
+import { asJoinVia } from "../../../app/queue/trackSession";
 import { MAX_ENTRY_ID_LENGTH, MAX_NAME_LENGTH, rateLimit } from "../../../lib/limits";
 
 export default async function handler(
@@ -19,6 +20,7 @@ export default async function handler(
     clientId?: string;
     locale?: string;
     localeSource?: string;
+    via?: string;
   };
   try {
     body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
@@ -34,6 +36,7 @@ export default async function handler(
   // the heartbeat — and narrowing keeps free text out of the session doc.
   const locale = asLocale(body.locale) ?? undefined;
   const localeSource = isLocaleSource(body.localeSource) ? body.localeSource : undefined;
+  const via = asJoinVia(body.via);
 
   // Session docs key on roomId:clientId:role, so uncapped ids would let a script mint unlimited
   // MB-scale docs. The rate limit is generous: one beat per minute per tab keeps a NAT'd venue under it.
@@ -63,7 +66,8 @@ export default async function handler(
     role as "host" | "singer" | "display",
     typeof clientId === "string" ? clientId : undefined,
     locale,
-    localeSource
+    localeSource,
+    via
   );
   res.status(200).json({ ok: true });
 }

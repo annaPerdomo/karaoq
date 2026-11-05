@@ -114,7 +114,7 @@ describe("Home component", () => {
     const submitBtns = screen.getAllByRole("button", { name: /^Join$/i });
     fireEvent.click(submitBtns[submitBtns.length - 1]);
 
-    expect(mockPush).toHaveBeenCalledWith("/sing/ABC12");
+    expect(mockPush).toHaveBeenCalledWith("/sing/ABC12?via=code");
   });
 
   it("disables submit button when code is empty", () => {
@@ -138,6 +138,6 @@ describe("Home component", () => {
     fireEvent.change(input, { target: { value: "ROOM1" } });
     fireEvent.keyDown(input, { key: "Enter" });
 
-    expect(mockPush).toHaveBeenCalledWith("/sing/ROOM1");
+    expect(mockPush).toHaveBeenCalledWith("/sing/ROOM1?via=code");
   });
 });

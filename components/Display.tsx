@@ -32,6 +32,7 @@ import NowPlayingBar from './display/NowPlayingBar';
 import DisplayStage from './display/DisplayStage';
 import HostFromPhoneCard from './display/HostFromPhoneCard';
 import { useHostFromPhoneVisible } from './display/hooks/useHostFromPhoneVisible';
+import { useCheerPrompt } from './display/hooks/useCheerPrompt';
 import p from '../styles/DisplayDesigner.module.css';
 import { useDisplayEdit } from './display/edit/useDisplayEdit';
 import { Spot, HideButton } from './edit/EditChrome';
@@ -49,6 +50,7 @@ const FAILED_VIDEO_SKIP_MS = 6000;
 const HEARTBEAT_INTERVAL = 10_000;
 // Must stay above DORMANT_POLL_MS.
 const POLL_HEARTBEAT_STALE_MS = 30_000;
+const CHEER_NUDGE_SHOW_MS = 10_000;
 
 const THEME_CLASS: Record<DisplayTheme, string> = {
   classic: '',
@@ -97,6 +99,10 @@ const Display = (): React.ReactElement => {
   songLimitRef.current = songLimit;
   const [visibleReactions, setVisibleReactions] = React.useState<(Reaction & { key: string; left: number; sway: number })[]>([]);
   const seenReactionIds = React.useRef(new Set<string>());
+  const [cheerCount, setCheerCount] = React.useState(0);
+  // Set on the seed pass too, or a reload mid-night re-arms the nudge.
+  const [roomHasCheered, setRoomHasCheered] = React.useState(false);
+  const [cheerNudge, setCheerNudge] = React.useState(false);
   const reactionTimers = React.useRef<ReturnType<typeof setTimeout>[]>([]);
   // Its own ref, not the cheer bag: an early drain of that array to stop it
   // growing over an all-night session would silently cancel this skip.
@@ -185,7 +191,9 @@ const Display = (): React.ReactElement => {
       const entries = Array.from(seenReactionIds.current);
       seenReactionIds.current = new Set(entries.slice(-100));
     }
+    setRoomHasCheered(true);
     if (!animate) return;
+    setCheerCount((c) => c + fresh.length);
     const withKeys = fresh.map((r) => ({
       ...r,
       key: r.id,
@@ -223,6 +231,8 @@ const Display = (): React.ReactElement => {
     setSongLimit(normalizeSongLimit(room.songLimitSeconds));
     setAutoStartAt(autoStartEpoch(room.autoStartAt));
     setHostJoined(!!room.hostJoinedAt);
+    // Before the reactions, so cheers landing in the switch poll count for the new song.
+    if (room.queue[room.activeVideoIndex]?.id !== currentSongIdRef.current) setCheerCount(0);
     processReactions(room.reactions, animateReactions);
     screenTest.adoptRoom(room);
   }
@@ -325,6 +335,19 @@ const Display = (): React.ReactElement => {
   const currentVideoIdRef = React.useRef(currentVideoId);
   currentVideoIdRef.current = currentVideoId;
   const reportPlayhead = usePlayheadBroadcast(joinCode, currentSongId, currentVideoId);
+
+  const audience = new Set(queue.map((e) => e.userName.trim().toLowerCase())).size >= 2;
+  useCheerPrompt({
+    active: isPlaying && reactionsOn && !edit.editing,
+    songId: currentSongId,
+    audience,
+    cheerCount,
+    roomHasCheered,
+    onPrompt: () => {
+      setCheerNudge(true);
+      reactionTimers.current.push(setTimeout(() => setCheerNudge(false), CHEER_NUDGE_SHOW_MS));
+    },
+  });
 
   // A replay of the same song (isPlaying toggle) needs its end reported again.
   React.useEffect(() => {
@@ -485,7 +508,7 @@ const Display = (): React.ReactElement => {
     ? queue.slice(activeIndex)
     : queue.slice(activeIndex + 1);
   const estimate = timing.estimate;
-  const joinUrl = `${origin || 'https://karaoq.live'}/sing/${joinCode}`;
+  const joinUrl = `${origin || 'https://karaoq.live'}/sing/${joinCode}?via=qr`;
   const view = edit.view;
   // boardsView, not raw boardsOn: after a save that hides boards, the raw flag
   // lags until the poll echoes.
@@ -676,6 +699,8 @@ const Display = (): React.ReactElement => {
           singWithMe={singWithMe}
           suggestions={suggestions}
           displayConfig={view}
+          cheerFor={isPlaying && reactionsOn && !edit.editing ? currentSong?.userName : undefined}
+          cheerNudge={cheerNudge && !edit.editing}
           scale={sidebarScale}
           edit={
             edit.editing

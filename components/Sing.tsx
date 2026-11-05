@@ -1,6 +1,5 @@
 import * as React from 'react';
 import { useRouter } from 'next/router';
-import { v4 as uuidv4 } from 'uuid';
 
 import styles from '../styles/Sing.module.css';
 import SongSearch from './SongSearch';
@@ -8,29 +7,31 @@ import BoardsPanel from './BoardsPanel';
 import getRoom from '../app/queue/getRoom';
 import useBoards from '../app/queue/useBoards';
 import { normalizeRoomId } from '../lib/roomCode';
-import postReaction from '../app/queue/postReaction';
-import { REACTION_COOLDOWN_MS, isTextReaction } from '../app/queue/cheerConstants';
 import { startSessionTracking } from '../app/queue/trackSession';
 import { startVisiblePolling } from '../app/queue/pollWhileVisible';
 import { DORMANT_POLL_MS, isRoomDormant } from '../lib/roomDormancy';
 import { useSearchBackNotice } from '../app/queue/useSearchBackNotice';
 import SearchBackToast from './search/SearchBackToast';
-import { DisplayTheme, QueueEntry, Reaction, Room, RoomBrand, roomTheme } from '../pages/api/types';
+import { DisplayTheme, QueueEntry, Room, RoomBrand, roomTheme } from '../pages/api/types';
 import { brandStyle } from '../lib/brandStyle';
 import { useT } from '../lib/i18n/I18nProvider';
-import { getStoredName, setStoredName } from '../lib/username';
-import LanguageSwitcher from './LanguageSwitcher';
 import SingSidebar from './sing/SingSidebar';
 import SingFooter from './sing/SingFooter';
 import SingErrorCard from './sing/SingErrorCard';
 import MobileQueueDrawer from './sing/MobileQueueDrawer';
+import WelcomeOverlay from './sing/WelcomeOverlay';
+import ReactionPops from './sing/ReactionPops';
+import { useCheers } from './sing/hooks/useCheers';
+import { useGuestIdentity } from './sing/hooks/useGuestIdentity';
+import { useJoinVia } from './sing/hooks/useJoinVia';
+import SingHeader from './sing/SingHeader';
+import TipsBanner from './sing/TipsBanner';
 import { myTurnState } from './sing/YourTurnCard';
 import postponeEntry from '../app/queue/postponeEntry';
 import { useRoomTiming } from './hooks/useRoomTiming';
 
 
 const POLL_INTERVAL = 8000;
-const NAME_STORAGE_KEY = 'karaoq_username';
 
 const THEME_CLASS: Record<DisplayTheme, string> = {
   classic: '',
@@ -50,7 +51,6 @@ const Sing = (): React.ReactElement => {
   const searchBack = useSearchBackNotice();
   const applySearchBack = searchBack.applyRoom;
   const [activeIndex, setActiveIndex] = React.useState(0);
-  const [username, setUsername] = React.useState('');
   const [isPlaying, setIsPlaying] = React.useState(false);
   const [reactionsOn, setReactionsOn] = React.useState(true);
   const [theme, setTheme] = React.useState<DisplayTheme>('classic');
@@ -61,104 +61,24 @@ const Sing = (): React.ReactElement => {
   const [initNonce, setInitNonce] = React.useState(0);
   const notFoundPollsRef = React.useRef(0);
   const dormantRef = React.useRef(false);
-  const [reactionCooldown, setReactionCooldown] = React.useState(false);
-  const [lastSentEmoji, setLastSentEmoji] = React.useState<string | null>(null);
   const [mobileQueueOpen, setMobileQueueOpen] = React.useState(false);
-  const [showWelcome, setShowWelcome] = React.useState(true);
-  const [showTipsBanner, setShowTipsBanner] = React.useState(false);
-  const [welcomeName, setWelcomeName] = React.useState('');
-  const [visibleReactions, setVisibleReactions] = React.useState<(Reaction & { key: string; left: number; sway: number })[]>([]);
-  const seenReactionIds = React.useRef(new Set<string>());
-  const reactionTimers = React.useRef<ReturnType<typeof setTimeout>[]>([]);
-
-  React.useEffect(() => {
-    const saved = getStoredName(NAME_STORAGE_KEY);
-    if (saved) {
-      setUsername(saved);
-      setShowWelcome(false);
-    }
-    try {
-      if (!localStorage.getItem('karaoq_seen_tips')) setShowTipsBanner(true);
-    } catch {
-      setShowTipsBanner(true);
-    }
-  }, []);
-
-  React.useEffect(() => {
-    setStoredName(NAME_STORAGE_KEY, username);
-  }, [username]);
-
-  function handleWelcomeSubmit() {
-    const name = welcomeName.trim();
-    if (!name) return;
-    setUsername(name);
-    setShowWelcome(false);
-  }
-
-  function dismissTips() {
-    setShowTipsBanner(false);
-    try {
-      localStorage.setItem('karaoq_seen_tips', '1');
-    } catch {
-      /* private mode */
-    }
-  }
-
-  // Debounced: username updates per keystroke, and restarting the tracker on
-  // each one would POST every partial name.
-  const [trackedName, setTrackedName] = React.useState('');
-  React.useEffect(() => {
-    const timer = setTimeout(() => setTrackedName(username), 1500);
-    return () => clearTimeout(timer);
-  }, [username]);
+  const identity = useGuestIdentity(joinCode);
+  const { username, showWelcome, trackedName } = identity;
+  const cheers = useCheers(joinCode, username);
+  const { processReactions } = cheers;
 
   // Same contract as Host's adminPeek: /sing/CODE?admin=1 is Anna checking on
   // a room from /admin, so she must not register as a participant or mark the
   // room live.
   const adminPeek = router.query.admin === '1';
+
+  const viaRef = useJoinVia(router);
+
   React.useEffect(() => {
-    if (!joinCode || !trackedName || showWelcome || adminPeek) return;
-    return startSessionTracking(joinCode, trackedName, 'singer');
+    // A guest who skipped the name prompt still counts, with an empty name.
+    if (!joinCode || showWelcome || adminPeek) return;
+    return startSessionTracking(joinCode, trackedName, 'singer', viaRef.current);
   }, [joinCode, trackedName, showWelcome, adminPeek]);
-
-  React.useEffect(() => {
-    const timers = reactionTimers.current;
-    return () => {
-      timers.forEach(clearTimeout);
-    };
-  }, []);
-
-  const spawnReactionPops = React.useCallback((fresh: Reaction[]) => {
-    const withKeys = fresh.map((r) => ({
-      ...r,
-      key: r.id,
-      left: 5 + Math.random() * 60,
-      sway: Math.random() * 60 - 30,
-    }));
-    setVisibleReactions((prev) => [...prev, ...withKeys]);
-    const timer = setTimeout(() => {
-      const ids = new Set(fresh.map((r) => r.id));
-      setVisibleReactions((prev) => prev.filter((r) => !ids.has(r.key)));
-    }, 4200);
-    reactionTimers.current.push(timer);
-  }, []);
-
-  // animate=false on initial load only seeds the seen-set — otherwise a join
-  // replays the last 30s of cheers at once.
-  const processReactions = React.useCallback(
-    (reactions: Reaction[] | undefined, animate = true) => {
-      if (!reactions || reactions.length === 0) return;
-      const fresh = reactions.filter((r) => !seenReactionIds.current.has(r.id));
-      if (fresh.length === 0) return;
-      fresh.forEach((r) => seenReactionIds.current.add(r.id));
-      if (seenReactionIds.current.size > 200) {
-        const entries = Array.from(seenReactionIds.current);
-        seenReactionIds.current = new Set(entries.slice(-100));
-      }
-      if (animate) spawnReactionPops(fresh);
-    },
-    [spawnReactionPops]
-  );
 
   const timing = useRoomTiming({
     queue,
@@ -230,20 +150,6 @@ const Sing = (): React.ReactElement => {
     );
   }
 
-  async function sendReaction(emoji: string) {
-    if (!joinCode || reactionCooldown || !username.trim()) return;
-    setReactionCooldown(true);
-    setLastSentEmoji(emoji);
-    setTimeout(() => setLastSentEmoji(null), 1500);
-    setTimeout(() => setReactionCooldown(false), REACTION_COOLDOWN_MS);
-    const id = uuidv4();
-    // Pop the cheer locally now; the seen-set keeps the next poll from replaying it.
-    seenReactionIds.current.add(id);
-    spawnReactionPops([{ id, emoji, userName: username.trim(), timestamp: Date.now() }]);
-    const ok = await postReaction(joinCode, id, emoji, username.trim());
-    if (!ok) setLastSentEmoji(null);
-  }
-
   // The server decides the slot, and the next poll is a full interval away — too long
   // to leave the card saying "up next".
   async function postpone(entryId: string, after: number | 'end'): Promise<boolean> {
@@ -312,49 +218,23 @@ const Sing = (): React.ReactElement => {
     estimate,
     sessionEndsAt,
     loading,
-    onReaction: sendReaction,
-    reactionCooldown,
-    lastSentEmoji,
+    onReaction: cheers.sendReaction,
+    lastSentEmoji: cheers.lastSentEmoji,
+    cheerNudge: cheers.cheerNudge,
     onPostpone: postpone,
   };
 
   return (
     <main className={mainClass} style={brandStyle(brand) as React.CSSProperties}>
       <SearchBackToast show={searchBack.show} onDismiss={searchBack.dismiss} />
-      <header className={styles.header}>
-        <div className={styles.brand} onClick={() => router.push('/')}>
-          KaraoQ
-        </div>
-        <div className={styles.headerRight}>
-          <LanguageSwitcher />
-          <div className={styles.roomBadge}>
-            {t('common.room')}: <strong>{joinCode?.toUpperCase()}</strong>
-          </div>
-        </div>
-      </header>
+      <SingHeader joinCode={joinCode} />
 
       <div className={styles.content}>
         <div
           className={`${styles.searchPanel} ${showingNowPlaying && reactionsOn ? styles.searchPanelCheer : ''}`}
         >
-          {!showWelcome && showTipsBanner && (
-            <div className={styles.tipsBanner}>
-              <div className={styles.tipsBannerBody}>
-                <span className={styles.tipsBannerTitle}>
-                  {username ? t('sing.tips.welcomeNamed', { name: username }) : t('sing.tips.welcome')}
-                </span>
-                <span className={styles.tipsBannerText}>
-                  {t('sing.tips.body')}
-                </span>
-              </div>
-              <button
-                className={styles.tipsBannerClose}
-                onClick={dismissTips}
-                aria-label={t('sing.tips.dismiss')}
-              >
-                ×
-              </button>
-            </div>
+          {!showWelcome && identity.showTipsBanner && (
+            <TipsBanner username={username} onDismiss={identity.dismissTips} />
           )}
           {joinCode && (
             <SongSearch
@@ -363,7 +243,7 @@ const Sing = (): React.ReactElement => {
               onSongAdded={handleSongAdded}
               showFilters={false}
               showNameInput={true}
-              onNameChange={setUsername}
+              onNameChange={identity.setUsername}
               requireName={true}
               role="singer"
               belowSearch={
@@ -389,54 +269,19 @@ const Sing = (): React.ReactElement => {
         />
       </div>
 
-      {reactionsOn && visibleReactions.length > 0 && (
-        <div className={styles.reactionOverlay} aria-hidden="true">
-          {visibleReactions.map((r) => (
-            <div
-              key={r.key}
-              className={styles.reactionBubble}
-              style={{ left: `${r.left}%`, '--sway': `${r.sway}px` } as React.CSSProperties}
-            >
-              {isTextReaction(r.emoji) ? (
-                <span className={styles.reactionTextPop}>{r.emoji}</span>
-              ) : (
-                <span className={styles.reactionEmojiPop}>{r.emoji}</span>
-              )}
-            </div>
-          ))}
-        </div>
+      {reactionsOn && cheers.visibleReactions.length > 0 && (
+        <ReactionPops reactions={cheers.visibleReactions} />
       )}
 
       {showWelcome && !loading && !error && (
-        <div className={styles.welcomeOverlay}>
-          <div className={styles.welcomeCard}>
-            <div className={styles.welcomeLogo}>KaraoQ</div>
-            <p className={styles.welcomeRoom}>
-              {t('sing.welcome.room').split(/(\{code\})/).map((part, i) =>
-                part === '{code}'
-                  ? <strong key={i}>{joinCode?.toUpperCase()}</strong>
-                  : <React.Fragment key={i}>{part}</React.Fragment>
-              )}
-            </p>
-            <h2 className={styles.welcomePrompt}>{t('sing.welcome.prompt')}</h2>
-            <input
-              className={styles.welcomeInput}
-              placeholder={t('common.enterYourName')}
-              value={welcomeName}
-              onChange={(e) => setWelcomeName(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleWelcomeSubmit()}
-              autoFocus
-              maxLength={30}
-            />
-            <button
-              className={styles.welcomeBtn}
-              onClick={handleWelcomeSubmit}
-              disabled={!welcomeName.trim()}
-            >
-              {t('sing.welcome.go')}
-            </button>
-          </div>
-        </div>
+        <WelcomeOverlay
+          joinCode={joinCode}
+          onSubmit={identity.handleWelcomeSubmit}
+          onSkip={identity.skipName}
+          onStage={showingNowPlaying && reactionsOn ? currentSong : undefined}
+          onCheer={(emoji) => cheers.sendReaction(emoji, 'welcome')}
+          lastSentEmoji={cheers.lastSentEmoji}
+        />
       )}
 
     </main>
