@@ -39,8 +39,8 @@ const MobileQueueDrawer = ({
     sessionEndsAt,
     loading,
     onReaction,
-    reactionCooldown,
     lastSentEmoji,
+    cheerNudge,
     onPostpone,
   } = view;
 
@@ -142,13 +142,15 @@ const MobileQueueDrawer = ({
       </button>
 
       {quickCheerVisible && (
-        <div className={styles.quickCheerRow}>
+        <div className={`${styles.quickCheerRow} ${cheerNudge ? styles.quickCheerRowNudge : ''}`}>
+          <span className={styles.quickCheerLabel}>
+            {t('sing.quickCheer.label', { name: currentSong!.userName })}
+          </span>
           {CHEER_EMOJIS.slice(0, 5).map((emoji) => (
             <button
               key={emoji}
-              className={`${styles.quickCheerBtn} ${reactionCooldown ? styles.quickCheerBtnCooldown : ''}`}
-              onClick={() => onReaction(emoji)}
-              disabled={reactionCooldown || !username.trim()}
+              className={styles.quickCheerBtn}
+              onClick={() => onReaction(emoji, 'quick')}
               aria-label={t('sing.cheer.sendAria', { emoji })}
             >
               {emoji}
@@ -184,9 +186,8 @@ const MobileQueueDrawer = ({
         {showingNowPlaying && reactionsOn ? (
           <CheerBar
             onReaction={onReaction}
-            cooldown={reactionCooldown}
             lastSentEmoji={lastSentEmoji}
-            disabled={!username.trim()}
+            nudge={cheerNudge}
             compact
           />
         ) : reactionsOn && queueItems.length > 0 && (

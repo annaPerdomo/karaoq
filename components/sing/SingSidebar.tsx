@@ -1,6 +1,7 @@
 import * as React from 'react';
 import styles from '../../styles/Sing.module.css';
 import CheerBar from '../CheerBar';
+import { CheerSource } from '../../app/queue/cheerConstants';
 import QueuePanel from './QueuePanel';
 import YourTurnCard from './YourTurnCard';
 import formatSongTitle from '../../lib/songTitle';
@@ -16,14 +17,13 @@ export interface SingQueueViewProps {
   currentSong: QueueEntry | undefined;
   isPlaying: boolean;
   reactionsOn: boolean;
-  /** The viewer's own name — highlights their rows and gates cheering. */
   username: string;
   estimate: QueueEstimate;
   sessionEndsAt: number | null;
   loading: boolean;
-  onReaction: (emoji: string) => void;
-  reactionCooldown: boolean;
+  onReaction: (emoji: string, source?: CheerSource) => void;
   lastSentEmoji: string | null;
+  cheerNudge: boolean;
   onPostpone: (entryId: string, after: number | "end") => Promise<boolean>;
 }
 
@@ -40,8 +40,8 @@ const SingSidebar = (props: SingQueueViewProps): React.ReactElement => {
     sessionEndsAt,
     loading,
     onReaction,
-    reactionCooldown,
     lastSentEmoji,
+    cheerNudge,
     onPostpone,
   } = props;
 
@@ -74,9 +74,8 @@ const SingSidebar = (props: SingQueueViewProps): React.ReactElement => {
       {currentSong && isPlaying && reactionsOn ? (
         <CheerBar
           onReaction={onReaction}
-          cooldown={reactionCooldown}
           lastSentEmoji={lastSentEmoji}
-          disabled={!username.trim()}
+          nudge={cheerNudge}
         />
       ) : reactionsOn && queueItems.length > 0 && (
         <div className={styles.cheerHint}>

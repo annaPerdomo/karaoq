@@ -60,30 +60,42 @@
   transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
 }
 
-.cheerBtn:hover:not(:disabled) {
+.cheerBtn:hover {
   transform: scale(1.15);
   background: rgba(255, 215, 0, 0.12);
   border-color: rgba(255, 215, 0, 0.3);
   box-shadow: 0 0 12px rgba(255, 215, 0, 0.15);
 }
 
-.cheerBtn:active:not(:disabled) {
+.cheerBtn:active {
   transform: scale(0.95);
 }
 
-.cheerBtnCooldown {
-  opacity: 0.35;
-  cursor: not-allowed;
+.cheerBarNudge .cheerBtn {
+  border-color: rgba(255, 215, 0, 0.35);
+  animation: cheerBarNudge 2s ease-in-out infinite;
 }
 
-.cheerCooldownBar {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  height: 2px;
-  background: linear-gradient(90deg, #ffd700, var(--acc-a, #ff2d78));
-  animation: cooldownShrink 3s linear forwards;
+@keyframes cheerBarNudge {
+  0%, 100% { box-shadow: 0 0 0 rgba(255, 215, 0, 0); }
+  50% { box-shadow: 0 0 14px rgba(255, 215, 0, 0.45); }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .cheerBarNudge .cheerBtn {
+    animation: none;
+    box-shadow: 0 0 10px rgba(255, 215, 0, 0.35);
+  }
+}
+
+/* Twin of the prefers-reduced-motion block above: smart TVs never report that
+   preference. tests/lib/calmCss.test.ts fails if the two drift. */
+/* @calm-twin-start */
+html[data-tv] .cheerBarNudge .cheerBtn {
+  animation: none;
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.35);
+}
+/* @calm-twin-end */
 
 /* ─── Compact (phones only) ───
    The wrapping emoji grid becomes a swipeable row so the bar stops eating
@@ -114,9 +126,4 @@
   .cheerBarCompact .cheerBtn {
     flex-shrink: 0;
   }
-}
-
-@keyframes cooldownShrink {
-  from { width: 100%; }
-  to { width: 0%; }
 }

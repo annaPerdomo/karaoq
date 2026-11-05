@@ -1,12 +1,12 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { ApiError, Reaction } from "../../types";
-import { CHEER_EMOJIS, REACTION_COOLDOWN_MS } from "../../../../app/queue/cheerConstants";
+import { CHEER_EMOJIS, CHEER_SOURCES, CheerSource } from "../../../../app/queue/cheerConstants";
 import { trackEvent } from "../../../../lib/analytics";
+import { sharesSinger } from "../../../../lib/fairQueue";
 import { MAX_ENTRY_ID_LENGTH, MAX_NAME_LENGTH, rateLimit } from "../../../../lib/limits";
 import { getRoomsCollection } from "../../../../lib/mongodb";
 import { normalizeRoomId } from "../../../../lib/roomCode";
 
-const RATE_LIMIT_MS = REACTION_COOLDOWN_MS;
 const MAX_REACTIONS = 50;
 const REACTION_TTL_MS = 30000;
 
@@ -23,15 +23,24 @@ export default async function handler(
 
   const roomId = normalizeRoomId(req.query.id);
   const emoji = req.query.emoji as string | undefined;
-  const userName = req.query.userName as string | undefined;
+  const userName = typeof req.query.userName === "string" ? req.query.userName.trim() : "";
   const reactionId = req.query.reactionId as string | undefined;
+  const clientId = typeof req.query.clientId === "string" ? req.query.clientId : undefined;
+  // Unknown values drop rather than reject: an old client is no reason to lose the cheer.
+  const source = (CHEER_SOURCES as readonly string[]).includes(req.query.source as string)
+    ? (req.query.source as CheerSource)
+    : undefined;
 
-  if (typeof roomId !== "string" || !emoji || !userName || !reactionId) {
+  if (typeof roomId !== "string" || !emoji || !reactionId) {
     res.status(400).json({ code: 400, message: "Missing required parameters." });
     return;
   }
 
-  if (userName.length > MAX_NAME_LENGTH || reactionId.length > MAX_ENTRY_ID_LENGTH) {
+  if (
+    userName.length > MAX_NAME_LENGTH ||
+    reactionId.length > MAX_ENTRY_ID_LENGTH ||
+    (clientId !== undefined && clientId.length > MAX_ENTRY_ID_LENGTH)
+  ) {
     res.status(400).json({ code: 400, message: "Invalid request." });
     return;
   }
@@ -41,9 +50,8 @@ export default async function handler(
     return;
   }
 
-  // The per-userName cooldown below is trivially bypassed by varying the
-  // name; this IP-scoped limit is the real cap on doc bloat. Generous enough
-  // for a venue's worth of guests behind one NAT during a hype burst.
+  // No per-person cooldown by design; reaction_sent's clientId is how per-sender bursts get measured.
+  // Sized for a venue behind one NAT mid-burst.
   if (!rateLimit(req, "reaction", 60, 10_000)) {
     res.status(429).json({ code: 429, message: "Too fast! Wait a moment." });
     return;
@@ -68,16 +76,6 @@ export default async function handler(
       (r) => now - r.timestamp < REACTION_TTL_MS
     );
 
-    // Per-user rate limit.
-    const lastReaction = reactions
-      .filter((r) => r.userName === userName)
-      .sort((a, b) => b.timestamp - a.timestamp)[0];
-
-    if (lastReaction && now - lastReaction.timestamp < RATE_LIMIT_MS) {
-      res.status(429).json({ code: 429, message: "Too fast! Wait a moment." });
-      return;
-    }
-
     const newReaction: Reaction = {
       id: reactionId,
       emoji,
@@ -99,7 +97,15 @@ export default async function handler(
       }
     );
 
-    const tracked = trackEvent(req, "reaction_sent", { roomId: roomId as string, userName: userName!, emoji });
+    const tracked = trackEvent(req, "reaction_sent", {
+      roomId: roomId as string,
+      userName,
+      emoji,
+      // Spread, not undefined: the driver stores null, and absent means "older client" downstream.
+      ...(clientId ? { clientId } : {}),
+      ...(source ? { cheerSource: source } : {}),
+      senderSang: room.queue.some((e) => sharesSinger(e.userName, userName)),
+    });
     res.status(200).json({ reactions: updated });
     await tracked;
   } catch (e) {

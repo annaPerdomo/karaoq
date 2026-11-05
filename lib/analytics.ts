@@ -1,3 +1,5 @@
+import type { CheerSource } from "../app/queue/cheerConstants";
+import type { JoinVia } from "../app/queue/trackSession";
 import type { NextApiRequest } from "next";
 import type { IdeaSurface } from "./ideaSurface";
 import type { AutoAdvance, DisplayConfig, HostConfig } from "../pages/api/types";
@@ -72,6 +74,10 @@ export interface AnalyticsEvent {
   songArtist?: string;
   videoId?: string;
   emoji?: string;
+  // reaction_sent: per-browser, so bursts count per person even without a name.
+  clientId?: string;
+  // reaction_sent: true when the sender had a song in the room's queue. Absent on older cheers.
+  senderSang?: boolean;
   role?: "host" | "singer" | "display";
   userAgent?: string;
   suggestionSource?: SuggestionSource;
@@ -88,6 +94,8 @@ export interface AnalyticsEvent {
   // Absent on events from before this field existed, which were all search adds.
   // "paste" is newer than "search": pastes before it shipped are in the search bucket.
   via?: "search" | "paste" | "board_claim" | "singwithme";
+  // reaction_sent: the surface tapped. Absent on cheers from before it existed.
+  cheerSource?: CheerSource;
   // song_added: singers credited, counted the way fair rotation splits the name; absent pre-duets.
   singers?: number;
   // display_config_saved: fields differing from DEFAULT_DISPLAY_CONFIG.
@@ -291,7 +299,8 @@ export async function trackSessionHeartbeat(
   role: "host" | "singer" | "display",
   clientId?: string,
   locale?: Locale,
-  localeSource?: LocaleSource
+  localeSource?: LocaleSource,
+  via?: JoinVia
 ): Promise<void> {
   if (isAnalyticsExempt(req)) return;
   try {
@@ -326,6 +335,22 @@ export async function trackSessionHeartbeat(
     if (clientId !== undefined) set.clientId = { $literal: clientId };
     if (locale) set.locale = { $literal: locale };
     if (localeSource) set.localeSource = { $literal: localeSource };
+    // Only the tab that read ?via= sends it; keep the stored value within a sitting (the firstSeen rule).
+    if (via) {
+      set.via = {
+        $cond: [
+          {
+            $and: [
+              { $ne: [{ $type: "$lastSeen" }, "missing"] },
+              { $lte: [{ $subtract: [now, "$lastSeen"] }, SESSION_GAP_MS] },
+              { $ne: [{ $type: "$via" }, "missing"] },
+            ],
+          },
+          "$via",
+          { $literal: via },
+        ],
+      };
+    }
     if (geo.country) set.country = { $literal: geo.country };
     if (geo.region) set.region = { $literal: geo.region };
     if (geo.city) set.city = { $literal: geo.city };
