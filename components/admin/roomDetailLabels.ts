@@ -190,12 +190,13 @@ export function autoAdvanceTitle(a: {
 }): string {
   // No toggle ever fired, so the current value IS the starting value — which for a room
   // predating the feature is AUTO_ADVANCE_OFF, not the DEFAULT_AUTO_ADVANCE a new room gets.
-  const starts =
-    a.toggles.length === 0
-      ? { enabled: a.enabled, gapSeconds: a.gapSeconds }
-      : DEFAULT_AUTO_ADVANCE;
+  // Once toggled, the start is unknown: the default has changed over time, so name
+  // today's default rather than claim it was this room's.
+  const d = DEFAULT_AUTO_ADVANCE;
   const lines = [
-    `Starts ${starts.enabled ? 'on' : 'off'} · ${starts.gapSeconds}s gap by default`,
+    a.toggles.length === 0
+      ? `Starts ${a.enabled ? 'on' : 'off'} · ${a.gapSeconds}s gap by default`
+      : `Default for new rooms: ${d.enabled ? 'on' : 'off'} · ${d.gapSeconds}s gap`,
   ];
   for (const t of a.toggles) {
     lines.push(
