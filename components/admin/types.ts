@@ -332,6 +332,10 @@ export interface RoomDossierData {
   languages?: RoomLanguages;
   span?: { first: string; last: string } | null;
   sessionEnd?: { minutesFromNow: number | null; timestamp: string } | null;
+  musicVideo?: Omit<
+    import('../../lib/roomMusicVideo').RoomMusicVideo,
+    'lastSeenAt' | 'firstOpenedAt'
+  > & { lastSeenAt: string | null; firstOpenedAt: string | null };
   counts: {
     people: number;
     songs: number;

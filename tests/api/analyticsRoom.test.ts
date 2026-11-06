@@ -142,3 +142,68 @@ describe("GET /api/analytics/room — search_run", () => {
     expect(body.fairRotation.started).not.toBeNull();
   });
 });
+
+describe("GET /api/analytics/room — musicVideo", () => {
+  function seedEvent(type: string, fields: Record<string, unknown> = {}, roomId = "ABCD1") {
+    nextEventId += 1;
+    collectionFor("analytics_events").seed({
+      _id: `evt-${nextEventId}`,
+      type,
+      roomId,
+      timestamp: new Date(Date.now() + nextEventId),
+      ...fields,
+    });
+  }
+
+  it("summarizes the room's music-video events and its musicVideoAt check-in", async () => {
+    const seenAt = new Date("2026-11-05T20:00:00.000Z");
+    collectionFor("rooms").seed({ _id: "room-1", id: "ABCD1", musicVideoAt: seenAt });
+    seedEvent("music_video_screen_opened");
+    seedEvent("original_video_resolved", { source: "live", found: true });
+    seedEvent("original_video_resolved", { source: "cache", found: false });
+    seedEvent("original_video_resolved", { source: "quota", found: false });
+    seedEvent("original_video_swapped", { source: "search" });
+    seedEvent("original_video_nudged", { offsetSeconds: 3 });
+    seedEvent("original_video_nudged", { offsetSeconds: 0 });
+    seedEvent("music_video_offset", { offsetSeconds: 3 });
+    seedEvent("music_video_offset", { offsetSeconds: 3 });
+    seedEvent("music_video_error", { code: 150 });
+    seedEvent("music_video_error", { code: 150 });
+    seedEvent("music_video_link", { action: "copy" });
+    seedEvent("music_video_screen_closed", { durationSeconds: 1800, songsShown: 4, songsUnavailable: 1 });
+    seedEvent("music_video_screen_opened", {}, "OTHER");
+
+    const body = (await get("ABCD1")).getBody();
+
+    expect(body.musicVideo).toMatchObject({
+      lastSeenAt: seenAt.toISOString(),
+      opens: 1,
+      minutesOpen: 30,
+      songsShown: 4,
+      songsUnavailable: 1,
+      songsResolved: 2,
+      songsWithVideo: 1,
+      songsWaiting: 1,
+      swaps: 1,
+      hostNudges: 1,
+      songsPlayedOffset: 2,
+      truncated: false,
+      errors: [{ code: 150, count: 2 }],
+      links: { open: 0, copy: 1 },
+    });
+    expect(typeof body.musicVideo.firstOpenedAt).toBe("string");
+    expect(body.counts.songs).toBe(0);
+  });
+
+  it("reports an untouched room as empty", async () => {
+    const body = (await get("ABCD1")).getBody();
+
+    expect(body.musicVideo).toMatchObject({
+      lastSeenAt: null,
+      firstOpenedAt: null,
+      opens: 0,
+      minutesOpen: null,
+      songsResolved: 0,
+    });
+  });
+});

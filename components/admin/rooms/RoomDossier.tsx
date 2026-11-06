@@ -15,6 +15,12 @@ import { BoardsSection, PeopleSection } from './DossierSections';
 import { TimelineSection } from './TimelineSection';
 import { CheersPanel, SetupPanel } from './DossierPanels';
 import SuggestionsSection from './SuggestionsSection';
+import {
+  MusicVideoPanel,
+  musicVideoChipLabel,
+  musicVideoChipTitle,
+  musicVideoTouched,
+} from './MusicVideoPanel';
 
 function spanLabel(span: RoomDossierData['span']): string | null {
   if (!span) return null;
@@ -78,6 +84,7 @@ export default function RoomDossier({
     data.fairRotation.toggles.length > 0 ||
     data.autoAdvance.toggles.length > 0;
   const hasSuggestions = (data.suggestions?.length ?? 0) > 0;
+  const musicVideo = musicVideoTouched(data.musicVideo) ? data.musicVideo : null;
 
   const quiet = [
     !hasCheers && 'no cheers',
@@ -86,6 +93,7 @@ export default function RoomDossier({
       (data.searchFails?.length ?? 0) === 0 &&
       'no errors',
     !customized && 'default layout',
+    !musicVideo && 'no music video',
   ].filter(Boolean) as string[];
 
   return (
@@ -109,6 +117,11 @@ export default function RoomDossier({
         <TapHint text={roomLanguageTitle(data.languages)} className={styles.dossierChip}>
           {roomLanguageLabel(data.languages)}
         </TapHint>
+        {musicVideo && (
+          <TapHint text={musicVideoChipTitle(musicVideo)} className={styles.dossierChip}>
+            {musicVideoChipLabel(musicVideo)}
+          </TapHint>
+        )}
         <span className={styles.dossierChip}>
           {data.counts.searches} searches
         </span>
@@ -144,6 +157,7 @@ export default function RoomDossier({
             wide={!hasBoards}
           />
         )}
+        {musicVideo && <MusicVideoPanel musicVideo={musicVideo} wide />}
         {hasSuggestions && (
           <SuggestionsSection suggestions={data.suggestions ?? []} wide />
         )}

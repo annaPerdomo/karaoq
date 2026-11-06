@@ -14,6 +14,11 @@ import {
   tvPlatformFromUA,
 } from "../../../lib/deviceType";
 import { CHOSEN_LOCALE_SOURCES } from "../../../lib/i18n/activeLocale";
+import type { MusicVideoRow } from "../../../lib/screensStats";
+import {
+  ROOM_MUSIC_VIDEO_EVENTS,
+  summarizeRoomMusicVideo,
+} from "../../../lib/roomMusicVideo";
 import {
   normalizeAutoAdvance,
   normalizeDisplayConfig,
@@ -23,6 +28,7 @@ import {
 } from "../types";
 
 const MAX_ERROR_ROWS = 200;
+const MAX_MUSIC_VIDEO_ROWS = 1000;
 
 async function handleGet(
   req: NextApiRequest,
@@ -90,6 +96,15 @@ async function handleGet(
     .toArray()
     .then((docs) => docs.reverse());
 
+  // Kept out of the timeline query: a lookup per song would crowd its 2000-row cap.
+  const musicVideoPromise = db
+    .collection<MusicVideoRow>("analytics_events")
+    .find({ roomId, type: { $in: [...ROOM_MUSIC_VIDEO_EVENTS] } })
+    .sort({ timestamp: -1 })
+    .limit(MAX_MUSIC_VIDEO_ROWS)
+    .toArray()
+    .then((docs) => docs.reverse());
+
   // Titles live in their own collection, expiring at 30 days (lib/mongodb.ts),
   // and are joined back by songDataId. The event rows outlive that expiry, so
   // an old room still shows *that* a song was added, just not which one.
@@ -121,14 +136,15 @@ async function handleGet(
   // The room doc's own field is the live truth — same reason the rooms-list
   // card reads it directly rather than replaying auto_advance_set events.
   const roomDocPromise = getRoomsCollection().then((c) =>
-    c.findOne({ id: roomId }, { projection: { _id: 0, autoAdvance: 1 } })
+    c.findOne({ id: roomId }, { projection: { _id: 0, autoAdvance: 1, musicVideoAt: 1 } })
   );
 
-  const [sessions, events, searchRunEvents, songDataDocs, errorRows, errorTotal, roomDoc] =
+  const [sessions, events, searchRunEvents, musicVideoRows, songDataDocs, errorRows, errorTotal, roomDoc] =
     await Promise.all([
       sessionsPromise,
       eventsPromise,
       searchRunsPromise,
+      musicVideoPromise,
       songDataPromise,
       errorsPromise,
       errorTotalPromise,
@@ -375,6 +391,11 @@ async function handleGet(
           }
         : null,
     sessionEnd,
+    musicVideo: summarizeRoomMusicVideo(
+      musicVideoRows,
+      roomDoc?.musicVideoAt,
+      musicVideoRows.length >= MAX_MUSIC_VIDEO_ROWS
+    ),
     counts: {
       people: people.length,
       songs: songs.length,
