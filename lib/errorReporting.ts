@@ -34,6 +34,9 @@ function isOpaqueThirdPartyError(text: string, stack?: unknown): boolean {
   return !stack && /^script error\.?$/i.test(text.trim());
 }
 
+// Safari's stackless WebExtension failure; our code never calls the extension runtime.
+const EXTENSION_API_MESSAGE = /^Invalid call to runtime\.\w+\(\)/;
+
 const EXTENSION_URL = /\b(?:chrome|moz|safari|safari-web)-extension:\/\//;
 const HTTP_URL = /https?:\/\/[^\s)]+/;
 // V8 frames start with "at "; Firefox/Safari frames are "fn@url:line:col".
@@ -49,6 +52,14 @@ const INJECTED_FRAME = /<anonymous>:\d+/;
 // ever runs from /_next/ bundles or a .js file — the one inline script we ship
 // (_document's TV flag) is wrapped in try/catch and cannot throw.
 const OWN_SCRIPT_PATH = /\/_next\/|\.m?js\b/;
+
+/** A fetch-wrapping extension throws from its own frame. A native error we caused
+ *  inside the wrapper is lost too, but only for users running that extension. */
+export function isThrownByExtension(stack: unknown): boolean {
+  if (typeof stack !== "string") return false;
+  const top = stack.split("\n").find((line) => FRAME_LINE.test(line));
+  return !!top && EXTENSION_URL.test(top);
+}
 
 /**
  * Drops extension, injected-script and other-origin noise that would otherwise
@@ -80,6 +91,8 @@ export function reportClientError(
   const text = typeof message === "string" ? message : String(message ?? "");
   if (!text) return;
   if (isOpaqueThirdPartyError(text, stack)) return;
+  if (EXTENSION_API_MESSAGE.test(text)) return;
+  if (isThrownByExtension(stack)) return;
   if (isForeignStack(stack, window.location.origin)) return;
 
   if (reportsSent >= MAX_REPORTS_PER_LOAD) return;
@@ -119,7 +132,10 @@ export function installErrorReporting(): void {
   });
 
   window.addEventListener("unhandledrejection", (event) => {
-    const reason = event.reason as { message?: string; stack?: string } | null;
+    const reason = event.reason as { name?: string; message?: string; stack?: string } | null;
+    // Every fetch of ours catches its abort; one that surfaces was re-chained by a
+    // fetch-wrapping extension, and its stack names only our code.
+    if (reason?.name === "AbortError") return;
     reportClientError(
       "promise",
       reason && typeof reason.message === "string" ? reason.message : String(reason),

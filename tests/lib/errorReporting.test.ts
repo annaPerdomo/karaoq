@@ -160,6 +160,66 @@ describe("errorReporting", () => {
     vi.unstubAllGlobals();
   });
 
+  it("drops a rejection thrown from an extension's fetch wrapper, even through our frames", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal("fetch", fetchMock);
+    const { reportClientError, isThrownByExtension } = await freshReporter();
+
+    // Field sample (2026-11-05, host DYZGG), our frame rehosted to the test origin.
+    const wrapped =
+      `TypeError: Failed to fetch\n    at OnFj (chrome-extension://bkkbcggnhapdmkeljlodobbkopceiche/injectScriptAdjust.js:1:3271)\n    at window.fetch (chrome-extension://bkkbcggnhapdmkeljlodobbkopceiche/injectScriptAdjust.js:1:5405)\n    at a (${window.location.origin}/_next/static/chunks/681-4644aee9068505cf.js:1:2208)`;
+    expect(isThrownByExtension(wrapped)).toBe(true);
+    reportClientError("promise", "Failed to fetch", wrapped);
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    const ownTop =
+      "TypeError: x\n    at t (https://www.karaoq.live/_next/static/chunks/a.js:1:1)\n    at w (chrome-extension://abc/inject.js:1:1)";
+    expect(isThrownByExtension(ownTop)).toBe(false);
+    expect(isThrownByExtension(undefined)).toBe(false);
+
+    vi.unstubAllGlobals();
+  });
+
+  it("drops stackless WebExtension API failures", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal("fetch", fetchMock);
+    const { reportClientError } = await freshReporter();
+
+    // Verbatim field sample (2026-11-05, iOS Safari on /).
+    reportClientError("promise", "Invalid call to runtime.sendMessage(). Tab not found.");
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    vi.unstubAllGlobals();
+  });
+
+  it("drops an unhandled AbortError but reports other rejections", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal("fetch", fetchMock);
+    const { installErrorReporting } = await freshReporter();
+    // Captured rather than left on window, where it would outlive this test.
+    const add = vi.spyOn(window, "addEventListener").mockImplementation(() => {});
+    installErrorReporting();
+    const onRejection = add.mock.calls.find(([type]) => type === "unhandledrejection")![1] as (
+      e: { reason: unknown }
+    ) => void;
+    const reject = (reason: unknown) => onRejection({ reason });
+
+    // Field sample (2026-11-01, host DYZGG), rehosted to the test origin.
+    reject(
+      Object.assign(new Error("signal is aborted without reason"), {
+        name: "AbortError",
+        stack:
+          `AbortError: signal is aborted without reason\n    at ${window.location.origin}/_next/static/chunks/526-c0992c0b6b8c9c1d.js:1:105798`,
+      })
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    reject(new TypeError("Cannot read properties of undefined"));
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    vi.unstubAllGlobals();
+  });
+
   it("spends neither the per-load budget nor a cooldown slot on a dropped report", async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true });
     vi.stubGlobal("fetch", fetchMock);
