@@ -65,7 +65,7 @@ describe("POST /api/queue/[id]/auto-advance - the room's auto-advance setting", 
     await handler(req, res);
 
     expect(res.getStatus()).toBe(200);
-    const expected = { enabled: true, gapSeconds: 60 };
+    const expected = { enabled: true, gapSeconds: 10 };
     expect(mockCollection.updateOne).toHaveBeenCalledWith(
       { id: "ROOM1" },
       { $set: { autoAdvance: expected, lastActivity: expect.any(Date) } }
@@ -137,7 +137,7 @@ describe("POST /api/queue/[id]/auto-advance - the room's auto-advance setting", 
       { id: "ROOM1" },
       {
         $set: {
-          autoAdvance: { enabled: true, gapSeconds: 60 },
+          autoAdvance: { enabled: true, gapSeconds: 10 },
           lastActivity: expect.any(Date),
         },
       }
