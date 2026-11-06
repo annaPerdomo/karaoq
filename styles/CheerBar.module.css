@@ -60,15 +60,34 @@
   transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
 }
 
-.cheerBtn:hover {
+.cheerBtn:hover:not(:disabled) {
   transform: scale(1.15);
   background: rgba(255, 215, 0, 0.12);
   border-color: rgba(255, 215, 0, 0.3);
   box-shadow: 0 0 12px rgba(255, 215, 0, 0.15);
 }
 
-.cheerBtn:active {
+.cheerBtn:active:not(:disabled) {
   transform: scale(0.95);
+}
+
+.cheerBtnCooldown {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.cheerCooldownBar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #ffd700, var(--acc-a, #ff2d78));
+  animation: cooldownShrink linear forwards; /* duration set inline from REACTION_COOLDOWN_MS */
+}
+
+@keyframes cooldownShrink {
+  from { width: 100%; }
+  to { width: 0%; }
 }
 
 .cheerBarNudge .cheerBtn {

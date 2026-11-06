@@ -4,6 +4,7 @@ import postReaction from '../../../app/queue/postReaction';
 import { getClientId } from '../../../app/queue/trackSession';
 import { Reaction } from '../../../pages/api/types';
 import { CheerSource } from '../../../app/queue/cheerConstants';
+import { useReactionCooldown } from '../../hooks/useReactionCooldown';
 
 const HAS_CHEERED_KEY = 'karaoq_has_cheered';
 
@@ -12,6 +13,7 @@ export type VisibleReaction = Reaction & { key: string; left: number; sway: numb
 export function useCheers(joinCode: string | undefined, username: string) {
   const [hasCheered, setHasCheered] = React.useState(true);
   const [lastSentEmoji, setLastSentEmoji] = React.useState<string | null>(null);
+  const { cooldown, tryStart: tryStartCooldown } = useReactionCooldown();
   const [visibleReactions, setVisibleReactions] = React.useState<VisibleReaction[]>([]);
   const seenReactionIds = React.useRef(new Set<string>());
   const reactionTimers = React.useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -67,7 +69,7 @@ export function useCheers(joinCode: string | undefined, username: string) {
   );
 
   async function sendReaction(emoji: string, source: CheerSource = 'bar') {
-    if (!joinCode) return;
+    if (!joinCode || !tryStartCooldown()) return;
     const name = username.trim();
     if (!hasCheered) {
       setHasCheered(true);
@@ -91,6 +93,7 @@ export function useCheers(joinCode: string | undefined, username: string) {
 
   return {
     cheerNudge: !hasCheered,
+    cooldown,
     lastSentEmoji,
     visibleReactions,
     processReactions,

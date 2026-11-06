@@ -91,21 +91,24 @@ describe("WelcomeOverlay", () => {
 });
 
 describe("CheerBar", () => {
-  it("sends every tap — no cooldown", () => {
+  it("locks the buttons and shows the bar during a cooldown", () => {
     const onReaction = vi.fn();
-    render(<CheerBar onReaction={onReaction} lastSentEmoji={null} />);
+    const { container, rerender } = render(<CheerBar onReaction={onReaction} cooldown={false} lastSentEmoji={null} />);
     const fire = screen.getByRole("button", { name: "🔥" });
     fireEvent.click(fire);
+    expect(onReaction).toHaveBeenCalledTimes(1);
+    expect(container.querySelector('[class*="cheerCooldownBar"]')).toBeNull();
+    rerender(<CheerBar onReaction={onReaction} cooldown lastSentEmoji="🔥" />);
+    expect(fire).toBeDisabled();
     fireEvent.click(fire);
-    fireEvent.click(fire);
-    expect(onReaction).toHaveBeenCalledTimes(3);
-    expect(fire).not.toBeDisabled();
+    expect(onReaction).toHaveBeenCalledTimes(1);
+    expect(container.querySelector('[class*="cheerCooldownBar"]')).not.toBeNull();
   });
 
   it("glows only while nudging", () => {
-    const { container, rerender } = render(<CheerBar onReaction={vi.fn()} lastSentEmoji={null} nudge />);
+    const { container, rerender } = render(<CheerBar onReaction={vi.fn()} cooldown={false} lastSentEmoji={null} nudge />);
     expect(container.firstElementChild!.className).toMatch(/cheerBarNudge/);
-    rerender(<CheerBar onReaction={vi.fn()} lastSentEmoji={null} />);
+    rerender(<CheerBar onReaction={vi.fn()} cooldown={false} lastSentEmoji={null} />);
     expect(container.firstElementChild!.className).not.toMatch(/cheerBarNudge/);
   });
 });

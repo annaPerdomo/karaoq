@@ -39,6 +39,7 @@ const MobileQueueDrawer = ({
     sessionEndsAt,
     loading,
     onReaction,
+    reactionCooldown,
     lastSentEmoji,
     cheerNudge,
     onPostpone,
@@ -149,8 +150,9 @@ const MobileQueueDrawer = ({
           {CHEER_EMOJIS.slice(0, 5).map((emoji) => (
             <button
               key={emoji}
-              className={styles.quickCheerBtn}
+              className={`${styles.quickCheerBtn} ${reactionCooldown ? styles.quickCheerBtnCooldown : ''}`}
               onClick={() => onReaction(emoji, 'quick')}
+              disabled={reactionCooldown}
               aria-label={t('sing.cheer.sendAria', { emoji })}
             >
               {emoji}
@@ -186,6 +188,7 @@ const MobileQueueDrawer = ({
         {showingNowPlaying && reactionsOn ? (
           <CheerBar
             onReaction={onReaction}
+            cooldown={reactionCooldown}
             lastSentEmoji={lastSentEmoji}
             nudge={cheerNudge}
             compact

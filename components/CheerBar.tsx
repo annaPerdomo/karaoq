@@ -1,10 +1,11 @@
 import * as React from 'react';
 import styles from '../styles/CheerBar.module.css';
-import { CHEER_EMOJIS } from '../app/queue/cheerConstants';
+import { CHEER_EMOJIS, REACTION_COOLDOWN_MS } from '../app/queue/cheerConstants';
 import { useT } from '../lib/i18n/I18nProvider';
 
 interface CheerBarProps {
   onReaction: (emoji: string) => void;
+  cooldown: boolean;
   lastSentEmoji: string | null;
   /** On small screens, collapse the wrapping grids into swipeable rows.
       Used where the bar shares space with a queue (host sidebar); the Sing
@@ -13,7 +14,7 @@ interface CheerBarProps {
   nudge?: boolean;
 }
 
-const CheerBar = ({ onReaction, lastSentEmoji, compact, nudge }: CheerBarProps): React.ReactElement => {
+const CheerBar = ({ onReaction, cooldown, lastSentEmoji, compact, nudge }: CheerBarProps): React.ReactElement => {
   const { t } = useT();
   return (
   <div className={`${styles.cheerBar} ${compact ? styles.cheerBarCompact : ''} ${nudge ? styles.cheerBarNudge : ''}`}>
@@ -27,13 +28,17 @@ const CheerBar = ({ onReaction, lastSentEmoji, compact, nudge }: CheerBarProps):
       {CHEER_EMOJIS.map((emoji) => (
         <button
           key={emoji}
-          className={styles.cheerBtn}
+          className={`${styles.cheerBtn} ${cooldown ? styles.cheerBtnCooldown : ''}`}
           onClick={() => onReaction(emoji)}
+          disabled={cooldown}
         >
           {emoji}
         </button>
       ))}
     </div>
+    {cooldown && (
+      <div className={styles.cheerCooldownBar} style={{ animationDuration: `${REACTION_COOLDOWN_MS}ms` }} />
+    )}
   </div>
   );
 };

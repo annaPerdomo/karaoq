@@ -43,6 +43,7 @@ import {
 import setSessionEnd from "../app/queue/setSessionEnd";
 import { formatClockTime } from "../lib/queueTime";
 import { useRoomTiming } from "./hooks/useRoomTiming";
+import { useReactionCooldown } from "./hooks/useReactionCooldown";
 import { fairInsertIndex } from "../lib/fairQueue";
 import postReaction from "../app/queue/postReaction";
 import { startSessionTracking } from "../app/queue/trackSession";
@@ -171,6 +172,7 @@ const Host = ({
   const [musicVideoAt, setMusicVideoAt] = React.useState<string | null>(null);
   const [lastSentEmoji, setLastSentEmoji] = React.useState<string | null>(null);
   const sentEmojiTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { cooldown: reactionCooldown, tryStart: tryStartReactionCooldown } = useReactionCooldown();
   const [visibleReactions, setVisibleReactions] = React.useState<
     (Reaction & { key: string; left: number; sway: number })[]
   >([]);
@@ -839,7 +841,7 @@ const Host = ({
   }, [joinCode, tvMode, remote]);
 
   async function sendReaction(emoji: string) {
-    if (!joinCode) return;
+    if (!joinCode || !tryStartReactionCooldown()) return;
     setLastSentEmoji(emoji);
     // One timer across rapid taps, so an earlier tap's can't clear a later "Sent!".
     if (sentEmojiTimer.current) clearTimeout(sentEmojiTimer.current);
@@ -1585,6 +1587,7 @@ const Host = ({
           cheersOpen={cheersOpen}
           onToggleCheers={toggleCheers}
           onSendReaction={sendReaction}
+          reactionCooldown={reactionCooldown}
           lastSentEmoji={lastSentEmoji}
           joinCode={joinCode}
           boards={boards}

@@ -972,6 +972,10 @@
     transition: transform 0.15s ease, background 0.15s ease;
   }
 
+  .quickCheerBtnCooldown {
+    opacity: 0.35;
+  }
+
   .quickCheerBtn:active {
     transform: scale(0.9);
     background: rgba(255, 215, 0, 0.12);
@@ -1380,6 +1384,10 @@ html[data-tv] .welcomeCheerBtn {
 .welcomeCheerBtn:active {
   transform: scale(0.9);
   background: rgba(255, 215, 0, 0.12);
+}
+
+.welcomeCheerBtnCooldown {
+  opacity: 0.35;
 }
 
 .welcomeCheerHint {

@@ -12,10 +12,11 @@ interface WelcomeOverlayProps {
   onSkip: () => void;
   onStage?: { userName: string; songTitle: string };
   onCheer?: (emoji: string) => void;
+  cooldown?: boolean;
   lastSentEmoji?: string | null;
 }
 
-const WelcomeOverlay = ({ joinCode, onSubmit, onSkip, onStage, onCheer, lastSentEmoji }: WelcomeOverlayProps): React.ReactElement => {
+const WelcomeOverlay = ({ joinCode, onSubmit, onSkip, onStage, onCheer, cooldown, lastSentEmoji }: WelcomeOverlayProps): React.ReactElement => {
   const { t } = useT();
   const [welcomeName, setWelcomeName] = React.useState('');
   const [cheered, setCheered] = React.useState(false);
@@ -70,8 +71,9 @@ const WelcomeOverlay = ({ joinCode, onSubmit, onSkip, onStage, onCheer, lastSent
               {CHEER_EMOJIS.slice(0, 5).map((emoji) => (
                 <button
                   key={emoji}
-                  className={styles.welcomeCheerBtn}
+                  className={`${styles.welcomeCheerBtn} ${cooldown ? styles.welcomeCheerBtnCooldown : ''}`}
                   onClick={() => handleCheer(emoji)}
+                  disabled={cooldown}
                   aria-label={t('sing.cheer.sendAria', { emoji })}
                 >
                   {emoji}

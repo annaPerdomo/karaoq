@@ -219,6 +219,7 @@ const Sing = (): React.ReactElement => {
     sessionEndsAt,
     loading,
     onReaction: cheers.sendReaction,
+    reactionCooldown: cheers.cooldown,
     lastSentEmoji: cheers.lastSentEmoji,
     cheerNudge: cheers.cheerNudge,
     onPostpone: postpone,
@@ -280,6 +281,7 @@ const Sing = (): React.ReactElement => {
           onSkip={identity.skipName}
           onStage={showingNowPlaying && reactionsOn ? currentSong : undefined}
           onCheer={(emoji) => cheers.sendReaction(emoji, 'welcome')}
+          cooldown={cheers.cooldown}
           lastSentEmoji={cheers.lastSentEmoji}
         />
       )}

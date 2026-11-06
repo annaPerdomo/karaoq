@@ -22,6 +22,7 @@ export interface SingQueueViewProps {
   sessionEndsAt: number | null;
   loading: boolean;
   onReaction: (emoji: string, source?: CheerSource) => void;
+  reactionCooldown: boolean;
   lastSentEmoji: string | null;
   cheerNudge: boolean;
   onPostpone: (entryId: string, after: number | "end") => Promise<boolean>;
@@ -40,6 +41,7 @@ const SingSidebar = (props: SingQueueViewProps): React.ReactElement => {
     sessionEndsAt,
     loading,
     onReaction,
+    reactionCooldown,
     lastSentEmoji,
     cheerNudge,
     onPostpone,
@@ -74,6 +76,7 @@ const SingSidebar = (props: SingQueueViewProps): React.ReactElement => {
       {currentSong && isPlaying && reactionsOn ? (
         <CheerBar
           onReaction={onReaction}
+          cooldown={reactionCooldown}
           lastSentEmoji={lastSentEmoji}
           nudge={cheerNudge}
         />
