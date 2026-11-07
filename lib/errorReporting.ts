@@ -52,6 +52,12 @@ const INJECTED_FRAME = /<anonymous>:\d+/;
 // ever runs from /_next/ bundles or a .js file — the one inline script we ship
 // (_document's TV flag) is wrapped in try/catch and cannot throw.
 const OWN_SCRIPT_PATH = /\/_next\/|\.m?js\b/;
+// A WebKit frame with nothing after the "@": a script the browser app injected
+// without a URL (Chrome iOS's own Closure-compiled scripts). Our bundles always
+// load from a URL; "fn@[native code]" frames don't match and are skipped. As with
+// extensions, an error our call caused inside one of its wrappers is lost too.
+const URLLESS_FRAME = /^\s*[^\s@]*@\s*$/;
+const V8_FRAME = /^\s*at\s/;
 
 /** A fetch-wrapping extension throws from its own frame. A native error we caused
  *  inside the wrapper is lost too, but only for users running that extension. */
@@ -68,10 +74,14 @@ export function isThrownByExtension(stack: unknown): boolean {
  */
 export function isForeignStack(stack: unknown, origin: string): boolean {
   if (typeof stack !== "string") return false;
-  const frames = stack.split("\n").filter((line) => FRAME_LINE.test(line));
+  const lines = stack.split("\n");
+  // Only WebKit stacks have URL-less frames; in a V8 stack the line is message text.
+  const webkit = !lines.some((line) => V8_FRAME.test(line));
+  const isUrlless = (line: string) => webkit && URLLESS_FRAME.test(line);
+  const frames = lines.filter((line) => FRAME_LINE.test(line) || isUrlless(line));
   if (frames.length === 0) return false;
   return frames.every((line) => {
-    if (EXTENSION_URL.test(line)) return true;
+    if (isUrlless(line) || EXTENSION_URL.test(line)) return true;
     const url = line.match(HTTP_URL)?.[0];
     if (url) {
       if (OWNED_THIRD_PARTY.test(url)) return false;

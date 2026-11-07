@@ -133,6 +133,30 @@ describe("errorReporting", () => {
     expect(isForeignStack("x@https://www.karaoq.live/sw.js:1:1", origin)).toBe(false);
   });
 
+  it("drops a stack whose WebKit frames carry no URL: a script Chrome iOS injected", async () => {
+    const { isForeignStack } = await freshReporter();
+    const origin = "https://www.karaoq.live";
+
+    // Verbatim field samples (2026-11-06, CriOS on a singer's phone).
+    expect(isForeignStack("@\nGi@\n@", origin)).toBe(true);
+    expect(isForeignStack("@\n@\nGi@\n@\nPromise@[native code]\nJi@\nXx@\n@", origin)).toBe(true);
+    expect(isForeignStack("@\nzk@\nxk@\nzk@\nxk@", origin)).toBe(true);
+    // One of our bundle frames among them keeps the report.
+    expect(
+      isForeignStack("Gi@\nt@https://www.karaoq.live/_next/static/chunks/pages/sing.js:1:1", origin)
+    ).toBe(false);
+    expect(isForeignStack("Promise@[native code]", origin)).toBe(false);
+    expect(isForeignStack("Gi@\nconnect@moz-extension://abc/inpage.js:7:1", origin)).toBe(true);
+    // In a V8 stack a line ending in "@" is message text, not a frame.
+    expect(
+      isForeignStack(
+        "Error: bad address\nanna@\n    at t (https://www.karaoq.live/_next/static/chunks/a.js:1:1)",
+        origin
+      )
+    ).toBe(false);
+    expect(isForeignStack("Error: bad address\nanna@\n    at Array.map (<anonymous>)", origin)).toBe(false);
+  });
+
   it("drops reports whose stack lives entirely in an extension or injected script", async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true });
     vi.stubGlobal("fetch", fetchMock);
