@@ -1221,5 +1221,19 @@
   "release.cheers.hl2.body": "Open the display on any screen to show the lyrics, Up next, and a QR code guests can scan to join.",
   "release.cheers.hl3.title": "A printable join sign",
   "release.cheers.hl3.body": "Print a sign with the room's QR code and join code for the table or the bar. It's in the gear menu under Print join code.",
-  "whatsNew.demoSongNote": "The song in these clips, “Neon Hearts” by Velvet Static, is made up: Velvet Static is a fictional band, and its lyrics and videos were created with Claude, just for fun. Music: “Party Club Dance Music” by Tatamusic (Pixabay)."
+  "whatsNew.demoSongNote": "The song in these clips, “Neon Hearts” by Velvet Static, is made up: Velvet Static is a fictional band, and its lyrics and videos were created with Claude, just for fun. Music: “Party Club Dance Music” by Tatamusic (Pixabay).",
+  "support.eyebrow": "From the maker",
+  "support.title": "Hi, I'm Anna",
+  "support.pageTitle": "Support KaraoQ",
+  "support.homeSub": "I'm the one software engineer behind KaraoQ, and a big karaoke fan. I built it to be free for everyone, everywhere. If it made your night, a tip helps keep it running.",
+  "support.story1": "I'm a software engineer and a lifelong karaoke fan. KaraoQ started as a weekend hackathon project with my husband and three friends. We didn't get it working that weekend, but I couldn't let the idea go, so I picked it back up, finished it, and brought it all the way to production.",
+  "support.story2": "The idea was simple: no karaoke machine, no app to download, just phones, a screen, and whoever's brave enough to grab the mic first. Today I design it, build it, and keep it running on my own. Every feature, every fix, every song suggestion comes from one person who really loves this.",
+  "support.story3": "From the start I wanted KaraoQ to be free and open to anyone in the world. No ads, no sign-ups, nothing to buy. Keeping it online now costs me about {cost} a month for hosting, which I pay myself.",
+  "support.story4": "If KaraoQ has given you a great night, a tip helps cover those costs and keeps it free for the next room full of singers.",
+  "support.cta": "Leave a tip",
+  "support.fine": "Completely optional. Everything in KaraoQ stays free either way.",
+  "support.signoff": "Thanks for singing with me. — Anna",
+  "support.readStory": "Read the story",
+  "support.back": "Back home",
+  "support.footerLink": "Tip jar"
 }

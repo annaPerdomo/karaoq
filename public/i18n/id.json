@@ -1221,5 +1221,19 @@
   "release.cheers.hl2.body": "Buka tampilan di layar apa pun untuk menampilkan lirik, Selanjutnya, dan kode QR yang bisa dipindai tamu untuk bergabung.",
   "release.cheers.hl3.title": "Papan gabung yang bisa dicetak",
   "release.cheers.hl3.body": "Cetak papan berisi kode QR dan kode gabung room untuk ditaruh di meja atau bar. Ada di menu pengaturan (ikon roda gigi), di bagian Cetak kode gabung.",
-  "whatsNew.demoSongNote": "Lagu di klip ini, “Neon Hearts” dari Velvet Static, cuma karangan: Velvet Static adalah band fiktif, dan lirik serta videonya dibuat dengan Claude, sekadar untuk seru-seruan. Musik: “Party Club Dance Music” oleh Tatamusic (Pixabay)."
+  "whatsNew.demoSongNote": "Lagu di klip ini, “Neon Hearts” dari Velvet Static, cuma karangan: Velvet Static adalah band fiktif, dan lirik serta videonya dibuat dengan Claude, sekadar untuk seru-seruan. Musik: “Party Club Dance Music” oleh Tatamusic (Pixabay).",
+  "support.eyebrow": "Dari pembuatnya",
+  "support.title": "Hai, aku Anna",
+  "support.pageTitle": "Dukung KaraoQ",
+  "support.homeSub": "Aku satu-satunya software engineer di balik KaraoQ, dan penggemar berat karaoke. Aku membuatnya gratis untuk semua orang, di mana pun. Kalau malammu jadi seru karenanya, tip membantu KaraoQ tetap berjalan.",
+  "support.story1": "Aku seorang software engineer dan penggemar karaoke sejak lama. KaraoQ berawal dari proyek hackathon akhir pekan bersama suamiku dan tiga teman. Akhir pekan itu kami belum berhasil membuatnya jalan, tapi aku tidak bisa melepaskan idenya, jadi aku melanjutkannya, menyelesaikannya, dan membawanya sampai ke produksi.",
+  "support.story2": "Idenya sederhana: tanpa mesin karaoke, tanpa aplikasi yang harus diunduh, cukup ponsel, satu layar, dan siapa pun yang paling berani pegang mik duluan. Sekarang aku merancang, membangun, dan menjalankannya sendiri. Setiap fitur, setiap perbaikan, setiap saran lagu datang dari satu orang yang benar-benar menyukai ini.",
+  "support.story3": "Sejak awal aku ingin KaraoQ gratis dan terbuka untuk siapa saja di dunia. Tanpa iklan, tanpa daftar, tanpa ada yang perlu dibeli. Sekarang biaya hosting supaya tetap online sekitar {cost} per bulan, dan aku membayarnya sendiri.",
+  "support.story4": "Kalau KaraoQ sudah memberimu malam yang seru, tip membantu menutup biaya itu dan menjaganya tetap gratis untuk ruangan penuh penyanyi berikutnya.",
+  "support.cta": "Kirim tip",
+  "support.fine": "Sepenuhnya opsional. Semua fitur KaraoQ tetap gratis.",
+  "support.signoff": "Terima kasih sudah bernyanyi bersamaku. — Anna",
+  "support.readStory": "Baca ceritanya",
+  "support.back": "Kembali ke beranda",
+  "support.footerLink": "Tip"
 }

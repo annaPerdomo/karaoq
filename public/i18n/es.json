@@ -1221,5 +1221,19 @@
   "release.cheers.hl2.body": "Abre la pantalla en cualquier dispositivo para mostrar la letra, A continuación y un código QR que los invitados pueden escanear para unirse.",
   "release.cheers.hl3.title": "Un cartel imprimible para unirse",
   "release.cheers.hl3.body": "Imprime un cartel con el código QR y el código de la sala para la mesa o la barra. Está en el menú de ajustes, en Imprimir código para unirse.",
-  "whatsNew.demoSongNote": "La canción de estos clips, “Neon Hearts” de Velvet Static, es inventada: Velvet Static es una banda ficticia, y su letra y sus videos se crearon con Claude, solo por diversión. Música: “Party Club Dance Music” de Tatamusic (Pixabay)."
+  "whatsNew.demoSongNote": "La canción de estos clips, “Neon Hearts” de Velvet Static, es inventada: Velvet Static es una banda ficticia, y su letra y sus videos se crearon con Claude, solo por diversión. Música: “Party Club Dance Music” de Tatamusic (Pixabay).",
+  "support.eyebrow": "De quien lo creó",
+  "support.title": "Hola, soy Anna",
+  "support.pageTitle": "Apoya KaraoQ",
+  "support.homeSub": "Soy la única ingeniera de software detrás de KaraoQ, y me encanta el karaoke. Lo creé para que fuera gratis para todo el mundo, en cualquier lugar. Si te alegró la noche, una propina ayuda a mantenerlo en marcha.",
+  "support.story1": "Soy ingeniera de software y fan del karaoke de toda la vida. KaraoQ empezó como un proyecto de hackathon de fin de semana con mi esposo y tres amigos. Ese fin de semana no logramos que funcionara, pero no pude soltar la idea, así que lo retomé, lo terminé y lo llevé hasta producción.",
+  "support.story2": "La idea era sencilla: sin máquina de karaoke, sin apps que descargar, solo teléfonos, una pantalla y quien se anime primero a agarrar el micrófono. Hoy lo diseño, lo programo y lo mantengo yo sola. Cada función, cada arreglo y cada sugerencia de canción viene de una persona a la que de verdad le encanta esto.",
+  "support.story3": "Desde el principio quise que KaraoQ fuera gratis y abierto para cualquiera en el mundo. Sin anuncios, sin registros, sin nada que comprar. Mantenerlo en línea ahora me cuesta unos {cost} al mes de hosting, que pago yo misma.",
+  "support.story4": "Si KaraoQ te ha dado una gran noche, una propina ayuda a cubrir esos costos y a que siga siendo gratis para la próxima sala llena de cantantes.",
+  "support.cta": "Dejar una propina",
+  "support.fine": "Totalmente opcional. Todo en KaraoQ sigue siendo gratis de cualquier forma.",
+  "support.signoff": "Gracias por cantar conmigo. — Anna",
+  "support.readStory": "Lee la historia",
+  "support.back": "Volver al inicio",
+  "support.footerLink": "Propinas"
 }

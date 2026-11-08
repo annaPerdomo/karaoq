@@ -4,6 +4,7 @@ import styles from "../../styles/Host.module.css";
 import { useT } from "../../lib/i18n/I18nProvider";
 import { renderWithHeart } from "../../lib/i18n/renderWithHeart";
 import FeedbackTrigger from "../feedback/FeedbackTrigger";
+import TipJarLink from "../support/TipJarLink";
 
 // Mobile page footer: on phones the transport footer hides (it would land
 // mid-page, above the stacked queue), so this pins the attribution to the
@@ -29,6 +30,8 @@ export function MobileFooter({
         <Link href="/terms" className={styles.transportLegalLink}>
           {t('footer.terms')}
         </Link>
+        <span className={styles.transportLegalSep} aria-hidden="true">·</span>
+        <TipJarLink className={styles.transportLegalLink} />
       </div>
       <a
         href="https://variationsonastring.com"

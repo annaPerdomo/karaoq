@@ -3,6 +3,7 @@ import Link from 'next/link';
 
 import styles from '../../styles/Sing.module.css';
 import FeedbackTrigger from '../feedback/FeedbackTrigger';
+import TipJarLink from '../support/TipJarLink';
 import { useT } from '../../lib/i18n/I18nProvider';
 import { renderWithHeart } from '../../lib/i18n/renderWithHeart';
 
@@ -26,6 +27,8 @@ export default function SingFooter({ roomId }: { roomId: string }) {
         <Link href="/terms" className={styles.inlineFooterLink}>
           {t('footer.terms')}
         </Link>
+        <span className={styles.inlineFooterLegalSep} aria-hidden="true">·</span>
+        <TipJarLink className={styles.inlineFooterLink} />
       </div>
       <a
         href="https://variationsonastring.com"

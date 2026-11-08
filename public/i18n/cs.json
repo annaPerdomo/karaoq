@@ -1221,5 +1221,19 @@
   "release.cheers.hl2.body": "Otevři zobrazení na jakékoli obrazovce a ukaž text písně, sekci Na řadě a QR kód, který hosté naskenují, aby se připojili.",
   "release.cheers.hl3.title": "Cedulka k tisku",
   "release.cheers.hl3.body": "Vytiskni cedulku s QR kódem a kódem pro připojení místnosti na stůl nebo na bar. Najdeš ji v nabídce nastavení (ozubené kolečko) pod Vytisknout kód pro připojení.",
-  "whatsNew.demoSongNote": "Píseň v těchto klipech, „Neon Hearts“ od Velvet Static, je vymyšlená: Velvet Static je smyšlená kapela a její text i videa vznikly s Claudem jen pro zábavu. Hudba: „Party Club Dance Music“ od Tatamusic (Pixabay)."
+  "whatsNew.demoSongNote": "Píseň v těchto klipech, „Neon Hearts“ od Velvet Static, je vymyšlená: Velvet Static je smyšlená kapela a její text i videa vznikly s Claudem jen pro zábavu. Hudba: „Party Club Dance Music“ od Tatamusic (Pixabay).",
+  "support.eyebrow": "Od autorky",
+  "support.title": "Ahoj, jsem Anna",
+  "support.pageTitle": "Podpořte KaraoQ",
+  "support.homeSub": "Jsem jediná softwarová vývojářka za KaraoQ a velká fanynka karaoke. Vytvořila jsem ho, aby byl zdarma pro každého a všude. Pokud vám zpříjemnil večer, spropitné pomůže udržet ho v chodu.",
+  "support.story1": "Jsem softwarová vývojářka a odjakživa fanynka karaoke. KaraoQ začal jako víkendový hackathonový projekt s mým manželem a třemi přáteli. Ten víkend se nám ho nepodařilo rozchodit, ale ten nápad mi nedal pokoj, tak jsem se k němu vrátila, dokončila ho a dotáhla až do ostrého provozu.",
+  "support.story2": "Nápad byl jednoduchý: žádný karaoke přístroj, žádná aplikace ke stažení, jen telefony, obrazovka a ten, kdo se jako první odváží vzít mikrofon. Dnes ho navrhuji, programuji a provozuji sama. Každá funkce, každá oprava i každý tip na písničku pochází od jednoho člověka, který to má opravdu rád.",
+  "support.story3": "Od začátku jsem chtěla, aby byl KaraoQ zdarma a otevřený komukoli na světě. Žádné reklamy, žádná registrace, nic ke koupi. Provoz mě teď stojí asi {cost} měsíčně za hosting a platím ho sama.",
+  "support.story4": "Pokud vám KaraoQ přinesl skvělý večer, spropitné pomůže tyto náklady pokrýt a udrží ho zdarma pro další místnost plnou zpěváků.",
+  "support.cta": "Poslat spropitné",
+  "support.fine": "Zcela dobrovolné. Všechno v KaraoQ zůstává zdarma tak jako tak.",
+  "support.signoff": "Díky, že zpíváte se mnou. — Anna",
+  "support.readStory": "Přečíst příběh",
+  "support.back": "Zpět domů",
+  "support.footerLink": "Spropitné"
 }

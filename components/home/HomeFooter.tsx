@@ -5,6 +5,7 @@ import styles from '../../styles/Home.module.css';
 import { useT } from '../../lib/i18n/I18nProvider';
 import { renderWithHeart } from '../../lib/i18n/renderWithHeart';
 import FeedbackTrigger from '../feedback/FeedbackTrigger';
+import TipJarLink from '../support/TipJarLink';
 
 export default function HomeFooter() {
   const { t } = useT();
@@ -41,6 +42,8 @@ export default function HomeFooter() {
           <Link href="/terms" className={styles.footerLink}>
             {t('footer.terms')}
           </Link>
+          <span className={styles.footerLegalSep} aria-hidden="true">·</span>
+          <TipJarLink className={styles.footerLink} />
         </div>
         <a
           href="https://variationsonastring.com"

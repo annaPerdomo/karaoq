@@ -1068,7 +1068,7 @@
 }
 
 .transportFooterStart {
-  /* Only route to /privacy and /terms from a room: _app hides AppFooter on /host and /remote. */
+  /* Only route to /privacy, /terms and /support from a room: _app hides AppFooter on /host and /remote. */
   grid-column: 1;
   justify-self: start;
   display: flex;

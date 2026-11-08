@@ -20,6 +20,7 @@ import SetupSection from './home/SetupSection';
 import FeaturesSection from './home/FeaturesSection';
 import UseCasesSection from './home/UseCasesSection';
 import FaqSection from './home/FaqSection';
+import SupportSection from './home/SupportSection';
 import HomeFooter from './home/HomeFooter';
 import GlobalReach from './home/GlobalReach';
 import Reveal from './home/Reveal';
@@ -275,6 +276,7 @@ const Home = ({ stats = EMPTY_STATS }: HomeProps): React.ReactElement => {
         <FeaturesSection />
         <UseCasesSection />
         <FaqSection />
+        <SupportSection />
 
         <section className={styles.ctaSection}>
           <Reveal>

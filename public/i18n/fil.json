@@ -1221,5 +1221,19 @@
   "release.cheers.hl2.body": "Buksan ang display sa kahit anong screen para ipakita ang lyrics, ang Up Next, at QR code na puwedeng i-scan ng mga bisita para sumali.",
   "release.cheers.hl3.title": "Printable na join sign",
   "release.cheers.hl3.body": "Mag-print ng sign na may QR code at join code ng room para sa mesa o sa bar. Nasa settings (yung gear icon) ito, sa ilalim ng I-print ang join code.",
-  "whatsNew.demoSongNote": "Gawa-gawa lang ang kanta sa mga clip na ito, ang “Neon Hearts” ng Velvet Static: hindi totoong banda ang Velvet Static, at ang lyrics at mga video nito ay ginawa gamit ang Claude, para lang sa katuwaan. Musika: “Party Club Dance Music” ni Tatamusic (Pixabay)."
+  "whatsNew.demoSongNote": "Gawa-gawa lang ang kanta sa mga clip na ito, ang “Neon Hearts” ng Velvet Static: hindi totoong banda ang Velvet Static, at ang lyrics at mga video nito ay ginawa gamit ang Claude, para lang sa katuwaan. Musika: “Party Club Dance Music” ni Tatamusic (Pixabay).",
+  "support.eyebrow": "Mula sa gumawa",
+  "support.title": "Hi, ako si Anna",
+  "support.pageTitle": "Suportahan ang KaraoQ",
+  "support.homeSub": "Ako ang nag-iisang software engineer sa likod ng KaraoQ, at mahilig talaga ako sa karaoke. Ginawa ko itong libre para sa lahat, saan man sa mundo. Kung napasaya nito ang gabi mo, makakatulong ang tip para tuloy-tuloy ito.",
+  "support.story1": "Software engineer ako at matagal nang fan ng karaoke. Nagsimula ang KaraoQ bilang weekend hackathon project kasama ang asawa ko at tatlong kaibigan. Hindi namin ito napagana noong weekend na iyon, pero hindi ko mabitawan ang ideya, kaya itinuloy ko ito, tinapos, at dinala hanggang production.",
+  "support.story2": "Simple lang ang ideya: walang karaoke machine, walang app na ida-download, mga phone lang, isang screen, at kung sino ang unang magtatapang humawak ng mic. Ngayon, ako mismo ang nagdidisenyo, gumagawa, at nagpapatakbo nito. Bawat feature, bawat ayos, bawat song suggestion ay galing sa isang taong talagang mahal ito.",
+  "support.story3": "Simula pa lang, gusto kong libre at bukas ang KaraoQ sa kahit sino sa mundo. Walang ads, walang sign-up, walang bibilhin. Ngayon, mga {cost} kada buwan ang gastos ko sa hosting para manatili itong online, at ako ang nagbabayad nito.",
+  "support.story4": "Kung nagbigay sa iyo ng masayang gabi ang KaraoQ, makakatulong ang tip sa mga gastos na iyon at mananatili itong libre para sa susunod na kuwartong puno ng mga kumakanta.",
+  "support.cta": "Mag-iwan ng tip",
+  "support.fine": "Hindi ito kailangan. Mananatiling libre ang lahat sa KaraoQ, may tip man o wala.",
+  "support.signoff": "Salamat sa pagkanta kasama ko. — Anna",
+  "support.readStory": "Basahin ang kuwento",
+  "support.back": "Bumalik sa home",
+  "support.footerLink": "Tip jar"
 }

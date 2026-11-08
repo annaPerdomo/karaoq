@@ -6,6 +6,7 @@ import { useT } from "../../lib/i18n/I18nProvider";
 import { renderWithHeart } from "../../lib/i18n/renderWithHeart";
 import FullscreenToggle from "../FullscreenToggle";
 import FeedbackTrigger from "../feedback/FeedbackTrigger";
+import TipJarLink from "../support/TipJarLink";
 import { Icons } from "./icons";
 import { formatSongTitle } from "./utils";
 import { formatGap, formatSecondsLeft } from "../../lib/duration";
@@ -259,6 +260,8 @@ export function TransportBar({
           <Link href="/terms" className={styles.transportLegalLink}>
             {t('footer.terms')}
           </Link>
+          <span className={styles.transportLegalSep} aria-hidden="true">·</span>
+          <TipJarLink className={styles.transportLegalLink} />
         </div>
         <a
           href="https://variationsonastring.com"

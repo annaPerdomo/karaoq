@@ -1221,5 +1221,19 @@
   "release.cheers.hl2.body": "どんな画面でも表示画面を開けば、歌詞、「次の曲」、ゲストが読み取って参加できる QR コードを表示できます。",
   "release.cheers.hl3.title": "印刷できる参加サイン",
   "release.cheers.hl3.body": "ルームの QR コードと参加コードが入ったサインを印刷して、テーブルやバーカウンターに置けます。設定（歯車）メニューの「参加コードを印刷」から使えます。",
-  "whatsNew.demoSongNote": "このクリップの曲「Neon Hearts」（Velvet Static）は架空のものです。Velvet Static は実在しないバンドで、歌詞と映像は Claude で楽しみのために作りました。音楽：Tatamusic「Party Club Dance Music」（Pixabay）。"
+  "whatsNew.demoSongNote": "このクリップの曲「Neon Hearts」（Velvet Static）は架空のものです。Velvet Static は実在しないバンドで、歌詞と映像は Claude で楽しみのために作りました。音楽：Tatamusic「Party Club Dance Music」（Pixabay）。",
+  "support.eyebrow": "作った人より",
+  "support.title": "こんにちは、Annaです",
+  "support.pageTitle": "KaraoQを応援する",
+  "support.homeSub": "KaraoQは、カラオケが大好きなソフトウェアエンジニアの私がひとりで作っています。世界中の誰もが無料で使えるように作りました。楽しい夜になったら、チップで運営を応援してもらえるとうれしいです。",
+  "support.story1": "私はソフトウェアエンジニアで、昔からのカラオケ好きです。KaraoQは、夫と3人の友だちと参加した週末のハッカソンのプロジェクトから始まりました。その週末には完成しませんでしたが、どうしてもアイデアを諦められず、私がひとりで続きを作り、本番公開までやり遂げました。",
+  "support.story2": "アイデアはシンプルです。カラオケ機器もアプリのダウンロードもいらない。スマホと画面、そして最初にマイクを握る勇気のある人がいれば十分。今はデザインも開発も運営も、すべてひとりでやっています。機能も修正も曲のおすすめも、これが本当に好きなひとりの人間から生まれています。",
+  "support.story3": "最初から、KaraoQは世界中の誰でも無料で使えるものにしたいと思っていました。広告なし、登録なし、買うものもなし。今はサーバー代として毎月約{cost}かかっていて、自分で払っています。",
+  "support.story4": "KaraoQで素敵な夜を過ごせたなら、チップがその費用の助けになり、次に歌うみんなのためにも無料のまま続けられます。",
+  "support.cta": "チップを送る",
+  "support.fine": "もちろん任意です。チップがなくても、KaraoQはすべて無料のままです。",
+  "support.signoff": "一緒に歌ってくれてありがとう。— Anna",
+  "support.readStory": "ストーリーを読む",
+  "support.back": "ホームに戻る",
+  "support.footerLink": "チップ"
 }

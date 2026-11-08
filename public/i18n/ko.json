@@ -1221,5 +1221,19 @@
   "release.cheers.hl2.body": "어떤 화면에서든 디스플레이를 열면 가사, '다음 곡', 그리고 게스트가 스캔해서 참여할 수 있는 QR 코드가 표시돼요.",
   "release.cheers.hl3.title": "인쇄용 참여 안내판",
   "release.cheers.hl3.body": "방의 QR 코드와 참여 코드가 담긴 안내판을 인쇄해 테이블이나 바에 놓아두세요. 설정(톱니바퀴) 메뉴의 '참여 코드 인쇄'에 있어요.",
-  "whatsNew.demoSongNote": "이 클립의 노래 “Neon Hearts”(Velvet Static)는 지어낸 곡이에요. Velvet Static은 가상의 밴드이고, 가사와 영상은 재미로 Claude와 함께 만들었어요. 음악: Tatamusic의 “Party Club Dance Music”(Pixabay)."
+  "whatsNew.demoSongNote": "이 클립의 노래 “Neon Hearts”(Velvet Static)는 지어낸 곡이에요. Velvet Static은 가상의 밴드이고, 가사와 영상은 재미로 Claude와 함께 만들었어요. 음악: Tatamusic의 “Party Club Dance Music”(Pixabay).",
+  "support.eyebrow": "만든 사람이 전하는 말",
+  "support.title": "안녕하세요, Anna예요",
+  "support.pageTitle": "KaraoQ 응원하기",
+  "support.homeSub": "KaraoQ는 노래방을 정말 좋아하는 소프트웨어 엔지니어인 제가 혼자 만들고 있어요. 전 세계 누구나 무료로 쓸 수 있도록 만들었어요. 즐거운 밤이 되셨다면, 팁으로 운영을 응원해 주세요.",
+  "support.story1": "저는 소프트웨어 엔지니어이자 오랜 노래방 팬이에요. KaraoQ는 남편, 친구 세 명과 함께한 주말 해커톤 프로젝트로 시작했어요. 그 주말에는 완성하지 못했지만 아이디어를 놓을 수가 없어서, 제가 다시 이어받아 끝까지 만들고 실제 서비스로 출시했어요.",
+  "support.story2": "아이디어는 간단했어요. 노래방 기계도, 앱 설치도 필요 없이 휴대폰과 화면, 그리고 먼저 마이크를 잡을 용기 있는 사람만 있으면 돼요. 지금은 디자인부터 개발, 운영까지 모두 혼자 하고 있어요. 모든 기능, 모든 수정, 모든 곡 추천이 이걸 정말 좋아하는 한 사람에게서 나와요.",
+  "support.story3": "처음부터 KaraoQ를 전 세계 누구에게나 무료로 열어 두고 싶었어요. 광고도, 가입도, 결제도 없어요. 지금은 서비스를 유지하는 데 호스팅 비용이 매달 약 {cost} 들고, 제가 직접 내고 있어요.",
+  "support.story4": "KaraoQ로 즐거운 밤을 보내셨다면, 팁이 그 비용에 보탬이 되고 다음에 노래할 사람들을 위해서도 계속 무료로 유지할 수 있어요.",
+  "support.cta": "팁 보내기",
+  "support.fine": "전적으로 선택이에요. 팁과 상관없이 KaraoQ의 모든 기능은 계속 무료예요.",
+  "support.signoff": "함께 노래해 줘서 고마워요. — Anna",
+  "support.readStory": "이야기 읽기",
+  "support.back": "홈으로",
+  "support.footerLink": "팁"
 }

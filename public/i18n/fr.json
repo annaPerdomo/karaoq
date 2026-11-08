@@ -1221,5 +1221,19 @@
   "release.cheers.hl2.body": "Ouvre l'affichage sur n'importe quel écran pour montrer les paroles, À suivre et un QR code que les invités peuvent scanner pour rejoindre.",
   "release.cheers.hl3.title": "Une affiche à imprimer pour rejoindre",
   "release.cheers.hl3.body": "Imprime une affiche avec le QR code et le code d'accès de la salle pour la table ou le bar. Elle se trouve dans le menu des réglages, sous Imprimer le code d'accès.",
-  "whatsNew.demoSongNote": "La chanson de ces extraits, « Neon Hearts » de Velvet Static, est inventée : Velvet Static est un groupe fictif, et ses paroles et ses vidéos ont été créées avec Claude, juste pour s'amuser. Musique : « Party Club Dance Music » de Tatamusic (Pixabay)."
+  "whatsNew.demoSongNote": "La chanson de ces extraits, « Neon Hearts » de Velvet Static, est inventée : Velvet Static est un groupe fictif, et ses paroles et ses vidéos ont été créées avec Claude, juste pour s'amuser. Musique : « Party Club Dance Music » de Tatamusic (Pixabay).",
+  "support.eyebrow": "Un mot de la créatrice",
+  "support.title": "Salut, moi c'est Anna",
+  "support.pageTitle": "Soutenir KaraoQ",
+  "support.homeSub": "Je suis la seule ingénieure logiciel derrière KaraoQ, et une grande fan de karaoké. Je l'ai créé pour qu'il soit gratuit pour tout le monde, partout. S'il a égayé votre soirée, un pourboire aide à le faire vivre.",
+  "support.story1": "Je suis ingénieure logiciel et fan de karaoké depuis toujours. KaraoQ a commencé comme un projet de hackathon le temps d'un week-end, avec mon mari et trois amis. Ce week-end-là, on n'a pas réussi à le faire marcher, mais je n'arrivais pas à lâcher l'idée : je l'ai repris, je l'ai terminé et je l'ai mené jusqu'en production.",
+  "support.story2": "L'idée était simple : pas de machine à karaoké, pas d'appli à télécharger, juste des téléphones, un écran, et celui ou celle qui ose prendre le micro en premier. Aujourd'hui, je le conçois, le développe et le fais tourner toute seule. Chaque fonctionnalité, chaque correction, chaque suggestion de chanson vient d'une personne qui adore vraiment ça.",
+  "support.story3": "Dès le départ, je voulais que KaraoQ soit gratuit et ouvert à tout le monde, partout dans le monde. Pas de pub, pas d'inscription, rien à acheter. Le garder en ligne me coûte aujourd'hui environ {cost} par mois d'hébergement, que je paie moi-même.",
+  "support.story4": "Si KaraoQ vous a offert une super soirée, un pourboire aide à couvrir ces frais et à le garder gratuit pour la prochaine salle pleine de chanteurs.",
+  "support.cta": "Laisser un pourboire",
+  "support.fine": "Entièrement facultatif. Tout dans KaraoQ reste gratuit dans tous les cas.",
+  "support.signoff": "Merci de chanter avec moi. — Anna",
+  "support.readStory": "Lire l'histoire",
+  "support.back": "Retour à l'accueil",
+  "support.footerLink": "Pourboire"
 }

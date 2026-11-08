@@ -1221,5 +1221,19 @@
   "release.cheers.hl2.body": "Abra a tela de exibição em qualquer aparelho para mostrar a letra, Próximas e um QR code que os convidados podem escanear para entrar.",
   "release.cheers.hl3.title": "Uma placa para imprimir",
   "release.cheers.hl3.body": "Imprima uma placa com o QR code e o código da sala para a mesa ou o balcão. Fica no menu de configurações, em Imprimir código.",
-  "whatsNew.demoSongNote": "A música destes clipes, “Neon Hearts”, da Velvet Static, é inventada: a Velvet Static é uma banda fictícia, e a letra e os vídeos foram criados com o Claude, só por diversão. Música: “Party Club Dance Music”, de Tatamusic (Pixabay)."
+  "whatsNew.demoSongNote": "A música destes clipes, “Neon Hearts”, da Velvet Static, é inventada: a Velvet Static é uma banda fictícia, e a letra e os vídeos foram criados com o Claude, só por diversão. Música: “Party Club Dance Music”, de Tatamusic (Pixabay).",
+  "support.eyebrow": "De quem criou",
+  "support.title": "Oi, eu sou a Anna",
+  "support.pageTitle": "Apoie o KaraoQ",
+  "support.homeSub": "Sou a única engenheira de software por trás do KaraoQ, e uma grande fã de karaokê. Criei ele para ser gratuito para todo mundo, em qualquer lugar. Se ele animou a sua noite, uma gorjeta ajuda a mantê-lo no ar.",
+  "support.story1": "Sou engenheira de software e fã de karaokê desde sempre. O KaraoQ começou como um projeto de hackathon de fim de semana com meu marido e três amigos. Naquele fim de semana a gente não conseguiu fazer funcionar, mas eu não consegui largar a ideia, então retomei, terminei e levei até a produção.",
+  "support.story2": "A ideia era simples: sem máquina de karaokê, sem app para baixar, só celulares, uma tela e quem tiver coragem de pegar o microfone primeiro. Hoje eu desenho, programo e mantenho tudo sozinha. Cada recurso, cada correção e cada sugestão de música vem de uma pessoa que ama muito isso.",
+  "support.story3": "Desde o começo eu quis que o KaraoQ fosse gratuito e aberto para qualquer pessoa no mundo. Sem anúncios, sem cadastro, nada para comprar. Hoje, manter ele no ar me custa cerca de {cost} por mês de hospedagem, que eu mesma pago.",
+  "support.story4": "Se o KaraoQ te deu uma noite incrível, uma gorjeta ajuda a cobrir esses custos e mantém tudo gratuito para a próxima sala cheia de cantores.",
+  "support.cta": "Deixar uma gorjeta",
+  "support.fine": "Totalmente opcional. Tudo no KaraoQ continua gratuito de qualquer jeito.",
+  "support.signoff": "Obrigada por cantar comigo. — Anna",
+  "support.readStory": "Leia a história",
+  "support.back": "Voltar ao início",
+  "support.footerLink": "Gorjeta"
 }

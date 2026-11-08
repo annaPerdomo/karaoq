@@ -1221,5 +1221,19 @@
   "release.cheers.hl2.body": "Öffne das Display auf einem beliebigen Bildschirm, um den Songtext, Als Nächstes und einen QR-Code zu zeigen, den Gäste zum Beitreten scannen.",
   "release.cheers.hl3.title": "Ein Beitrittsschild zum Ausdrucken",
   "release.cheers.hl3.body": "Druck ein Schild mit dem QR-Code und dem Beitrittscode des Raums für den Tisch oder die Bar. Du findest es im Einstellungsmenü (Zahnrad) unter Beitrittscode drucken.",
-  "whatsNew.demoSongNote": "Der Song in diesen Clips, „Neon Hearts“ von Velvet Static, ist ausgedacht: Velvet Static ist eine erfundene Band, Text und Videos sind mit Claude entstanden, einfach zum Spaß. Musik: „Party Club Dance Music“ von Tatamusic (Pixabay)."
+  "whatsNew.demoSongNote": "Der Song in diesen Clips, „Neon Hearts“ von Velvet Static, ist ausgedacht: Velvet Static ist eine erfundene Band, Text und Videos sind mit Claude entstanden, einfach zum Spaß. Musik: „Party Club Dance Music“ von Tatamusic (Pixabay).",
+  "support.eyebrow": "Von der Macherin",
+  "support.title": "Hi, ich bin Anna",
+  "support.pageTitle": "KaraoQ unterstützen",
+  "support.homeSub": "Ich bin die einzige Softwareentwicklerin hinter KaraoQ – und großer Karaoke-Fan. Ich habe es gebaut, damit es für alle kostenlos ist, überall auf der Welt. Wenn es deinen Abend besser gemacht hat, hilft ein Trinkgeld, es am Laufen zu halten.",
+  "support.story1": "Ich bin Softwareentwicklerin und seit jeher Karaoke-Fan. KaraoQ hat als Wochenend-Hackathon-Projekt mit meinem Mann und drei Freunden angefangen. An dem Wochenende haben wir es nicht zum Laufen gebracht, aber die Idee hat mich nicht losgelassen – also habe ich weitergemacht, es fertig gebaut und bis in die Produktion gebracht.",
+  "support.story2": "Die Idee war einfach: keine Karaoke-Maschine, keine App zum Herunterladen – nur Handys, ein Bildschirm und wer sich als Erstes ans Mikro traut. Heute entwerfe, baue und betreibe ich es allein. Jede Funktion, jeder Fix und jeder Songvorschlag kommt von einer Person, die das hier wirklich liebt.",
+  "support.story3": "Von Anfang an wollte ich, dass KaraoQ kostenlos und für alle auf der Welt offen ist. Keine Werbung, keine Anmeldung, nichts zu kaufen. Das Hosting kostet mich inzwischen etwa {cost} im Monat, und das zahle ich selbst.",
+  "support.story4": "Wenn dir KaraoQ einen tollen Abend beschert hat, hilft ein Trinkgeld, diese Kosten zu decken – und hält es kostenlos für den nächsten Raum voller Sänger*innen.",
+  "support.cta": "Trinkgeld geben",
+  "support.fine": "Ganz freiwillig. Alles in KaraoQ bleibt so oder so kostenlos.",
+  "support.signoff": "Danke, dass du mit mir singst. — Anna",
+  "support.readStory": "Die Geschichte lesen",
+  "support.back": "Zur Startseite",
+  "support.footerLink": "Trinkgeld"
 }
