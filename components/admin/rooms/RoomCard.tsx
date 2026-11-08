@@ -67,6 +67,7 @@ export default function RoomCard({
   onCheer: (emoji: string) => Promise<boolean>;
 }): React.ReactElement {
   const live = isLive(room.lastActivity);
+  const cheerable = live && room.playing === true;
   const boards = room.requests + room.singWithMe;
   const [cheerLocked, setCheerLocked] = React.useState(false);
   const cheerTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -86,7 +87,7 @@ export default function RoomCard({
     >
       <button
         type="button"
-        className={styles.roomMain}
+        className={`${styles.roomMain} ${cheerable ? styles.roomMainCheerable : ''}`}
         onClick={onToggle}
         aria-expanded={expanded}
       >
@@ -174,20 +175,23 @@ export default function RoomCard({
       </button>
 
       <div className={styles.roomActions}>
-        {live && room.playing &&
-          ADMIN_CHEER_EMOJIS.map((emoji) => (
-            <button
-              key={emoji}
-              type="button"
-              className={`${styles.roomActionBtn} ${styles.roomActionCheer}`}
-              onClick={() => void cheer(emoji)}
-              disabled={cheerLocked}
-              title={`Send ${emoji} to the room's screens`}
-              aria-label={`Send ${emoji} cheer to room ${room.roomId}`}
-            >
-              {emoji}
-            </button>
-          ))}
+        {cheerable && (
+          <span className={styles.roomCheers}>
+            {ADMIN_CHEER_EMOJIS.map((emoji) => (
+              <button
+                key={emoji}
+                type="button"
+                className={`${styles.roomActionBtn} ${styles.roomActionCheer}`}
+                onClick={() => void cheer(emoji)}
+                disabled={cheerLocked}
+                title={`Send ${emoji} to the room's screens`}
+                aria-label={`Send ${emoji} cheer to room ${room.roomId}`}
+              >
+                {emoji}
+              </button>
+            ))}
+          </span>
+        )}
         <a
           className={styles.roomActionBtn}
           href={`/host/${room.roomId}?admin=1`}

@@ -653,7 +653,7 @@
   border: none;
   color: inherit;
   text-align: left;
-  padding: 0.8rem 5.6rem 0.8rem 1rem;
+  padding: 0.8rem 6.5rem 0.8rem 1rem;
   border-radius: 14px;
 }
 
@@ -792,6 +792,17 @@
   gap: 0.3rem;
 }
 
+/* The action row is absolute, so the card reserves its width in padding. */
+.roomMainCheerable {
+  padding-right: 12.8rem;
+}
+
+.roomCheers {
+  display: flex;
+  gap: 0.3rem;
+  margin-right: 0.45rem;
+}
+
 .roomActionCheer {
   font-size: 0.95rem;
   border-color: rgba(52, 211, 153, 0.35);
@@ -846,6 +857,11 @@
       'code when lang chevron'
       'code stats fair chevron';
     row-gap: 0.3rem;
+  }
+  /* Six buttons would eat a third of the card here; stack them above instead. */
+  .roomMainCheerable {
+    padding-right: 1rem;
+    padding-top: 2.4rem;
   }
   .roomCode { grid-area: code; }
   .roomWhen { grid-area: when; }
