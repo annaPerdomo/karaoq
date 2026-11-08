@@ -5,6 +5,9 @@ import { liveRoomCount } from "../../../lib/liveRooms";
 import { getAnalyticsDb } from "../../../lib/mongodb";
 import { normalizeAutoAdvance } from "../types";
 
+// Longer than any song the player will sit on; past it the flag is a stale write.
+const PLAYING_STALE_MS = 20 * 60 * 1000;
+
 const DEFAULT_LIMIT = 25;
 const MAX_LIMIT = 100;
 const MAX_QUERY_LENGTH = 24;
@@ -250,7 +253,7 @@ export default async function handler(
             let: { rid: "$roomId" },
             pipeline: [
               { $match: { $expr: { $eq: ["$id", "$$rid"] } } },
-              { $project: { _id: 0, lastActivity: 1, autoAdvance: 1 } },
+              { $project: { _id: 0, lastActivity: 1, autoAdvance: 1, isPlaying: 1, playStartedAt: 1 } },
             ],
             as: "roomDoc",
           },
@@ -307,6 +310,19 @@ export default async function handler(
               $ifNull: [{ $arrayElemAt: ["$roomDoc.autoAdvance", 0] }, null],
             },
             autoAdvanceChanged: { $gt: [countOfType("auto_advance_set"), 0] },
+            // Bounded by the start stamp: isPlaying is only healed on a room GET,
+            // so an abandoned room keeps it.
+            playing: {
+              $and: [
+                { $eq: [{ $arrayElemAt: ["$roomDoc.isPlaying", 0] }, true] },
+                {
+                  $gt: [
+                    { $ifNull: [{ $arrayElemAt: ["$roomDoc.playStartedAt", 0] }, new Date(0)] },
+                    new Date(Date.now() - PLAYING_STALE_MS),
+                  ],
+                },
+              ],
+            },
             // Rides on room_created itself; null before it was recorded — which is most rooms, so
             // the language a room is *shown* as is the participants' mix below, not this.
             locale: { $ifNull: ["$locale", null] },

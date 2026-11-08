@@ -2,13 +2,11 @@ import { NextApiRequest, NextApiResponse } from "next";
 import { ApiError, Reaction } from "../../types";
 import { CHEER_EMOJIS, CHEER_SOURCES, CheerSource } from "../../../../app/queue/cheerConstants";
 import { trackEvent } from "../../../../lib/analytics";
+import { appendReaction, liveReactions, MAX_REACTIONS } from "../../../../lib/cheers";
 import { sharesSinger } from "../../../../lib/fairQueue";
 import { MAX_ENTRY_ID_LENGTH, MAX_NAME_LENGTH, rateLimit } from "../../../../lib/limits";
 import { getRoomsCollection } from "../../../../lib/mongodb";
 import { normalizeRoomId } from "../../../../lib/roomCode";
-
-const MAX_REACTIONS = 50;
-const REACTION_TTL_MS = 30000;
 
 const ALLOWED_REACTIONS = new Set(CHEER_EMOJIS);
 
@@ -72,9 +70,7 @@ export default async function handler(
     }
 
     const now = Date.now();
-    const reactions = (room.reactions ?? []).filter(
-      (r) => now - r.timestamp < REACTION_TTL_MS
-    );
+    const reactions = liveReactions(room, now);
 
     const newReaction: Reaction = {
       id: reactionId,
@@ -85,17 +81,7 @@ export default async function handler(
 
     const updated = [...reactions, newReaction].slice(-MAX_REACTIONS);
 
-    // Atomic $push instead of a $set of the merged array: simultaneous
-    // reactions used to collapse to ~1 as each write clobbered the others —
-    // exactly during the hype bursts reactions exist for. $slice keeps the
-    // doc bounded; expired entries age out of the window as new ones land.
-    await collection.updateOne(
-      { id: roomId },
-      {
-        $push: { reactions: { $each: [newReaction], $slice: -MAX_REACTIONS } },
-        $set: { lastActivity: new Date() },
-      }
-    );
+    await appendReaction(collection, roomId, newReaction);
 
     const tracked = trackEvent(req, "reaction_sent", {
       roomId: roomId as string,

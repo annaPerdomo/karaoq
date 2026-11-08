@@ -16,6 +16,9 @@ import {
 import { BoardIcon, HeartIcon, MicIcon, PeopleIcon } from '../icons';
 import { TapHint } from '../TapHint';
 import RoomDossier from './RoomDossier';
+import { CHEER_EMOJIS, REACTION_COOLDOWN_MS } from '../../../app/queue/cheerConstants';
+
+const ADMIN_CHEER_EMOJIS = CHEER_EMOJIS.slice(0, 3);
 
 function locationText(room: RoomRow): string {
   if (room.city) return `${safeDecode(room.city)}, ${room.country ?? ''}`.replace(/, $/, '');
@@ -51,6 +54,7 @@ export default function RoomCard({
   onToggle,
   onMerge,
   onDelete,
+  onCheer,
 }: {
   room: RoomRow;
   secret: string;
@@ -60,9 +64,19 @@ export default function RoomCard({
   onToggle: () => void;
   onMerge: () => void;
   onDelete: () => void;
+  onCheer: (emoji: string) => Promise<boolean>;
 }): React.ReactElement {
   const live = isLive(room.lastActivity);
   const boards = room.requests + room.singWithMe;
+  const [cheerLocked, setCheerLocked] = React.useState(false);
+  const cheerTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  React.useEffect(() => () => { if (cheerTimer.current) clearTimeout(cheerTimer.current); }, []);
+  const cheer = async (emoji: string) => {
+    if (cheerLocked) return;
+    setCheerLocked(true);
+    cheerTimer.current = setTimeout(() => setCheerLocked(false), REACTION_COOLDOWN_MS);
+    await onCheer(emoji);
+  };
 
   return (
     <div
@@ -160,6 +174,20 @@ export default function RoomCard({
       </button>
 
       <div className={styles.roomActions}>
+        {live && room.playing &&
+          ADMIN_CHEER_EMOJIS.map((emoji) => (
+            <button
+              key={emoji}
+              type="button"
+              className={`${styles.roomActionBtn} ${styles.roomActionCheer}`}
+              onClick={() => void cheer(emoji)}
+              disabled={cheerLocked}
+              title={`Send ${emoji} to the room's screens`}
+              aria-label={`Send ${emoji} cheer to room ${room.roomId}`}
+            >
+              {emoji}
+            </button>
+          ))}
         <a
           className={styles.roomActionBtn}
           href={`/host/${room.roomId}?admin=1`}

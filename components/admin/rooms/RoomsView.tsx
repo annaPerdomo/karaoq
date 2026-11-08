@@ -74,6 +74,24 @@ export default function RoomsView({
     [secret]
   );
 
+  const sendCheer = React.useCallback(
+    async (roomId: string, emoji: string): Promise<boolean> => {
+      try {
+        const res = await fetch('/api/analytics/cheer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-analytics-secret': secret },
+          body: JSON.stringify({ roomId, emoji }),
+        });
+        // 409: nothing is playing any more, so the card's buttons are stale.
+        if (res.status === 409) loadRooms(0, true, query, liveOnly);
+        return res.ok;
+      } catch {
+        return false;
+      }
+    },
+    [secret, loadRooms, query, liveOnly]
+  );
+
   React.useEffect(() => {
     const timer = setTimeout(
       () => loadRooms(0, true, query, liveOnly),
@@ -246,6 +264,7 @@ export default function RoomsView({
                 }
                 onMerge={() => handleMergeClick(room.roomId)}
                 onDelete={() => handleDelete(room.roomId)}
+                onCheer={(emoji) => sendCheer(room.roomId, emoji)}
               />
             ))}
           </div>
