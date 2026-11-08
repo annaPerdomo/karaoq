@@ -195,6 +195,7 @@ export interface RoomRow {
   participants: number;
   /** Last time anything was done in the room; drives the "live" badge. */
   lastActivity?: string | null;
+  playing?: boolean;
   /** null where the room predates the flag. */
   fairMode?: boolean | null;
   fairToggled?: boolean;
@@ -204,6 +205,22 @@ export interface RoomRow {
   /** The language the room was CREATED in; null where the room predates recording. */
   locale?: string | null;
   localeMix?: LocaleCount[];
+}
+
+/** The playback events expire at 90 days, so an old room reads as all zeros. */
+export interface RoomPlayback {
+  started: number;
+  /** Starts the player confirmed more than 10s after cueing: the autoplay tap. */
+  slowStarts: number;
+  ended: number;
+  limit: number;
+  embedFailed: number;
+  /** Position writes while a song was playing. */
+  skipped: number;
+  /** Position writes between songs. */
+  stepped: number;
+  stopped: number;
+  bySurface: { display: number; host: number };
 }
 
 /** The rooms view's top row; null when an older deploy's response omits it. */
@@ -311,6 +328,7 @@ export interface RoomDossierData {
   };
   errors?: RoomErrorRow[];
   searchFails?: RoomSearchFailRow[];
+  playback?: RoomPlayback;
   searchRuns?: RoomSearchRow[];
   fairRotation: {
     started: boolean | null;

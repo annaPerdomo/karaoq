@@ -6,6 +6,42 @@ import BarList from '../charts/BarList';
 import LayoutPreview from '../LayoutPreview';
 import { Section } from './DossierSections';
 
+export function PlaybackPanel({
+  playback,
+  wide,
+}: {
+  playback: NonNullable<RoomDossierData['playback']>;
+  wide?: boolean;
+}): React.ReactElement {
+  const { bySurface } = playback;
+  const surface =
+    bySurface.display && bySurface.host
+      ? `${bySurface.display} on the display, ${bySurface.host} on the host`
+      : bySurface.display
+        ? 'all on the display'
+        : bySurface.host
+          ? 'all on the host page'
+          : null;
+  const rows = [
+    { label: 'Sung to the end', value: playback.ended },
+    { label: 'Cut by the song limit', value: playback.limit },
+    { label: 'Embed refused', value: playback.embedFailed },
+    { label: 'Skipped mid-song', value: playback.skipped },
+    { label: 'Stopped mid-song', value: playback.stopped },
+    { label: 'Stepped between songs', value: playback.stepped },
+    { label: 'Waited on the autoplay tap', value: playback.slowStarts },
+  ].filter((r) => r.value > 0);
+  return (
+    <Section title="Playback" count={playback.started} wide={wide}>
+      <p className={styles.dsNote}>
+        {playback.started} {playback.started === 1 ? 'song' : 'songs'} confirmed playing
+        {surface ? ` · ${surface}` : ''}
+      </p>
+      {rows.length > 0 && <BarList data={rows} />}
+    </Section>
+  );
+}
+
 /** Only rendered when the room actually got cheers — see RoomDossier. */
 export function CheersPanel({
   cheers,

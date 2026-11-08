@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from "next";
-import { EventType, SCREEN_EVENT_TTL_MS, trackEvent } from "../../../lib/analytics";
+import { EventType, PLAY_SURFACES, PlaySurface, SCREEN_EVENT_TTL_MS, trackEvent } from "../../../lib/analytics";
 import { rateLimit } from "../../../lib/limits";
 import { normalizeRoomId, ROOM_CODE_PATTERN } from "../../../lib/roomCode";
 
@@ -91,6 +91,16 @@ EXTRACTORS.logo_upload_rejected = (data) => {
   const d = data as Record<string, unknown>;
   if (!hasOnlyKeys(d, ["reason"]) || (d.reason !== "type" && d.reason !== "size")) return null;
   return { reason: d.reason };
+};
+
+EXTRACTORS.song_started = (data) => {
+  if (!data || typeof data !== "object") return null;
+  const d = data as Record<string, unknown>;
+  if (!hasOnlyKeys(d, ["surface", "afterSeconds"])) return null;
+  if (!PLAY_SURFACES.includes(d.surface as PlaySurface) || !isInt(d.afterSeconds, 0, MAX_SECONDS)) {
+    return null;
+  }
+  return { surface: d.surface, afterSeconds: d.afterSeconds };
 };
 
 export default async function handler(

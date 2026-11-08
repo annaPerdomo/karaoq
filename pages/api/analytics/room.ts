@@ -27,6 +27,8 @@ import {
   type HostConfig,
 } from "../types";
 
+// A start confirmed later than this waited on the autoplay tap, not on YouTube.
+const SLOW_START_SECONDS = 10;
 const MAX_ERROR_ROWS = 200;
 const MAX_MUSIC_VIDEO_ROWS = 1000;
 
@@ -78,6 +80,10 @@ async function handleGet(
           "screen_help_opened",
           "screen_help_option",
           "screen_help_step",
+          "song_started",
+          "song_ended",
+          "song_skipped",
+          "song_stopped",
         ],
       },
     })
@@ -226,9 +232,37 @@ async function handleGet(
   let hostSaves = 0;
   // Last write wins, same as the queue's own behavior; null = cleared or never set.
   let sessionEnd: { minutesFromNow: number | null; timestamp: Date } | null = null;
+  const playback = {
+    started: 0,
+    slowStarts: 0,
+    ended: 0,
+    limit: 0,
+    embedFailed: 0,
+    skipped: 0,
+    stepped: 0,
+    stopped: 0,
+    bySurface: { display: 0, host: 0 },
+  };
 
   for (const e of events) {
     switch (e.type) {
+      case "song_started":
+        playback.started += 1;
+        if ((e.afterSeconds ?? 0) > SLOW_START_SECONDS) playback.slowStarts += 1;
+        if (e.surface === "display" || e.surface === "host") playback.bySurface[e.surface] += 1;
+        break;
+      case "song_ended":
+        if (e.how === "limit") playback.limit += 1;
+        else if (e.how === "embed_failed") playback.embedFailed += 1;
+        else playback.ended += 1;
+        break;
+      case "song_skipped":
+        if (e.wasPlaying) playback.skipped += 1;
+        else playback.stepped += 1;
+        break;
+      case "song_stopped":
+        playback.stopped += 1;
+        break;
       case "song_added":
         songs.push({
           userName: e.userName ?? null,
@@ -346,6 +380,7 @@ async function handleGet(
     requests,
     singWithMe,
     suggestions,
+    playback,
     cheers: {
       total: reactions,
       byEmoji: Array.from(cheersByEmoji, ([emoji, count]) => ({ emoji, count }))

@@ -13,7 +13,7 @@ import {
 import { TapHint } from '../TapHint';
 import { BoardsSection, PeopleSection } from './DossierSections';
 import { TimelineSection } from './TimelineSection';
-import { CheersPanel, SetupPanel } from './DossierPanels';
+import { CheersPanel, PlaybackPanel, SetupPanel } from './DossierPanels';
 import SuggestionsSection from './SuggestionsSection';
 import {
   MusicVideoPanel,
@@ -77,6 +77,11 @@ export default function RoomDossier({
 
   const span = spanLabel(data.span ?? null);
   const hasCheers = (data.cheers?.total ?? 0) > 0;
+  const playback = data.playback;
+  const hasPlayback =
+    !!playback &&
+    playback.started + playback.ended + playback.limit + playback.embedFailed +
+      playback.skipped + playback.stepped + playback.stopped > 0;
   const hasBoards = data.requests.length + data.singWithMe.length > 0;
   const customized = Boolean(data.layout?.display || data.layout?.host);
   const hasSetup =
@@ -88,6 +93,7 @@ export default function RoomDossier({
 
   const quiet = [
     !hasCheers && 'no cheers',
+    !hasPlayback && 'no playback reported',
     !hasBoards && 'no board activity',
     (data.errors?.length ?? 0) === 0 &&
       (data.searchFails?.length ?? 0) === 0 &&
@@ -142,6 +148,7 @@ export default function RoomDossier({
         />
         <PeopleSection people={data.people} wide={!hasCheers} />
         {hasCheers && data.cheers && <CheersPanel cheers={data.cheers} />}
+        {hasPlayback && playback && <PlaybackPanel playback={playback} />}
         {hasBoards && (
           <BoardsSection
             requests={data.requests}

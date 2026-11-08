@@ -1,6 +1,7 @@
 import type { UpdateFilter } from "mongodb";
 import { NextApiRequest, NextApiResponse } from "next";
 import { Room } from "../../types";
+import { playedSecondsField, SCREEN_EVENT_TTL_MS, trackEvent } from "../../../../lib/analytics";
 import { getRoomsCollection } from "../../../../lib/mongodb";
 import { normalizeRoomId } from "../../../../lib/roomCode";
 
@@ -25,6 +26,8 @@ export default async function handler(
   // A playback surface firing the countdown. Guarded on the countdown still
   // standing, so a host's Cancel landing first wins rather than races.
   const auto = req.query.auto === "1";
+  // A fresh display clearing stale playback: nobody stopped a song.
+  const heal = req.query.heal === "1";
 
   if (typeof roomId !== "string") {
     res.status(400).json({ code: 400, message: "Invalid request." });
@@ -91,6 +94,14 @@ export default async function handler(
               : "Room is already playing.",
         });
         return;
+      }
+      // Starts aren't recorded here: only the player knows one sounded (song_started).
+      if (!isPlaying && room.isPlaying && !heal) {
+        await trackEvent(req, "song_stopped", {
+          roomId,
+          ...playedSecondsField(room.playStartedAt),
+          expiresAt: new Date(Date.now() + SCREEN_EVENT_TTL_MS),
+        });
       }
       res.status(200).json({ code: 200, message: "Play state updated." });
     }

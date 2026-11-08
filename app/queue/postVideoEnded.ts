@@ -1,8 +1,14 @@
+import type { PlaySurface, SongEndReason } from "../../lib/analytics";
+
 export default async function postVideoEnded(
   roomId: string,
-  endedIndex: number
+  endedIndex: number,
+  how?: SongEndReason,
+  surface?: PlaySurface
 ): Promise<boolean> {
   const params = new URLSearchParams({ index: String(endedIndex) });
+  if (how) params.set("reason", how);
+  if (surface) params.set("surface", surface);
   try {
     const resp = await fetch(`/api/queue/${roomId}/video-ended?${params}`, {
       method: "POST",

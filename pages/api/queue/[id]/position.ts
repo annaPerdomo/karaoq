@@ -1,4 +1,5 @@
 import { NextApiRequest, NextApiResponse } from "next";
+import { playedSecondsField, SCREEN_EVENT_TTL_MS, trackEvent } from "../../../../lib/analytics";
 import { getRoomsCollection } from "../../../../lib/mongodb";
 import { normalizeRoomId } from "../../../../lib/roomCode";
 import { normalizeAutoAdvance } from "../../types";
@@ -70,6 +71,12 @@ export default async function handler(
           },
         }
       );
+      await trackEvent(req, "song_skipped", {
+        roomId,
+        wasPlaying: room.isPlaying === true,
+        ...(room.isPlaying ? playedSecondsField(room.playStartedAt) : {}),
+        expiresAt: new Date(Date.now() + SCREEN_EVENT_TTL_MS),
+      });
       res.status(200).json({ code: 200, message: "Position updated." });
     }
   } catch (e) {

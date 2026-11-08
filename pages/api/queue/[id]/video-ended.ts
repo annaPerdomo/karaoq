@@ -1,4 +1,13 @@
 import { NextApiRequest, NextApiResponse } from "next";
+import {
+  PLAY_SURFACES,
+  PlaySurface,
+  playedSecondsField,
+  SCREEN_EVENT_TTL_MS,
+  SONG_END_REASONS,
+  SongEndReason,
+  trackEvent,
+} from "../../../../lib/analytics";
 import { getRoomsCollection } from "../../../../lib/mongodb";
 import { normalizeRoomId } from "../../../../lib/roomCode";
 import { normalizeAutoAdvance } from "../../types";
@@ -23,8 +32,17 @@ export default async function handler(
 
   const roomId = normalizeRoomId(req.query.id);
   const endedIndex = Number(req.query.index);
+  // Absent on older clients, which all reported natural ends.
+  const how = (req.query.reason ?? "ended") as SongEndReason;
+  const surface = req.query.surface as PlaySurface | undefined;
 
-  if (typeof roomId !== "string" || !Number.isInteger(endedIndex) || endedIndex < 0) {
+  if (
+    typeof roomId !== "string" ||
+    !Number.isInteger(endedIndex) ||
+    endedIndex < 0 ||
+    !SONG_END_REASONS.includes(how) ||
+    (surface !== undefined && !PLAY_SURFACES.includes(surface))
+  ) {
     res.status(400).json({ code: 400, message: "Invalid request." });
     return;
   }
@@ -84,6 +102,16 @@ export default async function handler(
         },
       ]
     );
+
+    if (result.modifiedCount > 0) {
+      await trackEvent(req, "song_ended", {
+        roomId,
+        how,
+        ...(surface ? { surface } : {}),
+        ...playedSecondsField(room.playStartedAt),
+        expiresAt: new Date(Date.now() + SCREEN_EVENT_TTL_MS),
+      });
+    }
 
     res.status(200).json({
       code: 200,

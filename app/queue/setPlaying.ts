@@ -10,12 +10,14 @@ export default async function setPlaying(
   claim = false,
   // The countdown firing, not a person. The server refuses it once the countdown
   // is gone, so a false return here is a yield rather than a failure.
-  auto = false
+  auto = false,
+  heal = false
 ): Promise<boolean> {
   const params = new URLSearchParams({ isPlaying: String(isPlaying) });
   if (isPlaying && playToken) params.set("playToken", playToken);
   if (claim) params.set("claim", "1");
   if (auto) params.set("auto", "1");
+  if (heal) params.set("heal", "1");
   try {
     const resp = await fetch(`/api/queue/${roomId}/play?${params}`, {
       method: "POST",

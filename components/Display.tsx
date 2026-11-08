@@ -3,6 +3,8 @@ import { useRouter } from 'next/router';
 import styles from '../styles/Display.module.css';
 import getRoom from '../app/queue/getRoom';
 import postVideoEnded from '../app/queue/postVideoEnded';
+import postScreenEvent from '../app/queue/screenEvent';
+import type { SongEndReason } from '../lib/analytics';
 import postDisplaySeen from '../app/queue/postDisplaySeen';
 import postDisplayGone from '../app/queue/postDisplayGone';
 import reportDisplayPaused from '../app/queue/setDisplayPaused';
@@ -112,6 +114,7 @@ const Display = (): React.ReactElement => {
 
   const [needsTap, setNeedsTap] = React.useState(false);
   const playbackConfirmedRef = React.useRef(false);
+  const cuedAtRef = React.useRef(0);
   const unlockRetryRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   // YouTube sends both onStateChange and infoDelivery for the same end event.
   const endedHandledRef = React.useRef(false);
@@ -272,7 +275,7 @@ const Display = (): React.ReactElement => {
         // A TV display loading fresh proves recorded playback is stale — clear it rather
         // than blast a song. Skip if another display's heartbeat is live, or in here-mode.
         if (room.isPlaying && room.playMode !== 'here' && !room.displayConnected) {
-          await setPlaying(joinCode!, false);
+          await setPlaying(joinCode!, false, undefined, false, false, true);
           room = { ...room, isPlaying: false };
         }
         if (cancelled) return;
@@ -356,13 +359,13 @@ const Display = (): React.ReactElement => {
     setWrapUpIn(null);
   }, [currentSongId, isPlaying]);
 
-  const reportVideoEndedRef = React.useRef<() => Promise<void>>(async () => {});
-  reportVideoEndedRef.current = async () => {
+  const reportVideoEndedRef = React.useRef<(how?: SongEndReason) => Promise<void>>(async () => {});
+  reportVideoEndedRef.current = async (how: SongEndReason = 'ended') => {
     if (!joinCode || !isPlaying || !playsVideoHere) return;
     if (endedHandledRef.current) return;
     endedHandledRef.current = true;
     const roomId = joinCode;
-    await postVideoEnded(roomId, activeIndex);
+    await postVideoEnded(roomId, activeIndex, how, 'display');
     const room = await getRoom(roomId, { display: true });
     if (typeof room !== "string") applyRoom(room);
     broadcastVideoEnded(roomId);
@@ -372,8 +375,8 @@ const Display = (): React.ReactElement => {
     if (!isPlaying || !joinCode || !playsVideoHere) return;
     const roomId = joinCode;
 
-    function reportVideoEnded() {
-      reportVideoEndedRef.current();
+    function reportVideoEnded(how?: SongEndReason) {
+      reportVideoEndedRef.current(how);
     }
 
     function onMessage(e: MessageEvent) {
@@ -392,7 +395,7 @@ const Display = (): React.ReactElement => {
       if (limitLeft !== null) {
         setWrapUpIn(limitLeft <= WRAP_UP_WARN_SECONDS ? limitLeft : null);
         if (limitLeft <= 0) {
-          reportVideoEnded();
+          reportVideoEnded('limit');
           return;
         }
       }
@@ -400,6 +403,12 @@ const Display = (): React.ReactElement => {
         reportVideoEnded();
       } else if (state === 1 || state === 3) {
         // Playing or buffering.
+        if (!playbackConfirmedRef.current) {
+          postScreenEvent(roomId, 'song_started', {
+            surface: 'display',
+            afterSeconds: Math.max(0, Math.round((Date.now() - cuedAtRef.current) / 1000)),
+          });
+        }
         playbackConfirmedRef.current = true;
         setNeedsTap(false);
         if (pausedReportedRef.current) {
@@ -429,6 +438,7 @@ const Display = (): React.ReactElement => {
       return;
     }
     playbackConfirmedRef.current = false;
+    cuedAtRef.current = Date.now();
     const timer = setTimeout(() => {
       if (!playbackConfirmedRef.current) setNeedsTap(true);
     }, 3000);
@@ -480,7 +490,7 @@ const Display = (): React.ReactElement => {
       // A host who skipped, or swapped in a cut that plays, must not have the
       // song reported ended.
       if (currentSongIdRef.current === failedId && currentVideoIdRef.current === failedVideo) {
-        reportVideoEndedRef.current();
+        reportVideoEndedRef.current('embed_failed');
       }
     }, FAILED_VIDEO_SKIP_MS);
   }

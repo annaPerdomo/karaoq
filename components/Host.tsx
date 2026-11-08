@@ -30,6 +30,8 @@ import setAutoAdvance from "../app/queue/setAutoAdvance";
 import setSongLimit from "../app/queue/setSongLimit";
 import cancelAutoStart from "../app/queue/cancelAutoStart";
 import postVideoEnded from "../app/queue/postVideoEnded";
+import postScreenEvent from "../app/queue/screenEvent";
+import type { SongEndReason } from "../lib/analytics";
 import { useAutoStart } from "./hooks/useAutoStart";
 import { useAutoArm } from "./hooks/useAutoArm";
 import { useEndedCheer } from "./hooks/useEndedCheer";
@@ -225,6 +227,7 @@ const Host = ({
   // if blocked. herePlayingRef mirrors it for the watchdog + postMessage listener.
   const [hereVideoPlaying, setHereVideoPlaying] = React.useState(true);
   const herePlayingRef = React.useRef(false);
+  const hereCuedAtRef = React.useRef(0);
 
   React.useEffect(() => {
     if (!joinCode || remote) return;
@@ -668,8 +671,8 @@ const Host = ({
   }, [currentQueueSongId, isPlaying]);
 
   // Ref so the postMessage handler always has current state.
-  const onVideoEndedRef = React.useRef<() => void>(() => {});
-  onVideoEndedRef.current = async () => {
+  const onVideoEndedRef = React.useRef<(how?: SongEndReason) => void>(() => {});
+  onVideoEndedRef.current = async (how: SongEndReason = "ended") => {
     if (!joinCode || endedHandledRef.current) return;
     endedHandledRef.current = true;
     // Past the last song too — bounding this parks on the finished entry, which
@@ -678,7 +681,7 @@ const Host = ({
     // The video-ended route rather than a plain position write: it is the one
     // that arms auto-advance, and its guard makes a straggler end a no-op.
     const ended = queue[activeIndex]?.id ?? null;
-    const ok = await postVideoEnded(joinCode, activeIndex);
+    const ok = await postVideoEnded(joinCode, activeIndex, how, "host");
     if (ok) {
       setActiveIndex(nextIdx);
       setIsPlaying(false);
@@ -713,7 +716,7 @@ const Host = ({
         if (limitLeft !== null) {
           setWrapUpIn(limitLeft <= WRAP_UP_WARN_SECONDS ? limitLeft : null);
           if (limitLeft <= 0) {
-            onVideoEndedRef.current();
+            onVideoEndedRef.current("limit");
             return;
           }
         }
@@ -721,6 +724,12 @@ const Host = ({
           onVideoEndedRef.current();
         } else if (state === 1 || state === 3) {
           // Playing or buffering.
+          if (!herePlayingRef.current && joinCode) {
+            postScreenEvent(joinCode, "song_started", {
+              surface: "host",
+              afterSeconds: Math.max(0, Math.round((Date.now() - hereCuedAtRef.current) / 1000)),
+            });
+          }
           herePlayingRef.current = true;
           setHereVideoPlaying(true);
         } else if (state === 2) {
@@ -732,13 +741,14 @@ const Host = ({
 
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [playsVideoHere, tvMode, remote]);
+  }, [playsVideoHere, tvMode, remote, joinCode]);
 
   // Autoplay watchdog: if YouTube never confirms shortly after the player
   // (re)mounts, autoplay was blocked — flip the control to Play.
   React.useEffect(() => {
     if (remote || tvMode || !playsVideoHere) return;
     herePlayingRef.current = false;
+    hereCuedAtRef.current = Date.now();
     setHereVideoPlaying(true);
     const timer = setTimeout(() => {
       if (!herePlayingRef.current) setHereVideoPlaying(false);

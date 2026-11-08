@@ -57,6 +57,7 @@ describe("POST /api/analytics/screen-event", () => {
     ["music_video_link", { action: "open" }],
     ["logo_upload_rejected", { reason: "size" }],
     ["karaoke_swap_opened", { live: true }],
+    ["song_started", { surface: "display", afterSeconds: 2 }],
   ];
 
   it.each(cases)("accepts a valid %s event", async (type, data) => {
@@ -82,6 +83,13 @@ describe("POST /api/analytics/screen-event", () => {
     const tooFar = createRes();
     await handler(post({ roomId: "ROOM1", type: "music_video_offset", data: { offsetSeconds: 600.5 } }), tooFar);
     expect(tooFar.getStatus()).toBe(400);
+  });
+
+  it("rejects a song_started from a surface that isn't a player", async () => {
+    const res = createRes();
+    await handler(post({ roomId: "ROOM1", type: "song_started", data: { surface: "phone", afterSeconds: 2 } }), res);
+    expect(res.getStatus()).toBe(400);
+    expect(mockInsertOne).not.toHaveBeenCalled();
   });
 
   it("rejects an unknown type with 400", async () => {

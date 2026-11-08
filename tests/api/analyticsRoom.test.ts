@@ -195,8 +195,40 @@ describe("GET /api/analytics/room — musicVideo", () => {
     expect(body.counts.songs).toBe(0);
   });
 
+  it("sums what the players reported into the playback block", async () => {
+    seedEvent("song_started", { surface: "display", afterSeconds: 1 });
+    seedEvent("song_started", { surface: "display", afterSeconds: 40 });
+    seedEvent("song_started", { surface: "host", afterSeconds: 0 });
+    seedEvent("song_ended", { how: "ended", surface: "display", playedSeconds: 200 });
+    seedEvent("song_ended", { how: "limit", surface: "display" });
+    seedEvent("song_ended", { how: "embed_failed", surface: "display" });
+    seedEvent("song_ended", {});
+    seedEvent("song_skipped", { wasPlaying: true, playedSeconds: 12 });
+    seedEvent("song_skipped", { wasPlaying: false });
+    seedEvent("song_stopped", { playedSeconds: 5 });
+    seedEvent("song_started", { surface: "display", afterSeconds: 1 }, "OTHER");
+
+    const body = (await get("ABCD1")).getBody();
+
+    expect(body.playback).toEqual({
+      started: 3,
+      slowStarts: 1,
+      ended: 2,
+      limit: 1,
+      embedFailed: 1,
+      skipped: 1,
+      stepped: 1,
+      stopped: 1,
+      bySurface: { display: 2, host: 1 },
+    });
+    // Playback rows are not songs, searches or cheers.
+    expect(body.counts).toMatchObject({ songs: 0, reactions: 0, searches: 0 });
+  });
+
   it("reports an untouched room as empty", async () => {
     const body = (await get("ABCD1")).getBody();
+
+    expect(body.playback).toMatchObject({ started: 0, ended: 0, bySurface: { display: 0, host: 0 } });
 
     expect(body.musicVideo).toMatchObject({
       lastSeenAt: null,

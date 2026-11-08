@@ -8,6 +8,12 @@ const mockCollection = {
   updateOne: vi.fn(),
 };
 
+const trackEvent = vi.fn();
+vi.mock("../../lib/analytics", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../lib/analytics")>()),
+  trackEvent: (...args: unknown[]) => trackEvent(...args),
+}));
+
 vi.mock("mongodb", () => ({
   MongoClient: function () {
     return {
@@ -74,6 +80,57 @@ describe("POST /api/queue/[id]/position - Advance song position", () => {
         },
       }
     );
+  });
+
+  it("records a mid-song skip with how far the song got", async () => {
+    const room: Room = {
+      id: "ROOM1",
+      queue: makeQueue(3),
+      activeVideoIndex: 0,
+      isPlaying: true,
+      playStartedAt: new Date(Date.now() - 42_000),
+    };
+    mockCollection.findOne.mockResolvedValue(room);
+    mockCollection.updateOne.mockResolvedValue({ modifiedCount: 1 });
+
+    await handler(
+      createMockReq({ method: "POST", query: { id: "ROOM1", activeVideoIndex: "1" } }),
+      createRes()
+    );
+
+    expect(trackEvent).toHaveBeenCalledWith(expect.anything(), "song_skipped", {
+      roomId: "ROOM1",
+      wasPlaying: true,
+      playedSeconds: 42,
+      expiresAt: expect.any(Date),
+    });
+  });
+
+  it("records a move between songs as a step, with no run time", async () => {
+    const room: Room = { id: "ROOM1", queue: makeQueue(3), activeVideoIndex: 0, isPlaying: false };
+    mockCollection.findOne.mockResolvedValue(room);
+    mockCollection.updateOne.mockResolvedValue({ modifiedCount: 1 });
+
+    await handler(
+      createMockReq({ method: "POST", query: { id: "ROOM1", activeVideoIndex: "2" } }),
+      createRes()
+    );
+
+    const data = trackEvent.mock.calls[0][2];
+    expect(data).toMatchObject({ wasPlaying: false });
+    expect(data).not.toHaveProperty("playedSeconds");
+  });
+
+  it("records nothing for a same-index write", async () => {
+    const room: Room = { id: "ROOM1", queue: makeQueue(3), activeVideoIndex: 1, isPlaying: true };
+    mockCollection.findOne.mockResolvedValue(room);
+
+    await handler(
+      createMockReq({ method: "POST", query: { id: "ROOM1", activeVideoIndex: "1" } }),
+      createRes()
+    );
+
+    expect(trackEvent).not.toHaveBeenCalled();
   });
 
   it("counts the landed-on song in when auto-advance is on", async () => {

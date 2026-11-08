@@ -271,6 +271,20 @@ describe("Client API wrappers", () => {
       });
     });
 
+    it("rides the end reason and the reporting screen on the query", async () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ code: 200, advanced: true }),
+      });
+      const { default: postVideoEnded } = await import("../../app/queue/postVideoEnded");
+
+      await postVideoEnded("ROOM1", 2, "limit", "host");
+      expect(mockFetch).toHaveBeenCalledWith(
+        "/api/queue/ROOM1/video-ended?index=2&reason=limit&surface=host",
+        { method: "POST" }
+      );
+    });
+
     it("treats a 200 no-op as a failure so the caller doesn't render an advance", async () => {
       // The route answers 200/advanced:false when its guard matched nothing —
       // the room was stopped or had already moved on.

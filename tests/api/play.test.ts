@@ -8,6 +8,12 @@ const mockCollection = {
   updateOne: vi.fn(),
 };
 
+const trackEvent = vi.fn();
+vi.mock("../../lib/analytics", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../lib/analytics")>()),
+  trackEvent: (...args: unknown[]) => trackEvent(...args),
+}));
+
 vi.mock("mongodb", () => ({
   MongoClient: function () {
     return {
@@ -184,6 +190,34 @@ describe("POST /api/queue/[id]/play - Set play state", () => {
         $set: expect.objectContaining({ playToken: "mine" }),
       })
     );
+  });
+
+  it("records a stop that interrupted a running song, and only then", async () => {
+    mockCollection.updateOne.mockResolvedValue({ matchedCount: 1 });
+
+    mockCollection.findOne.mockResolvedValue({
+      id: "ROOM1",
+      queue: [],
+      activeVideoIndex: 0,
+      isPlaying: true,
+      playStartedAt: new Date(Date.now() - 30_000),
+    });
+    await handler(createMockReq({ method: "POST", query: { id: "ROOM1", isPlaying: "false" } }), createRes());
+    expect(trackEvent).toHaveBeenCalledWith(expect.anything(), "song_stopped", {
+      roomId: "ROOM1",
+      playedSeconds: 30,
+      expiresAt: expect.any(Date),
+    });
+
+    // A fresh display clearing stale playback is a heal, not a stop.
+    trackEvent.mockClear();
+    await handler(createMockReq({ method: "POST", query: { id: "ROOM1", isPlaying: "false", heal: "1" } }), createRes());
+    expect(trackEvent).not.toHaveBeenCalled();
+
+    mockCollection.findOne.mockResolvedValue({ id: "ROOM1", queue: [], activeVideoIndex: 0, isPlaying: false });
+    await handler(createMockReq({ method: "POST", query: { id: "ROOM1", isPlaying: "false" } }), createRes());
+    await handler(createMockReq({ method: "POST", query: { id: "ROOM1", isPlaying: "true" } }), createRes());
+    expect(trackEvent).not.toHaveBeenCalled();
   });
 
   it("sets isPlaying to false for any value other than 'true'", async () => {

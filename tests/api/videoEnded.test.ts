@@ -8,6 +8,12 @@ const mockCollection = {
   updateOne: vi.fn(),
 };
 
+const trackEvent = vi.fn();
+vi.mock("../../lib/analytics", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../lib/analytics")>()),
+  trackEvent: (...args: unknown[]) => trackEvent(...args),
+}));
+
 vi.mock("mongodb", () => ({
   MongoClient: function () {
     return {
@@ -211,6 +217,65 @@ describe("POST /api/queue/[id]/video-ended - Display reports a finished song", (
     await handler(req, res);
 
     expect(res.getStatus()).toBe(405);
+  });
+
+  it("records how the song ended, from which screen, and how long it ran", async () => {
+    const room = roomWithSongs(3, 0);
+    room.playStartedAt = new Date(Date.now() - 95_000);
+    mockCollection.findOne.mockResolvedValue(room);
+    mockCollection.updateOne.mockResolvedValue({ modifiedCount: 1 });
+
+    const res = createRes();
+    await handler(
+      createMockReq({
+        method: "POST",
+        query: { id: "ROOM1", index: "0", reason: "embed_failed", surface: "display" },
+      }),
+      res
+    );
+
+    expect(res.getStatus()).toBe(200);
+    expect(trackEvent).toHaveBeenCalledWith(expect.anything(), "song_ended", {
+      roomId: "ROOM1",
+      how: "embed_failed",
+      surface: "display",
+      playedSeconds: 95,
+      expiresAt: expect.any(Date),
+    });
+  });
+
+  it("reads an old client's bare report as a natural end with no surface", async () => {
+    mockCollection.findOne.mockResolvedValue(roomWithSongs(3, 0));
+    mockCollection.updateOne.mockResolvedValue({ modifiedCount: 1 });
+
+    await handler(createMockReq({ method: "POST", query: { id: "ROOM1", index: "0" } }), createRes());
+
+    const data = trackEvent.mock.calls[0][2];
+    expect(data).toMatchObject({ how: "ended" });
+    expect(data).not.toHaveProperty("surface");
+    expect(data).not.toHaveProperty("playedSeconds");
+  });
+
+  it("records nothing for a duplicate report that advanced nothing", async () => {
+    mockCollection.findOne.mockResolvedValue(roomWithSongs(3, 1));
+    mockCollection.updateOne.mockResolvedValue({ modifiedCount: 0 });
+
+    await handler(createMockReq({ method: "POST", query: { id: "ROOM1", index: "0" } }), createRes());
+
+    expect(trackEvent).not.toHaveBeenCalled();
+  });
+
+  it("rejects an unknown reason or surface with 400", async () => {
+    mockCollection.findOne.mockResolvedValue(roomWithSongs(3, 0));
+    for (const query of [{ reason: "bored" }, { surface: "phone" }]) {
+      const res = createRes();
+      await handler(
+        createMockReq({ method: "POST", query: { id: "ROOM1", index: "0", ...query } }),
+        res
+      );
+      expect(res.getStatus()).toBe(400);
+    }
+    expect(mockCollection.updateOne).not.toHaveBeenCalled();
   });
 
   it("stamps the auto-start a gap after now when auto-advance is on", async () => {

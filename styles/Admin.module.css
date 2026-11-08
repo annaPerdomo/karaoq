@@ -792,6 +792,16 @@
   gap: 0.3rem;
 }
 
+.roomActionCheer {
+  font-size: 0.95rem;
+  border-color: rgba(52, 211, 153, 0.35);
+}
+
+.roomActionCheer:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
 .roomActionBtn {
   display: inline-flex;
   align-items: center;
@@ -948,6 +958,12 @@
 .dsSectionCountWarn {
   color: #fcd34d;
   background: rgba(250, 178, 25, 0.12);
+}
+
+.dsNote {
+  margin: 0 0 0.5rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
 }
 
 .dsEmpty {

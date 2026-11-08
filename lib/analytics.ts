@@ -57,7 +57,26 @@ export type EventType =
   | "tv_paired"
   | "screen_help_opened"
   | "screen_help_option"
-  | "screen_help_step";
+  | "screen_help_step"
+  | "song_started"
+  | "song_ended"
+  | "song_skipped"
+  | "song_stopped"
+  // Its own type, not a reaction_sent: every cheer tally, the public counter
+  // included, would otherwise count Mission Control's own clicks.
+  | "admin_cheer_sent";
+
+/** Whole seconds since the start, clamped at 0 against clock skew; nothing when
+ *  the song never started. */
+export function playedSecondsField(playStartedAt: Date | undefined): { playedSeconds?: number } {
+  if (!(playStartedAt instanceof Date) || Number.isNaN(playStartedAt.getTime())) return {};
+  return { playedSeconds: Math.max(0, Math.floor((Date.now() - playStartedAt.getTime()) / 1000)) };
+}
+
+export type PlaySurface = "display" | "host";
+export const PLAY_SURFACES: readonly PlaySurface[] = ["display", "host"];
+export type SongEndReason = "ended" | "limit" | "embed_failed";
+export const SONG_END_REASONS: readonly SongEndReason[] = ["ended", "limit", "embed_failed"];
 
 // Music-video / brand telemetry retention: the Screens view's longest window.
 export const SCREEN_EVENT_TTL_MS = 90 * 24 * 60 * 60 * 1000;
@@ -110,6 +129,14 @@ export interface AnalyticsEvent {
   songLimitSeconds?: number | null;
   // song_postponed: how far back the singer sent their own song.
   postponedBy?: number | "end";
+  // song_started: seconds from cue to YouTube confirming play; long = the autoplay tap.
+  afterSeconds?: number;
+  // song_ended: to the end, cut by the song limit, or an embed YouTube refused.
+  how?: SongEndReason;
+  // song_ended, song_skipped, song_stopped: absent when the song never started.
+  playedSeconds?: number;
+  // song_skipped: the host moved on mid-song rather than between songs.
+  wasPlaying?: boolean;
   // session_end_set: how far out the host set the end, or null when they cleared
   // it. A duration, not a wall-clock time — no timezone rides along.
   minutesFromNow?: number | null;
@@ -176,7 +203,9 @@ export interface AnalyticsEvent {
   logo?: boolean;
   colors?: boolean;
   cleared?: boolean;
-  surface?: "host" | "display";
+  // brand_saved: which Customize rail saved it. song_started, song_ended: which
+  // player reported it; absent from clients predating the field.
+  surface?: PlaySurface;
   // brand_saved: the logo was resized away from its default.
   resized?: boolean;
   // screen_help_opened, screen_help_option: which device the sheet detected.
