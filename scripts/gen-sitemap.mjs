@@ -44,8 +44,8 @@ const RELEASES = [
 ];
 
 // Countries that currently clear CHART_MIN_SONGS (lib/songCharts.ts) in the
-// shared Atlas DB, checked 2026-10-22 — rerun that query before extending this.
-const SONG_CHART_PASSING_COUNTRIES = ['us', 'ph', 'ca', 'fr'];
+// shared Atlas DB, checked 2026-11-10 — rerun that query before extending this.
+const SONG_CHART_PASSING_COUNTRIES = ['us', 'gb', 'ph', 'de', 'ca', 'fr'];
 
 // A page = a path suffix rendered in every locale. '' is the landing root.
 const PAGES = [
