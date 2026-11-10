@@ -111,3 +111,23 @@ export const ScreensIcon = () => (
     <path d="M12 16.5V20" />
   </Icon>
 );
+
+export const FeaturesIcon = () => (
+  <Icon>
+    <path d="m12 3 2.7 5.6 6.1.8-4.5 4.2 1.2 6L12 16.7l-5.5 2.9 1.2-6-4.500-4.200 6.100-.8z" />
+  </Icon>
+);
+
+export const HealthIcon = () => (
+  <Icon>
+    <path d="M3 12h4l3-8 4 16 3-8h4" />
+  </Icon>
+);
+
+export const MoreIcon = () => (
+  <Icon>
+    <circle cx="5" cy="12" r="1.3" />
+    <circle cx="12" cy="12" r="1.3" />
+    <circle cx="19" cy="12" r="1.3" />
+  </Icon>
+);

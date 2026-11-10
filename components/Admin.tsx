@@ -2,8 +2,9 @@ import * as React from 'react';
 import AdminLogin from './admin/AdminLogin';
 import AdminShell from './admin/AdminShell';
 import RoomsView from './admin/rooms/RoomsView';
-import QuotaView from './admin/quota/QuotaView';
-import ErrorsView from './admin/errors/ErrorsView';
+import FeaturesView from './admin/features/FeaturesView';
+import HealthView from './admin/health/HealthView';
+import MoreView from './admin/MoreView';
 import SuggestionsView from './admin/SuggestionsView';
 import PulseView from './admin/pulse/PulseView';
 import ScreensView from './admin/screens/ScreensView';
@@ -23,6 +24,7 @@ const Admin = (): React.ReactElement => {
   const [errorsLoading, setErrorsLoading] = React.useState(false);
   const [view, setView] = React.useState<AdminView>('rooms');
   const [roomsQuery, setRoomsQuery] = React.useState('');
+  const [roomsFeature, setRoomsFeature] = React.useState<string | null>(null);
   const [feedbackUnhandled, setFeedbackUnhandled] = React.useState(0);
   // RoomsView owns its own paged list, so Refresh has to reach it explicitly.
   const [refreshToken, setRefreshToken] = React.useState(0);
@@ -101,13 +103,32 @@ const Admin = (): React.ReactElement => {
     setSecret('');
     setView('rooms');
     setRoomsQuery('');
+    setRoomsFeature(null);
   }
 
   /** An error group's room chip jumps straight to that room's dossier. */
   function openRoom(roomId: string) {
+    setRoomsFeature(null);
     setRoomsQuery(roomId);
     setView('rooms');
   }
+
+  function openFeature(featureId: string) {
+    setRoomsQuery('');
+    setRoomsFeature(featureId);
+    setView('rooms');
+  }
+
+  function refresh() {
+    fetchData(secret);
+    setRefreshToken((n) => n + 1);
+  }
+
+  const badges = {
+    health: errors?.totals.last24h ?? 0,
+    feedback: feedbackUnhandled,
+  };
+  const generatedAt = data?.meta?.generatedAt ?? null;
 
   if (!authenticated || !data) {
     return (
@@ -124,40 +145,38 @@ const Admin = (): React.ReactElement => {
   return (
     <AdminShell
       view={view}
-      badges={{
-        errors: errors?.totals.last24h ?? 0,
-        feedback: feedbackUnhandled,
-      }}
+      badges={badges}
       refreshing={loading}
-      generatedAt={data.meta?.generatedAt ?? null}
+      generatedAt={generatedAt}
       onNavigate={setView}
-      onRefresh={() => {
-        fetchData(secret);
-        setRefreshToken((n) => n + 1);
-      }}
+      onRefresh={refresh}
       onLogout={handleLogout}
     >
       {view === 'rooms' && (
         <RoomsView
           secret={secret}
           query={roomsQuery}
+          feature={roomsFeature}
           refreshToken={refreshToken}
           onQueryChange={setRoomsQuery}
+          onFeatureChange={setRoomsFeature}
           onMutate={() => {
             fetchData(secret);
           }}
         />
       )}
-      {view === 'quota' && (
-        <QuotaView secret={secret} onOpenRoom={openRoom} />
+      {view === 'features' && (
+        <FeaturesView secret={secret} refreshToken={refreshToken} onOpenFeature={openFeature} />
       )}
-      {view === 'errors' && (
-        <ErrorsView
+      {view === 'health' && (
+        <HealthView
+          secret={secret}
+          refreshToken={refreshToken}
           errors={errors}
           searchHealth={data.searchHealth}
           linkLookups={data.linkLookups}
-          loading={errorsLoading}
-          onRetry={() => fetchErrors(secret)}
+          errorsLoading={errorsLoading}
+          onRetryErrors={() => fetchErrors(secret)}
           onOpenRoom={openRoom}
         />
       )}
@@ -168,6 +187,14 @@ const Admin = (): React.ReactElement => {
       {view === 'screens' && <ScreensView secret={secret} refreshToken={refreshToken} />}
       {view === 'feedback' && (
         <FeedbackView secret={secret} onUnhandledChange={setFeedbackUnhandled} />
+      )}
+      {view === 'more' && (
+        <MoreView
+          badges={badges}
+          generatedAt={generatedAt}
+          onNavigate={setView}
+          onLogout={handleLogout}
+        />
       )}
     </AdminShell>
   );

@@ -1,25 +1,8 @@
 import * as React from 'react';
 import styles from '../../styles/Admin.module.css';
 import type { AdminView } from './types';
-import {
-  ErrorsIcon,
-  FeedbackIcon,
-  PulseIcon,
-  QuotaIcon,
-  RoomsIcon,
-  ScreensIcon,
-  SuggestionsIcon,
-} from './icons';
-
-const NAV: { view: AdminView; label: string; icon: React.ComponentType }[] = [
-  { view: 'rooms', label: 'Rooms', icon: RoomsIcon },
-  { view: 'quota', label: 'Quota', icon: QuotaIcon },
-  { view: 'errors', label: 'Errors', icon: ErrorsIcon },
-  { view: 'suggestions', label: 'Suggestions', icon: SuggestionsIcon },
-  { view: 'pulse', label: 'Pulse', icon: PulseIcon },
-  { view: 'screens', label: 'Screens', icon: ScreensIcon },
-  { view: 'feedback', label: 'Feedback', icon: FeedbackIcon },
-];
+import { MoreIcon } from './icons';
+import { PRIMARY_NAV, SECONDARY_NAV, isSecondary, type NavEntry } from './nav';
 
 export default function AdminShell({
   view,
@@ -40,6 +23,25 @@ export default function AdminShell({
   onLogout: () => void;
   children: React.ReactNode;
 }): React.ReactElement {
+  const sidebarItem = ({ view: v, label, icon: NavIcon }: NavEntry) => {
+    const badge = badges[v] ?? 0;
+    return (
+      <button
+        key={v}
+        className={`${styles.navItem} ${view === v ? styles.navItemActive : ''}`}
+        onClick={() => onNavigate(v)}
+        aria-current={view === v ? 'page' : undefined}
+      >
+        <NavIcon />
+        <span className={styles.navLabel}>{label}</span>
+        {badge > 0 && <span className={styles.navBadge}>{badge}</span>}
+      </button>
+    );
+  };
+
+  const moreActive = view === 'more' || isSecondary(view);
+  const moreBadge = SECONDARY_NAV.reduce((sum, entry) => sum + (badges[entry.view] ?? 0), 0);
+
   return (
     <div className={styles.shell}>
       <aside className={styles.sidebar}>
@@ -48,21 +50,9 @@ export default function AdminShell({
           <span className={styles.brandSub}>Mission Control</span>
         </div>
         <nav className={styles.nav} aria-label="Admin sections">
-          {NAV.map(({ view: v, label, icon: NavIcon }) => {
-            const badge = badges[v] ?? 0;
-            return (
-              <button
-                key={v}
-                className={`${styles.navItem} ${view === v ? styles.navItemActive : ''}`}
-                onClick={() => onNavigate(v)}
-                aria-current={view === v ? 'page' : undefined}
-              >
-                <NavIcon />
-                <span className={styles.navLabel}>{label}</span>
-                {badge > 0 && <span className={styles.navBadge}>{badge}</span>}
-              </button>
-            );
-          })}
+          {PRIMARY_NAV.map(sidebarItem)}
+          <span className={styles.navDivider}>More</span>
+          {SECONDARY_NAV.map(sidebarItem)}
         </nav>
         <div className={styles.sidebarFooter}>
           <button className={styles.refreshBtn} onClick={onRefresh} disabled={refreshing}>
@@ -83,6 +73,32 @@ export default function AdminShell({
         </div>
       </aside>
       <main className={styles.main}>{children}</main>
+      <nav className={styles.tabBar} aria-label="Admin tabs">
+        {PRIMARY_NAV.map(({ view: v, label, icon: NavIcon }) => {
+          const badge = badges[v] ?? 0;
+          return (
+            <button
+              key={v}
+              className={`${styles.tab} ${view === v ? styles.tabActive : ''}`}
+              onClick={() => onNavigate(v)}
+              aria-current={view === v ? 'page' : undefined}
+            >
+              <NavIcon />
+              <span>{label}</span>
+              {badge > 0 && <span className={styles.tabBadge}>{badge}</span>}
+            </button>
+          );
+        })}
+        <button
+          className={`${styles.tab} ${moreActive ? styles.tabActive : ''}`}
+          onClick={() => onNavigate('more')}
+          aria-current={moreActive ? 'page' : undefined}
+        >
+          <MoreIcon />
+          <span>More</span>
+          {moreBadge > 0 && <span className={styles.tabBadge}>{moreBadge}</span>}
+        </button>
+      </nav>
     </div>
   );
 }

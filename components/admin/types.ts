@@ -205,6 +205,8 @@ export interface RoomRow {
   /** The language the room was CREATED in; null where the room predates recording. */
   locale?: string | null;
   localeMix?: LocaleCount[];
+  /** lib/adminFeatures ids. Absent on an older deploy. */
+  features?: string[];
 }
 
 /** The playback events expire at 90 days, so an old room reads as all zeros. */
@@ -495,4 +497,12 @@ export interface QuotaLedgerData {
   billedByDay?: DayBilledWire[];
 }
 
-export type AdminView = 'rooms' | 'quota' | 'errors' | 'suggestions' | 'pulse' | 'screens' | 'feedback';
+export type AdminView =
+  | 'rooms'
+  | 'features'
+  | 'health'
+  | 'suggestions'
+  | 'pulse'
+  | 'screens'
+  | 'feedback'
+  | 'more';

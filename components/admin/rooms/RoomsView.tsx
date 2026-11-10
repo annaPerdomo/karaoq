@@ -1,27 +1,36 @@
 import * as React from 'react';
 import styles from '../../../styles/Admin.module.css';
 import type { RightNow, RoomRow } from '../types';
-import { LIVE_EXPLANATION } from '../format';
+import { adminFeature } from '../../../lib/adminFeatures';
 import RoomCard from './RoomCard';
 import RightNowRow from './RightNowRow';
+import RoomsFilters from './RoomsFilters';
+import CameBackCard from './CameBackCard';
+import RoomsListEnd from './RoomsListEnd';
+import { roomsSubtitle } from './roomsSubtitle';
+import MergeBanner from './MergeBanner';
 
 const PAGE_SIZE = 25;
 const SEARCH_DEBOUNCE_MS = 300;
-const LIVE_TIP_ID = 'rooms-live-tip';
 
 /** Search filters server-side, so it reaches rooms past the loaded pages. */
 export default function RoomsView({
   secret,
   query,
+  feature,
   refreshToken,
   onQueryChange,
+  onFeatureChange,
   onMutate,
 }: {
   secret: string;
   query: string;
+  /** A lib/adminFeatures id. */
+  feature: string | null;
   /** Bumped by the shell's Refresh button; any change reloads the first page. */
   refreshToken: number;
   onQueryChange: (q: string) => void;
+  onFeatureChange: (feature: string | null) => void;
   /** A delete/merge changed the totals other views show — refetch them. */
   onMutate: () => void;
 }): React.ReactElement {
@@ -31,6 +40,8 @@ export default function RoomsView({
   // created days ago can be live now, and newest-first would bury it.
   const [liveCount, setLiveCount] = React.useState(0);
   const [rightNow, setRightNow] = React.useState<RightNow | null>(null);
+  // Tagged with its feature so a chip switch can't show the old count mid-request.
+  const [featureRooms, setFeatureRooms] = React.useState<{ feature: string; count: number } | null>(null);
   const [hasMore, setHasMore] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
   const [failed, setFailed] = React.useState(false);
@@ -43,7 +54,7 @@ export default function RoomsView({
   const requestSeq = React.useRef(0);
 
   const loadRooms = React.useCallback(
-    async (skip: number, replace: boolean, q: string, live: boolean) => {
+    async (skip: number, replace: boolean, q: string, live: boolean, feat: string | null) => {
       const seq = ++requestSeq.current;
       setLoading(true);
       setFailed(false);
@@ -54,6 +65,7 @@ export default function RoomsView({
         });
         if (q) params.set('q', q);
         if (live) params.set('live', '1');
+        if (feat) params.set('feature', feat);
         const res = await fetch(`/api/analytics/rooms?${params}`, {
           headers: { 'x-analytics-secret': secret },
         });
@@ -64,6 +76,9 @@ export default function RoomsView({
         setHasMore(Boolean(json.hasMore));
         setLiveCount(json.liveCount ?? 0);
         setRightNow(json.rightNow ?? null);
+        setFeatureRooms(
+          feat && typeof json.featureRooms === 'number' ? { feature: feat, count: json.featureRooms } : null
+        );
       } catch {
         if (seq !== requestSeq.current) return;
         setHasMore(false);
@@ -83,22 +98,22 @@ export default function RoomsView({
           body: JSON.stringify({ roomId, emoji }),
         });
         // 409: nothing is playing any more, so the card's buttons are stale.
-        if (res.status === 409) loadRooms(0, true, query, liveOnly);
+        if (res.status === 409) loadRooms(0, true, query, liveOnly, feature);
         return res.ok;
       } catch {
         return false;
       }
     },
-    [secret, loadRooms, query, liveOnly]
+    [secret, loadRooms, query, liveOnly, feature]
   );
 
   React.useEffect(() => {
     const timer = setTimeout(
-      () => loadRooms(0, true, query, liveOnly),
+      () => loadRooms(0, true, query, liveOnly, feature),
       query ? SEARCH_DEBOUNCE_MS : 0
     );
     return () => clearTimeout(timer);
-  }, [query, liveOnly, refreshToken, loadRooms]);
+  }, [query, liveOnly, feature, refreshToken, loadRooms]);
 
   React.useEffect(() => {
     if (!hasMore || loading) return;
@@ -107,13 +122,13 @@ export default function RoomsView({
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting)
-          loadRooms(rooms.length, false, query, liveOnly);
+          loadRooms(rooms.length, false, query, liveOnly, feature);
       },
       { rootMargin: '300px' }
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, [hasMore, loading, rooms.length, query, liveOnly, loadRooms]);
+  }, [hasMore, loading, rooms.length, query, liveOnly, feature, loadRooms]);
 
   async function handleDelete(roomId: string) {
     if (!confirm(`Delete all data for room ${roomId}?`)) return;
@@ -125,7 +140,7 @@ export default function RoomsView({
       if (!res.ok) throw new Error('Delete failed');
       if (mergeSource === roomId) setMergeSource(null);
       if (expanded === roomId) setExpanded(null);
-      loadRooms(0, true, query, liveOnly);
+      loadRooms(0, true, query, liveOnly, feature);
       onMutate();
     } catch {
       alert('Failed to delete room');
@@ -160,16 +175,27 @@ export default function RoomsView({
       });
       if (!res.ok) throw new Error('Merge failed');
       setMergeSource(null);
-      loadRooms(0, true, query, liveOnly);
+      loadRooms(0, true, query, liveOnly, feature);
       onMutate();
     } catch {
       alert('Failed to merge rooms');
     }
   }
 
+  const featureLabel = adminFeature(feature)?.label ?? null;
+  const filtered = liveOnly || feature !== null;
+
+  function openRoom(roomId: string) {
+    setLiveOnly(false);
+    onFeatureChange(null);
+    onQueryChange(roomId);
+  }
+
   function emptyMessage(): string {
     if (loading) return 'Loading…';
     if (failed) return 'Couldn’t load rooms.';
+    if (featureLabel)
+      return `No ${liveOnly ? 'live ' : ''}rooms${query ? ` matching “${query}”` : ''} have used ${featureLabel}.`;
     if (liveOnly && query) return `No live rooms matching “${query}”`;
     if (liveOnly) return 'No rooms are live right now.';
     if (query) return `No rooms matching “${query}”`;
@@ -179,56 +205,36 @@ export default function RoomsView({
   return (
     <div className={styles.view}>
       <RightNowRow data={rightNow} />
+      <CameBackCard
+        secret={secret}
+        refreshToken={refreshToken}
+        hidden={Boolean(query) || filtered}
+        onOpenRoom={openRoom}
+      />
       <header className={styles.viewHeader}>
         <div>
           <h1 className={styles.viewTitle}>Rooms</h1>
           <p className={styles.viewSub}>
-            {liveOnly
-              ? 'Live rooms only — click one for the whole story.'
-              : 'Every room, newest first — click one for the whole story.'}
+            {roomsSubtitle(
+              featureLabel,
+              featureRooms?.feature === feature ? featureRooms.count : null,
+              liveOnly
+            )}
           </p>
         </div>
-        <div className={styles.roomsTools}>
-          {/* Kept mounted while filtering even at zero, so the last room going
-              dormant can't strand the operator in an empty filtered list. */}
-          {(liveCount > 0 || liveOnly) && (
-            <span className={styles.liveToggleWrap}>
-              <button
-                type="button"
-                className={`${styles.liveToggle} ${
-                  liveOnly ? styles.liveToggleOn : ''
-                }`}
-                onClick={() => setLiveOnly((on) => !on)}
-                aria-pressed={liveOnly}
-                aria-describedby={LIVE_TIP_ID}
-              >
-                ● {liveCount} live now
-              </button>
-              <span role="tooltip" id={LIVE_TIP_ID} className={styles.liveTip}>
-                {LIVE_EXPLANATION}
-              </span>
-            </span>
-          )}
-          <input
-            type="search"
-            className={styles.roomSearch}
-            placeholder="Find a room code…"
-            value={query}
-            onChange={(e) => onQueryChange(e.target.value)}
-            aria-label="Search rooms by code"
-          />
-        </div>
       </header>
+      <RoomsFilters
+        query={query}
+        liveOnly={liveOnly}
+        liveCount={liveCount}
+        feature={feature}
+        onQueryChange={onQueryChange}
+        onLiveChange={setLiveOnly}
+        onFeatureChange={onFeatureChange}
+      />
 
       {mergeSource && (
-        <div className={styles.mergeBanner}>
-          <span>
-            Merging <strong>{mergeSource}</strong> — pick the room to fold it into.
-          </span>
-          <button className={styles.mergeCancel} onClick={() => setMergeSource(null)}>
-            Cancel
-          </button>
-        </div>
+        <MergeBanner source={mergeSource} onCancel={() => setMergeSource(null)} />
       )}
 
       {rooms.length === 0 ? (
@@ -237,13 +243,19 @@ export default function RoomsView({
           {failed && (
             <button
               className={styles.retryBtn}
-              onClick={() => loadRooms(0, true, query, liveOnly)}
+              onClick={() => loadRooms(0, true, query, liveOnly, feature)}
             >
               Retry
             </button>
           )}
-          {liveOnly && !loading && !failed && (
-            <button className={styles.retryBtn} onClick={() => setLiveOnly(false)}>
+          {filtered && !loading && !failed && (
+            <button
+              className={styles.retryBtn}
+              onClick={() => {
+                setLiveOnly(false);
+                onFeatureChange(null);
+              }}
+            >
               Show all rooms
             </button>
           )}
@@ -255,6 +267,7 @@ export default function RoomsView({
               <RoomCard
                 key={`${room.roomId}-${i}`}
                 room={room}
+                highlight={feature}
                 secret={secret}
                 expanded={expanded === room.roomId}
                 merging={mergeSource === room.roomId}
@@ -269,24 +282,14 @@ export default function RoomsView({
             ))}
           </div>
           <div ref={sentinelRef} />
-          {loading && <p className={styles.empty}>Loading…</p>}
-          {failed && !loading ? (
-            <p className={styles.empty}>
-              Couldn&rsquo;t load more rooms.{' '}
-              <button
-                className={styles.retryBtn}
-                onClick={() => loadRooms(rooms.length, false, query, liveOnly)}
-              >
-                Retry
-              </button>
-            </p>
-          ) : (
-            !hasMore && !loading && (
-              <p className={styles.roomsEnd}>
-                {rooms.length} {liveOnly ? 'live rooms' : 'rooms'}
-              </p>
-            )
-          )}
+          <RoomsListEnd
+            count={rooms.length}
+            liveOnly={liveOnly}
+            loading={loading}
+            failed={failed}
+            hasMore={hasMore}
+            onRetry={() => loadRooms(rooms.length, false, query, liveOnly, feature)}
+          />
         </>
       )}
     </div>

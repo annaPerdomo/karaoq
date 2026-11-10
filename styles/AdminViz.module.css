@@ -329,13 +329,13 @@
 }
 
 .chartPick:focus-visible {
-  outline: 2px solid #a78bfa;
+  outline: 2px solid #00f0ff;
   outline-offset: 2px;
 }
 
 .chartPickOn {
-  border-color: #a78bfa;
-  color: #d8ccff;
+  border-color: #00f0ff;
+  color: #00f0ff;
 }
 
 /* ─── Bar list ─── */

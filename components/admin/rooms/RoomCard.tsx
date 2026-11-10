@@ -16,6 +16,7 @@ import {
 import { BoardIcon, HeartIcon, MicIcon, PeopleIcon } from '../icons';
 import { TapHint } from '../TapHint';
 import RoomDossier from './RoomDossier';
+import { ADMIN_FEATURES } from '../../../lib/adminFeatures';
 import { CHEER_EMOJIS, REACTION_COOLDOWN_MS } from '../../../app/queue/cheerConstants';
 
 const ADMIN_CHEER_EMOJIS = CHEER_EMOJIS.slice(0, 3);
@@ -47,6 +48,7 @@ function Stat({
 
 export default function RoomCard({
   room,
+  highlight,
   secret,
   expanded,
   merging,
@@ -57,6 +59,7 @@ export default function RoomCard({
   onCheer,
 }: {
   room: RoomRow;
+  highlight?: string | null;
   secret: string;
   expanded: boolean;
   merging: boolean;
@@ -69,6 +72,10 @@ export default function RoomCard({
   const live = isLive(room.lastActivity);
   const cheerable = live && room.playing === true;
   const boards = room.requests + room.singWithMe;
+  const used = room.features ?? [];
+  const featureChips = ADMIN_FEATURES.filter(
+    (f) => used.includes(f.id) && (!f.noChip || f.id === highlight)
+  );
   const [cheerLocked, setCheerLocked] = React.useState(false);
   const cheerTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   React.useEffect(() => () => { if (cheerTimer.current) clearTimeout(cheerTimer.current); }, []);
@@ -98,7 +105,12 @@ export default function RoomCard({
               text={`${LIVE_EXPLANATION} Last action ${timeAgo(room.lastActivity)}.`}
               className={styles.liveBadge}
             >
-              ● live
+              <span className={styles.eqBars} aria-hidden="true">
+                <span className={styles.eqBar} />
+                <span className={styles.eqBar} />
+                <span className={styles.eqBar} />
+              </span>
+              live
             </TapHint>
           )}
         </span>
@@ -117,19 +129,6 @@ export default function RoomCard({
             value={boards}
             label="board activity (requests + sing-with-me posts, joins and queues)"
           />
-          {(room.ideas ?? 0) > 0 && (
-            <TapHint
-              text={`${room.ideas} songs picked from the song ideas shelves`}
-              className={styles.ideaChip}
-            >
-              ideas ×{room.ideas}
-            </TapHint>
-          )}
-          {room.duets > 0 && (
-            <TapHint text={`${room.duets} duet or group adds`} className={styles.duetChip}>
-              duet ×{room.duets}
-            </TapHint>
-          )}
           {room.errors > 0 && (
             <TapHint
               text={`${room.errors} client errors recorded in this room`}
@@ -172,6 +171,22 @@ export default function RoomCard({
         <span className={styles.roomChevron} aria-hidden="true">
           {expanded ? '▾' : '▸'}
         </span>
+        {featureChips.length > 0 && (
+          <span className={styles.roomFeatures}>
+            {featureChips.map((f) => (
+              <span
+                key={f.id}
+                className={`${styles.featureChip} ${
+                  f.id === highlight ? styles.featureChipOn : ''
+                }`}
+              >
+                {f.label}
+                {f.id === 'ideas' && (room.ideas ?? 0) > 0 && ` ×${room.ideas}`}
+                {f.id === 'duets' && room.duets > 0 && ` ×${room.duets}`}
+              </span>
+            ))}
+          </span>
+        )}
       </button>
 
       <div className={styles.roomActions}>

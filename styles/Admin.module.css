@@ -1,6 +1,54 @@
-/* KaraoQ Mission Control. Dark, quiet chrome; the data is the loud part.
- * Brand purple is UI chrome only — data marks use the validated chart palette
- * (components/admin/charts/palette.ts). */
+/* KaraoQ Mission Control, dressed like the app: the pink-to-cyan neon wordmark,
+ * cyan for whatever is selected, pink for emphasis (Host.module.css's --acc-a /
+ * --acc-b). Those are UI chrome only — data marks use the validated chart
+ * palette (components/admin/charts/palette.ts). */
+
+/* ─── Wordmark ─── */
+
+/* The app's mark, value for value: .navLogo's face, tracking and gradient, and
+   .brandWord's glow and cold-tube flicker (Home.module.css). */
+.wordmark {
+  font-family: var(--font-brand);
+  font-weight: 400;
+  letter-spacing: 2px;
+  line-height: 1.1;
+  background: linear-gradient(135deg, #ff2d78, #00f0ff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  /* filter, not text-shadow: the glyphs are background-clipped, so a shadow
+     would paint under the box rather than around the letters. */
+  filter:
+    drop-shadow(0 0 8px rgba(255, 45, 120, 0.28))
+    drop-shadow(0 0 20px rgba(0, 240, 255, 0.16));
+  animation: neonFlicker 1.1s steps(1, end) 0s both;
+}
+
+@keyframes neonFlicker {
+  0% { opacity: 0; }
+  6% { opacity: 1; }
+  10% { opacity: 0.25; }
+  15% { opacity: 1; }
+  21% { opacity: 0.4; }
+  26%, 100% { opacity: 1; }
+}
+
+@keyframes eqBounce {
+  0%, 100% { height: 3px; }
+  50% { height: 10px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wordmark { animation: none; }
+  .eqBar { animation: none !important; height: 7px !important; }
+}
+
+/* Smart TVs never report prefers-reduced-motion, so the block above is twinned
+   under html[data-tv]; tests/lib/calmCss.test.ts fails if the two drift. */
+/* @calm-twin-start */
+html[data-tv] .wordmark { animation: none; }
+html[data-tv] .eqBar { animation: none !important; height: 7px !important; }
+/* @calm-twin-end */
 
 /* ─── Login ─── */
 
@@ -11,7 +59,8 @@
   justify-content: center;
   padding: 1.5rem;
   background:
-    radial-gradient(ellipse 60% 40% at 50% 0%, rgba(167, 139, 250, 0.12), transparent),
+    radial-gradient(ellipse at 18% 20%, rgba(255, 45, 120, 0.13) 0%, transparent 50%),
+    radial-gradient(ellipse at 82% 15%, rgba(0, 240, 255, 0.09) 0%, transparent 50%),
     var(--bg-primary);
 }
 
@@ -27,10 +76,9 @@
 }
 
 .loginBrand {
-  font-family: var(--font-brand);
-  font-size: 1rem;
-  letter-spacing: 2px;
-  color: rgba(200, 180, 255, 0.6);
+  composes: wordmark;
+  font-size: 1.7rem;
+  align-self: flex-start;
 }
 
 .loginTitle {
@@ -62,12 +110,12 @@
 
 .loginInput:focus {
   outline: none;
-  border-color: #a78bfa;
+  border-color: #00f0ff;
 }
 
 .loginButton {
-  background: #a78bfa;
-  color: #14082e;
+  background: linear-gradient(135deg, #ff2d78, #ff6b35);
+  color: #fff;
   border: none;
   border-radius: 10px;
   padding: 0.7rem;
@@ -97,7 +145,12 @@
   min-height: 100vh;
   display: grid;
   grid-template-columns: 218px 1fr;
-  background: var(--bg-primary);
+  /* The home hero's stage wash, pinned so it doesn't scroll away. */
+  background:
+    radial-gradient(ellipse at 12% 0%, rgba(255, 45, 120, 0.11) 0%, transparent 45%),
+    radial-gradient(ellipse at 88% 0%, rgba(0, 240, 255, 0.08) 0%, transparent 45%),
+    var(--bg-primary);
+  background-attachment: fixed;
 }
 
 .sidebar {
@@ -120,13 +173,8 @@
 }
 
 .brandLogo {
-  font-family: var(--font-brand);
-  font-size: 1.25rem;
-  letter-spacing: 1.5px;
-  background: linear-gradient(120deg, #c4b5fd, #f0abfc);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  composes: wordmark;
+  font-size: 1.4rem;
 }
 
 .brandSub {
@@ -164,8 +212,17 @@
 
 .navItemActive,
 .navItemActive:hover {
-  background: rgba(167, 139, 250, 0.14);
-  color: #d8ccff;
+  background: rgba(0, 240, 255, 0.1);
+  box-shadow: inset 0 0 0 1px rgba(0, 240, 255, 0.35);
+  color: #00f0ff;
+}
+
+.navDivider {
+  margin: 0.9rem 0.7rem 0.2rem;
+  color: var(--text-muted);
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
 }
 
 .navLabel {
@@ -221,48 +278,103 @@
   min-width: 0;
 }
 
+/* Phone only: the sidebar's nav is hidden below 860px and this takes over. */
+.tabBar {
+  display: none;
+}
+
 @media (max-width: 860px) {
   .shell {
     grid-template-columns: 1fr;
+    /* Keeps the page from stretching the top bar when the list is short. */
+    align-content: start;
   }
   .sidebar {
     position: static;
     height: auto;
     flex-direction: row;
     align-items: center;
+    justify-content: space-between;
     gap: 0.8rem;
     border-right: none;
     border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-    padding: 0.7rem 1rem;
-    overflow-x: auto;
+    padding: 0.6rem 1rem;
   }
   .brand {
-    flex-shrink: 0;
-  }
-  .brandSub {
-    display: none;
-  }
-  .nav {
     flex-direction: row;
-    flex: 1;
+    align-items: baseline;
+    gap: 0.6rem;
+    padding: 0;
   }
-  .navItem {
-    padding: 0.45rem 0.6rem;
-    white-space: nowrap;
-  }
-  .navLabel {
-    flex: none;
+  /* Rooms, Features, Health and More sit in the tab bar; Log out is under More. */
+  .nav,
+  .sidebarFooter .logoutBtn,
+  .generatedAt {
+    display: none;
   }
   .sidebarFooter {
     flex-direction: row;
     flex-shrink: 0;
   }
-  .generatedAt {
-    display: none;
+  .refreshBtn {
+    min-height: 2.75rem;
+    padding: 0.5rem 0.9rem;
   }
   .main {
-    padding: 1.1rem 1rem 3rem;
+    padding: 1.1rem 1rem calc(5.5rem + env(safe-area-inset-bottom));
   }
+  .tabBar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 40;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    padding: 0.3rem 0.4rem calc(0.3rem + env(safe-area-inset-bottom));
+    background: rgba(10, 10, 24, 0.92);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+  }
+}
+
+.tab {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
+  min-height: 3.1rem;
+  border: none;
+  border-radius: 12px;
+  background: none;
+  color: #9a9ab0;
+  font-size: 0.68rem;
+  font-weight: 600;
+}
+
+.tabActive {
+  color: #00f0ff;
+  background: rgba(0, 240, 255, 0.08);
+}
+
+.tabActive svg {
+  filter: drop-shadow(0 0 6px rgba(0, 240, 255, 0.55));
+}
+
+.tabBadge {
+  position: absolute;
+  top: 0.2rem;
+  left: calc(50% + 0.45rem);
+  background: #ff2d78;
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 0.05rem 0.38rem;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ─── View chrome ─── */
@@ -306,62 +418,16 @@
   margin-top: 0.15rem;
 }
 
-.roomsTools {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 0.6rem;
-  flex-wrap: wrap;
-}
-
 /* Anchors the tooltip; the button itself can't, being a flex item. */
 .liveToggleWrap {
   position: relative;
   display: inline-flex;
 }
 
-.liveToggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  background: rgba(52, 211, 153, 0.1);
-  border: 1px solid rgba(52, 211, 153, 0.28);
-  border-radius: 999px;
-  padding: 0.5rem 0.85rem;
-  color: #34d399;
-  font-family: inherit;
-  font-size: 0.82rem;
-  font-weight: 600;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background 0.15s ease, border-color 0.15s ease;
-}
-
-.liveToggle:hover {
-  background: rgba(52, 211, 153, 0.18);
-  border-color: rgba(52, 211, 153, 0.5);
-}
-
-.liveToggle:focus-visible {
-  outline: 2px solid #34d399;
-  outline-offset: 2px;
-}
-
-.liveToggleOn {
-  background: rgba(52, 211, 153, 0.9);
-  border-color: rgba(52, 211, 153, 0.9);
-  color: #04231a;
-}
-
-.liveToggleOn:hover {
-  background: #34d399;
-  border-color: #34d399;
-}
-
 .liveTip {
   position: absolute;
   top: calc(100% + 0.45rem);
-  right: 0;
+  left: 0;
   z-index: 20;
   width: max-content;
   max-width: min(320px, 78vw);
@@ -386,7 +452,7 @@
 }
 
 .liveToggleWrap:hover .liveTip,
-.liveToggle:focus-visible + .liveTip {
+.filterChipLive:focus-visible + .liveTip {
   opacity: 1;
   visibility: visible;
 }
@@ -592,7 +658,7 @@
 
 .roomSearch:focus {
   outline: none;
-  border-color: #a78bfa;
+  border-color: #00f0ff;
 }
 
 .mergeBanner {
@@ -600,8 +666,8 @@
   justify-content: space-between;
   align-items: center;
   gap: 1rem;
-  background: rgba(167, 139, 250, 0.12);
-  border: 1px solid rgba(167, 139, 250, 0.35);
+  background: rgba(0, 240, 255, 0.12);
+  border: 1px solid rgba(0, 240, 255, 0.35);
   border-radius: 10px;
   padding: 0.6rem 0.9rem;
   color: var(--text-secondary);
@@ -632,15 +698,15 @@
 }
 
 .roomCard:hover {
-  border-color: rgba(167, 139, 250, 0.4);
+  border-color: rgba(0, 240, 255, 0.4);
 }
 
 .roomCardMerging {
-  border-color: #a78bfa;
+  border-color: #00f0ff;
 }
 
 .roomCardExpanded {
-  border-color: rgba(167, 139, 250, 0.5);
+  border-color: rgba(0, 240, 255, 0.5);
 }
 
 .roomMain {
@@ -679,6 +745,8 @@
   border-radius: 999px;
   padding: 0.08rem 0.5rem;
   text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
 }
 
 .roomWhen {
@@ -718,25 +786,6 @@
 
 .roomStatValue {
   font-variant-numeric: tabular-nums;
-}
-
-.duetChip {
-  font-size: 0.68rem;
-  font-weight: 700;
-  color: #c4b5fd;
-  background: rgba(167, 139, 250, 0.12);
-  border-radius: 999px;
-  padding: 0.12rem 0.5rem;
-}
-
-/* Cyan, not mint: the fair-rotation chip sits beside it and is already mint. */
-.ideaChip {
-  font-size: 0.68rem;
-  font-weight: 700;
-  color: #7dd3fc;
-  background: rgba(56, 189, 248, 0.14);
-  border-radius: 999px;
-  padding: 0.12rem 0.5rem;
 }
 
 .errorChip {
@@ -834,8 +883,8 @@
 }
 
 .roomActionActive {
-  border-color: #a78bfa;
-  color: #c4b5fd;
+  border-color: #00f0ff;
+  color: #00f0ff;
 }
 
 .roomActionDanger:hover {
@@ -850,14 +899,23 @@
   padding: 0.8rem 0;
 }
 
+/* The wide card has no named areas: the chips take a row of their own. */
+@media (min-width: 1021px) {
+  .roomFeatures {
+    grid-column: 2 / -1;
+  }
+}
+
 @media (max-width: 1020px) {
   .roomMain {
     grid-template-columns: 110px 1fr auto 1.2rem;
     grid-template-areas:
       'code when lang chevron'
-      'code stats fair chevron';
+      'code stats fair chevron'
+      'code features features chevron';
     row-gap: 0.3rem;
   }
+  .roomFeatures { grid-area: features; }
   /* Six buttons would eat a third of the card here; stack them above instead. */
   .roomMainCheerable {
     padding-right: 1rem;
@@ -878,12 +936,449 @@
       'code chevron'
       'when when'
       'stats stats'
-      'lang fair';
+      'features features';
     padding-right: 1rem;
     padding-top: 2.4rem;
   }
-  .roomLang { justify-self: start; }
-  .roomBadges { justify-self: end; }
+  /* The phone card is who, where, how much and which features; language and
+     the fair/auto settings are one tap away in the dossier strip. */
+  .roomLang,
+  .roomBadges {
+    display: none;
+  }
+}
+
+/* ─── Rooms: filters, feature chips, came back ─── */
+
+.roomsFilters {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.filterRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.filterChip {
+  min-height: 2.25rem;
+  padding: 0 0.85rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: none;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  white-space: nowrap;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.filterChip:hover {
+  border-color: rgba(255, 255, 255, 0.28);
+  color: var(--text-primary);
+}
+
+.filterChip:focus-visible {
+  outline: 2px solid #00f0ff;
+  outline-offset: 2px;
+}
+
+.filterChipLive {
+  color: #34d399;
+  border-color: rgba(52, 211, 153, 0.35);
+}
+
+.filterChipOn,
+.filterChipOn:hover {
+  color: #00f0ff;
+  border-color: rgba(0, 240, 255, 0.5);
+  background: rgba(0, 240, 255, 0.12);
+  box-shadow: 0 0 12px rgba(0, 240, 255, 0.2);
+  font-weight: 600;
+}
+
+@media (max-width: 640px) {
+  /* One swipeable line: a dozen features wrapped would push the rooms off-screen. */
+  .filterRow {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    margin: 0 -1rem;
+    padding: 0.2rem 1rem;
+    scrollbar-width: none;
+  }
+  .filterRow::-webkit-scrollbar {
+    display: none;
+  }
+  .filterChip {
+    flex: none;
+    min-height: 2.75rem;
+  }
+  /* Clipped by the scrolling row, and there's no hover on a phone anyway. */
+  .liveTip {
+    display: none;
+  }
+}
+
+.roomFeatures {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.featureChip {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 999px;
+  padding: 0.14rem 0.55rem;
+  white-space: nowrap;
+}
+
+.featureChipOn {
+  color: #00f0ff;
+  background: rgba(0, 240, 255, 0.14);
+}
+
+.eqBars {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 1.5px;
+  height: 10px;
+  margin-right: 0.3rem;
+}
+
+.eqBar {
+  width: 2px;
+  border-radius: 1px;
+  background: currentColor;
+  animation: eqBounce 1.2s ease-in-out infinite;
+}
+
+.eqBar:nth-child(2) { animation-delay: 0.2s; }
+.eqBar:nth-child(3) { animation-delay: 0.1s; }
+
+.cameBack {
+  background: var(--bg-secondary);
+  border: 1px solid rgba(255, 45, 120, 0.35);
+  border-radius: 14px;
+  padding: 0.9rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  box-shadow: 0 0 24px rgba(255, 45, 120, 0.08);
+}
+
+.cameBackHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.cameBackTitle {
+  font-family: var(--font-headline);
+  font-size: 1rem;
+  color: #ff2d78;
+  text-shadow: 0 0 12px rgba(255, 45, 120, 0.5);
+}
+
+.cameBackWindow {
+  font-size: 0.75rem;
+  color: #9a9ab0;
+}
+
+.cameBackLead {
+  display: flex;
+  align-items: baseline;
+  gap: 0.55rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.cameBackValue {
+  font-family: var(--font-headline);
+  font-weight: 700;
+  font-size: 1.9rem;
+  line-height: 1;
+  color: var(--text-primary);
+}
+
+.cameBackRows {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.cameBackRow {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.6rem 0;
+  min-height: 2.75rem;
+  border: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  background: none;
+  text-align: left;
+  color: var(--text-primary);
+}
+
+.cameBackRow:hover .cameBackRoom {
+  color: #00f0ff;
+}
+
+.cameBackWho {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.cameBackRoom {
+  font-family: var(--font-mono);
+  font-weight: 400;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+
+.cameBackNote {
+  font-size: 0.76rem;
+  color: #9a9ab0;
+}
+
+.cameBackMore {
+  align-self: flex-start;
+  min-height: 2.75rem;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #00f0ff;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+/* ─── Features ─── */
+
+.featuresLead {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  max-width: 62ch;
+}
+
+.featuresNote {
+  font-size: 0.75rem;
+  color: #9a9ab0;
+  max-width: 70ch;
+}
+
+.featureGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr));
+  gap: 0.8rem;
+}
+
+.featureCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  padding: 0.9rem 1rem;
+  background: var(--bg-secondary);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 14px;
+  color: var(--text-primary);
+  text-align: left;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.featureCard:hover,
+.featureCard:focus-visible {
+  border-color: rgba(0, 240, 255, 0.5);
+  box-shadow: 0 0 16px rgba(0, 240, 255, 0.14);
+  outline: none;
+}
+
+.featureCardHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.featureCardName {
+  font-family: var(--font-headline);
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.featureCardLink {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #00f0ff;
+  white-space: nowrap;
+}
+
+.featureCardStats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+
+.featureStat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.featureStatLabel {
+  font-size: 0.68rem;
+  color: #9a9ab0;
+}
+
+.featureStatValue {
+  font-family: var(--font-headline);
+  font-weight: 700;
+  font-size: 1.2rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+@media (max-width: 400px) {
+  /* "30 of 200" has to fit a third of a 320px card on one line. */
+  .featureStatValue {
+    font-size: 1rem;
+  }
+}
+
+.featureStatSub {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+}
+
+/* ─── Health ─── */
+
+.healthGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.8rem;
+}
+
+.healthCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.9rem 1rem;
+  background: var(--bg-secondary);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 14px;
+  color: var(--text-primary);
+  text-align: left;
+}
+
+.healthCardAlert {
+  border-color: rgba(255, 45, 120, 0.55);
+  box-shadow: 0 0 18px rgba(255, 45, 120, 0.1);
+}
+
+.healthCardActive {
+  background: rgba(0, 240, 255, 0.06);
+}
+
+.healthCard:focus-visible {
+  outline: 2px solid #00f0ff;
+  outline-offset: 2px;
+}
+
+.healthCardHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.healthCardTitle {
+  font-family: var(--font-headline);
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.healthOk,
+.healthAlert {
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.healthOk { color: #34d399; }
+.healthAlert { color: #ff7aa8; }
+
+.healthCardValue {
+  font-family: var(--font-headline);
+  font-weight: 700;
+  font-size: 1.9rem;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.healthCardSub {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+/* ─── More (phone menu) ─── */
+
+.moreList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.moreItem {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  min-height: 3.5rem;
+  padding: 0.7rem 1rem;
+  background: var(--bg-secondary);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 14px;
+  color: var(--text-primary);
+  text-align: left;
+}
+
+.moreItem:hover {
+  border-color: rgba(0, 240, 255, 0.4);
+}
+
+.moreItemText {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.moreItemLabel {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.moreItemHint {
+  font-size: 0.76rem;
+  color: #9a9ab0;
+}
+
+.moreLogout {
+  composes: logoutBtn;
+  min-height: 2.75rem;
+}
+
+.moreAsOf {
+  color: #9a9ab0;
+  font-size: 0.75rem;
 }
 
 /* ─── Room dossier ─── */
@@ -1036,13 +1531,13 @@
 }
 
 .dsBadgeHost {
-  color: #c4b5fd;
-  background: rgba(167, 139, 250, 0.14);
+  color: #00f0ff;
+  background: rgba(0, 240, 255, 0.14);
 }
 
 .dsBadgeDuet {
-  color: #c4b5fd;
-  background: rgba(167, 139, 250, 0.14);
+  color: #00f0ff;
+  background: rgba(0, 240, 255, 0.14);
 }
 
 .dsBadgeIdea {
@@ -1177,8 +1672,8 @@
 }
 
 .tlFilterOn {
-  border-color: #a78bfa;
-  color: #d8ccff;
+  border-color: #00f0ff;
+  color: #00f0ff;
 }
 
 @media (max-width: 640px) {
@@ -1318,7 +1813,7 @@
 
 .roomJumpChip:hover {
   color: var(--text-primary);
-  border-color: rgba(167, 139, 250, 0.5);
+  border-color: rgba(0, 240, 255, 0.5);
 }
 
 .errorStack {
@@ -1543,9 +2038,9 @@
 }
 
 .wantedToggleOn {
-  border-color: #a78bfa;
-  color: #c4b5fd;
-  background: rgba(167, 139, 250, 0.12);
+  border-color: #00f0ff;
+  color: #00f0ff;
+  background: rgba(0, 240, 255, 0.12);
 }
 
 .wantedFlags {
