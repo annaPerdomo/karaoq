@@ -17,6 +17,7 @@ import { BoardIcon, HeartIcon, MicIcon, PeopleIcon } from '../icons';
 import { TapHint } from '../TapHint';
 import RoomDossier from './RoomDossier';
 import { ADMIN_FEATURES } from '../../../lib/adminFeatures';
+import { BrandMark, hasBrand } from './BrandPanel';
 import { CHEER_EMOJIS, REACTION_COOLDOWN_MS } from '../../../app/queue/cheerConstants';
 
 const ADMIN_CHEER_EMOJIS = CHEER_EMOJIS.slice(0, 3);
@@ -171,8 +172,9 @@ export default function RoomCard({
         <span className={styles.roomChevron} aria-hidden="true">
           {expanded ? '▾' : '▸'}
         </span>
-        {featureChips.length > 0 && (
+        {(featureChips.length > 0 || hasBrand(room.brand)) && (
           <span className={styles.roomFeatures}>
+            {hasBrand(room.brand) && <BrandMark roomId={room.roomId} brand={room.brand} />}
             {featureChips.map((f) => (
               <span
                 key={f.id}
@@ -247,7 +249,7 @@ export default function RoomCard({
         </button>
       </div>
 
-      {expanded && <RoomDossier roomId={room.roomId} secret={secret} />}
+      {expanded && <RoomDossier roomId={room.roomId} secret={secret} brand={room.brand} />}
     </div>
   );
 }

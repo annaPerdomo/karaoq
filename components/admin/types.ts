@@ -205,6 +205,8 @@ export interface RoomRow {
   /** The language the room was CREATED in; null where the room predates recording. */
   locale?: string | null;
   localeMix?: LocaleCount[];
+  /** The room's current logo and colors; null once the room doc has expired. */
+  brand?: import('../../pages/api/types').RoomBrand | null;
   /** lib/adminFeatures ids. Absent on an older deploy. */
   features?: string[];
 }

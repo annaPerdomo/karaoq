@@ -15,6 +15,8 @@ import { BoardsSection, PeopleSection } from './DossierSections';
 import { TimelineSection } from './TimelineSection';
 import { CheersPanel, PlaybackPanel, SetupPanel } from './DossierPanels';
 import SuggestionsSection from './SuggestionsSection';
+import { BrandPanel, hasBrand } from './BrandPanel';
+import type { RoomBrand } from '../../../pages/api/types';
 import {
   MusicVideoPanel,
   musicVideoChipLabel,
@@ -39,9 +41,12 @@ function spanLabel(span: RoomDossierData['span']): string | null {
 export default function RoomDossier({
   roomId,
   secret,
+  brand,
 }: {
   roomId: string;
   secret: string;
+  /** From the room list's row: the dossier endpoint doesn't carry it. */
+  brand?: RoomBrand | null;
 }): React.ReactElement {
   const [data, setData] = React.useState<RoomDossierData | null>(null);
   const [failed, setFailed] = React.useState(false);
@@ -165,6 +170,7 @@ export default function RoomDossier({
           />
         )}
         {musicVideo && <MusicVideoPanel musicVideo={musicVideo} wide />}
+        {hasBrand(brand) && <BrandPanel roomId={roomId} brand={brand} wide />}
         {hasSuggestions && (
           <SuggestionsSection suggestions={data.suggestions ?? []} wide />
         )}

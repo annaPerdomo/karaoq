@@ -162,7 +162,7 @@ describe("GET /api/analytics/rooms", () => {
     // A room doc carries its whole queue.
     expect(roomLookup().localField).toBeUndefined();
     expect(roomLookup().pipeline).toContainEqual({
-      $project: { _id: 0, lastActivity: 1, autoAdvance: 1, isPlaying: 1, playStartedAt: 1 },
+      $project: { _id: 0, lastActivity: 1, autoAdvance: 1, isPlaying: 1, playStartedAt: 1, brand: 1 },
     });
   });
 

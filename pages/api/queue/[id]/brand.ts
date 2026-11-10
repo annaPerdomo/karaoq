@@ -77,6 +77,9 @@ export default async function handler(
       roomId,
       logo: !!saved.logo,
       colors: !!(saved.accentA || saved.accentB),
+      // The hexes themselves: the room doc that holds them expires, this doesn't.
+      ...(saved.accentA ? { accentA: saved.accentA } : {}),
+      ...(saved.accentB ? { accentB: saved.accentB } : {}),
       cleared: Object.keys(saved).length === 0,
       surface: surface as Surface,
       resized: saved.logoScale !== undefined,

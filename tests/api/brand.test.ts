@@ -140,6 +140,14 @@ describe("POST /api/queue/[id]/brand - save the room brand", () => {
     expect(room()).not.toHaveProperty("brand");
   });
 
+  it("records the chosen colors themselves, since the room doc expires", async () => {
+    await save({ brand: { accentA: "#112233", accentB: "#445566" } });
+
+    expect(tracked()).toEqual([
+      expect.objectContaining({ type: "brand_saved", accentA: "#112233", accentB: "#445566" }),
+    ]);
+  });
+
   it("clears the brand with {} and deletes the room's logos", async () => {
     const hash = await saveDraftLogo("ROOM1", PNG, "image/png");
     await commitLogo("ROOM1", hash);

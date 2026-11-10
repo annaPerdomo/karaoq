@@ -202,6 +202,9 @@ export interface AnalyticsEvent {
   // brand_saved: what the saved brand carries, and which Customize rail saved it.
   logo?: boolean;
   colors?: boolean;
+  // brand_saved: "#rrggbb", when a color was chosen.
+  accentA?: string;
+  accentB?: string;
   cleared?: boolean;
   // brand_saved: which Customize rail saved it. song_started, song_ended: which
   // player reported it; absent from clients predating the field.

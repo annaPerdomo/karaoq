@@ -1161,6 +1161,83 @@ html[data-tv] .eqBar { animation: none !important; height: 7px !important; }
   font-weight: 600;
 }
 
+/* ─── Branding: the room's logo and colors ─── */
+
+.brandMark {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.12rem 0.4rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.brandMarkLogo {
+  height: 1.25rem;
+  max-width: 4.5rem;
+  object-fit: contain;
+}
+
+.brandDot {
+  width: 0.8rem;
+  height: 0.8rem;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+.brandPanel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem 1.4rem;
+}
+
+/* A neutral mid-dark plate: logos arrive as light-on-clear and dark-on-white alike. */
+.brandLogoFrame {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 11rem;
+  height: 6.5rem;
+  padding: 0.6rem;
+  border-radius: 12px;
+  background: #2a2a3d;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.brandLogoFrame img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.brandSwatches {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.brandSwatch {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.brandSwatchChip {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.brandHex {
+  display: block;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+}
+
 /* ─── Features ─── */
 
 .featuresLead {
