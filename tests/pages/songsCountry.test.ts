@@ -11,8 +11,9 @@ vi.mock("../../lib/songChartsServer", async () => {
   };
 });
 
-import { getStaticProps } from "../../pages/songs/[country]";
+import { getStaticPaths, getStaticProps } from "../../pages/songs/[country]";
 import { CHART_MIN_SONGS } from "../../lib/songCharts";
+import { SUPPORTED_LOCALES } from "../../lib/i18n/config";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -66,5 +67,35 @@ describe("pages/songs/[country] getStaticProps", () => {
     expect(result.props.country).toBe("us");
     expect(result.props.songs).toHaveLength(CHART_MIN_SONGS);
     expect(result.revalidate).toBe(86400);
+  });
+});
+
+describe("pages/songs/[country] getStaticPaths", () => {
+  it("prebuilds every locale-named param, in every locale", async () => {
+    const { paths, fallback }: any = await getStaticPaths({} as any);
+    expect(fallback).toBe("blocking");
+    const keys = new Set(paths.map((p: any) => `${p.locale}/${p.params.country}`));
+    for (const cc of SUPPORTED_LOCALES) {
+      for (const locale of SUPPORTED_LOCALES) expect(keys.has(`${locale}/${cc}`)).toBe(true);
+    }
+    expect(keys.has("en/fr")).toBe(true);
+    expect(keys.has("en/us")).toBe(false);
+  });
+});
+
+describe("pages/songs/[country] build-time DB failure", () => {
+  it("404s with a short revalidate during the build instead of failing it", async () => {
+    vi.stubEnv("NEXT_PHASE", "phase-production-build");
+    readTopSongsMock.mockRejectedValueOnce(new Error("maxTimeMS expired"));
+    const result: any = await getStaticProps({ params: { country: "fr" }, locale: "en" } as any);
+    vi.unstubAllEnvs();
+    expect(result).toEqual({ notFound: true, revalidate: 300 });
+  });
+
+  it("rethrows at runtime so ISR keeps the last good page", async () => {
+    readTopSongsMock.mockRejectedValueOnce(new Error("maxTimeMS expired"));
+    await expect(
+      getStaticProps({ params: { country: "fr" }, locale: "en" } as any)
+    ).rejects.toThrow("maxTimeMS expired");
   });
 });

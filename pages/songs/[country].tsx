@@ -121,8 +121,12 @@ const SongsCountryPage: NextPage<SongsCountryPageProps> = ({
 
 const CHART_REVALIDATE_SECONDS = 86400;
 
+// Prebuild every locale-named param: on Vercel, a fallback render of /songs/fr has
+// Next 14 read `fr` as a locale (getParamsFromRouteMatches) and 500.
 export const getStaticPaths: GetStaticPaths = async () => ({
-  paths: [],
+  paths: SUPPORTED_LOCALES.flatMap((country) =>
+    SUPPORTED_LOCALES.map((locale) => ({ params: { country }, locale }))
+  ),
   fallback: 'blocking',
 });
 
@@ -141,7 +145,14 @@ export const getStaticProps: GetStaticProps<
 
   // The exact call countriesWithCharts makes, so a country it links here
   // from the global page always clears this same check.
-  const songs = await readTopSongs({ country });
+  let songs: ChartSong[];
+  try {
+    songs = await readTopSongs({ country });
+  } catch (err) {
+    // A slow Atlas must not fail the deploy; at runtime, throwing keeps ISR's last good page.
+    if (process.env.NEXT_PHASE !== 'phase-production-build') throw err;
+    return { notFound: true, revalidate: 300 };
+  }
   if (songs.length < CHART_MIN_SONGS) {
     return { notFound: true, revalidate: CHART_REVALIDATE_SECONDS };
   }

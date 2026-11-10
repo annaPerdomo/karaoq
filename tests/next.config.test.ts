@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import nextConfig from "../next.config.js";
+import { SUPPORTED_LOCALES } from "../lib/i18n/config";
 
 describe("next.config.js", () => {
   it("builds with output: standalone and the i18n config untouched", () => {
@@ -7,5 +8,9 @@ describe("next.config.js", () => {
     expect(nextConfig.i18n.locales).toContain("en");
     expect(nextConfig.i18n.defaultLocale).toBe("en");
     expect(nextConfig.i18n.localeDetection).toBe(false);
+  });
+
+  it("routes exactly the app's SUPPORTED_LOCALES", () => {
+    expect([...nextConfig.i18n.locales].sort()).toEqual([...SUPPORTED_LOCALES].sort());
   });
 });
