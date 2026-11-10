@@ -16,7 +16,7 @@ Key facts:
 - Available in English, Japanese, Filipino, Spanish, Korean, Portuguese, German, Indonesian, Czech, and French.
 
 ## Guides
-- [How to host karaoke at home](https://www.karaoq.live/guide/how-to-host-karaoke-at-home): Run a karaoke night at home with no machine — browser, YouTube, and any screen.
+- [How to do karaoke at home without a machine](https://www.karaoq.live/guide/how-to-host-karaoke-at-home): Run a karaoke night at home with no machine — browser, YouTube, and any screen.
 - [How to do karaoke on your TV](https://www.karaoq.live/guide/karaoke-on-your-tv): Per-device walkthrough — smart TV browser, Chromecast, Apple TV, Fire TV Stick, Roku, HDMI — plus the fix for delayed vocals.
 - [Free YouTube karaoke](https://www.karaoq.live/guide/free-youtube-karaoke): Use YouTube as an endless free karaoke library — finding the right version, songs with no karaoke track, ads, unplayable videos.
 - [Home karaoke setup guide](https://www.karaoq.live/guide/home-karaoke-setup): Five levels from a $0 phone-and-TV night to a mixer, powered speakers and UHF wireless mics — what each costs, what to buy, what to skip.

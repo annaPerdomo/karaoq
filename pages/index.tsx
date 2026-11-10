@@ -39,14 +39,14 @@ const HomePage: NextPage<HomePageProps> = ({ pageLocale, stats }) => {
   // where there is nothing to break across.
   const heroTitle = `${t('home.hero.titleLine1')} ${t('home.hero.titleLine2')}`;
   const title = isEn
-    ? 'KaraoQ — YouTube Karaoke App | No Downloads, No Sign-Up'
+    ? 'KaraoQ — Free YouTube Karaoke at Home | No Downloads, No Sign-Up'
     : `KaraoQ — ${heroTitle}`;
-  const ogTitle = isEn ? 'KaraoQ — YouTube Karaoke App' : `KaraoQ — ${heroTitle}`;
+  const ogTitle = isEn ? 'KaraoQ — Free YouTube Karaoke' : `KaraoQ — ${heroTitle}`;
   const description = isEn
-    ? 'Turn any gathering into karaoke night with KaraoQ. Search YouTube for songs, build a shared queue from your phone, and sing with friends. No downloads, works on any device.'
+    ? 'Free karaoke at home, on any screen. Search YouTube for songs, build a shared queue from your phones, and sing with friends. No downloads, no sign-up, no karaoke machine.'
     : t('home.hero.sub');
   const twitterDescription = isEn
-    ? 'Turn any gathering into karaoke night. Search YouTube, build a queue from your phone, cheer on your friends, and sing.'
+    ? 'Free karaoke for any gathering. Search YouTube, build a queue from your phone, cheer on your friends, and sing.'
     : t('home.hero.sub');
 
   // JSON-LD built from the same translated strings the page shows, so the
@@ -61,7 +61,7 @@ const HomePage: NextPage<HomePageProps> = ({ pageLocale, stats }) => {
         {isEn && (
           <meta
             name="keywords"
-            content="karaoke app, YouTube karaoke, online karaoke, karaoke with friends, karaoke queue, karaoke night, karaoke party, sing karaoke online, live reactions"
+            content="free karaoke, home karaoke, karaoke at home, karaoke app, YouTube karaoke, online karaoke, karaoke with friends, karaoke queue, karaoke night, karaoke party, sing karaoke online, live reactions"
           />
         )}
         <link rel="canonical" href={url} />
