@@ -306,7 +306,7 @@ html[data-tv] .eqBar { animation: none !important; height: 7px !important; }
     gap: 0.6rem;
     padding: 0;
   }
-  /* Rooms, Features, Health and More sit in the tab bar; Log out is under More. */
+  /* The tab bar carries the views; Log out is under More. */
   .nav,
   .sidebarFooter .logoutBtn,
   .generatedAt {
@@ -330,7 +330,7 @@ html[data-tv] .eqBar { animation: none !important; height: 7px !important; }
     bottom: 0;
     z-index: 40;
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     padding: 0.3rem 0.4rem calc(0.3rem + env(safe-area-inset-bottom));
     background: rgba(10, 10, 24, 0.92);
     -webkit-backdrop-filter: blur(10px);
