@@ -222,4 +222,67 @@ describe("GET /api/analytics/rooms", () => {
       spy.mockRestore();
     });
   });
+
+  describe("feature filter", () => {
+    it("refuses a feature the registry doesn't know", async () => {
+      const res = await get({ feature: "nope" });
+
+      expect(res.getStatus()).toBe(400);
+      expect(mockAggregate).not.toHaveBeenCalled();
+    });
+
+    it("pages over only the rooms that used the feature", async () => {
+      mockEventsDistinct.mockResolvedValue(["MV1", "MV2"]);
+      mockCountDocuments.mockResolvedValue(2);
+
+      const res = await get({ feature: "musicVideo" });
+
+      expect(mockEventsDistinct).toHaveBeenCalledWith("roomId", {
+        type: {
+          $in: ["music_video_screen_opened", "original_video_resolved", "music_video_link"],
+        },
+      });
+      expect(matchStage()).toEqual({
+        type: "room_created",
+        roomId: { $in: ["MV1", "MV2"] },
+      });
+      expect(res.getBody().featureRooms).toBe(2);
+    });
+
+    it("intersects with the live filter rather than replacing it", async () => {
+      mockEventsDistinct.mockResolvedValue(["MV1", "LIVE2"]);
+
+      await get({ feature: "musicVideo", live: "1" });
+
+      expect(matchStage().roomId).toEqual({ $in: ["LIVE2"] });
+    });
+
+    it("narrows a sliced feature to its own slice of song_added", async () => {
+      await get({ feature: "duets" });
+
+      expect(mockEventsDistinct).toHaveBeenCalledWith("roomId", {
+        type: { $in: ["song_added"] },
+        singers: { $gte: 2 },
+      });
+    });
+  });
+
+  it("names the features each room used, from the same tallies as its counters", async () => {
+    mockAggregateToArray.mockResolvedValue([
+      {
+        roomId: "ROOM1",
+        eventCounts: [
+          { _id: "song_added", n: 5, duets: 0, ideas: 2 },
+          { _id: "music_video_link", n: 1, duets: 0, ideas: 0 },
+          { _id: "search_performed", n: 9, duets: 0, ideas: 0 },
+        ],
+      },
+    ]);
+
+    const res = await get();
+
+    expect(res.getBody().rooms[0].features).toEqual(["musicVideo", "ideas"]);
+    expect(res.getBody().rooms[0].eventCounts).toBeUndefined();
+    expect(res.getBody().featureRooms).toBeNull();
+  });
 });

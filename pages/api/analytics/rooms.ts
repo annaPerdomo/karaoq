@@ -4,6 +4,29 @@ import { ADMIN_LIVE_WINDOW_MS, ADMIN_RIGHT_NOW_WINDOW_MS } from "../../../lib/li
 import { liveRoomCount } from "../../../lib/liveRooms";
 import { getAnalyticsDb } from "../../../lib/mongodb";
 import { normalizeAutoAdvance } from "../types";
+import {
+  FEATURE_EVENT_TYPES,
+  adminFeature,
+  featureMatch,
+  featuresUsed,
+  type TypeTally,
+} from "../../../lib/adminFeatures";
+
+const ROOM_TALLY_TYPES = Array.from(
+  new Set([
+    "song_added",
+    "reaction_sent",
+    "song_suggested",
+    // All three, because the dossier's boards section lists
+    // all three — the card's number has to be the same number.
+    "singwithme_posted",
+    "singwithme_joined",
+    "singwithme_queued",
+    "search_performed",
+    "auto_advance_set",
+    ...FEATURE_EVENT_TYPES,
+  ])
+);
 
 // Longer than any song the player will sit on; past it the flag is a stale write.
 const PLAYING_STALE_MS = 20 * 60 * 1000;
@@ -65,6 +88,11 @@ export default async function handler(
       ? req.query.q.trim().slice(0, MAX_QUERY_LENGTH)
       : "";
   const liveOnly = req.query.live === "1";
+  const feature = adminFeature(req.query.feature);
+  if (req.query.feature !== undefined && !feature) {
+    res.status(400).json({ code: 400, message: "Unknown feature." });
+    return;
+  }
 
   const createdMatch: Record<string, unknown> = { type: "room_created" };
   if (q) {
@@ -89,7 +117,7 @@ export default async function handler(
 
     // Narrowing roomId rather than filtering after the $limit, so paging still
     // walks the filtered set instead of thinning out whole pages.
-    const liveMatch = (ids: string[]) => ({
+    const roomIdIn = (ids: string[]) => ({
       ...createdMatch,
       roomId: {
         ...((createdMatch.roomId as Record<string, unknown>) ?? {}),
@@ -97,16 +125,26 @@ export default async function handler(
       },
     });
 
-    // Awaited only when the filter is on: the default list doesn't depend on
-    // this, so it goes out in parallel rather than a round trip behind it.
-    const match = liveOnly ? liveMatch(await liveRoomIds) : createdMatch;
-
     // Not narrowed by `q`: a search matching nothing live must not blank the
     // badge. Counts events, not ids, so unsearched it agrees exactly with the
     // rows the filter shows — a room with two room_created docs is two rows.
     const liveCountPromise = liveRoomIds.then((ids) =>
       events.countDocuments({ type: "room_created", roomId: { $in: ids } })
     );
+
+    // Awaited only when a filter is on: the default list doesn't depend on
+    // these, so they go out in parallel rather than a round trip behind it.
+    let match: Record<string, unknown> = createdMatch;
+    let featureRooms: number | null = null;
+    if (feature) {
+      const used: string[] = await events.distinct("roomId", featureMatch(feature));
+      const live = liveOnly ? new Set(await liveRoomIds) : null;
+      match = roomIdIn(live ? used.filter((id) => live.has(id)) : used);
+      // Counts rows, like liveCount: a room with two room_created docs is two.
+      featureRooms = await events.countDocuments(match);
+    } else if (liveOnly) {
+      match = roomIdIn(await liveRoomIds);
+    }
 
     // First page of an unsearched list only, so typing or scrolling can't
     // re-run it; errors here cost the row, not the whole request.
@@ -155,20 +193,7 @@ export default async function handler(
               {
                 $match: {
                   $expr: { $eq: ["$roomId", "$$rid"] },
-                  type: {
-                    $in: [
-                      "song_added",
-                      "reaction_sent",
-                      "song_suggested",
-                      // All three, because the dossier's boards section lists
-                      // all three — the card's number has to be the same number.
-                      "singwithme_posted",
-                      "singwithme_joined",
-                      "singwithme_queued",
-                      "search_performed",
-                      "auto_advance_set",
-                    ],
-                  },
+                  type: { $in: ROOM_TALLY_TYPES },
                 },
               },
               {
@@ -276,6 +301,7 @@ export default async function handler(
             timestamp: 1,
             country: 1,
             city: 1,
+            eventCounts: 1,
             songs: countOfType("song_added"),
             cheers: countOfType("reaction_sent"),
             requests: countOfType("song_suggested"),
@@ -354,11 +380,16 @@ export default async function handler(
     ]);
 
     const hasMore = docs.length > limit;
-    const rooms = docs.slice(0, limit).map((r) => ({
-      ...r,
-      autoAdvance: normalizeAutoAdvance(r.autoAdvance),
-    }));
-    res.status(200).json({ rooms, hasMore, liveCount, rightNow });
+    const rooms = docs.slice(0, limit).map(({ eventCounts, ...r }) => {
+      const tallies: Record<string, TypeTally> = {};
+      for (const c of (eventCounts ?? []) as ({ _id: string } & TypeTally)[]) tallies[c._id] = c;
+      return {
+        ...r,
+        autoAdvance: normalizeAutoAdvance(r.autoAdvance),
+        features: featuresUsed(tallies),
+      };
+    });
+    res.status(200).json({ rooms, hasMore, liveCount, rightNow, featureRooms });
   } catch (e) {
     console.error("Rooms query error:", e);
     res.status(500).json({ code: 500, message: "Internal server error." });
