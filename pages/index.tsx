@@ -39,11 +39,11 @@ const HomePage: NextPage<HomePageProps> = ({ pageLocale, stats }) => {
   // where there is nothing to break across.
   const heroTitle = `${t('home.hero.titleLine1')} ${t('home.hero.titleLine2')}`;
   const title = isEn
-    ? 'KaraoQ — Free YouTube Karaoke at Home | No Downloads, No Sign-Up'
+    ? 'KaraoQ — Free Home Karaoke | YouTube Karaoke App, No Sign-Up'
     : `KaraoQ — ${heroTitle}`;
   const ogTitle = isEn ? 'KaraoQ — Free YouTube Karaoke' : `KaraoQ — ${heroTitle}`;
   const description = isEn
-    ? 'Free karaoke at home, on any screen. Search YouTube for songs, build a shared queue from your phones, and sing with friends. No downloads, no sign-up, no karaoke machine.'
+    ? 'Free home karaoke on any screen. Search YouTube for songs, build a shared queue from your phones, and sing with friends. No downloads, no sign-up, no karaoke machine.'
     : t('home.hero.sub');
   const twitterDescription = isEn
     ? 'Free karaoke for any gathering. Search YouTube, build a queue from your phone, cheer on your friends, and sing.'
