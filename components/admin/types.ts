@@ -503,6 +503,7 @@ export type AdminView =
   | 'rooms'
   | 'features'
   | 'health'
+  | 'quota'
   | 'suggestions'
   | 'pulse'
   | 'screens'

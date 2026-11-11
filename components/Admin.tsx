@@ -4,6 +4,7 @@ import AdminShell from './admin/AdminShell';
 import RoomsView from './admin/rooms/RoomsView';
 import FeaturesView from './admin/features/FeaturesView';
 import HealthView from './admin/health/HealthView';
+import QuotaView from './admin/quota/QuotaView';
 import MoreView from './admin/MoreView';
 import SuggestionsView from './admin/SuggestionsView';
 import PulseView from './admin/pulse/PulseView';
@@ -178,7 +179,11 @@ const Admin = (): React.ReactElement => {
           errorsLoading={errorsLoading}
           onRetryErrors={() => fetchErrors(secret)}
           onOpenRoom={openRoom}
+          onOpenQuota={() => setView('quota')}
         />
+      )}
+      {view === 'quota' && (
+        <QuotaView key={refreshToken} secret={secret} onOpenRoom={openRoom} />
       )}
       {view === 'suggestions' && (
         <SuggestionsView data={data} secret={secret} onOpenRoom={openRoom} />

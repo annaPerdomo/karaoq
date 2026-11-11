@@ -7,8 +7,7 @@ import type {
   SearchHealthData,
 } from '../types';
 import ErrorsView from '../errors/ErrorsView';
-import QuotaView from '../quota/QuotaView';
-import HealthSummary, { type HealthSection } from './HealthSummary';
+import HealthSummary from './HealthSummary';
 
 export default function HealthView({
   secret,
@@ -19,6 +18,7 @@ export default function HealthView({
   errorsLoading,
   onRetryErrors,
   onOpenRoom,
+  onOpenQuota,
 }: {
   secret: string;
   refreshToken: number;
@@ -28,11 +28,10 @@ export default function HealthView({
   errorsLoading: boolean;
   onRetryErrors: () => void;
   onOpenRoom: (roomId: string) => void;
+  onOpenQuota: () => void;
 }): React.ReactElement {
-  const [section, setSection] = React.useState<HealthSection>('errors');
   const [quota, setQuota] = React.useState<QuotaLedgerData | null>(null);
 
-  // The summary's own read of the ledger: QuotaView only mounts once picked.
   React.useEffect(() => {
     let live = true;
     fetch('/api/analytics/quota', { headers: { 'x-analytics-secret': secret } })
@@ -54,7 +53,7 @@ export default function HealthView({
         <div>
           <h1 className={styles.viewTitle}>Health</h1>
           <p className={styles.viewSub}>
-            Is anything broken right now? Tap a card for its detail below.
+            Is anything broken right now? Tap the quota card for the full ledger.
           </p>
         </div>
       </header>
@@ -62,21 +61,16 @@ export default function HealthView({
         errors={errors}
         searchHealth={searchHealth}
         quota={quota}
-        section={section}
-        onSection={setSection}
+        onOpenQuota={onOpenQuota}
       />
-      {section === 'errors' ? (
-        <ErrorsView
-          errors={errors}
-          searchHealth={searchHealth}
-          linkLookups={linkLookups}
-          loading={errorsLoading}
-          onRetry={onRetryErrors}
-          onOpenRoom={onOpenRoom}
-        />
-      ) : (
-        <QuotaView key={refreshToken} secret={secret} onOpenRoom={onOpenRoom} />
-      )}
+      <ErrorsView
+        errors={errors}
+        searchHealth={searchHealth}
+        linkLookups={linkLookups}
+        loading={errorsLoading}
+        onRetry={onRetryErrors}
+        onOpenRoom={onOpenRoom}
+      />
     </div>
   );
 }

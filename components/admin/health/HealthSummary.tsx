@@ -2,8 +2,6 @@ import * as React from 'react';
 import styles from '../../../styles/Admin.module.css';
 import type { ErrorsData, QuotaLedgerData, SearchHealthData } from '../types';
 
-export type HealthSection = 'errors' | 'quota';
-
 interface Status {
   ok: boolean;
   word: string;
@@ -14,25 +12,17 @@ function Card({
   status,
   value,
   sub,
-  active,
   onOpen,
 }: {
   title: string;
   status: Status | null;
   value: string;
   sub: string;
-  active: boolean;
-  onOpen: () => void;
+  onOpen?: () => void;
 }): React.ReactElement {
-  return (
-    <button
-      type="button"
-      className={`${styles.healthCard} ${status && !status.ok ? styles.healthCardAlert : ''} ${
-        active ? styles.healthCardActive : ''
-      }`}
-      onClick={onOpen}
-      aria-pressed={active}
-    >
+  const className = `${styles.healthCard} ${status && !status.ok ? styles.healthCardAlert : ''}`;
+  const body = (
+    <>
       <span className={styles.healthCardHead}>
         <span className={styles.healthCardTitle}>{title}</span>
         {status && (
@@ -41,6 +31,12 @@ function Card({
       </span>
       <span className={styles.healthCardValue}>{value}</span>
       <span className={styles.healthCardSub}>{sub}</span>
+    </>
+  );
+  if (!onOpen) return <div className={className}>{body}</div>;
+  return (
+    <button type="button" className={className} onClick={onOpen}>
+      {body}
     </button>
   );
 }
@@ -49,14 +45,12 @@ export default function HealthSummary({
   errors,
   searchHealth,
   quota,
-  section,
-  onSection,
+  onOpenQuota,
 }: {
   errors: ErrorsData | null;
   searchHealth?: SearchHealthData;
   quota: QuotaLedgerData | null;
-  section: HealthSection;
-  onSection: (section: HealthSection) => void;
+  onOpenQuota: () => void;
 }): React.ReactElement {
   const today = quota?.days[quota.days.length - 1];
   const used = today?.searches ?? 0;
@@ -88,16 +82,13 @@ export default function HealthSummary({
             ? `client errors in 24 hours · ${errors.totals.last7d} in 7 days`
             : 'client errors in 24 hours'
         }
-        active={section === 'errors'}
-        onOpen={() => onSection('errors')}
       />
       <Card
         title="YouTube quota"
         status={quotaStatus}
         value={quota ? `${usedPct}%` : '—'}
         sub={quota ? `${used} of ${allowance} searches used today` : 'of today’s searches used'}
-        active={section === 'quota'}
-        onOpen={() => onSection('quota')}
+        onOpen={onOpenQuota}
       />
       <Card
         title="Search"
@@ -110,8 +101,6 @@ export default function HealthSummary({
         }
         value={searchHealth ? String(failed) : '—'}
         sub="failed searches in 24 hours"
-        active={false}
-        onOpen={() => onSection('errors')}
       />
     </div>
   );

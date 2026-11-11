@@ -5,6 +5,7 @@ import {
   FeedbackIcon,
   HealthIcon,
   PulseIcon,
+  QuotaIcon,
   RoomsIcon,
   ScreensIcon,
   SuggestionsIcon,
@@ -25,6 +26,7 @@ export const PRIMARY_NAV: NavEntry[] = [
 ];
 
 export const SECONDARY_NAV: NavEntry[] = [
+  { view: 'quota', label: 'Quota', hint: 'YouTube searches: today, by room, the cache, the ledger', icon: QuotaIcon },
   { view: 'suggestions', label: 'Suggestions', hint: 'Song ideas, wanted songs, the corpus', icon: SuggestionsIcon },
   { view: 'pulse', label: 'Pulse', hint: 'Growth, activation, audience', icon: PulseIcon },
   { view: 'screens', label: 'Screens', hint: 'Music video, swaps and branding in detail', icon: ScreensIcon },
