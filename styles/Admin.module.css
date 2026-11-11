@@ -1024,6 +1024,7 @@ html[data-tv] .eqBar { animation: none !important; height: 7px !important; }
 .roomFeatures {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 0.35rem;
 }
 
@@ -1173,9 +1174,19 @@ html[data-tv] .eqBar { animation: none !important; height: 7px !important; }
   background: rgba(255, 255, 255, 0.06);
 }
 
+.brandMark:has(.brandMarkLogo) {
+  gap: 0.4rem;
+  padding: 0.25rem 0.5rem 0.25rem 0.25rem;
+  border-radius: 10px;
+}
+
+/* Same neutral plate as the dossier frame, so light and dark logos both read. */
 .brandMarkLogo {
-  height: 1.25rem;
-  max-width: 4.5rem;
+  height: 3rem;
+  max-width: 9rem;
+  padding: 0.2rem;
+  border-radius: 7px;
+  background: #2a2a3d;
   object-fit: contain;
 }
 
@@ -1198,9 +1209,10 @@ html[data-tv] .eqBar { animation: none !important; height: 7px !important; }
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 11rem;
-  height: 6.5rem;
-  padding: 0.6rem;
+  width: 100%;
+  max-width: 22rem;
+  height: 11rem;
+  padding: 0.75rem;
   border-radius: 12px;
   background: #2a2a3d;
   border: 1px solid rgba(255, 255, 255, 0.1);
