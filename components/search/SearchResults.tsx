@@ -121,8 +121,9 @@ const SearchResults: React.FC<SearchResultsProps> = ({
         <RefusedLinkNotice
           title={refused.video.title}
           hasCuts
-          canQueueOutside={canQueueOutside}
+          canQueueOutside={false}
           onQueueOutside={() => onQueueOutside?.()}
+          part="head"
         />
       )}
       {visible.map((song, i) => (
@@ -177,6 +178,15 @@ const SearchResults: React.FC<SearchResultsProps> = ({
           </button>
         </div>
       ))}
+      {refused?.hasCuts && canQueueOutside && (
+        <RefusedLinkNotice
+          title={refused.video.title}
+          hasCuts
+          canQueueOutside
+          onQueueOutside={() => onQueueOutside?.()}
+          part="action"
+        />
+      )}
       <div className={styles.resultsSource}>
         <span className={styles.resultsSourceIcon} aria-hidden="true">
           {/* Official YouTube play-icon geometry (not a hand-drawn stand-in);

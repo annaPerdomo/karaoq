@@ -47,3 +47,19 @@ describe("RefusedLinkNotice", () => {
     expect(screen.getByText(en["search.refused.queueAnyway"]).getAttribute("aria-describedby")).toBe(hint.id);
   });
 });
+
+describe("RefusedLinkNotice parts", () => {
+  it("head shows the title and versions line without the action", () => {
+    renderNotice({ hasCuts: true, canQueueOutside: true, part: "head" });
+    expect(screen.getByText(/Dancing Queen/)).toBeInTheDocument();
+    expect(screen.getByText(en["search.refused.withCuts"])).toBeInTheDocument();
+    expect(screen.queryByText(en["search.refused.queueAnyway"])).toBeNull();
+  });
+
+  it("action shows only the queue-anyway button and hint", () => {
+    renderNotice({ hasCuts: true, canQueueOutside: true, part: "action" });
+    expect(screen.queryByText(/Dancing Queen/)).toBeNull();
+    expect(screen.queryByText(en["search.refused.withCuts"])).toBeNull();
+    expect(screen.getByText(en["search.refused.queueAnyway"])).toBeInTheDocument();
+  });
+});
