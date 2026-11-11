@@ -1,5 +1,7 @@
 import decodeHtml from '../../lib/decodeHtml';
 
+export type SongSelection = YoutubeResult & { external?: true };
+
 export interface YoutubeResult {
   title: string;
   thumbnailUrl: string;

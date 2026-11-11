@@ -283,6 +283,7 @@ export function QueueSidebar({
                 showFilters={false}
                 requireName={false}
                 role="host"
+                allowExternal
                 belowSearch={
                   <BoardsPanel
                     roomId={joinCode}

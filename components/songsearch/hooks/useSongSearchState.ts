@@ -11,6 +11,7 @@ import suggestionCuts from '../../../app/queue/suggestionCuts';
 import { classifySearchInput } from '../../../lib/videoLink';
 import { buildSearchQuery, searchCacheKey } from '../../../lib/searchQuery';
 import { INITIAL_RESULTS } from '../constants';
+import { Refusal, refusalFrom } from '../refusal';
 
 function lookupFailure(err: unknown): SearchFailure {
   if (err instanceof SearchUnavailableError) {
@@ -64,6 +65,7 @@ export function useSongSearchState({ roomId, role }: UseSongSearchStateArgs) {
   const [resultsFromCorpus, setResultsFromCorpus] = React.useState<boolean | null>(
     null
   );
+  const [refused, setRefused] = React.useState<Refusal | null>(null);
   const [filters, setFilters] = React.useState<SearchFilters>({
     duration: 'any',
     sortBy: 'relevance',
@@ -88,6 +90,7 @@ export function useSongSearchState({ roomId, role }: UseSongSearchStateArgs) {
       setHasSearched(false);
       setResults([]);
       setSearchError(null);
+      setRefused(null);
     }
   }, [query, hasSearched]);
 
@@ -126,6 +129,7 @@ export function useSongSearchState({ roomId, role }: UseSongSearchStateArgs) {
     setSearching(true);
     setHasSearched(true);
     setSearchError(null);
+    setRefused(null);
     const query = buildSearchQuery(rawQuery, karaoke);
     setSearchedQuery(query);
     // Keyed as the server keys the catalog, so the two agree without the client
@@ -207,6 +211,7 @@ export function useSongSearchState({ roomId, role }: UseSongSearchStateArgs) {
     setSearching(true);
     setHasSearched(true);
     setSearchError(null);
+    setRefused(null);
     setLookupMode(true);
     setSearchedQuery('');
     lookupVideo(videoId, 'paste', controller.signal, roomId)
@@ -234,6 +239,18 @@ export function useSongSearchState({ roomId, role }: UseSongSearchStateArgs) {
           runSearch(rawQuery, filters, karaokeMode);
           return;
         }
+        const { refused: refusal, cuts } = refusalFrom(err);
+        setRefused(refusal);
+        if (refusal) {
+          setResultsVia('paste');
+          setResultsSuggestionKey(null);
+          setResultsFromCorpus(null);
+        }
+        if (cuts.length > 0) {
+          setResults(cuts);
+          setVisibleCount(INITIAL_RESULTS);
+          return;
+        }
         setResults([]);
         setSearchError(lookupFailure(err));
       })
@@ -252,6 +269,7 @@ export function useSongSearchState({ roomId, role }: UseSongSearchStateArgs) {
     setLookupMode(true);
     setResults([]);
     setSearchedQuery('');
+    setRefused(null);
     setSearchError({ quota: false, source: 'lookup', link });
   }
 
@@ -323,6 +341,7 @@ export function useSongSearchState({ roomId, role }: UseSongSearchStateArgs) {
     setHasSearched(false);
     setSearching(false);
     setSearchError(null);
+    setRefused(null);
     setLookupMode(false);
     setSearchedQuery('');
   }
@@ -334,6 +353,7 @@ export function useSongSearchState({ roomId, role }: UseSongSearchStateArgs) {
     setQuery('');
     setHasSearched(false);
     setSearchError(null);
+    setRefused(null);
     setLookupMode(false);
     setSearchedQuery('');
   }
@@ -393,6 +413,7 @@ export function useSongSearchState({ roomId, role }: UseSongSearchStateArgs) {
     resultsVia,
     resultsSuggestionKey,
     resultsFromCorpus,
+    refused,
     karaokeMode,
     filters,
     runSearch,

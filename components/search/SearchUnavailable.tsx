@@ -6,6 +6,8 @@ import { formatCountdown } from '../../lib/duration';
 import { useT } from '../../lib/i18n/I18nProvider';
 import BrokenLinkIcon from './BrokenLinkIcon';
 import NotesIcon from './NotesIcon';
+import RefusedLinkNotice from './RefusedLinkNotice';
+import type { Refusal } from '../songsearch/refusal';
 
 const LINK_MESSAGE_KEYS: Record<NonNullable<SearchFailure['link']>, string> = {
   not_found: 'search.linkNotFound',
@@ -21,6 +23,9 @@ interface SearchUnavailableProps {
   /** False when the text wasn't a YouTube video link — refused that way rather
    *  than as a failure, so this panel survives to offer its other ways out. */
   onPasteLink: (text: string) => boolean;
+  refused?: Refusal | null;
+  canQueueOutside?: boolean;
+  onQueueOutside?: () => void;
 }
 
 /** Ordinary linking, not an API call: spends no quota, and stays inside the API
@@ -38,6 +43,9 @@ const SearchUnavailable: React.FC<SearchUnavailableProps> = ({
   searchError,
   searchedQuery,
   onPasteLink,
+  refused,
+  canQueueOutside = false,
+  onQueueOutside,
 }) => {
   const { t } = useT();
   // After mount: reading it during render would disagree with the SSR markup.
@@ -77,7 +85,19 @@ const SearchUnavailable: React.FC<SearchUnavailableProps> = ({
     return (
       <div className={styles.unavailable}>
         <BrokenLinkIcon className={styles.unavailableIcon} />
-        <p className={styles.unavailableBody}>{t(linkKey)}</p>
+        {searchError.link === 'not_embeddable' && refused ? (
+          <RefusedLinkNotice
+            title={refused.video.title}
+            hasCuts={false}
+            canQueueOutside={canQueueOutside}
+            onQueueOutside={() => onQueueOutside?.()}
+          />
+        ) : (
+          <p className={styles.unavailableBody}>{t(linkKey)}</p>
+        )}
+        {searchError.link === 'not_embeddable' && refused && !canQueueOutside && (
+          <p className={styles.unavailableBody}>{t(linkKey)}</p>
+        )}
       </div>
     );
   }

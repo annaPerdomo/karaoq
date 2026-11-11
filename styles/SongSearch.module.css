@@ -1249,3 +1249,27 @@ html[data-tv] .skeletonAdd::after {
     max-width: 220px;
   }
 }
+
+.refusedNotice {
+  padding: 0.9rem 1rem 0.4rem;
+  text-align: center;
+}
+
+.refusedButton {
+  display: block;
+  margin: 0 auto 0.5rem;
+  padding: 0.55rem 1rem;
+  background: transparent;
+  border: 1px solid var(--acc-b, #00f0ff);
+  border-radius: 8px;
+  color: var(--acc-b, #00f0ff);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 44px;
+}
+
+.refusedButton:focus-visible {
+  outline: 2px solid var(--acc-b, #00f0ff);
+  outline-offset: 2px;
+}

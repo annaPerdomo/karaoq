@@ -5,6 +5,8 @@ import { YoutubeResult, SearchFailure } from '../../app/queue/searchYoutube';
 import { formatDuration } from '../../lib/duration';
 import { useT } from '../../lib/i18n/I18nProvider';
 import SearchUnavailable from './SearchUnavailable';
+import RefusedLinkNotice from './RefusedLinkNotice';
+import type { Refusal } from '../songsearch/refusal';
 
 interface SearchResultsProps {
   hasSearched: boolean;
@@ -24,6 +26,9 @@ interface SearchResultsProps {
   onPreview: (song: YoutubeResult) => void;
   onAdd: (song: YoutubeResult) => void;
   onShowMore: () => void;
+  refused?: Refusal | null;
+  canQueueOutside?: boolean;
+  onQueueOutside?: () => void;
 }
 
 const SKELETON_COUNT = 8;
@@ -45,6 +50,9 @@ const SearchResults: React.FC<SearchResultsProps> = ({
   onPreview,
   onAdd,
   onShowMore,
+  refused,
+  canQueueOutside = false,
+  onQueueOutside,
 }) => {
   const { t, locale } = useT();
   const compactViews = React.useMemo(
@@ -62,6 +70,9 @@ const SearchResults: React.FC<SearchResultsProps> = ({
         searchError={searchError}
         searchedQuery={searchedQuery}
         onPasteLink={onPasteLink}
+        refused={refused}
+        canQueueOutside={canQueueOutside}
+        onQueueOutside={onQueueOutside}
       />
     );
   }
@@ -106,6 +117,14 @@ const SearchResults: React.FC<SearchResultsProps> = ({
 
   return (
     <div className={styles.results}>
+      {refused?.hasCuts && (
+        <RefusedLinkNotice
+          title={refused.video.title}
+          hasCuts
+          canQueueOutside={canQueueOutside}
+          onQueueOutside={() => onQueueOutside?.()}
+        />
+      )}
       {visible.map((song, i) => (
         <div
           key={song.videoId}

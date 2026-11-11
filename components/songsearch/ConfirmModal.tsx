@@ -1,11 +1,12 @@
 import * as React from 'react';
 
 import styles from '../../styles/SongSearch.module.css';
-import { YoutubeResult } from '../../app/queue/searchYoutube';
+import { SongSelection } from '../../app/queue/searchYoutube';
+import { youtubeWatchUrl } from '../../lib/externalEntry';
 import { useT } from '../../lib/i18n/I18nProvider';
 
 interface ConfirmModalProps {
-  song: YoutubeResult;
+  song: SongSelection;
   previewPlaying: boolean;
   onPlayPreview: () => void;
   /** Picker mode ("Sing with me" / Suggestions boards) vs. add-to-queue. */
@@ -40,6 +41,18 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
               allow="autoplay; encrypted-media"
               allowFullScreen
             />
+          ) : song.external ? (
+            <a
+              className={styles.previewPlayBtn}
+              href={youtubeWatchUrl(song.videoId)}
+              target="_blank"
+              rel="noopener noreferrer"
+              title={t('search.confirm.previewVideo')}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element -- external YouTube thumbnail; Next optimization adds cost/latency without benefit */}
+              <img src={song.thumbnailUrl} alt="" className={styles.modalThumb} />
+              <span className={styles.previewPlayIcon}>▶</span>
+            </a>
           ) : (
             <button
               type="button"
@@ -58,6 +71,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
           )}
         </div>
         <p className={styles.modalSong}>{song.title}</p>
+        {song.external && <p className={styles.modalAs}>{t('search.refused.confirmNote')}</p>}
         {!pickMode && (
           <p className={styles.modalAs}>
             {t('search.confirm.addingAs').split(/(\{name\})/).map((part, i) =>

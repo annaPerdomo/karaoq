@@ -635,3 +635,87 @@ describe("useSongSearchState — the query a failure carries", () => {
     expect(result.current.searchedQuery).toBe("");
   });
 });
+
+describe("useSongSearchState — refused link", () => {
+  const VIDEO = { title: "Refused", thumbnailUrl: "t", videoId: "dQw4w9WgXcQ" };
+  const CUTS = [
+    { title: "Cut 1", thumbnailUrl: "t", videoId: "cut10000000" },
+    { title: "Cut 2", thumbnailUrl: "t", videoId: "cut20000000" },
+  ];
+
+  function refusal(detail: Record<string, unknown>) {
+    return new SearchUnavailableError(422, { reason: "not_embeddable", ...detail });
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+    global.fetch = vi.fn().mockResolvedValue({ ok: true }) as never;
+  });
+
+  it("shows the cuts as results, with no error, when the refusal carries some", async () => {
+    mockLookupVideo.mockRejectedValue(refusal({ result: VIDEO, cuts: CUTS }));
+    const { result } = setup();
+
+    await runQuery(result, PASTE_URL);
+
+    await waitFor(() => expect(result.current.results).toEqual(CUTS));
+    expect(result.current.searchError).toBeNull();
+    expect(result.current.refused).toEqual({ video: VIDEO, hasCuts: true });
+    expect(result.current.resultsVia).toBe("paste");
+    expect(mockLookupVideo).toHaveBeenCalledTimes(1);
+    expect(mockSearchYoutube).not.toHaveBeenCalled();
+  });
+
+  it("keeps the link error when there are no cuts", async () => {
+    mockLookupVideo.mockRejectedValue(refusal({ result: VIDEO, cuts: [] }));
+    const { result } = setup();
+
+    await runQuery(result, PASTE_URL);
+
+    await waitFor(() => expect(result.current.searchError?.link).toBe("not_embeddable"));
+    expect(result.current.results).toEqual([]);
+    expect(result.current.refused).toEqual({ video: VIDEO, hasCuts: false });
+  });
+
+  it("behaves as before when the refusal names no video", async () => {
+    mockLookupVideo.mockRejectedValue(refusal({}));
+    const { result } = setup();
+
+    await runQuery(result, PASTE_URL);
+
+    await waitFor(() => expect(result.current.searchError?.link).toBe("not_embeddable"));
+    expect(result.current.refused).toBeNull();
+  });
+
+  it("clears the refusal on the next search", async () => {
+    mockLookupVideo.mockRejectedValue(refusal({ result: VIDEO, cuts: CUTS }));
+    mockSearchYoutube.mockResolvedValue([song("a")]);
+    const { result } = setup();
+    await runQuery(result, PASTE_URL);
+    await waitFor(() => expect(result.current.refused).not.toBeNull());
+
+    await runQuery(result, "dancing queen");
+
+    await waitFor(() => expect(result.current.results).toHaveLength(1));
+    expect(result.current.refused).toBeNull();
+  });
+
+  it("drops an idea's attribution when a refused paste has no cuts", async () => {
+    mockSuggestionCuts.mockResolvedValue([song("a")]);
+    mockLookupVideo.mockRejectedValue(refusal({ result: VIDEO, cuts: [] }));
+    const { result } = setup();
+    await act(async () => {
+      result.current.runSearch("mr brightside", result.current.filters, true, true);
+    });
+    await waitFor(() => expect(result.current.resultsSuggestionKey).not.toBeNull());
+    expect(result.current.resultsFromCorpus).toBe(true);
+
+    await runQuery(result, PASTE_URL);
+
+    await waitFor(() => expect(result.current.refused).not.toBeNull());
+    expect(result.current.resultsVia).toBe("paste");
+    expect(result.current.resultsSuggestionKey).toBeNull();
+    expect(result.current.resultsFromCorpus).toBeNull();
+  });
+});

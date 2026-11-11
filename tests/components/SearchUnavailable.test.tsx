@@ -176,3 +176,38 @@ describe("getting the link back in", () => {
     ).not.toBeInTheDocument();
   });
 });
+
+describe("a refused link", () => {
+  it("shows the refusal notice in place of the bare sentence when the video is known", () => {
+    render(
+      <SearchUnavailable
+        searchError={{ quota: false, source: "lookup", link: "not_embeddable" }}
+        searchedQuery=""
+        onPasteLink={vi.fn(() => true)}
+        refused={{ video: { title: "Dancing Queen", thumbnailUrl: "", videoId: "x" }, hasCuts: false }}
+        canQueueOutside
+        onQueueOutside={vi.fn()}
+      />
+    );
+
+    expect(screen.queryByText(en["search.linkNotEmbeddable"])).toBeNull();
+    expect(screen.getByText(en["search.refused.queueAnyway"])).toBeInTheDocument();
+  });
+});
+
+describe("a refused link for someone who cannot queue it outside", () => {
+  it("keeps the plain sentence under the title", () => {
+    render(
+      <SearchUnavailable
+        searchError={{ quota: false, source: "lookup", link: "not_embeddable" }}
+        searchedQuery=""
+        onPasteLink={vi.fn(() => true)}
+        refused={{ video: { title: "Dancing Queen", thumbnailUrl: "", videoId: "x" }, hasCuts: false }}
+      />
+    );
+
+    expect(screen.getByText(/Dancing Queen/)).toBeInTheDocument();
+    expect(screen.getByText(en["search.linkNotEmbeddable"])).toBeInTheDocument();
+    expect(screen.queryByText(en["search.refused.queueAnyway"])).toBeNull();
+  });
+});

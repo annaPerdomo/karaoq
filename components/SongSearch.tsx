@@ -41,6 +41,8 @@ interface SongSearchProps {
    * "Sing with me" and Suggestions boards on the singer page.
    */
   belowSearch?: React.ReactNode;
+  /** Host and co-host only: lets a refused link be queued to play on YouTube. */
+  allowExternal?: boolean;
 }
 
 const SongSearch: React.FC<SongSearchProps> = ({
@@ -54,6 +56,7 @@ const SongSearch: React.FC<SongSearchProps> = ({
   role,
   onPick,
   belowSearch,
+  allowExternal = false,
 }) => {
   const country = useCountry();
   const { t, locale } = useT();
@@ -72,6 +75,7 @@ const SongSearch: React.FC<SongSearchProps> = ({
     resultsVia,
     resultsSuggestionKey,
     resultsFromCorpus,
+    refused,
     karaokeMode,
     filters,
     runSearch,
@@ -224,6 +228,9 @@ const SongSearch: React.FC<SongSearchProps> = ({
         onPreview={(song) => openConfirm(song, true)}
         onAdd={(song) => (onPick ? handlePick(song) : openConfirm(song, false))}
         onShowMore={() => setVisibleCount((c) => c + INITIAL_RESULTS)}
+        refused={refused}
+        canQueueOutside={allowExternal && !onPick && canAdd}
+        onQueueOutside={() => refused && openConfirm({ ...refused.video, external: true }, false)}
       />
 
       {!hasSearched && results.length === 0 && !justAdded && (

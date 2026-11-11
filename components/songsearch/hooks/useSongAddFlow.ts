@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { v4 as uuidv4 } from 'uuid';
 
-import { YoutubeResult } from '../../../app/queue/searchYoutube';
+import { SongSelection, YoutubeResult } from '../../../app/queue/searchYoutube';
 import postEntryToQueue from '../../../app/queue/postEntryToQueue';
 import type { IdeaOrigin } from '../../../lib/ideaSurface';
 import { QueueEntry } from '../../../pages/api/types';
@@ -43,10 +43,10 @@ export function useSongAddFlow({
   // In-flight guard: on a slow connection a double-tapped Add would $push
   // two fresh-uuid entries — the same song queued twice.
   const [adding, setAdding] = React.useState(false);
-  const [confirmSong, setConfirmSong] = React.useState<YoutubeResult | null>(null);
+  const [confirmSong, setConfirmSong] = React.useState<SongSelection | null>(null);
   const [previewPlaying, setPreviewPlaying] = React.useState(false);
 
-  async function addSong(song: YoutubeResult) {
+  async function addSong(song: SongSelection) {
     if (!roomId || adding) return;
     if (requireName && !userName.trim()) return;
 
@@ -60,6 +60,7 @@ export function useSongAddFlow({
       ...(song.durationSeconds !== undefined
         ? { durationSeconds: song.durationSeconds }
         : {}),
+      ...(song.external ? { external: true as const } : {}),
     };
 
     setAdding(true);
@@ -95,7 +96,7 @@ export function useSongAddFlow({
   // Open the preview/confirm modal for a search result. `autoplay` starts the
   // video straight away (when the user tapped the thumbnail to preview) vs.
   // showing the thumbnail first (when they tapped "+").
-  function openConfirm(song: YoutubeResult, autoplay: boolean) {
+  function openConfirm(song: SongSelection, autoplay: boolean) {
     setPreviewPlaying(autoplay);
     setConfirmSong(song);
   }
