@@ -14,7 +14,8 @@ export async function songKeyForVideo(videoId: string): Promise<string | null> {
 const NOISE_WORDS = /\b(official|music|video|mv|audio|hd|4k|lyric|lyrics|visualizer|remastered)\b/gi;
 
 export function refusalSongQuery(title: string): string {
-  return title
+  const head = title.split("|")[0];
+  return (head.trim() ? head : title)
     .replace(/\([^)]*\)|\[[^\]]*\]/g, " ")
     .replace(/["|]/g, " ")
     .replace(/(^|\s)#\S*/g, " ")

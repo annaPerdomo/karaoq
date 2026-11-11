@@ -78,7 +78,10 @@ describe("playableCutsFor", () => {
 describe("refusalSongQuery", () => {
   it.each([
     ["ABBA - Dancing Queen (Official Music Video)", "ABBA - Dancing Queen"],
-    ["Dancing Queen | ABBA", "Dancing Queen ABBA"],
+    ["Dancing Queen | ABBA", "Dancing Queen"],
+    ["Rise Up - Andra Day | Karaoke Version | KaraFun", "Rise Up - Andra Day"],
+    ["Suavemente (Merengue) - Elvis Crespo | Versión Karaoke | KaraFun", "Suavemente - Elvis Crespo"],
+    ["| Odd", "Odd"],
     ["Adele - Hello (Official Video) #adele", "Adele - Hello"],
     ["Queen - Bohemian Rhapsody [Remastered 2011] HD", "Queen - Bohemian Rhapsody"],
   ])("cleans %j", (title, expected) => {
