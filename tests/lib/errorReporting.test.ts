@@ -204,6 +204,54 @@ describe("errorReporting", () => {
     vi.unstubAllGlobals();
   });
 
+  it("places a frameless uncaught error by its filename", async () => {
+    const { isForeignFramelessError } = await freshReporter();
+    const origin = "https://www.karaoq.live";
+    // Verbatim field sample (2026-11-11 UTC, /cs/terms, Chrome 124 from a Singapore datacenter).
+    const syntax = "SyntaxError: Invalid or unexpected token";
+
+    expect(isForeignFramelessError(syntax, "", origin)).toBe(true);
+    expect(isForeignFramelessError(syntax, undefined, origin)).toBe(true);
+    expect(isForeignFramelessError(syntax, `${origin}/cs/terms`, origin)).toBe(true);
+    expect(isForeignFramelessError(syntax, "https://evil.example/x.js", origin)).toBe(true);
+    expect(isForeignFramelessError(undefined, "chrome-extension://abc/inject.js", origin)).toBe(true);
+
+    expect(
+      isForeignFramelessError(syntax, `${origin}/_next/static/chunks/681-d4056191c5781488.js`, origin)
+    ).toBe(false);
+    expect(isForeignFramelessError(undefined, `${origin}/_next/static/chunks/a.js`, origin)).toBe(false);
+    expect(
+      isForeignFramelessError(undefined, "https://www.youtube.com/s/player/www-widgetapi.js", origin)
+    ).toBe(false);
+
+    expect(isForeignFramelessError(`TypeError: x\n    at t (${origin}/a.js:1:1)`, "", origin)).toBe(false);
+    expect(isForeignFramelessError(`t@${origin}/_next/static/chunks/a.js:1:1`, "", origin)).toBe(false);
+    expect(isForeignFramelessError("@\nGi@\n@", "", origin)).toBe(false);
+  });
+
+  it("drops a frameless window error from an unknown script before it posts", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal("fetch", fetchMock);
+    const { installErrorReporting } = await freshReporter();
+    const add = vi.spyOn(window, "addEventListener").mockImplementation(() => {});
+    installErrorReporting();
+    const onError = add.mock.calls.find(([type]) => type === "error")![1] as (e: Partial<ErrorEvent>) => void;
+
+    const error = new SyntaxError("Invalid or unexpected token");
+    error.stack = "SyntaxError: Invalid or unexpected token";
+    onError({ message: "Uncaught SyntaxError: Invalid or unexpected token", error, filename: "" });
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    onError({
+      message: "Uncaught SyntaxError: Invalid or unexpected token",
+      error,
+      filename: `${window.location.origin}/_next/static/chunks/a.js`,
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    vi.unstubAllGlobals();
+  });
+
   it("drops stackless WebExtension API failures", async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true });
     vi.stubGlobal("fetch", fetchMock);
@@ -318,7 +366,12 @@ describe("errorReporting", () => {
     installErrorReporting();
     installErrorReporting();
 
-    window.dispatchEvent(new ErrorEvent("error", { message: "kaboom" }));
+    window.dispatchEvent(
+      new ErrorEvent("error", {
+        message: "kaboom",
+        filename: `${window.location.origin}/_next/static/chunks/main.js`,
+      })
+    );
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(JSON.parse(fetchMock.mock.calls[0][1].body).message).toBe("kaboom");
 

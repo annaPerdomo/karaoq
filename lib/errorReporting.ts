@@ -72,24 +72,41 @@ export function isThrownByExtension(stack: unknown): boolean {
  * outrank every real bug in the Errors view. A frame we can't place counts as
  * ours, so only an entirely foreign stack is dropped — bias is toward reporting.
  */
-export function isForeignStack(stack: unknown, origin: string): boolean {
-  if (typeof stack !== "string") return false;
+function stackFrames(stack: unknown): { frames: string[]; isUrlless: (line: string) => boolean } {
+  if (typeof stack !== "string") return { frames: [], isUrlless: () => false };
   const lines = stack.split("\n");
   // Only WebKit stacks have URL-less frames; in a V8 stack the line is message text.
   const webkit = !lines.some((line) => V8_FRAME.test(line));
   const isUrlless = (line: string) => webkit && URLLESS_FRAME.test(line);
-  const frames = lines.filter((line) => FRAME_LINE.test(line) || isUrlless(line));
+  return { frames: lines.filter((line) => FRAME_LINE.test(line) || isUrlless(line)), isUrlless };
+}
+
+export function isForeignStack(stack: unknown, origin: string): boolean {
+  const { frames, isUrlless } = stackFrames(stack);
   if (frames.length === 0) return false;
   return frames.every((line) => {
     if (isUrlless(line) || EXTENSION_URL.test(line)) return true;
     const url = line.match(HTTP_URL)?.[0];
-    if (url) {
-      if (OWNED_THIRD_PARTY.test(url)) return false;
-      if (!url.startsWith(origin)) return true;
-      return !OWN_SCRIPT_PATH.test(url.slice(origin.length));
-    }
+    if (url) return !isOwnScriptUrl(url, origin);
     return INJECTED_FRAME.test(line);
   });
+}
+
+function isOwnScriptUrl(url: string, origin: string): boolean {
+  if (OWNED_THIRD_PARTY.test(url)) return true;
+  if (!url.startsWith(origin)) return false;
+  return OWN_SCRIPT_PATH.test(url.slice(origin.length));
+}
+
+/** Frameless errors (parse-time SyntaxError, thrown non-Error) are placed by filename:
+ *  browsers set it for our bundles, and leave it empty for code evaluated from a string. */
+export function isForeignFramelessError(
+  stack: unknown,
+  filename: string | undefined,
+  origin: string
+): boolean {
+  if (stackFrames(stack).frames.length > 0) return false;
+  return !filename || !isOwnScriptUrl(filename, origin);
 }
 
 export function reportClientError(
@@ -138,6 +155,7 @@ export function installErrorReporting(): void {
 
   window.addEventListener("error", (event) => {
     const error = event.error as { stack?: string } | undefined;
+    if (isForeignFramelessError(error?.stack, event.filename, window.location.origin)) return;
     reportClientError("window", event.message || String(event.error), error?.stack);
   });
 
