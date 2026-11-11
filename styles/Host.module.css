@@ -3629,3 +3629,18 @@ html[data-tv] .tvStatsRow .queueEndRow {
   border-bottom: none;
   flex-wrap: nowrap;
 }
+
+.queueExternalBadge {
+  display: inline-block;
+  align-self: flex-start;
+  width: fit-content;
+  margin: 0.15rem 0;
+  padding: 0 0.4rem;
+  border: 1px solid var(--acc-b, #00f0ff);
+  border-radius: 999px;
+  color: var(--acc-b, #00f0ff);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  vertical-align: middle;
+}

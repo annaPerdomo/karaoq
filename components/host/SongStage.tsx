@@ -6,6 +6,9 @@ import { EmptyStage } from "./EmptyStage";
 import { StageLoading } from "./StageLoading";
 import { embedSrc } from "../player/embed";
 import { PlaybackErrorNotice } from "../player/PlaybackErrorNotice";
+import ExternalSongCard from "../player/ExternalSongCard";
+import postScreenEvent from "../../app/queue/screenEvent";
+import { isExternal } from "../../lib/externalEntry";
 import { usePlaybackError } from "../player/usePlaybackError";
 import { formatSongTitle } from "./utils";
 import { AutoStartPanel } from "./AutoStartPanel";
@@ -81,7 +84,7 @@ export function SongStage({
     roomId: joinCode,
     entryId: currentSong?.id,
     videoId: currentSong?.videoId,
-    active: !loading && !!currentSong && !remote && !tvMode && playsVideoHere,
+    active: !loading && !!currentSong && !remote && !tvMode && playsVideoHere && !isExternal(currentSong),
   });
   const countdown =
     currentSong && !isPlaying ? (
@@ -126,8 +129,33 @@ export function SongStage({
   // Must mirror AutoStartPanel's showCount.
   const counting = autoStartIn !== null || (!!onOpenPlaybackSettings && autoEnabled);
   const stageClass = `${styles.songControl} ${countdown ? styles.songControlStaged : ""} ${countdown && counting ? styles.songControlCounting : ""}`;
+  const startedRef = React.useRef(false);
+  React.useEffect(() => {
+    if (!isPlaying) startedRef.current = false;
+  }, [isPlaying, currentSong?.id]);
+  const outsideCard =
+    currentSong && !remote && isExternal(currentSong) ? (
+      <ExternalSongCard
+        variant="host"
+        singer={currentSong.userName}
+        title={formatSongTitle(currentSong.songTitle)}
+        videoId={currentSong.videoId}
+        playing={isPlaying}
+        onOpen={() => {
+          if (isPlaying || startedRef.current) return;
+          startedRef.current = true;
+          window.setTimeout(() => {
+            startedRef.current = false;
+          }, 3000);
+          onStartSong();
+          if (joinCode) postScreenEvent(joinCode, "external_opened", { surface: "host" });
+        }}
+      />
+    ) : null;
   return loading ? (
     <StageLoading />
+  ) : outsideCard ? (
+    outsideCard
   ) : currentSong ? (
     remote ? (
       /* Co-host mode: status only, no player or audio. */

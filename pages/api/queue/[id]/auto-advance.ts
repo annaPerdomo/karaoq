@@ -1,3 +1,4 @@
+import { shouldArmAutoStart } from "../../../../lib/externalEntry";
 import { NextApiRequest, NextApiResponse } from "next";
 import { AutoAdvance, normalizeAutoAdvance } from "../../types";
 import { trackEvent } from "../../../../lib/analytics";
@@ -48,6 +49,10 @@ export default async function handler(
       const room = await collection.findOne({ id: roomId });
       if (!room) {
         res.status(404).json({ code: 404, message: "Room not found." });
+        return;
+      }
+      if (!shouldArmAutoStart(room.queue[room.activeVideoIndex])) {
+        res.status(200).json({ code: 200, message: "Nothing to arm.", autoStartAt: null });
         return;
       }
       const gapMs = normalizeAutoAdvance(room.autoAdvance).gapSeconds * 1000;
@@ -112,8 +117,11 @@ export default async function handler(
       !room.isPlaying &&
       room.activeVideoIndex >= 0 &&
       room.activeVideoIndex < room.queue.length;
+    const armable = shouldArmAutoStart(room.queue[room.activeVideoIndex]);
     const restamped =
-      config.enabled && running !== null && config.gapSeconds !== prev.gapSeconds
+      !armable
+        ? null
+        : config.enabled && running !== null && config.gapSeconds !== prev.gapSeconds
         ? new Date(running - prev.gapSeconds * 1000 + config.gapSeconds * 1000)
         : config.enabled && !prev.enabled && running === null && betweenSongs
           ? new Date(Date.now() + config.gapSeconds * 1000)

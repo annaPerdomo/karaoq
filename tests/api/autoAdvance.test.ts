@@ -218,6 +218,19 @@ describe("POST /api/queue/[id]/auto-advance - the room's auto-advance setting", 
     expect(trackEvent).not.toHaveBeenCalled();
   });
 
+  it("arms nothing and writes nothing while an external entry is on stage", async () => {
+    mockCollection.findOne.mockResolvedValue({
+      ...ROOM,
+      queue: [{ id: "a", userName: "A", songTitle: "Out", videoId: "v1", external: true as const }],
+      autoAdvance: { enabled: true, gapSeconds: 20 },
+    });
+    const res = createRes();
+    await handler(createMockReq({ method: "POST", query: { id: "ROOM1", arm: "1" } }), res);
+
+    expect(mockCollection.updateOne).not.toHaveBeenCalled();
+    expect((res.getBody() as { autoStartAt: unknown }).autoStartAt).toBeNull();
+  });
+
   it("reports nothing armed when the room did not match", async () => {
     mockCollection.findOne.mockResolvedValue(ROOM);
     mockCollection.updateOne.mockResolvedValue({ matchedCount: 0 });

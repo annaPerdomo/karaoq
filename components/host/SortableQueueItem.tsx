@@ -99,6 +99,7 @@ export function SortableQueueItem({
             </span>
           )}
         </div>
+        {item.external && <span className={styles.queueExternalBadge}>{t('external.badge')}</span>}
         <div className={styles.queueSong} title={formatSongTitle(item.songTitle)}>
           {formatSongTitle(item.songTitle)}
         </div>

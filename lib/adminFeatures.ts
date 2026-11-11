@@ -28,6 +28,7 @@ export const ADMIN_FEATURES: readonly AdminFeature[] = [
     types: ["song_suggested", "singwithme_posted", "singwithme_joined", "singwithme_queued"],
   },
   { id: "swap", label: "Video swap", name: "Karaoke video swap", types: ["karaoke_video_swapped"] },
+  { id: "outside", label: "Plays on YouTube", name: "Songs played on YouTube", types: ["external_opened"] },
   { id: "branding", label: "Branding", name: "Club branding", types: ["brand_saved", "logo_uploaded"] },
   { id: "duets", label: "Duets", name: "Duets & groups", types: ["song_added"], slice: "duets" },
   { id: "cheers", label: "Cheers", name: "Cheers", types: ["reaction_sent"], noChip: true },

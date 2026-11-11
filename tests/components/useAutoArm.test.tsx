@@ -125,3 +125,12 @@ describe("useAutoArm", () => {
     expect(setAutoStartAt).not.toHaveBeenCalled();
   });
 });
+
+describe("useAutoArm while disabled", () => {
+  it("never arms", async () => {
+    armAutoStart.mockClear();
+    render({ enabled: false });
+    await flush();
+    expect(armAutoStart).not.toHaveBeenCalled();
+  });
+});

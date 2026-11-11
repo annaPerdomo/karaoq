@@ -6,6 +6,8 @@ import { useT } from '../../lib/i18n/I18nProvider';
 import formatSongTitle from '../../lib/songTitle';
 import { embedSrc } from '../player/embed';
 import { PlaybackErrorNotice } from '../player/PlaybackErrorNotice';
+import ExternalSongCard from '../player/ExternalSongCard';
+import { isExternal } from '../../lib/externalEntry';
 import { usePlaybackError } from '../player/usePlaybackError';
 import AutoStartCountdown from './AutoStartCountdown';
 import WrapUpPill from '../player/WrapUpPill';
@@ -46,12 +48,13 @@ export default function DisplayStage({
   onPlaybackFailed: () => void;
 }) {
   const { t } = useT();
+  const external = isExternal(currentSong);
   const playbackFailed = usePlaybackError({
     videoRef,
     roomId: joinCode,
     entryId: currentSong?.id,
     videoId: currentSong?.videoId,
-    active: !loading && !!currentSong && isPlaying && playsVideoHere,
+    active: !loading && !!currentSong && isPlaying && playsVideoHere && !external,
   });
 
   const onPlaybackFailedRef = React.useRef(onPlaybackFailed);
@@ -72,6 +75,14 @@ export default function DisplayStage({
         <div className={styles.centerState}>
           <div className={styles.spinner} />
         </div>
+      ) : currentSong && isPlaying && external ? (
+        <ExternalSongCard
+          variant="display"
+          singer={currentSong.userName}
+          title={formatSongTitle(currentSong.songTitle)}
+          videoId={currentSong.videoId}
+          playing
+        />
       ) : currentSong && isPlaying && playsVideoHere ? (
         <iframe
           ref={videoRef}
@@ -134,7 +145,7 @@ export default function DisplayStage({
 
       {/* !playbackFailed: a dead video never confirms playback either, so the
           watchdog fires too and its opaque overlay would bury the notice. */}
-      {needsTap && isPlaying && currentSong && !playbackFailed && (
+      {needsTap && isPlaying && currentSong && !external && !playbackFailed && (
         <button
           className={styles.tapOverlay}
           onClick={onUnlock}
@@ -155,7 +166,7 @@ export default function DisplayStage({
         </button>
       )}
 
-      {wrapUpIn !== null && isPlaying && currentSong && !playbackFailed && (
+      {wrapUpIn !== null && isPlaying && currentSong && !external && !playbackFailed && (
         <WrapUpPill secondsLeft={wrapUpIn} />
       )}
 

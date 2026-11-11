@@ -1,0 +1,76 @@
+.card {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 2rem;
+  text-align: center;
+}
+
+.tag {
+  font-size: 0.8rem;
+  letter-spacing: calc(4px * var(--tv-scale, 1));
+  color: var(--acc-a, #ff2d78);
+  font-weight: 700;
+  text-transform: uppercase;
+  text-shadow: 0 0 12px rgba(var(--acc-a-rgb, 255, 45, 120), 0.5);
+}
+
+.singer {
+  font-family: var(--font-headline);
+  font-size: clamp(2.5rem, 6vw, 4.5rem);
+  font-weight: 700;
+  color: var(--acc-b, #00f0ff);
+  background: linear-gradient(135deg, var(--acc-a, #ff2d78), var(--acc-b, #00f0ff));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  margin: 0;
+}
+
+.song {
+  font-size: clamp(1rem, 2vw, 1.4rem);
+  color: var(--text-muted);
+  max-width: calc(600px * var(--tv-scale, 1));
+  line-height: 1.5;
+  margin: 0;
+}
+
+.line {
+  color: var(--text-primary, #fff);
+  line-height: 1.5;
+  margin: 0;
+  max-width: 32ch;
+}
+
+.display .line {
+  font-size: clamp(1.1rem, 2.4vw, 1.8rem);
+  font-weight: 600;
+}
+
+.host .line {
+  font-size: 0.9rem;
+}
+
+.open {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0.6rem 1.4rem;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--acc-a, #ff2d78), var(--acc-c, #9b1dff));
+  color: #fff;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.open:focus-visible {
+  outline: 2px solid var(--acc-b, #00f0ff);
+  outline-offset: 2px;
+}

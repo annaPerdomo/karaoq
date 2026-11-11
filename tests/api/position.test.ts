@@ -161,6 +161,25 @@ describe("POST /api/queue/[id]/position - Advance song position", () => {
     expect(update.$unset.endedEntryId).toBe("");
   });
 
+  it("stamps nothing when the skip lands on an external entry", async () => {
+    const queue = makeQueue(3);
+    queue[1] = { ...queue[1], external: true };
+    mockCollection.findOne.mockResolvedValue({
+      id: "ROOM1",
+      queue,
+      activeVideoIndex: 0,
+      isPlaying: true,
+      autoAdvance: { enabled: true, gapSeconds: 20 },
+    });
+    mockCollection.updateOne.mockResolvedValue({ modifiedCount: 1 });
+
+    await handler(createMockReq({ method: "POST", query: { id: "ROOM1", activeVideoIndex: "1" } }), createRes());
+
+    const [, update] = mockCollection.updateOne.mock.calls[0];
+    expect(update.$set).not.toHaveProperty("autoStartAt");
+    expect(update.$unset.autoStartAt).toBe("");
+  });
+
   it("stamps nothing when a skip drains the queue", async () => {
     const room: Room = {
       id: "ROOM1",

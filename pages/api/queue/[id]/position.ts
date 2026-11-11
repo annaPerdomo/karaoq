@@ -1,3 +1,4 @@
+import { shouldArmAutoStart } from "../../../../lib/externalEntry";
 import { NextApiRequest, NextApiResponse } from "next";
 import { playedSecondsField, SCREEN_EVENT_TTL_MS, trackEvent } from "../../../../lib/analytics";
 import { getRoomsCollection } from "../../../../lib/mongodb";
@@ -47,7 +48,7 @@ export default async function handler(
       // Under auto a skip counts the landed-on song in, same as a natural end.
       const config = normalizeAutoAdvance(room.autoAdvance);
       const autoStartAt =
-        config.enabled && nextIndex < room.queue.length
+        config.enabled && nextIndex < room.queue.length && shouldArmAutoStart(room.queue[nextIndex])
           ? new Date(Date.now() + config.gapSeconds * 1000)
           : null;
       await collection.updateOne(

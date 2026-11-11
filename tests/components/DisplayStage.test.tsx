@@ -112,3 +112,40 @@ describe("DisplayStage", () => {
     expect(screen.queryByText(en["display.hostOwn"])).toBeNull();
   });
 });
+
+describe("DisplayStage with an external entry", () => {
+  it("shows the card, mounts no player, and never reports the video unplayable or failed", async () => {
+    const onPlaybackFailed = vi.fn();
+    function ExternalStage() {
+      const ref = React.useRef<HTMLIFrameElement>(null);
+      return (
+        <DisplayStage
+          loading={false}
+          joinCode="ABCD"
+          origin="https://karaoq.live"
+          currentSong={{ ...SONG, external: true }}
+          isPlaying
+          playsVideoHere
+          videoRef={ref}
+          onIframeLoad={() => {}}
+          needsTap
+          onUnlock={() => {}}
+          autoStartIn={null}
+          autoGapSeconds={10}
+          onStartNow={() => {}}
+          wrapUpIn={null}
+          onPlaybackFailed={onPlaybackFailed}
+        />
+      );
+    }
+    const { container } = render(<ExternalStage />);
+
+    expect(container.querySelector("iframe")).toBeNull();
+    expect(screen.getByText(en["external.display.line"])).toBeInTheDocument();
+    expect(screen.queryByText(en["display.tapTitle"])).toBeNull();
+    await new Promise((r) => setTimeout(r, 20));
+    expect(raiseError).toBeNull();
+    expect(onPlaybackFailed).not.toHaveBeenCalled();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+});

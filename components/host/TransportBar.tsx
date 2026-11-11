@@ -33,6 +33,7 @@ export function TransportBar({
   remote = false,
   cohostControlsLive = false,
   cohostCanPlay = false,
+  external = false,
   autoAdvance,
   onChangeAutoAdvance,
   songLimit = null,
@@ -66,6 +67,7 @@ export function TransportBar({
   cohostControlsLive?: boolean;
   /** Host.tsx's gate for the co-host's Play, which here-mode also satisfies. */
   cohostCanPlay?: boolean;
+  external?: boolean;
   autoAdvance?: AutoAdvance;
   onChangeAutoAdvance?: (patch: Partial<AutoAdvance>) => void;
   songLimit?: number | null;
@@ -135,7 +137,7 @@ export function TransportBar({
             // Pause needs a live display to receive it and report back; Play only
             // needs a screen that will pick the command up, which here-mode has.
             isPlaying ? (
-              cohostControlsLive ? (
+              cohostControlsLive && !external ? (
                 <button
                   className={`${styles.tBtn} ${styles.tPause}`}
                   onClick={onToggleDisplayPause}
@@ -163,7 +165,7 @@ export function TransportBar({
             // from here (only useful with a live display to receive
             // it), plus a Stop.
             <>
-              {displayConnected && (
+              {displayConnected && !external && (
                 <button
                   className={`${styles.tBtn} ${styles.tPause}`}
                   onClick={onToggleDisplayPause}
@@ -190,13 +192,15 @@ export function TransportBar({
             // hunting for YouTube's own chrome — and so a blocked
             // autoplay has a one-tap recovery.
             <>
-              <button
-                className={`${styles.tBtn} ${styles.tPause}`}
-                onClick={onToggleHereVideo}
-                title={hereVideoPlaying ? t('host.transport.pause') : t('host.transport.play')}
-              >
-                {hereVideoPlaying ? Icons.pause : Icons.resume}
-              </button>
+              {!external && (
+                <button
+                  className={`${styles.tBtn} ${styles.tPause}`}
+                  onClick={onToggleHereVideo}
+                  title={hereVideoPlaying ? t('host.transport.pause') : t('host.transport.play')}
+                >
+                  {hereVideoPlaying ? Icons.pause : Icons.resume}
+                </button>
+              )}
               <button
                 className={`${styles.tBtn} ${styles.tStop}`}
                 onClick={onStop}

@@ -59,6 +59,7 @@ export type EventType =
   | "screen_help_option"
   | "screen_help_step"
   | "song_started"
+  | "external_opened"
   | "song_ended"
   | "song_skipped"
   | "song_stopped"

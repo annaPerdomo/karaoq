@@ -31,8 +31,10 @@ import setSongLimit from "../app/queue/setSongLimit";
 import cancelAutoStart from "../app/queue/cancelAutoStart";
 import postVideoEnded from "../app/queue/postVideoEnded";
 import postScreenEvent from "../app/queue/screenEvent";
+import { autoArmEnabled, isExternal, mayReportEnded, playerListenerActive } from "../lib/externalEntry";
 import type { SongEndReason } from "../lib/analytics";
 import { useAutoStart } from "./hooks/useAutoStart";
+import { useEntryAutoStartStamp } from "./hooks/useEntryAutoStartStamp";
 import { useAutoArm } from "./hooks/useAutoArm";
 import { useEndedCheer } from "./hooks/useEndedCheer";
 import { useHostJoinedFromTv } from "./host/hooks/useHostJoinedFromTv";
@@ -138,6 +140,7 @@ const Host = ({
   // Stable across renders — safe to depend on from the poll/init effects.
   const applyBoards = boards.applyRoom;
   const [activeIndex, setActiveIndex] = React.useState(0);
+  const externalActive = isExternal(queue[activeIndex]);
   const [isPlaying, setIsPlaying] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
   // Definitive "room doesn't exist" — terminal, stops polling.
@@ -673,7 +676,7 @@ const Host = ({
   // Ref so the postMessage handler always has current state.
   const onVideoEndedRef = React.useRef<(how?: SongEndReason) => void>(() => {});
   onVideoEndedRef.current = async (how: SongEndReason = "ended") => {
-    if (!joinCode || endedHandledRef.current) return;
+    if (!joinCode || endedHandledRef.current || !mayReportEnded(queue[activeIndex])) return;
     endedHandledRef.current = true;
     // Past the last song too — bounding this parks on the finished entry, which
     // then replays ahead of anything added afterwards.
@@ -698,7 +701,7 @@ const Host = ({
   // Only the device actually playing (playsVideoHere) listens — other host
   // pages have no player and must not advance the queue.
   React.useEffect(() => {
-    if (remote || !playsVideoHere || tvMode) return;
+    if (remote || tvMode || !playerListenerActive(playsVideoHere, queue[activeIndex])) return;
 
     function onMessage(e: MessageEvent) {
       // Source-checked: the music video card's preview player posts the same events.
@@ -741,12 +744,12 @@ const Host = ({
 
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [playsVideoHere, tvMode, remote, joinCode]);
+  }, [playsVideoHere, tvMode, remote, joinCode, externalActive]);
 
   // Autoplay watchdog: if YouTube never confirms shortly after the player
   // (re)mounts, autoplay was blocked — flip the control to Play.
   React.useEffect(() => {
-    if (remote || tvMode || !playsVideoHere) return;
+    if (remote || tvMode || !playsVideoHere || externalActive) return;
     herePlayingRef.current = false;
     hereCuedAtRef.current = Date.now();
     setHereVideoPlaying(true);
@@ -754,7 +757,7 @@ const Host = ({
       if (!herePlayingRef.current) setHereVideoPlaying(false);
     }, 1500);
     return () => clearTimeout(timer);
-  }, [playsVideoHere, tvMode, remote, activeIndex]);
+  }, [playsVideoHere, tvMode, remote, activeIndex, externalActive]);
 
   // A co-host's Play flips isPlaying with no surface attached to it. In here-mode
   // this page is the surface, so claim it — otherwise the room reads as playing
@@ -1283,12 +1286,12 @@ const Host = ({
   // obey it, a here-mode room needs only a host page, which claims the start on
   // its next poll. Pause stays TV-only — it flips a shared flag that the display
   // reports its real state back against, and the here-mode player reports nothing.
-  const cohostCanPlay = remote && (tvMode ? displayConnected : true);
+  const cohostCanPlay = remote && !externalActive && (tvMode ? displayConnected : true);
   const cohostControlsLive = remote && tvMode && displayConnected;
 
   const { hold: holdAutoArm } = useAutoArm({
     roomId: joinCode,
-    enabled: !loading && !remote && !tvMode && !adminPeek && autoAdvance.enabled,
+    enabled: autoArmEnabled(!loading && !remote && !tvMode && !adminPeek && autoAdvance.enabled, queue[activeIndex]),
     isPlaying,
     autoStartAt,
     activeIndex,
@@ -1298,8 +1301,9 @@ const Host = ({
     setAutoStartAt,
   });
 
+  const entryStamp = useEntryAutoStartStamp(queue[activeIndex], autoStartAt);
   const { secondsLeft: autoStartIn } = useAutoStart({
-    autoStartAt,
+    autoStartAt: entryStamp,
     isPlaying,
     canStart:
       !remote &&
@@ -1332,6 +1336,7 @@ const Host = ({
       remote={remote}
       cohostControlsLive={cohostControlsLive}
       cohostCanPlay={cohostCanPlay}
+      external={externalActive}
       onPrevious={playPrevious}
       onToggleDisplayPause={toggleDisplayPause}
       onStop={stopSong}

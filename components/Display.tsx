@@ -31,6 +31,8 @@ import { renderWithHeart } from '../lib/i18n/renderWithHeart';
 import FullscreenToggle from './FullscreenToggle';
 import DisplaySidebar from './display/DisplaySidebar';
 import NowPlayingBar from './display/NowPlayingBar';
+import { isExternal, mayReportEnded, playerListenerActive } from '../lib/externalEntry';
+import { useEntryAutoStartStamp } from './hooks/useEntryAutoStartStamp';
 import DisplayStage from './display/DisplayStage';
 import HostFromPhoneCard from './display/HostFromPhoneCard';
 import { useHostFromPhoneVisible } from './display/hooks/useHostFromPhoneVisible';
@@ -241,6 +243,8 @@ const Display = (): React.ReactElement => {
   }
 
   const playsVideoHere = playMode !== 'here';
+  const externalActive = isExternal(queue[activeIndex]);
+  const entryStamp = useEntryAutoStartStamp(queue[activeIndex], autoStartAt);
 
   const edit = useDisplayEdit({
     joinCode,
@@ -361,7 +365,7 @@ const Display = (): React.ReactElement => {
 
   const reportVideoEndedRef = React.useRef<(how?: SongEndReason) => Promise<void>>(async () => {});
   reportVideoEndedRef.current = async (how: SongEndReason = 'ended') => {
-    if (!joinCode || !isPlaying || !playsVideoHere) return;
+    if (!joinCode || !isPlaying || !playsVideoHere || !mayReportEnded(queue[activeIndex])) return;
     if (endedHandledRef.current) return;
     endedHandledRef.current = true;
     const roomId = joinCode;
@@ -372,7 +376,7 @@ const Display = (): React.ReactElement => {
   };
 
   React.useEffect(() => {
-    if (!isPlaying || !joinCode || !playsVideoHere) return;
+    if (!playerListenerActive(isPlaying && !!joinCode && playsVideoHere, queue[activeIndex]) || !joinCode) return;
     const roomId = joinCode;
 
     function reportVideoEnded(how?: SongEndReason) {
@@ -429,11 +433,11 @@ const Display = (): React.ReactElement => {
 
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
-  }, [isPlaying, joinCode, activeIndex, playsVideoHere, reportPlayhead]);
+  }, [isPlaying, joinCode, activeIndex, playsVideoHere, externalActive, reportPlayhead]);
 
   // If YouTube hasn't reported playing shortly after mount, autoplay was blocked.
   React.useEffect(() => {
-    if (!isPlaying || !currentSongId || !playsVideoHere) {
+    if (!isPlaying || !currentSongId || !playsVideoHere || externalActive) {
       setNeedsTap(false);
       return;
     }
@@ -446,12 +450,12 @@ const Display = (): React.ReactElement => {
       clearTimeout(timer);
       if (unlockRetryRef.current) clearTimeout(unlockRetryRef.current);
     };
-  }, [isPlaying, currentSongId, playsVideoHere]);
+  }, [isPlaying, currentSongId, playsVideoHere, externalActive]);
 
   // Drive the player to match the polled pause flag when they disagree
   // (host paused/resumed from another device).
   React.useEffect(() => {
-    if (!isPlaying || !playsVideoHere || !playbackConfirmedRef.current) return;
+    if (!isPlaying || !playsVideoHere || externalActive || !playbackConfirmedRef.current) return;
     const iframe = videoRef.current;
     if (!iframe) return;
     if (displayPaused && !pausedReportedRef.current) {
@@ -459,11 +463,11 @@ const Display = (): React.ReactElement => {
     } else if (!displayPaused && pausedReportedRef.current) {
       ytCommand(iframe, 'playVideo');
     }
-  }, [displayPaused, isPlaying, playsVideoHere]);
+  }, [displayPaused, isPlaying, playsVideoHere, externalActive]);
 
   const currentSongForStart = queue[activeIndex];
   const { secondsLeft: autoStartIn } = useAutoStart({
-    autoStartAt,
+    autoStartAt: entryStamp,
     isPlaying,
     canStart: playsVideoHere && !!currentSongForStart && !edit.editing && !loading,
     onStart: () => {
@@ -672,7 +676,7 @@ const Display = (): React.ReactElement => {
           </button>
         )
       ) : (
-        currentSong && isPlaying && playsVideoHere && view.showNowPlaying && (
+        currentSong && isPlaying && playsVideoHere && !externalActive && view.showNowPlaying && (
           <NowPlayingBar singerName={currentSong.userName} songTitle={currentSong.songTitle} />
         )
       )}

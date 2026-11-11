@@ -819,6 +819,25 @@ describe("POST /api/queue/[id]/videos - the first song's count-in", () => {
     expect(gapMs).toBeLessThanOrEqual(60_000);
   });
 
+  it("does not count an external first song in", async () => {
+    mockCollection.findOne.mockResolvedValue({
+      id: "ROOM1",
+      queue: [],
+      activeVideoIndex: 0,
+      isPlaying: false,
+      autoAdvance: { enabled: true, gapSeconds: 60 },
+    });
+    await handler(
+      createMockReq({
+        method: "POST",
+        query: { id: "ROOM1" },
+        body: { entryId: "entry-1", userName: "Anna", videoId: "dQw4w9WgXcQ", songTitle: "Song", external: true },
+      }),
+      createRes()
+    );
+    expect(armCall()).toBeUndefined();
+  });
+
   it("leaves the room alone when auto-advance is off", async () => {
     await addTo({ autoAdvance: { enabled: false, gapSeconds: 60 } });
     expect(armCall()).toBeUndefined();

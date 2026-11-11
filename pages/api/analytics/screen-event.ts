@@ -93,6 +93,13 @@ EXTRACTORS.logo_upload_rejected = (data) => {
   return { reason: d.reason };
 };
 
+EXTRACTORS.external_opened = (data) => {
+  if (!data || typeof data !== "object") return null;
+  const d = data as Record<string, unknown>;
+  if (!hasOnlyKeys(d, ["surface"]) || !PLAY_SURFACES.includes(d.surface as PlaySurface)) return null;
+  return { surface: d.surface };
+};
+
 EXTRACTORS.song_started = (data) => {
   if (!data || typeof data !== "object") return null;
   const d = data as Record<string, unknown>;

@@ -76,6 +76,33 @@ function autoStartStamp(nextIndex: number) {
 describe("POST /api/queue/[id]/video-ended - Display reports a finished song", () => {
   beforeEach(() => vi.clearAllMocks());
 
+  it("refuses to end an external entry for any reason", async () => {
+    const room = roomWithSongs(3, 0);
+    room.queue[0] = { ...room.queue[0], external: true };
+    mockCollection.findOne.mockResolvedValue(room);
+
+    for (const reason of ["ended", "limit", "embed_failed"]) {
+      const res = createRes();
+      await handler(createMockReq({ method: "POST", query: { id: "ROOM1", index: "0", reason } }), res);
+      expect(res.getStatus()).toBe(200);
+      expect((res.getBody() as { advanced: boolean }).advanced).toBe(false);
+    }
+    expect(mockCollection.updateOne).not.toHaveBeenCalled();
+    expect(trackEvent).not.toHaveBeenCalled();
+  });
+
+  it("does not arm a countdown for an external entry that follows", async () => {
+    const room = roomWithSongs(3, 0);
+    room.queue[1] = { ...room.queue[1], external: true };
+    mockCollection.findOne.mockResolvedValue(room);
+    mockCollection.updateOne.mockResolvedValue({ modifiedCount: 1 });
+
+    await handler(createMockReq({ method: "POST", query: { id: "ROOM1", index: "0" } }), createRes());
+
+    const [, pipeline] = mockCollection.updateOne.mock.calls[0];
+    expect(pipeline[0].$set.autoStartAt.$cond[0].$and).toContainEqual({ $eq: [1, 0] });
+  });
+
   it("advances to the next song and stops playback", async () => {
     mockCollection.findOne.mockResolvedValue(roomWithSongs(3, 0));
     mockCollection.updateOne.mockResolvedValue({ modifiedCount: 1 });

@@ -10,6 +10,7 @@ import {
 } from "../../../../lib/analytics";
 import { getRoomsCollection } from "../../../../lib/mongodb";
 import { normalizeRoomId } from "../../../../lib/roomCode";
+import { mayReportEnded, shouldArmAutoStart } from "../../../../lib/externalEntry";
 import { normalizeAutoAdvance } from "../../types";
 
 /**
@@ -56,6 +57,11 @@ export default async function handler(
       return;
     }
 
+    if (!mayReportEnded(room.queue[endedIndex])) {
+      res.status(200).json({ code: 200, message: "Video end recorded.", advanced: false });
+      return;
+    }
+
     // Past the last song too — `queue.length` is the legitimate "queue
     // finished" state, and parking on the finished entry replays it ahead of
     // anything added afterwards.
@@ -87,6 +93,7 @@ export default async function handler(
                     // room with no setting predates the feature.
                     { $eq: ["$autoAdvance.enabled", true] },
                     { $lt: [endedIndex + 1, { $size: "$queue" }] },
+                    ...(shouldArmAutoStart(room.queue[endedIndex + 1]) ? [] : [{ $eq: [1, 0] }]),
                   ],
                 },
                 new Date(Date.now() + gapMs),
