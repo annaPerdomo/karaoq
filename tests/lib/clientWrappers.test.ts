@@ -454,6 +454,38 @@ describe("Client API wrappers", () => {
       expect(err.reason).toBe(reason);
     });
 
+    it("surfaces the refused video and its playable versions on a 422", async () => {
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 422,
+        json: async () => ({
+          reason: "not_embeddable",
+          result: VIDEO,
+          cuts: [{ ...VIDEO, videoId: "cut10000000", title: "Cut &amp; one" }],
+        }),
+      });
+      const { default: lookupVideo } = await import("../../app/queue/lookupVideo");
+
+      const err = await lookupVideo("dQw4w9WgXcQ", "paste").catch((e) => e);
+
+      expect(err.result).toEqual({ ...VIDEO, title: "Rick Astley & friends" });
+      expect(err.cuts).toEqual([{ ...VIDEO, videoId: "cut10000000", title: "Cut & one" }]);
+    });
+
+    it("tolerates a 422 body without them", async () => {
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 422,
+        json: async () => ({ reason: "not_embeddable", cuts: "nope" }),
+      });
+      const { default: lookupVideo } = await import("../../app/queue/lookupVideo");
+
+      const err = await lookupVideo("dQw4w9WgXcQ", "paste").catch((e) => e);
+
+      expect(err.result).toBeUndefined();
+      expect(err.cuts).toEqual([]);
+    });
+
     it("treats an empty 200 as a missing video rather than a crash", async () => {
       mockFetch.mockResolvedValue({ ok: true, json: async () => [] });
       const { default: lookupVideo } = await import("../../app/queue/lookupVideo");

@@ -9,6 +9,7 @@ import { trackEvent } from "../../lib/analytics";
 import { sendQuotaAlertOnce } from "../../lib/alerts";
 import { confirmDailyOut } from "../../lib/searchQuotaStatus";
 import { quotaResetsAt } from "../../lib/pacificTime";
+import { playableCutsFor } from "../../lib/corpusCuts";
 import { recordSpend } from "../../lib/corpusBudget";
 
 // A videos.list call is 1 quota unit against the same daily pool a text search
@@ -170,6 +171,8 @@ export default async function handler(
         code: 422,
         reason: "not_embeddable",
         message: "That video can't be played outside YouTube.",
+        result: video.result,
+        cuts: await playableCutsFor(id, video.result.title),
       });
       return;
     }

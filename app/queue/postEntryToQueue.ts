@@ -21,6 +21,7 @@ export default async function postEntryToQueue(
         videoId: entry.videoId,
         songTitle: entry.songTitle,
         durationSeconds: entry.durationSeconds,
+        ...(entry.external ? { external: true } : {}),
         ...(via ? { via } : {}),
         ...(suggestionKey ? { suggestionKey } : {}),
         ...(suggestionKey && typeof fromCorpus === "boolean" ? { fromCorpus } : {}),

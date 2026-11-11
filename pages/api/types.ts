@@ -386,6 +386,8 @@ export interface QueueEntry {
   originalVideoId?: string;
   /** Host-chosen timing nudge for the music-video screen, seconds. Absent = 0. */
   originalOffsetSeconds?: number;
+  /** Plays outside the app (on youtube.com); never mounts a player. */
+  external?: true;
 }
 
 /** One theme for the whole room: the host's. Both config routes mirror a save

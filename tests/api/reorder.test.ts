@@ -87,6 +87,26 @@ describe("POST /api/queue/[id]/reorder - Reorder queue", () => {
     expect(written.find((e) => e.id === "b")?.originalVideoId).toBe("overridenvid");
   });
 
+  it("preserves an external entry across a reorder", async () => {
+    const external = { ...sampleQueue[1], external: true as const };
+    const queue = [sampleQueue[0], external, sampleQueue[2]];
+    const room: Room = { id: "ROOM1", queue, activeVideoIndex: 0, isPlaying: false };
+    mockCollection.findOne.mockResolvedValue(room);
+    mockCollection.updateOne.mockResolvedValue({ matchedCount: 1, modifiedCount: 1 });
+
+    const req = createMockReq({
+      method: "POST",
+      query: { id: "ROOM1" },
+      body: { queue: [queue[2], queue[0], queue[1]], activeVideoIndex: 0 },
+    });
+    const res = createRes();
+    await handler(req, res);
+
+    expect(res.getStatus()).toBe(200);
+    const written = mockCollection.updateOne.mock.calls[0][1].$set.queue as QueueEntry[];
+    expect(written.find((e) => e.id === "b")?.external).toBe(true);
+  });
+
   it("preserves a host-chosen originalOffsetSeconds across a reorder", async () => {
     const nudged = { ...sampleQueue[1], originalOffsetSeconds: 1.5 };
     const queue = [sampleQueue[0], nudged, sampleQueue[2]];

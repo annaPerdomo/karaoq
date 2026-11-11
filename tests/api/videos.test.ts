@@ -453,6 +453,74 @@ describe("POST /api/queue/[id]/videos - Add song to queue", () => {
     });
   });
 
+  describe("external entries", () => {
+    let cacheDoc: unknown = null;
+    beforeEach(() => {
+      cacheDoc = null;
+    });
+
+    async function addWith(extra: Record<string, unknown>) {
+      vi.clearAllMocks();
+      const room: Room = { id: "ROOM1", queue: [], activeVideoIndex: 0, isPlaying: false };
+      mockCollection.findOne.mockImplementation(async (q: { key?: string }) =>
+        q?.key ? cacheDoc : room
+      );
+      mockCollection.updateOne.mockResolvedValue({ matchedCount: 1, modifiedCount: 1 });
+      mockCollection.insertOne.mockResolvedValue({});
+
+      const req = createMockReq({
+        method: "POST",
+        query: { id: "ROOM1" },
+        headers: { host: "karaoq.live" },
+        body: {
+          entryId: "entry-1",
+          userName: "Anna",
+          videoId: "dQw4w9WgXcQ",
+          songTitle: "Never Gonna Give You Up",
+          ...extra,
+        },
+      });
+      await handler(req, createRes());
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      const stored = mockCollection.updateOne.mock.calls[0][1].$push.queue;
+      return { stored, event: mockCollection.insertOne.mock.calls[0][0] };
+    }
+
+    it("stores external: true and reports it on song_added", async () => {
+      const { stored, event } = await addWith({ external: true });
+      expect(stored.external).toBe(true);
+      expect(event.external).toBe(true);
+    });
+
+    it("does not feed the corpus, unlike a normal add", async () => {
+      await addWith({ external: true });
+      expect(recordAddMock).not.toHaveBeenCalled();
+      await addWith({});
+      expect(recordAddMock).toHaveBeenCalled();
+    });
+
+    it("drops the claim when the lookup cache knows the video embeds", async () => {
+      cacheDoc = { key: "video:dQw4w9WgXcQ", results: [{ videoId: "dQw4w9WgXcQ" }], createdAt: new Date() };
+      const { stored, event } = await addWith({ external: true });
+      expect(stored).not.toHaveProperty("external");
+      expect(event).not.toHaveProperty("external");
+      expect(recordAddMock).toHaveBeenCalled();
+    });
+
+    it("keeps the claim when the cache has nothing or can't be read", async () => {
+      expect((await addWith({ external: true })).stored.external).toBe(true);
+      cacheDoc = { key: "video:dQw4w9WgXcQ", results: [], createdAt: new Date() };
+      expect((await addWith({ external: true })).stored.external).toBe(true);
+    });
+
+    it.each([["yes"], [false], [1]])("stores %j as absent", async (value) => {
+      const { stored, event } = await addWith({ external: value });
+      expect(stored).not.toHaveProperty("external");
+      expect(event).not.toHaveProperty("external");
+    });
+  });
+
   describe("via on the song_added event", () => {
     async function addVia(via: unknown) {
       vi.clearAllMocks();

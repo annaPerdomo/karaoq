@@ -18,6 +18,7 @@ import { normalizeRoomId } from "../../../../lib/roomCode";
 import { recordAdd } from "../../../../lib/songCorpus";
 import { isCorpusSong } from "../../../../lib/corpusRead";
 import { ideaFields } from "../../../../lib/ideaSurface";
+import { readCache } from "../../../../lib/searchCache";
 import { normalizeAutoAdvance } from "../../types";
 import { catalogEntry } from "../../../../lib/suggestionCatalog";
 
@@ -48,6 +49,7 @@ export default async function handler(
     fromCorpus?: unknown;
     ideaSurface?: unknown;
     ideaAway?: unknown;
+    external?: unknown;
   };
   try {
     const parsed = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
@@ -94,18 +96,22 @@ export default async function handler(
       ? body.fromCorpus
       : undefined;
 
+  if (!rateLimit(req, "song-add", 15, 30_000)) {
+    res.status(429).json({ code: 429, message: "Too many songs added, slow down." });
+    return;
+  }
+
+  const cached = body.external === true ? await readCache(`video:${videoId}`) : null;
+  const external = body.external === true && !(Array.isArray(cached?.results) && cached.results.length > 0);
+
   // Stamped server-side, never taken from the body: queue time decides the running order, so a
   // client must not be able to backdate itself to the front.
   const entry = {
     ...base,
     ...(durationSeconds !== undefined ? { durationSeconds } : {}),
+    ...(external ? { external: true as const } : {}),
     addedAt: Date.now(),
   };
-
-  if (!rateLimit(req, "song-add", 15, 30_000)) {
-    res.status(429).json({ code: 429, message: "Too many songs added, slow down." });
-    return;
-  }
 
   try {
     const collection = await getRoomsCollection();
@@ -211,12 +217,13 @@ export default async function handler(
         ...(fromCorpus !== undefined ? { fromCorpus } : {}),
         ...(suggestionKey ? ideaFields(body) : {}),
         singers: singerKeys(userName).length,
+        ...(external ? { external: true } : {}),
       });
       res.status(200).json({ code: 200, message: "Song added." });
       // Awaited only after the reply: the singer waits on nothing, and the
       // instance can't freeze partway through a two-collection write. Demo and
       // dev traffic is skipped — one shared database with the live site.
-      if (!isAnalyticsExempt(req)) {
+      if (!external && !isAnalyticsExempt(req)) {
         const { country } = extractGeo(req);
         await recordAdd(
           {

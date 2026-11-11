@@ -197,7 +197,7 @@ describe("POST /api/queue/[id]/karaoke-video", () => {
           playStartedAt: expect.any(Date),
           lastActivity: expect.any(Date),
         },
-        $unset: { "queue.$.originalOffsetSeconds": "", playPausedAt: "", displayPaused: "" },
+        $unset: { "queue.$.originalOffsetSeconds": "", "queue.$.external": "", playPausedAt: "", displayPaused: "" },
       }
     );
     expect(trackEventMock).toHaveBeenCalledWith(expect.anything(), "karaoke_video_swapped", {
@@ -222,7 +222,7 @@ describe("POST /api/queue/[id]/karaoke-video", () => {
       { id: "ROOM1", "queue.id": "e2", activeVideoIndex: 1, isPlaying: true },
       {
         $set: { "queue.$.videoId": "good0000000", "queue.$.songTitle": "Waterloo", lastActivity: expect.any(Date) },
-        $unset: { "queue.$.originalOffsetSeconds": "", "queue.$.durationSeconds": "" },
+        $unset: { "queue.$.originalOffsetSeconds": "", "queue.$.external": "", "queue.$.durationSeconds": "" },
       }
     );
   });

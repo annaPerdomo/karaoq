@@ -24,6 +24,8 @@ export default async function lookupVideo(
     throw new SearchUnavailableError(resp.status, {
       reason: detail?.reason,
       resetsAt: detail?.resetsAt,
+      ...(detail?.result ? { result: toYoutubeResult(detail.result) } : {}),
+      cuts: Array.isArray(detail?.cuts) ? detail.cuts.map(toYoutubeResult) : [],
     });
   }
   const data = await resp.json();

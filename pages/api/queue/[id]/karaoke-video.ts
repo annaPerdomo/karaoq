@@ -1,9 +1,10 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { SCREEN_EVENT_TTL_MS, trackEvent } from "../../../../lib/analytics";
+import { songKeyForVideo } from "../../../../lib/corpusCuts";
 import { readSongCuts } from "../../../../lib/corpusRead";
 import { findSongForQuery } from "../../../../lib/corpusLookup";
 import { MAX_TITLE_LENGTH, rateLimit, sanitizeSongDuration } from "../../../../lib/limits";
-import { getKaraokeVideosCollection, getRoomsCollection } from "../../../../lib/mongodb";
+import { getRoomsCollection } from "../../../../lib/mongodb";
 import { normalizeRoomId } from "../../../../lib/roomCode";
 import { filterBlockedIds } from "../../../../lib/videoBlocklist";
 import { VIDEO_ID_RE } from "../../../../lib/videoLink";
@@ -136,12 +137,6 @@ async function searchForSong(
   }
 }
 
-async function songKeyForVideo(videoId: string): Promise<string | null> {
-  const videos = await getKaraokeVideosCollection();
-  const row = await videos.findOne({ _id: videoId }, { projection: { songKeys: 1 } });
-  return row?.songKeys?.[0] ?? null;
-}
-
 async function handlePost(req: NextApiRequest, res: NextApiResponse) {
   const roomId = normalizeRoomId(req.query.id);
   let body: Record<string, unknown>;
@@ -211,6 +206,7 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse) {
         // A timing nudge was made against the old cut's intro.
         $unset: {
           "queue.$.originalOffsetSeconds": "" as const,
+          "queue.$.external": "" as const,
           ...(duration ? {} : { "queue.$.durationSeconds": "" as const }),
           ...(live ? { playPausedAt: "" as const, displayPaused: "" as const } : {}),
         },

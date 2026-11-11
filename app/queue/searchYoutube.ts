@@ -19,12 +19,26 @@ export class SearchUnavailableError extends Error {
   reason?: string;
   /** ISO time the quota frees up, when the server knows it. */
   resetsAt?: string;
-  constructor(status: number, detail?: { reason?: string; resetsAt?: string }) {
+  /** On a not_embeddable refusal: the video that was refused. */
+  result?: YoutubeResult;
+  /** On a not_embeddable refusal: playable versions of the same song. */
+  cuts?: YoutubeResult[];
+  constructor(
+    status: number,
+    detail?: {
+      reason?: string;
+      resetsAt?: string;
+      result?: YoutubeResult;
+      cuts?: YoutubeResult[];
+    }
+  ) {
     super(`Search unavailable (${status})`);
     this.name = 'SearchUnavailableError';
     this.status = status;
     this.reason = detail?.reason;
     this.resetsAt = detail?.resetsAt;
+    this.result = detail?.result;
+    this.cuts = detail?.cuts;
   }
 }
 

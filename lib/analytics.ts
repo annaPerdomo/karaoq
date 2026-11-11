@@ -117,6 +117,7 @@ export interface AnalyticsEvent {
   cheerSource?: CheerSource;
   // song_added: singers credited, counted the way fair rotation splits the name; absent pre-duets.
   singers?: number;
+  external?: boolean;
   // display_config_saved: fields differing from DEFAULT_DISPLAY_CONFIG.
   changedFields?: string[];
   displayConfig?: DisplayConfig;

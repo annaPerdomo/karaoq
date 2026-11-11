@@ -34,6 +34,11 @@ vi.mock("../../lib/analytics", () => ({
   isAnalyticsExempt: () => false,
 }));
 
+const playableCutsMock = vi.fn(async (..._args: unknown[]) => [] as unknown[]);
+vi.mock("../../lib/corpusCuts", () => ({
+  playableCutsFor: (...args: unknown[]) => playableCutsMock(...args),
+}));
+
 const sendQuotaAlertMock = vi.fn(async (..._args: unknown[]) => {});
 vi.mock("../../lib/alerts", () => ({
   sendQuotaAlertOnce: (...args: unknown[]) => sendQuotaAlertMock(...args),
@@ -239,13 +244,30 @@ describe("GET /api/video-lookup", () => {
     await handler(createMockReq({ query: { id: ID } }), res);
 
     expect(res.getStatus()).toBe(422);
-    expect(res.getBody()).toMatchObject({ reason: "not_embeddable" });
+    expect(res.getBody()).toMatchObject({ reason: "not_embeddable", result: EXPECTED_RESULT, cuts: [] });
+    expect(playableCutsMock).toHaveBeenCalledWith(ID, EXPECTED_RESULT.title);
     expect(mockCollection.updateOne).not.toHaveBeenCalled();
     expect(lookupEvent()).toMatchObject({
       lookupOutcome: "not_embeddable",
       lookupCache: "miss",
     });
     expect(failureEvent()).toBeNull();
+  });
+
+  it("carries the corpus's playable versions on the refusal without searching", async () => {
+    const cut = { videoId: "cut10000000", title: "Karaoke cut", thumbnailUrl: "t" };
+    playableCutsMock.mockResolvedValue([cut]);
+    fetchMock.mockImplementation(async () =>
+      jsonResponse(videoItem({ status: { embeddable: false } }))
+    );
+
+    const res = createRes();
+    await handler(createMockReq({ query: { id: ID } }), res);
+
+    expect(res.getStatus()).toBe(422);
+    expect(res.getBody()).toMatchObject({ cuts: [cut] });
+    expect(mockCollection.updateOne).not.toHaveBeenCalled();
+    expect(fetchMock.mock.calls.every((c) => !String(c[0]).includes("/search"))).toBe(true);
   });
 
   it("falls back to a stale copy when the quota is spent, and pages", async () => {
